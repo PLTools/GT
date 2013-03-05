@@ -1,0 +1,20 @@
+type 'a t = {gcata : 'a}
+type ('a, 'b, 'c) a = {x : 'b; f : 'a -> 'c; g : 'a -> 'b -> 'c}
+
+let make f x = {x=x; f=(fun a -> f a x); g=f}
+let apply f x = f x
+
+let list = 
+  let rec gcata ext t fa acc l =
+    let self = gcata ext t fa in
+    match l with
+    | []    -> t#m_Nil  acc l 
+    | h::tl -> t#m_Cons acc l (make fa h) (make self tl)
+  in 
+  {gcata = gcata}
+
+class virtual ['e, 'a, 'b] list_t =
+  object (self)
+    method virtual m_Nil  : 'a -> 'e list -> 'b
+    method virtual m_Cons : 'a -> 'e list -> ('a, 'e, 'b) a -> ('a, 'e list, 'b) a -> 'b
+  end
