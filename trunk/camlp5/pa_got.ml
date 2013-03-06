@@ -109,13 +109,19 @@ EXTEND
                  body
              in
              let current    = name in
-             let extensible = match descr with `Poly (`More, _) -> true | _ -> false in
+             let extensible, remove_bound_var, is_bound_var = 
+               match descr with 
+               | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x)
+               | _ -> false, (fun x -> x), (fun _ -> false)
+             in
              let polyvar    = match descr with `Poly _ -> true | _ -> false in
+             let args       = remove_bound_var args in
              let metargs    = (if extensible then [ext] else ["_"]) @ [trans] @ (map farg args) in
              let args       = metargs @ [acc; subj] in
              let get_type_handler, get_local_defs =
                let context = ref [] in
                (fun (args, qname) as typ ->
+                  let args = match qname with [name] when name = current -> remove_bound_var args | _ -> args in
                   let name = 
                     try fst (assoc typ !context) with
                       Not_found ->
@@ -248,42 +254,8 @@ EXTEND
   ];
 
   t_decl: [
-    [ a=fargs; n=LIDENT; "="; t=rhs -> 
-      let args, def, cons = 
-         match fst t with
-         | (<:ctyp< [ > $list:_$ ] >> | <:ctyp< [ < $list:_$ ] >>) as typ ->  
-           let p = (name_generator a)#generate "me" in
-           let pp = <:ctyp< ' $p$ >> in
-           let rec propagate_p = 
-             let propagate_pv lpv = 
-               map (function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
-                      let args = map propagate_p args in
-                      <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
-                   ) lpv 
-             in
-             function 
-             | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $propagate_p t1$ as $propagate_p t2$ >>           
-             | <:ctyp< $t1$ $t2$ >> -> 
-                (match t1 with
-                 | <:ctyp< $lid:s$ >> when s = n -> let q = <:ctyp< $t1$ $pp$ >> in <:ctyp< $q$ $propagate_p t2$ >>
-                 | _ -> <:ctyp< $propagate_p t1$ $propagate_p t2$ >>
-                )
-             | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $propagate_p t1$ -> $propagate_p t2$ >>
-             | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $propagate_p t$ >>
-             | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $propagate_p t1$ == private $propagate_p t2$ >>
-             | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $propagate_p t1$ == $propagate_p t2$ >>
-             | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $propagate_p t$ >>
-             | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map propagate_p lt$ ) >> 
-             | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:propagate_pv lpv$ ] >>
-             | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:propagate_pv lpv$ ] >>
-             | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, propagate_p t) lst$ > >>
-             | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, propagate_p t) lst$ .. > >>  
-             | <:ctyp< $lid:tt$ >> as t when tt = n -> <:ctyp< $t$ $pp$ >> 
-             | typ -> typ
-           in 
-           p::a, pp, [pp, propagate_p typ]
-         | typ -> a, typ, []
-      in
+    [ a=fargs; n=LIDENT; "="; t=rhs ->      
+      let args, (def, cons) = a, fst t in
       {
         tdNam = VaVal (loc, VaVal n);
         tdPrm = VaVal (map (fun name -> VaVal (Some name), None) args);
@@ -300,7 +272,7 @@ EXTEND
   vari: [
     [ OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
         let x, y = split vari_cons in
-        <:ctyp< [ $list:x$ ] >>, `Vari y
+        (<:ctyp< [ $list:x$ ] >>, []), `Vari y
     ]
   ];
 
@@ -309,7 +281,18 @@ EXTEND
   ];
 
   poly: [
-    [ m=poly_mody; OPT "|"; poly_cons=LIST1 poly_con SEP "|"; "]" -> 
+    [ "["; body=poly_body; "]" -> 
+        let lcons, y = body in
+        (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
+    ] |
+    [ a=targ; "constraint"; "["; ">"; body=poly_body; "]" ->
+        let lcons, y = body in
+        (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
+    ]
+  ];
+
+  poly_body: [
+    [ OPT "|"; poly_cons=LIST1 poly_con SEP "|" ->
         let x, y = split poly_cons in
         let lcons = map (fun (loc, name, args, _) ->                                  
 	    	    	     	 if length args = 0 
@@ -319,18 +302,8 @@ EXTEND
                                    <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
                               ) x
         in
-        (match m with
-         | `Equal -> <:ctyp< [ = $list:lcons$ ] >>
-         | `Less  -> <:ctyp< [ < $list:lcons$ ] >>
-         | `More  -> <:ctyp< [ > $list:lcons$ ] >>
-        ), `Poly (m, y) 
+        lcons, y
     ]
-  ];
-
-  poly_mody: [
-    [ "["; ">" -> `More  ] |
-    [ "[<" -> `Less  ] |
-    [ "["  -> `Equal ]
   ];
 
   poly_con: [
