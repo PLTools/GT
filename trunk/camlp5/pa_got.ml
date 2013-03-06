@@ -155,7 +155,7 @@ EXTEND
                            <:patt< $lid:compound_name$ >>, 
                            make_fun 
                              [acc; subj] 
-                             (make_call id base_gcata (ext :: map of_lid ([trans] @ (map farg args) @ [acc; subj])))
+                             (make_call id base_gcata (ext :: map of_lid ([trans] @ (map (fun a -> if is_bound_var a then "self" else farg a) args) @ [acc; subj])))
                           )
                         in
                         let name = <:expr< $lid:compound_name$ >> in
