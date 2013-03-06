@@ -1,11 +1,11 @@
 module Expr =
   struct
   
-    generic t = 
+    generic 'self t = 'self constraint
     [> 
       | `Var   of [string] 
       | `Const of [int] 
-      | `Binop of [int -> int -> int] * [string] * t * t
+      | `Binop of [int -> int -> int] * [string] * 'self t * 'self t
     ]
 
     class virtual ['me, 'a, 'b] t_t =
@@ -36,15 +36,15 @@ module Expr =
 module Stmt =
   struct
 
-    generic 'a t =
+    generic ('self, 'a) t = 'self constraint
     [>
       | `Skip 
       | `Assign of [string] * 'a Expr.t
       | `Read   of [string]
       | `Write  of 'a Expr.t
-      | `If     of 'a Expr.t * 'a t * 'a t
-      | `While  of 'a Expr.t * 'a t  
-      | `Seq    of 'a t * 'a t 
+      | `If     of 'a Expr.t * ('self, 'a) t * ('self, 'a) t
+      | `While  of 'a Expr.t * ('self, 'a) t  
+      | `Seq    of ('self, 'a) t * ('self, 'a) t 
     ]
 
   end
