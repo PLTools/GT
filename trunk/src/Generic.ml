@@ -1,8 +1,8 @@
-type 'a t = {gcata : 'a}
+type ('a, 'b) t = {gcata : 'a; gcata_ext : 'b}
 type ('a, 'b, 'c) a = {x : 'b; f : 'a -> 'c; g : 'a -> 'b -> 'c}
 
 let make f x = {x=x; f=(fun a -> f a x); g=f}
-let apply f x = f x
+let apply f a x = f a x
 
 let list = 
   let rec gcata ext t fa acc l =
@@ -11,7 +11,7 @@ let list =
     | []    -> t#m_Nil  acc l 
     | h::tl -> t#m_Cons acc l (make fa h) (make self tl)
   in 
-  {gcata = gcata}
+  {gcata = gcata; gcata_ext = gcata}
 
 class virtual ['e, 'a, 'b] list_t =
   object (self)

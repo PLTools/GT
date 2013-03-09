@@ -1,6 +1,6 @@
 
 (**************************************************************************
- *  Copyright (C) 2012
+ *  Copyright (C) 2012-2013
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
  *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
  *
@@ -70,6 +70,16 @@ EXTEND
 
   str_item: LEVEL "top" [
     [ "generic"; t=LIST1 t_decl SEP "and" -> 
+      let make_call g f args =
+        fold_left (fun e a -> <:expr< $e$ $g a$ >>) f args
+      in
+      let make_fun g args body =
+        fold_right 
+          (fun arg expr -> <:expr< fun [ $list:[g arg, VaVal None, expr]$ ] >>)                  
+          args
+          body
+      in
+      let id x = x in
       let t, d = split   t in
       let t    = flatten t in
       let get_cata =
@@ -99,17 +109,7 @@ EXTEND
       let defs =
         map 
           (fun (args, name, descr) -> 
-             let id x        = x in
              let of_lid name = <:expr< $lid:name$ >> in
-             let make_call g f args =
-               fold_left (fun e a -> <:expr< $e$ $g a$ >>) f args
-             in
-             let make_fun args body =
-               fold_right 
-                 (fun arg expr -> let a = <:patt< $lid:arg$ >> in <:expr< fun [ $list:[a, VaVal None, expr]$ ] >>)                  
-                 args
-                 body
-             in
              let current    = name in
              let extensible, remove_bound_var, is_bound_var = 
                match descr with 
@@ -128,14 +128,9 @@ EXTEND
                     try fst (assoc typ !context) with
                       Not_found ->
                         let compound_name = String.concat "_" (args @ qname) in
-                        let apply = 
-                          let g = <:expr< $uid:"Generic"$ >> in
-                          let a = <:expr< $lid:apply$ >> in
-                          <:expr< $g$ . $a$ >>
-                        in
                         let base_gcata, ext = 
                           match qname with
-                          | [name]      -> get_cata name, if name = current && extensible then <:expr< $lid:ext$ >> else apply
+                          | [name]      -> get_cata name, if name = current && extensible then [<:expr< $lid:ext$ >>] else [] 
                           | name::names -> 
                               let base = 
                                 fold_left (fun q name -> 
@@ -150,14 +145,15 @@ EXTEND
                               in
                               let fname = <:expr< $uid:"Generic"$ >> in
                               let fname = <:expr< $fname$ . $lid:"gcata"$ >> in
-                              <:expr< $base$ . $fname$ >>, apply
+                              <:expr< $base$ . $fname$ >>, []
                         in
                         let impl =
                           (
                            <:patt< $lid:compound_name$ >>, 
                            make_fun 
+                             (fun a -> <:patt< $lid:a$ >>)
                              [acc; subj] 
-                             (make_call id base_gcata (ext :: map of_lid ([trans] @ (map (fun a -> if is_bound_var a then "self" else farg a) args) @ [acc; subj])))
+                             (make_call id base_gcata (ext @ map of_lid ([trans] @ (map (fun a -> if is_bound_var a then "self" else farg a) args) @ [acc; subj])))
                           )
                         in
                         let name = <:expr< $lid:compound_name$ >> in
@@ -229,7 +225,7 @@ EXTEND
                | _  -> <:expr< let $list:local_defs$ in $expr$ >>
              in
              <:patt< $lid:cata name$ >>, 
-             (make_fun args (local_defs_and_then <:expr< match $subj$ with [ $list:match_cases$ ] >>))
+             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:match_cases$ ] >>))
           ) 
           d
       in
@@ -238,10 +234,45 @@ EXTEND
         let c = <:patt< $lid:"gcata"$ >> in
         <:patt< $g$ . $c$ >>
       in
+      let generic_cata_ext = 
+        let g = <:patt< $uid:"Generic"$ >> in
+        let c = <:patt< $lid:"gcata_ext"$ >> in
+        <:patt< $g$ . $c$ >>
+      in
       let pnames, tnames = 
         split (
-          map (fun (_, name, _) -> 
-                 let pe = [generic_cata, <:expr< $lid:cata name$ >>] in 
+          map (fun (args, name, descr) -> 
+                 let p = snd (fold_left (fun (i, acc) _ -> i+1, (sprintf "p%d" i)::acc) (0, []) (["t"; "acc"; "s"] @ args)) in
+                 let pe = [
+                   generic_cata_ext, <:expr< $lid:cata name$ >>; 
+                   generic_cata, let ext, p = 
+                                   match descr with 
+                                   | `Poly (`More _, _) -> 
+                                        let p = tl p in
+                                        let px = <:patt< $lid:"x"$ >> in
+                                        let tx = 
+                                          fold_left 
+                                            (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) 
+                                            <:ctyp< $lid:closed name$ >> 
+                                            args
+                                        in                                        
+                                        make_fun id 
+                                          [<:patt< $lid:"f"$ >>; <:patt< $lid:"acc"$ >>; <:patt< ( $px$ : $tx$ ) >>] 
+                                          (make_call id 
+                                             <:expr< $lid:"f"$ >> 
+                                             [<:expr< $lid:"acc"$ >>; <:expr< $lid:"x"$ >>]
+                                          ), p
+
+                                   | _ -> 
+                                        let g = <:expr< $uid:"Generic"$ >> in
+                                        let a = <:expr< $lid:"apply"$ >> in
+                                        <:expr< $g$ . $a$ >>, p
+                                 in
+                                 let args = ext :: map (fun arg -> <:expr< $lid:arg$ >>) p in
+                                 let cata = <:expr< $lid:cata name$ >> in
+                                 make_fun (fun a -> <:patt< $lid:a$ >>) p (make_call id cata args)
+                 ] 
+                 in 
                  <:patt< $lid:name$ >>, <:expr< { $list:pe$ } >>
               ) 
               d
@@ -299,16 +330,16 @@ EXTEND
                                  | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
                                  | <:ctyp< $t1$ $t2$ >> -> 
                                      (match t1 with
-                                      | <:ctyp< $lid:s$ >> as t when s = n ->
+                                      | <:ctyp< $lid:s$ >> as typ when s = n ->
                                          let rec inner args t =
                                            match args, t with
-                                           | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else t
+                                           | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else typ
                                            | arg::args, <:ctyp< $t1$ $t2$ >> ->
                                               (match t1 with 
                                                | <:ctyp< ' $b$ >> when arg = b -> inner args t2
-                                               | _ -> t
+                                               | _ -> typ
                                               )
-                                           | _ -> t
+                                           | _ -> typ
                                          in
                                          inner a t2
 
