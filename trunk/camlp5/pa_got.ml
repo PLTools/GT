@@ -63,13 +63,15 @@ let cata  name  = name ^ "_gcata"
 let others      = "others"
 let cmethod c   = "m_" ^ c
 let apply       = "apply"
+let closed name = "closed_" ^ name
     
 EXTEND
   GLOBAL: str_item; 
 
   str_item: LEVEL "top" [
     [ "generic"; t=LIST1 t_decl SEP "and" -> 
-      let t, d = split t in
+      let t, d = split   t in
+      let t    = flatten t in
       let get_cata =
         let s = fold_left (fun s (_, n, _) -> S.add n s) S.empty d in
         fun name -> 
@@ -254,16 +256,112 @@ EXTEND
   ];
 
   t_decl: [
-    [ a=fargs; n=LIDENT; "="; t=rhs ->      
-      let args, (def, cons) = a, fst t in
+    [ a=fargs; n=LIDENT; "="; t=rhs -> 
+      let def, cons = fst t in
+      let default_version =
       {
-        tdNam = VaVal (loc, VaVal n);
-        tdPrm = VaVal (map (fun name -> VaVal (Some name), None) args);
-        tdPrv = VaVal false;
-        tdDef = def; 
-        tdCon = VaVal cons
-      },
-      (a, n, snd t)
+       tdNam = VaVal (loc, VaVal n);
+       tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+       tdPrv = VaVal false;
+       tdDef = def; 
+       tdCon = VaVal cons
+      }
+      in      
+      let t = snd t in
+      let descriptor, open_version =
+        match t with
+        | `Poly (`More b, d) -> 
+           (match a with 
+           | f::_ when f <> b -> invalid_arg (sprintf "type argument \"%s\" should be listed first in type \"%s\" definition." b n) 
+           | [] -> invalid_arg (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b) 
+           | _  -> (a, n, t)
+           ),
+           (let lcons =
+              map 
+                (fun (constr, args) -> 
+                   match args with
+                   | [] -> <:poly_variant< `$constr$ >>
+                   | _  ->
+                      let args = 
+                        map 
+                          (function 
+                           | `Protected t -> 
+                               let rec replace_t = 
+                                 let replace_pv lpv = 
+                                   map 
+                                     (function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
+                                        let args = map replace_t args in
+                                        <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
+                                     ) 
+                                     lpv 
+                                 in
+                                 function 
+                                 | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
+                                 | <:ctyp< $t1$ $t2$ >> -> 
+                                     (match t1 with
+                                      | <:ctyp< $lid:s$ >> as t when s = n ->
+                                         let rec inner args t =
+                                           match args, t with
+                                           | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else t
+                                           | arg::args, <:ctyp< $t1$ $t2$ >> ->
+                                              (match t1 with 
+                                               | <:ctyp< ' $b$ >> when arg = b -> inner args t2
+                                               | _ -> t
+                                              )
+                                           | _ -> t
+                                         in
+                                         inner a t2
+
+                                      | _ -> <:ctyp< $replace_t t1$ $replace_t t2$ >>
+                                     )
+                                 | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $replace_t t1$ -> $replace_t t2$ >>
+                                 | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $replace_t t$ >>
+                                 | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $replace_t t1$ == private $replace_t t2$ >>
+                                 | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $replace_t t1$ == $replace_t t2$ >>
+                                 | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $replace_t t$ >>
+                                 | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map replace_t lt$ ) >> 
+                                 | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:replace_pv lpv$ ] >>
+                                 | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:replace_pv lpv$ ] >>
+                                 | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ > >>
+                                 | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
+                                 | typ -> typ
+                               in 
+                               replace_t t
+
+                           | `Processing (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
+                           | `Processing (targs, qname) ->   
+                               let qtype =
+                                 match rev qname with
+                                 | name::qname -> 
+                                    fold_right 
+                                      (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
+                                      qname 
+                                      <:ctyp< $lid:name$ >>
+                               in
+                               fold_left 
+                                 (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
+                                 qtype 
+                                 targs
+                           | `Variable a -> <:ctyp< ' $a$ >>
+                          )
+                          args
+                      in
+                      let args = [<:ctyp< ($list:args$) >>] in
+                      <:poly_variant< `$constr$ of $flag:false$ $list:args$ >>
+                ) 
+                d
+            in
+            [{
+              tdNam = VaVal (loc, VaVal (closed n));
+              tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+              tdPrv = VaVal false;
+              tdDef = <:ctyp< [ = $list:lcons$ ] >>; 
+              tdCon = VaVal []            
+             }]
+           )
+        | _ -> (a, n, t), []
+      in
+      default_version::open_version, descriptor
     ]
   ];
 
@@ -285,7 +383,7 @@ EXTEND
         let lcons, y = body in
         (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
     ] |
-    [ a=targ; "constraint"; "["; ">"; body=poly_body; "]" ->
+    [ a=targ; "as"; "["; ">"; body=poly_body; "]" ->
         let lcons, y = body in
         (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
     ]

@@ -1,7 +1,7 @@
 module Expr =
   struct
   
-    generic 'self t = 'self constraint
+    generic 'self t = 'self as
     [> 
       | `Var   of [string] 
       | `Const of [int] 
@@ -36,7 +36,7 @@ module Expr =
 module Stmt =
   struct
 
-    generic ('self, 'a) t = 'self constraint
+    generic ('self, 'a) t = 'self as
     [>
       | `Skip 
       | `Assign of [string] * 'a Expr.t
