@@ -57,9 +57,9 @@ class resolve =
 let resolve p = 
   let symbols = ref [] in
   let p = Array.mapi (fun i (s, c) -> if s != "" then symbols := (s, i) :: !symbols; c) p in
-  Array.map (fun i -> t.Generic.gcata Generic.apply (new resolve) (fun _ i -> List.assoc i !symbols) () i) p
+  Array.map (fun i -> t.Generic.gcata (*Generic.apply*) (new resolve) (fun _ i -> List.assoc i !symbols) () i) p
 
-let toString i  = t.Generic.gcata Generic.apply (new toString) (fun _ i -> string_of_int i) () i
+let toString i  = t.Generic.gcata (*Generic.apply*) (new toString) (fun _ i -> string_of_int i) () i
 
 type env  = int list * (string -> int) * int list * int list * int
 
@@ -95,7 +95,7 @@ class debug callback =
 
 let interpret ii p i =
   let rec inner (_, _, _, o, i) as conf  =
-    match t.Generic.gcata Generic.apply ii (fun _ i -> i) conf p.(i) with
+    match t.Generic.gcata (*Generic.apply*) ii (fun _ i -> i) conf p.(i) with
     | None      -> List.rev o
     | Some conf -> inner conf
   in
