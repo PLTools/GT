@@ -189,7 +189,7 @@ EXTEND
                       make_call id 
                         met 
                         (<:expr< $lid:acc$  >> :: 
-                         <:expr< $lid:subj$ >> :: 
+                         (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
                          (map (fun (typ, x) -> 
                                  match typ with
                                  | `Protected _   -> <:expr< $lid:x$ >>
