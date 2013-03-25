@@ -22,18 +22,6 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
-(** 
-
-  generic ('a, 'b, ..., 'z) t = [> `C1 of t1 | C2 of t2 | ... | Ck of tk ]
- 
-  let gmap ext ta tb ... tz t ihn s =
-    let self = gmap m ext ta tb ... tz t in
-    match s with
-    | `C1 (x1, x2, ..., xk) -> ...
-    | `C2 (x1, x2, ..., xk) -> ...
-
-*)
-
 #load "pa_extend.cmo";;
 #load "q_MLast.cmo";;
 
@@ -111,15 +99,25 @@ EXTEND
           (fun (args, name, descr) -> 
              let of_lid name = <:expr< $lid:name$ >> in
              let current    = name in
-             let extensible, remove_bound_var, is_bound_var = 
+             let extensible, remove_bound_var, is_bound_var, bound_var = 
                match descr with 
-               | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x)
-               | _ -> false, (fun x -> x), (fun _ -> false)
+               | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
+               | _ -> false, (fun x -> x), (fun _ -> false), None
              in
-             let polyvar    = match descr with `Poly _ -> true | _ -> false in
-             let args       = remove_bound_var args in
-             let metargs    = (if extensible then [ext] else ["_"]) @ [trans] @ (map farg args) in
-             let args       = metargs @ [acc; subj] in
+             let polyvar     = match descr with `Poly _ -> true | _ -> false in
+             let orig_args   = args                     in
+             let args        = remove_bound_var args    in
+             let generator   = name_generator args      in
+             let targs       = map (fun arg -> arg, generator#generate ("t" ^ arg)) args in
+             let img name    = assoc name targs         in
+             let inh         = generator#generate "inh" in
+             let syn         = generator#generate "syn" in
+             let class_targs = (match bound_var with None -> [] | Some x -> [x]) @ 
+                               (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
+                               [inh; syn]              in
+
+             let metargs     = (if extensible then [ext] else ["_"]) @ [trans] @ (map farg args) in
+             let args        = metargs @ [acc; subj] in
              let get_type_handler, get_local_defs =
                let context = ref [] in
                (fun (args, qname) as typ ->
@@ -177,9 +175,42 @@ EXTEND
                         (if polyvar then <:patt< ` $cname$ >> else <:patt< $uid:cname$ >>) 
                         args
                     in
+                    let met_name = cmethod cname in
+                    let met_sig  = 
+                      let make_a x y z = 
+                        let g  = <:ctyp< $uid:"Generic"$ >> in
+                        let a  = <:ctyp< $lid:"a"$ >> in
+                        let ga = <:ctyp< $g$ . $a$ >> in
+                        let ga = <:ctyp< $ga$ $x$ >> in
+                        let ga = <:ctyp< $ga$ $y$ >> in
+                        <:ctyp< $ga$ $z$ >>
+                      in
+                      let make_typ = function
+                      | `Protected   t    -> t
+                      | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
+                      | `Processing (targs, qname) ->   
+                           let typ =
+                             let qtype =
+                               match rev qname with
+                               | name::qname -> 
+                                  fold_right 
+                                    (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
+                                    qname 
+                                    <:ctyp< $lid:name$ >>
+                             in
+                             fold_left 
+                               (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
+                               qtype 
+                               targs
+                           in
+                           make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
+                      in
+                      let typs = [<:ctyp< ' $inh$ >>; make_typ (`Processing (orig_args, [name]))] @ (map make_typ cargs) in
+                      fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
+                    in
                     let expr =
-                      let obj = <:expr< $lid:trans$ >> in
-                      let met = <:expr< $obj$ # $cmethod cname$ >> in
+                      let obj      = <:expr< $lid:trans$ >>        in
+                      let met      = <:expr< $obj$ # $met_name$ >> in
                       let garg f x =
                         let g = <:expr< $uid:"Generic"$ >> in
                         let m = <:expr< $lid:"make"$ >> in
@@ -202,14 +233,16 @@ EXTEND
                          )
                         )
                     in
-                    patt, VaVal None, expr
+                    (patt, VaVal None, expr), [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>]
                  ) 
                  (match descr with `Vari cons | `Poly (_, cons) -> cons)
              in
              let match_cases = 
-               if extensible then match_cases @ [<:patt< $lid:others$ >>, 
-                                                 VaVal None,
-                                                 make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
+               if extensible then match_cases @ [(<:patt< $lid:others$ >>, 
+                                                  VaVal None,
+                                                  make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
+                                                 ),
+                                                 []
                                                 ]
                              else match_cases
              in
@@ -224,8 +257,22 @@ EXTEND
                | [] -> expr
                | _  -> <:expr< let $list:local_defs$ in $expr$ >>
              in
-             <:patt< $lid:cata name$ >>, 
-             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:match_cases$ ] >>))
+             let cases, methods = split match_cases in
+             let methods = flatten methods in
+             let class_expr = <:class_expr< object $list:methods$ end >> in
+             let class_info = { 
+                ciLoc = loc;
+                ciVir = Ploc.VaVal true;
+                ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
+                ciNam = Ploc.VaVal (name ^ "_t");
+                ciExp = class_expr;
+               } 
+             in
+             let class_def = <:str_item< class $list:[class_info]$ >> in
+             (<:patt< $lid:cata name$ >>, 
+              (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
+             ),
+             class_def
           ) 
           d
       in
@@ -280,10 +327,11 @@ EXTEND
       in
       let tuple = <:patt< ( $list:pnames$ ) >> in
       let tup = <:expr< ( $list:tnames$ ) >> in 
+      let defs, class_defs = split defs in
       let def = <:expr< let rec $list:defs$ in $tup$ >> in
       let cata_def = <:str_item< value $list:[tuple, def]$ >> in
       let type_def = <:str_item< type $list:t$ >> in
-      <:str_item< declare $list:[type_def; cata_def]$ end >> ]
+      <:str_item< declare $list:[type_def; cata_def] @ class_defs$ end >> ]
   ];
 
   t_decl: [
