@@ -10,20 +10,6 @@ generic 'l t =
   | JT of 'l
   | JF of 'l
 
-class virtual ['l, 'c, 'a, 'b] t_t =
-  object
-    method virtual m_R  : 'a -> 'l t -> 'b
-    method virtual m_W  : 'a -> 'l t -> 'b
-    method virtual m_L  : 'a -> 'l t -> string -> 'b
-    method virtual m_S  : 'a -> 'l t -> string -> 'b
-    method virtual m_B  : 'a -> 'l t -> (int -> int -> int) -> string -> 'b
-    method virtual m_E  : 'a -> 'l t -> 'b
-    method virtual m_C  : 'a -> 'l t -> int -> 'b
-    method virtual m_J  : 'a -> 'l t -> ('a, 'l, 'c) Generic.a -> 'b
-    method virtual m_JT : 'a -> 'l t -> ('a, 'l, 'c) Generic.a -> 'b
-    method virtual m_JF : 'a -> 'l t -> ('a, 'l, 'c) Generic.a -> 'b
-  end
-
 class toString =
   object (this)
     inherit [int, string, unit, string] t_t
@@ -57,9 +43,9 @@ class resolve =
 let resolve p = 
   let symbols = ref [] in
   let p = Array.mapi (fun i (s, c) -> if s != "" then symbols := (s, i) :: !symbols; c) p in
-  Array.map (fun i -> t.Generic.gcata (*Generic.apply*) (new resolve) (fun _ i -> List.assoc i !symbols) () i) p
+  Array.map (fun i -> t.Generic.gcata (new resolve) (fun _ i -> List.assoc i !symbols) () i) p
 
-let toString i  = t.Generic.gcata (*Generic.apply*) (new toString) (fun _ i -> string_of_int i) () i
+let toString i  = t.Generic.gcata (new toString) (fun _ i -> string_of_int i) () i
 
 type env  = int list * (string -> int) * int list * int list * int
 
@@ -95,7 +81,7 @@ class debug callback =
 
 let interpret ii p i =
   let rec inner (_, _, _, o, i) as conf  =
-    match t.Generic.gcata (*Generic.apply*) ii (fun _ i -> i) conf p.(i) with
+    match t.Generic.gcata ii (fun _ i -> i) conf p.(i) with
     | None      -> List.rev o
     | Some conf -> inner conf
   in
@@ -147,7 +133,7 @@ let sumNS = [|
 
 let _ = 
   let ii = new interpret in
-  let dd = new debug (fun i (_, _, _, _, p) -> Printf.printf "%s @ %d\n" (toString i) p) in
+  let dd = new debug (fun i (_, _, _, _, p) -> Printf.printf "%s @ %d\n" (toString i.Generic.x) p) in
   let main name xx p i = 
     Printf.printf "%s:\n" name;
     List.iter (fun x -> Printf.printf "%d\n" x) (interpret xx p i) 

@@ -116,7 +116,7 @@ EXTEND
                                (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
                                [inh; syn]              in
 
-             let metargs     = (if extensible then [ext] else ["_"]) @ [trans] @ (map farg args) in
+             let metargs     = [ext; trans] @ (map farg args) in
              let args        = metargs @ [acc; subj] in
              let get_type_handler, get_local_defs =
                let context = ref [] in
@@ -250,8 +250,7 @@ EXTEND
              let local_defs_and_then expr =
                let local_defs =
                   get_local_defs () @
-                  if extensible then [<:patt< $lid:"self"$ >>, make_call of_lid <:expr< $lid:cata current$ >> metargs]
-                                else []
+                  [<:patt< $lid:"self"$ >>, make_call of_lid <:expr< $lid:cata current$ >> metargs]                               
                in
                match local_defs with
                | [] -> expr

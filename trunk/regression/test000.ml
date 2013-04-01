@@ -1,33 +1,28 @@
 generic tree = Node of [int] * [tree list]
 
-class virtual ['a, 'b] tree_t =
-  object(self)
-    method virtual m_Node : 'a -> tree -> int -> tree list -> 'b
-  end
-
 class ['a, 'b] tree_map_t f =
   object(self)
     inherit ['a, 'b] tree_t
-    method m_Node _ _ n l = Node (f n, List.map (fun (Node (n, l)) as t -> self#m_Node () t n l ) l)
+    method m_Node _ x n l = Node (f n, List.map (fun t -> x.Generic.g () t) l)
   end
 
 class ['a, 'b] tree_fold_t f =
   object(self)
     inherit ['a, 'b] tree_t
-    method m_Node acc _ n l = List.fold_left (fun acc (Node (n, l)) as t -> self#m_Node acc t n l) (f acc n) l
+    method m_Node acc x n l = List.fold_left (fun acc t -> x.Generic.g acc t) (f acc n) l
   end
 
 let num_of_nodes t = 
-  tree.Generic.gcata (*Generic.apply*) (new tree_fold_t (fun n _ -> n+1))
+  tree.Generic.gcata (new tree_fold_t (fun n _ -> n+1))
     0 t
 
 let increment t =
-  tree.Generic.gcata (*Generic.apply*) (new tree_map_t (fun x -> x + 1))
+  tree.Generic.gcata (new tree_map_t (fun x -> x + 1))
     () t
 
 let toString t =
   Buffer.contents (
-    tree.Generic.gcata (*Generic.apply*) 
+    tree.Generic.gcata
       (new tree_fold_t (fun buf n -> 
                           Buffer.add_string buf (string_of_int n);
                           buf
