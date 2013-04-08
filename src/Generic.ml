@@ -19,5 +19,14 @@ class virtual ['e, 'a, 'b] list_t =
     method virtual m_Cons : 'a -> 'e list -> ('a, 'e, 'b) a -> ('a, 'e list, 'b) a -> 'b
   end
 
-let union f g = f (fun self acc s -> g (fun _ acc x -> self acc x) acc s)
+let union f g = fun ext acc x -> f (fun self acc s -> g (fun _ acc x -> ext self acc x) acc s) acc x
 let (++) = union
+
+
+(*
+f ext acc x
+g ext acc x
+
+\ ext acc x -> f (fun self acc x -> g (fun _ acc x -> ext self acc x) acc x) acc x
+
+*)
