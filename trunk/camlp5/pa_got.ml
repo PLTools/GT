@@ -116,7 +116,7 @@ EXTEND
                                (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
                                [inh; syn]              in
 
-             let metargs     = [ext; trans] @ (map farg args) in
+             let metargs     = (map farg args) @ [trans; ext] in
              let args        = metargs @ [acc; subj] in
              let get_type_handler, get_local_defs =
                let context = ref [] in
@@ -151,7 +151,14 @@ EXTEND
                            make_fun 
                              (fun a -> <:patt< $lid:a$ >>)
                              [acc; subj] 
-                             (make_call id base_gcata (ext @ map of_lid ([trans] @ (map (fun a -> if is_bound_var a then "self" else farg a) args) @ [acc; subj])))
+                             (make_call 
+                                id 
+                                base_gcata 
+                                (map of_lid ((map (fun a -> if is_bound_var a then "self" else farg a) args) @ [trans]) @ 
+                                 ext @ 
+                                 map of_lid [acc; subj]
+                                )
+                             )
                           )
                         in
                         let name = <:expr< $lid:compound_name$ >> in
@@ -302,7 +309,8 @@ EXTEND
                                             <:ctyp< $lid:closed name$ >> 
                                             args
                                         in                                        
-                                        make_fun id 
+                                        make_fun 
+                                          id 
                                           [<:patt< $lid:"f"$ >>; <:patt< $lid:"acc"$ >>; <:patt< ( $px$ : $tx$ ) >>] 
                                           (make_call id 
                                              <:expr< $lid:"f"$ >> 
@@ -313,8 +321,11 @@ EXTEND
                                         let g = <:expr< $uid:"Generic"$ >> in
                                         let a = <:expr< $lid:"apply"$ >> in
                                         <:expr< $g$ . $a$ >>, p
+                                 in                                 
+                                 let args =
+                                    let x :: y :: a = rev (map (fun arg -> <:expr< $lid:arg$ >>) p) in
+                                    rev a @ [ext; y; x]
                                  in
-                                 let args = ext :: map (fun arg -> <:expr< $lid:arg$ >>) p in
                                  let cata = <:expr< $lid:cata name$ >> in
                                  make_fun (fun a -> <:patt< $lid:a$ >>) p (make_call id cata args)
                  ] 
@@ -443,7 +454,12 @@ EXTEND
     ]
   ];
 
-  rhs: [[ vari ] | [ poly ]];
+  rhs: [[ vari ] | [ poly ] | [ sumi ]];
+
+  sumi: [
+    [
+    ]
+  ];
 
   vari: [
     [ OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
