@@ -100,7 +100,19 @@ let rec replace_t loc opened_version a n typ =
   | typ -> typ
     
 EXTEND
-  GLOBAL: str_item; 
+  GLOBAL: str_item ctyp; 
+
+  ctyp: [
+    [ ">"; t=ctyp -> 
+      let rec inner = function
+      | <:ctyp< $q$ . $t$ >> -> <:ctyp< $q$ . $inner t$ >>
+      | <:ctyp< $t$ $a$ >> -> <:ctyp< $inner t$ $a$ >>
+      | <:ctyp< $lid:name$ >> -> <:ctyp< $lid:opened name$ >>
+      | t -> Ploc.raise loc (Invalid_argument "application or qualified name expected")
+      in
+      inner t
+    ]
+  ];
 
   str_item: LEVEL "top" [
     [ "generic"; t=LIST1 t_decl SEP "and" -> 
