@@ -51,7 +51,53 @@ let cata  name  = name ^ "_gcata"
 let others      = "others"
 let cmethod c   = "m_" ^ c
 let apply       = "apply"
-let closed name = "closed_" ^ name
+let opened name = name ^ "'"
+let closed name = name
+
+let rec replace_t loc opened_version a n typ =
+  let replace_t = replace_t loc opened_version a n in 
+  let replace_pv lpv = 
+    map 
+      (function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
+         let args = map replace_t args in
+         <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
+      ) 
+      lpv 
+  in
+  match typ with
+  | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
+  | <:ctyp< $t1$ $t2$ >> -> 
+      (match t1 with
+       | <:ctyp< $lid:s$ >> as typ when s = n ->
+            if opened_version
+            then 
+              let t1 = <:ctyp< $lid:opened s$ >> in
+              <:ctyp< $t1$ $replace_t t2$ >>
+            else  
+              let rec inner args t =
+                match args, t with
+                | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else typ
+                | arg::args, <:ctyp< $t1$ $t2$ >> ->
+                    (match t1 with 
+                     | <:ctyp< ' $b$ >> when arg = b -> inner args t2
+                     | _ -> typ
+                    )
+                | _ -> typ
+                in
+                inner a t2
+       | _ -> <:ctyp< $replace_t t1$ $replace_t t2$ >>
+      )
+  | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $replace_t t1$ -> $replace_t t2$ >>
+  | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $replace_t t$ >>
+  | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $replace_t t1$ == private $replace_t t2$ >>
+  | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $replace_t t1$ == $replace_t t2$ >>
+  | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $replace_t t$ >>
+  | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map replace_t lt$ ) >> 
+  | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:replace_pv lpv$ ] >>
+  | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:replace_pv lpv$ ] >>
+  | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ > >>
+  | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
+  | typ -> typ
     
 EXTEND
   GLOBAL: str_item; 
@@ -96,7 +142,7 @@ EXTEND
       let acc  = g#generate "acc" in
       let defs =
         map 
-          (fun (args, name, descr) -> 
+          (fun (args, name, descr) ->              
              let of_lid name = <:expr< $lid:name$ >> in
              let current    = name in
              let extensible, remove_bound_var, is_bound_var, bound_var = 
@@ -193,7 +239,7 @@ EXTEND
                         <:ctyp< $ga$ $z$ >>
                       in
                       let make_typ = function
-                      | `Protected   t    -> t
+                      | `Protected   t    -> replace_t loc true [] current t
                       | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
                       | `Processing (targs, qname) ->   
                            let typ =
@@ -203,7 +249,7 @@ EXTEND
                                   fold_right 
                                     (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
                                     qname 
-                                    <:ctyp< $lid:name$ >>
+                                    <:ctyp< $lid:opened name$ >>
                              in
                              fold_left 
                                (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
@@ -347,19 +393,10 @@ EXTEND
   t_decl: [
     [ a=fargs; n=LIDENT; "="; t=rhs -> 
       let def, cons = fst t in
-      let default_version =
-      {
-       tdNam = VaVal (loc, VaVal n);
-       tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
-       tdPrv = VaVal false;
-       tdDef = def; 
-       tdCon = VaVal cons
-      }
-      in      
       let t = snd t in
-      let descriptor, open_version =
+      let descriptor, types =
         match t with
-        | `Poly (`More b, d) -> 
+        | `Poly (`More b, d) ->
            (match a with 
            | f::_ when f <> b -> invalid_arg (sprintf "type argument \"%s\" should be listed first in type \"%s\" definition." b n) 
            | [] -> invalid_arg (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b) 
@@ -367,56 +404,14 @@ EXTEND
            ),
            (let lcons =
               map 
-                (fun (constr, args) -> 
+                (fun (constr, args) ->                     
                    match args with
                    | [] -> <:poly_variant< `$constr$ >>
                    | _  ->
                       let args = 
                         map 
                           (function 
-                           | `Protected t -> 
-                               let rec replace_t = 
-                                 let replace_pv lpv = 
-                                   map 
-                                     (function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
-                                        let args = map replace_t args in
-                                        <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
-                                     ) 
-                                     lpv 
-                                 in
-                                 function 
-                                 | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
-                                 | <:ctyp< $t1$ $t2$ >> -> 
-                                     (match t1 with
-                                      | <:ctyp< $lid:s$ >> as typ when s = n ->
-                                         let rec inner args t =
-                                           match args, t with
-                                           | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else typ
-                                           | arg::args, <:ctyp< $t1$ $t2$ >> ->
-                                              (match t1 with 
-                                               | <:ctyp< ' $b$ >> when arg = b -> inner args t2
-                                               | _ -> typ
-                                              )
-                                           | _ -> typ
-                                         in
-                                         inner a t2
-
-                                      | _ -> <:ctyp< $replace_t t1$ $replace_t t2$ >>
-                                     )
-                                 | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $replace_t t1$ -> $replace_t t2$ >>
-                                 | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $replace_t t$ >>
-                                 | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $replace_t t1$ == private $replace_t t2$ >>
-                                 | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $replace_t t1$ == $replace_t t2$ >>
-                                 | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $replace_t t$ >>
-                                 | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map replace_t lt$ ) >> 
-                                 | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:replace_pv lpv$ ] >>
-                                 | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:replace_pv lpv$ ] >>
-                                 | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ > >>
-                                 | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
-                                 | typ -> typ
-                               in 
-                               replace_t t
-
+                           | `Protected t -> replace_t loc false a n t
                            | `Processing (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
                            | `Processing (targs, qname) ->   
                                let qtype =
@@ -441,16 +436,36 @@ EXTEND
                 d
             in
             [{
-              tdNam = VaVal (loc, VaVal (closed n));
+              tdNam = VaVal (loc, VaVal (opened n));
+              tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+              tdPrv = VaVal false;
+              tdDef = replace_t loc true a n def; 
+              tdCon = VaVal (map (fun (x, y) -> replace_t loc true a n x, replace_t loc true a n y) cons)
+             };
+             {
+              tdNam = VaVal (loc, VaVal n);
               tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
               tdPrv = VaVal false;
               tdDef = <:ctyp< [ = $list:lcons$ ] >>; 
               tdCon = VaVal []            
              }]
            )
-        | _ -> (a, n, t), []
+        | _ -> (a, n, t), 
+               [{tdNam = VaVal (loc, VaVal n);
+                 tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+                 tdPrv = VaVal false;
+                 tdDef = def; 
+                 tdCon = VaVal cons
+                };
+                {tdNam = VaVal (loc, VaVal (opened n));
+                 tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+                 tdPrv = VaVal false;
+                 tdDef = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) <:ctyp< $lid:n$>> a; 
+                 tdCon = VaVal cons
+                }
+               ]
       in
-      default_version::open_version, descriptor
+      types, descriptor
     ]
   ];
 
