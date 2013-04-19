@@ -30,6 +30,8 @@ open Printf
 open Pcaml
 open MLast
 open Ploc
+
+exception Generic_extension of string
      
 let get_val (VaVal x) = x 
 
@@ -47,12 +49,13 @@ let name_generator list =
       )
   end
 
-let cata  name  = name ^ "_gcata"
-let others      = "others"
-let cmethod c   = "m_" ^ c
-let apply       = "apply"
-let opened name = name ^ "'"
-let closed name = name
+let cata    name = name ^ "_gcata"
+let others       = "others"
+let cmethod c    = "m_" ^ c
+let apply        = "apply"
+let opened  name = name ^ "'"
+let closed  name = name
+let class_t name = name ^ "_t"
 
 let rec replace_t loc opened_version a n typ =
   let replace_t = replace_t loc opened_version a n in 
@@ -108,7 +111,7 @@ EXTEND
       | <:ctyp< $q$ . $t$ >> -> <:ctyp< $q$ . $inner t$ >>
       | <:ctyp< $t$ $a$ >> -> <:ctyp< $inner t$ $a$ >>
       | <:ctyp< $lid:name$ >> -> <:ctyp< $lid:opened name$ >>
-      | t -> Ploc.raise loc (Invalid_argument "application or qualified name expected")
+      | t -> Ploc.raise loc (Generic_extension "application or qualified name expected")
       in
       inner t
     ]
@@ -135,7 +138,28 @@ EXTEND
                           else let name, gcata = <:expr< $lid:name$ >>, <:expr< $lid:"gcata"$ >> in
                                <:expr< $name$ . $gcata$ >>
       in
-      let g     = name_generator (map (fun (_, n, _) -> n) d) in
+      let g = 
+        let names = 
+          fold_left 
+            (fun acc (_, n, d) -> 
+               let acc = n::acc in
+               match d with
+               | `Sumi (_, _, types) ->
+                   fold_left 
+                     (fun acc t ->
+                        match t with
+                        | `Processing (_, [n]) -> n::acc
+                        | _ -> acc
+                     ) 
+                     acc 
+                     types
+               | _ -> acc
+            ) 
+            [] 
+            d 
+        in
+        name_generator names
+      in
       let trans = g#generate "t"   in
       let ext   = g#generate "ext" in
       let farg  = 
@@ -181,8 +205,25 @@ EXTEND
                let inherits =
                  map (function 
                       | `Processing (args, qname) ->
-                          let args = map (fun a -> <:ctyp< ' $a$ >>) args in
-                          let ce   = <:class_expr< [ $list:args$ ] $list:qname$ >> in
+                          let h::tl = args in
+                          let args  = 
+                            h :: 
+                            (map 
+                               (fun a -> 
+                                  try img a with 
+                                  | Not_found -> 
+                                      Ploc.raise loc (Generic_extension (sprintf "unbound type variable '%s" a))
+                               ) 
+                               tl
+                            ) @ 
+                            [inh; syn] 
+                          in
+                          let qname = 
+                            let h::t = rev qname in
+                            (rev t) @ [class_t h]
+                          in
+                          let args  = map (fun a -> <:ctyp< ' $a$ >>) args in
+                          let ce    = <:class_expr< [ $list:args$ ] $list:qname$ >> in
                           <:class_str_item< inherit $ce$ >>
                       | _ -> invalid_arg "should not happen"
                      ) 
@@ -193,13 +234,46 @@ EXTEND
                   ciLoc = loc;
                   ciVir = Ploc.VaVal true;
                   ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
-                  ciNam = Ploc.VaVal (name ^ "_t");
+                  ciNam = Ploc.VaVal (class_t name);
                   ciExp = class_expr;
                  } 
                in
                let class_def = <:str_item< class $list:[class_info]$ >> in
+               let sum_body  =
+                 let summand = function
+                 | `Variable _ -> invalid_arg "should not happen"                 
+                 | `Processing (args, qname) -> 
+                    let _::t = rev args in
+                    let args = rev t    in
+                    let typename =
+                      match qname with
+                      | [n]  -> <:expr< $lid:n$ >>
+                      | h::t -> 
+                         let n::t = rev t in
+                         let n = <:expr< $lid:n$ >> in
+                         let q = 
+                           fold_left 
+                             (fun q n -> let n = <:expr< $uid:n$ >> in <:expr< $q$ . $n$ >>) 
+                             <:expr< $uid:h$ >> 
+                             (rev t) 
+                         in
+                         <:expr< $q$ . $n$ >>
+                    in
+                    let generic = <:expr< $uid:"Generic"$ >> in
+                    let cata    = <:expr< $lid:"gcata_ext"$ >> in
+                    let func    = <:expr< $typename$ . $generic$ >> in
+                    let func    = <:expr< $func$ . $cata$ >> in
+                    make_call of_lid func ((map farg args) @ [trans])
+                 in
+                 let h::t = typs in
+                 let generic = <:expr< $uid:"Generic"$ >> in
+                 let sum     = <:expr< $lid:"sum"$ >> in
+                 let gsum    = <:expr< $generic$ . $sum$ >> in
+                 let sumcata = fold_left (fun l r -> make_call id gsum [l; summand r]) (summand h) t in
+                 make_call of_lid sumcata [ext; acc; subj]
+               in
                (<:patt< $lid:cata name$ >>, 
-                (make_fun (fun a -> <:patt< $lid:a$ >>) args <:expr< () >>)
+                (make_fun (fun a -> <:patt< $lid:a$ >>) args sum_body)
                ),
                class_def
                  
@@ -356,7 +430,7 @@ EXTEND
                   ciLoc = loc;
                   ciVir = Ploc.VaVal true;
                   ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
-                  ciNam = Ploc.VaVal (name ^ "_t");
+                  ciNam = Ploc.VaVal (class_t name);
                   ciExp = class_expr;
                  } 
                in
@@ -386,7 +460,7 @@ EXTEND
                    generic_cata_ext, <:expr< $lid:cata name$ >>; 
                    generic_cata, let ext, p = 
                                    match descr with 
-                                   | `Poly (`More _, _) -> 
+                                   | `Poly (`More _, _) | `Sumi _ -> 
                                         let p = tl p in
                                         let px = <:patt< $lid:"x"$ >> in
                                         let tx = 
@@ -440,7 +514,7 @@ EXTEND
            ignore (
              match a with
              | a::_ when a = var -> ()
-             | _ -> Ploc.raise loc (Invalid_argument (Printf.sprintf "sum type must be polymorphic with the first type variable '%s" var))
+             | _ -> Ploc.raise loc (Generic_extension (sprintf "sum type must be polymorphic with the first type variable '%s" var))
            );
            (a, n, t),
            [{
@@ -579,14 +653,14 @@ EXTEND
           (fun a d -> 
              match d with
              | `Variable x -> 
-                 Ploc.raise loc (Invalid_argument (Printf.sprintf "type variable ('%s) is not allowed in type sum" x))
+                 Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in type sum" x))
              | `Processing ([], _) ->
-                 Ploc.raise loc (Invalid_argument "polymorphic type expected in type sum")
+                 Ploc.raise loc (Generic_extension "polymorphic type expected in type sum")
              | `Processing (b::_, _) ->
                  (match a with 
                  | None -> Some b
                  | Some a when a <> b -> 
-                    Ploc.raise loc (Invalid_argument (Printf.sprintf "type variable '%s should be the first parameter of all types this type sum" a))
+                    Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types this type sum" a))
                  | _ -> a
                  )
           ) 
