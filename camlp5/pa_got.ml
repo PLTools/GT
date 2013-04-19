@@ -154,15 +154,15 @@ EXTEND
       let acc  = g#generate "acc" in
       let defs =
         map 
-          (fun (args, name, descr) ->              
+          (fun (args, name, descr) ->     
              let of_lid name = <:expr< $lid:name$ >> in
-             let current    = name in
+             let current     = name in
              let extensible, remove_bound_var, is_bound_var, bound_var = 
                match descr with 
-               | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
+               | `Sumi (x, _, _) | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
                | _ -> false, (fun x -> x), (fun _ -> false), None
              in
-             let polyvar     = match descr with `Poly _ -> true | _ -> false in
+             let polyvar     = match descr with `Poly _ | `Sumi _ -> true | _ -> false in
              let orig_args   = args                     in
              let args        = remove_bound_var args    in
              let generator   = name_generator args      in
@@ -172,62 +172,90 @@ EXTEND
              let syn         = generator#generate "syn" in
              let class_targs = (match bound_var with None -> [] | Some x -> [x]) @ 
                                (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
-                               [inh; syn]              in
-
+                               [inh; syn]              
+             in
              let metargs     = (map farg args) @ [trans; ext] in
              let args        = metargs @ [acc; subj] in
-             let get_type_handler, get_local_defs =
-               let context = ref [] in
-               (fun (args, qname) as typ ->
-                  let args = match qname with [name] when name = current -> remove_bound_var args | _ -> args in
-                  let name = 
-                    try fst (assoc typ !context) with
-                      Not_found ->
-                        let compound_name = String.concat "_" (args @ qname) in
-                        let base_gcata, ext = 
-                          match qname with
-                          | [name]      -> get_cata name, if name = current && extensible then [<:expr< $lid:ext$ >>] else [] 
-                          | name::names -> 
-                              let base = 
-                                fold_left (fun q name -> 
-                                             let name = if Char.lowercase name.[0] = name.[0] 
-                                                        then <:expr< $lid:name$ >>
-                                                        else <:expr< $uid:name$ >>
-                                             in
-                                             <:expr< $q$ . $name$ >>   
-                                          ) 
-                                          <:expr< $uid:name$ >> 
-                                          names
-                              in
-                              let fname = <:expr< $uid:"Generic"$ >> in
-                              let fname = <:expr< $fname$ . $lid:"gcata"$ >> in
-                              <:expr< $base$ . $fname$ >>, []
-                        in
-                        let impl =
-                          (
-                           <:patt< $lid:compound_name$ >>, 
-                           make_fun 
-                             (fun a -> <:patt< $lid:a$ >>)
-                             [acc; subj] 
-                             (make_call 
-                                id 
-                                base_gcata 
-                                (map of_lid ((map (fun a -> if is_bound_var a then "self" else farg a) args) @ [trans]) @ 
-                                 ext @ 
-                                 map of_lid [acc; subj]
-                                )
-                             )
-                          )
-                        in
-                        let name = <:expr< $lid:compound_name$ >> in
-                        context := (typ, (name, impl)) :: !context;
-                        name
-                  in
-                  name
+             match descr with
+             | `Sumi (_, _, typs) -> 
+               let inherits =
+                 map (function 
+                      | `Processing (args, qname) ->
+                          let args = map (fun a -> <:ctyp< ' $a$ >>) args in
+                          let ce   = <:class_expr< [ $list:args$ ] $list:qname$ >> in
+                          <:class_str_item< inherit $ce$ >>
+                      | _ -> invalid_arg "should not happen"
+                     ) 
+                     typs
+               in
+               let class_expr = <:class_expr< object $list:inherits$ end >> in
+               let class_info = { 
+                  ciLoc = loc;
+                  ciVir = Ploc.VaVal true;
+                  ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
+                  ciNam = Ploc.VaVal (name ^ "_t");
+                  ciExp = class_expr;
+                 } 
+               in
+               let class_def = <:str_item< class $list:[class_info]$ >> in
+               (<:patt< $lid:cata name$ >>, 
+                (make_fun (fun a -> <:patt< $lid:a$ >>) args <:expr< () >>)
                ),
-               (fun () ->
-                  map (fun (_, (_, x)) -> x) !context
-               )
+               class_def
+                 
+             | (`Poly _ | `Vari _) as descr -> 
+               let get_type_handler, get_local_defs =
+                 let context = ref [] in
+                 (fun (args, qname) as typ ->
+                    let args = match qname with [name] when name = current -> remove_bound_var args | _ -> args in
+                    let name = 
+                      try fst (assoc typ !context) with
+                        Not_found ->
+                          let compound_name = String.concat "_" (args @ qname) in
+                          let base_gcata, ext = 
+                            match qname with
+                            | [name]      -> get_cata name, if name = current && extensible then [<:expr< $lid:ext$ >>] else [] 
+                            | name::names -> 
+                                let base = 
+                                  fold_left (fun q name -> 
+                                               let name = if Char.lowercase name.[0] = name.[0] 
+                                                          then <:expr< $lid:name$ >>
+                                                          else <:expr< $uid:name$ >>
+                                               in
+                                               <:expr< $q$ . $name$ >>   
+                                            ) 
+                                            <:expr< $uid:name$ >> 
+                                            names
+                                in
+                                let fname = <:expr< $uid:"Generic"$ >> in
+                                let fname = <:expr< $fname$ . $lid:"gcata"$ >> in
+                                <:expr< $base$ . $fname$ >>, []
+                          in
+                          let impl =
+                            (
+                             <:patt< $lid:compound_name$ >>, 
+                             make_fun 
+                               (fun a -> <:patt< $lid:a$ >>)
+                               [acc; subj] 
+                               (make_call 
+                                  id 
+                                  base_gcata 
+                                  (map of_lid ((map (fun a -> if is_bound_var a then "self" else farg a) args) @ [trans]) @ 
+                                   ext @ 
+                                   map of_lid [acc; subj]
+                                  )
+                               )
+                            )
+                          in
+                          let name = <:expr< $lid:compound_name$ >> in
+                          context := (typ, (name, impl)) :: !context;
+                          name
+                    in
+                    name
+                 ),
+                 (fun () ->
+                    map (fun (_, (_, x)) -> x) !context
+                 )
              in
              let match_cases =
                map 
@@ -239,104 +267,104 @@ EXTEND
                         (fun p id -> let pid = <:patt< $lid:id$ >> in <:patt< $p$ $pid$ >>)
                         (if polyvar then <:patt< ` $cname$ >> else <:patt< $uid:cname$ >>) 
                         args
-                    in
-                    let met_name = cmethod cname in
-                    let met_sig  = 
-                      let make_a x y z = 
-                        let g  = <:ctyp< $uid:"Generic"$ >> in
-                        let a  = <:ctyp< $lid:"a"$ >> in
-                        let ga = <:ctyp< $g$ . $a$ >> in
-                        let ga = <:ctyp< $ga$ $x$ >> in
-                        let ga = <:ctyp< $ga$ $y$ >> in
-                        <:ctyp< $ga$ $z$ >>
                       in
-                      let make_typ = function
-                      | `Protected   t    -> replace_t loc true [] current t
-                      | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
-                      | `Processing (targs, qname) ->   
-                           let typ =
-                             let qtype =
-                               match rev qname with
-                               | name::qname -> 
-                                  fold_right 
-                                    (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
-                                    qname 
-                                    <:ctyp< $lid:opened name$ >>
+                      let met_name = cmethod cname in
+                      let met_sig  = 
+                        let make_a x y z = 
+                          let g  = <:ctyp< $uid:"Generic"$ >> in
+                          let a  = <:ctyp< $lid:"a"$ >> in
+                          let ga = <:ctyp< $g$ . $a$ >> in
+                          let ga = <:ctyp< $ga$ $x$ >> in
+                          let ga = <:ctyp< $ga$ $y$ >> in
+                          <:ctyp< $ga$ $z$ >>
+                        in
+                        let make_typ = function
+                        | `Protected   t    -> replace_t loc true [] current t
+                        | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
+                        | `Processing (targs, qname) ->   
+                             let typ =
+                               let qtype =
+                                 match rev qname with
+                                 | name::qname -> 
+                                    fold_right 
+                                      (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
+                                      qname 
+                                      <:ctyp< $lid:opened name$ >>
+                               in
+                               fold_left 
+                                 (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
+                                 qtype 
+                                 targs
                              in
-                             fold_left 
-                               (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
-                               qtype 
-                               targs
-                           in
-                           make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
+                             make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
+                        in
+                        let typs = [<:ctyp< ' $inh$ >>; make_typ (`Processing (orig_args, [name]))] @ (map make_typ cargs) in
+                        fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
                       in
-                      let typs = [<:ctyp< ' $inh$ >>; make_typ (`Processing (orig_args, [name]))] @ (map make_typ cargs) in
-                      fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
-                    in
-                    let expr =
-                      let obj      = <:expr< $lid:trans$ >>        in
-                      let met      = <:expr< $obj$ # $met_name$ >> in
-                      let garg f x =
-                        let g = <:expr< $uid:"Generic"$ >> in
-                        let m = <:expr< $lid:"make"$ >> in
-                        let gm = <:expr< $g$ . $m$ >> in
-                        make_call id gm [f; x]
+                      let expr =
+                        let obj      = <:expr< $lid:trans$ >>        in
+                        let met      = <:expr< $obj$ # $met_name$ >> in
+                        let garg f x =
+                          let g = <:expr< $uid:"Generic"$ >> in
+                          let m = <:expr< $lid:"make"$ >> in
+                          let gm = <:expr< $g$ . $m$ >> in
+                          make_call id gm [f; x]
+                        in
+                        make_call id 
+                          met 
+                          (<:expr< $lid:acc$  >> :: 
+                           (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
+                           (map (fun (typ, x) -> 
+                                   match typ with
+                                   | `Protected _   -> <:expr< $lid:x$ >>
+                                   | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
+                                   | `Processing t   -> 
+                                       let name = get_type_handler t in 
+                                       garg name <:expr< $lid:x$ >>
+                                ) 
+                                (combine cargs args)
+                           )
+                          )
                       in
-                      make_call id 
-                        met 
-                        (<:expr< $lid:acc$  >> :: 
-                         (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
-                         (map (fun (typ, x) -> 
-                                 match typ with
-                                 | `Protected _   -> <:expr< $lid:x$ >>
-                                 | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
-                                 | `Processing t   -> 
-                                     let name = get_type_handler t in 
-                                     garg name <:expr< $lid:x$ >>
-                              ) 
-                              (combine cargs args)
-                         )
-                        )
-                    in
-                    (patt, VaVal None, expr), [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>]
-                 ) 
-                 (match descr with `Vari cons | `Poly (_, cons) -> cons)
-             in
-             let match_cases = 
-               if extensible then match_cases @ [(<:patt< $lid:others$ >>, 
-                                                  VaVal None,
-                                                  make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
-                                                 ),
-                                                 []
-                                                ]
-                             else match_cases
-             in
-             let subj = <:expr< $lid:subj$ >> in 
-             let local_defs_and_then expr =
-               let local_defs =
-                  get_local_defs () @
-                  [<:patt< $lid:"self"$ >>, make_call of_lid <:expr< $lid:cata current$ >> metargs]                               
+                      (patt, VaVal None, expr), [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>]
+                   ) 
+                   (match descr with `Vari cons | `Poly (_, cons) -> cons)
                in
-               match local_defs with
-               | [] -> expr
-               | _  -> <:expr< let $list:local_defs$ in $expr$ >>
-             in
-             let cases, methods = split match_cases in
-             let methods = flatten methods in
-             let class_expr = <:class_expr< object $list:methods$ end >> in
-             let class_info = { 
-                ciLoc = loc;
-                ciVir = Ploc.VaVal true;
-                ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
-                ciNam = Ploc.VaVal (name ^ "_t");
-                ciExp = class_expr;
-               } 
-             in
-             let class_def = <:str_item< class $list:[class_info]$ >> in
-             (<:patt< $lid:cata name$ >>, 
-              (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
-             ),
-             class_def
+               let match_cases = 
+                 if extensible then match_cases @ [(<:patt< $lid:others$ >>, 
+                                                    VaVal None,
+                                                    make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
+                                                   ),
+                                                   []
+                                                  ]
+                               else match_cases
+               in
+               let subj = <:expr< $lid:subj$ >> in 
+               let local_defs_and_then expr =
+                 let local_defs =
+                    get_local_defs () @
+                    [<:patt< $lid:"self"$ >>, make_call of_lid <:expr< $lid:cata current$ >> metargs]                               
+                 in
+                 match local_defs with
+                 | [] -> expr
+                 | _  -> <:expr< let $list:local_defs$ in $expr$ >>
+               in
+               let cases, methods = split match_cases in
+               let methods = flatten methods in
+               let class_expr = <:class_expr< object $list:methods$ end >> in
+               let class_info = { 
+                  ciLoc = loc;
+                  ciVir = Ploc.VaVal true;
+                  ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
+                  ciNam = Ploc.VaVal (name ^ "_t");
+                  ciExp = class_expr;
+                 } 
+               in
+               let class_def = <:str_item< class $list:[class_info]$ >> in
+               (<:patt< $lid:cata name$ >>, 
+                (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
+               ),
+               class_def
           ) 
           d
       in
@@ -408,6 +436,28 @@ EXTEND
       let t = snd t in
       let descriptor, types =
         match t with
+        | `Sumi (var, lpv, _) -> 
+           ignore (
+             match a with
+             | a::_ when a = var -> ()
+             | _ -> Ploc.raise loc (Invalid_argument (Printf.sprintf "sum type must be polymorphic with the first type variable '%s" var))
+           );
+           (a, n, t),
+           [{
+             tdNam = VaVal (loc, VaVal n);
+             tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+             tdPrv = VaVal false;
+             tdDef = def; 
+             tdCon = VaVal []            
+            };
+            {
+             tdNam = VaVal (loc, VaVal (opened n));
+             tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+             tdPrv = VaVal false;
+             tdDef = <:ctyp< ' $var$ >>; 
+             tdCon = VaVal [<:ctyp< ' $var$ >>, <:ctyp< [ > $list:lpv$ ] >>]
+            }]
+
         | `Poly (`More b, d) ->
            (match a with 
            | f::_ when f <> b -> invalid_arg (sprintf "type argument \"%s\" should be listed first in type \"%s\" definition." b n) 
@@ -481,12 +531,7 @@ EXTEND
     ]
   ];
 
-  rhs: [[ vari ] | [ poly ] | [ sumi ]];
-
-  sumi: [
-    [
-    ]
-  ];
+  rhs: [[ vari ] | [ poly ]];
 
   vari: [
     [ OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
@@ -501,12 +546,16 @@ EXTEND
 
   poly: [
     [ "["; body=poly_body; "]" -> 
-        let lcons, y = body in
-        (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
+        match body with
+        | `TypeDef (lcons, y) ->
+           (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
+        | `TypeSum s -> s
     ] |
     [ a=targ; "as"; "["; ">"; body=poly_body; "]" ->
-        let lcons, y = body in
-        (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
+        match body with
+        | `TypeDef (lcons, y) ->
+            (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
+        | `TypeSum s -> s
     ]
   ];
 
@@ -521,7 +570,31 @@ EXTEND
                                    <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
                               ) x
         in
-        lcons, y
+        `TypeDef (lcons, y)
+    ] |
+    [ OPT "|"; typs=LIST1 c_typ SEP "|" ->
+      let t, d = split typs in
+      let Some a = 
+        fold_left 
+          (fun a d -> 
+             match d with
+             | `Variable x -> 
+                 Ploc.raise loc (Invalid_argument (Printf.sprintf "type variable ('%s) is not allowed in type sum" x))
+             | `Processing ([], _) ->
+                 Ploc.raise loc (Invalid_argument "polymorphic type expected in type sum")
+             | `Processing (b::_, _) ->
+                 (match a with 
+                 | None -> Some b
+                 | Some a when a <> b -> 
+                    Ploc.raise loc (Invalid_argument (Printf.sprintf "type variable '%s should be the first parameter of all types this type sum" a))
+                 | _ -> a
+                 )
+          ) 
+          None 
+          d
+      in
+      let t = map (fun t -> PvInh (loc, t)) t in
+      `TypeSum ((<:ctyp< [= $list:t$ ] >>, []), `Sumi (a, t, d))
     ]
   ];
 
@@ -536,7 +609,10 @@ EXTEND
 
   typ: [ 
     [ "["; t=ctyp; "]" -> t, `Protected t ] |
-    [ c_typ ]
+    [ t=c_typ -> 
+      let t, d = t in
+      t, (d :> [`Processing of string list * string list | `Variable of string | `Protected of ctyp])
+    ]
   ];
 
   c_typ: [
@@ -554,11 +630,26 @@ EXTEND
   ];
 
   qname: [
-    [ x=LIDENT -> <:ctyp< $lid:x$ >>, [x] ] |
-    [ q=UIDENT; "."; n=qname -> 
-       let t = <:ctyp< $uid:q$ >> in 
-       <:ctyp< $t$ . $fst n$ >>, q :: snd n
+    [ q=LIST0 qualifier; x=LIDENT ->
+      let x' = <:ctyp< $lid:x$ >> in
+      match q with
+      | []   -> x', [x]
+      | h::t -> 
+         let q' =
+           fold_left 
+             (fun q t -> 
+                let t = <:ctyp< $uid:t$ >> in 
+                <:ctyp< $q$ . $t$ >>
+             ) 
+             <:ctyp< $uid:h$ >> 
+            t
+         in
+         <:ctyp< $q'$ . $x'$ >>, q@[x]
     ]
+  ];
+
+  qualifier: [
+    [ x=UIDENT; "." -> x ]
   ];
 
   fargs: [
