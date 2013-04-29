@@ -103,7 +103,7 @@ let rec replace_t loc opened_version a n typ =
   | typ -> typ
     
 EXTEND
-  GLOBAL: str_item ctyp; 
+  GLOBAL: str_item ctyp class_expr class_longident; 
 
   ctyp: [
     [ ">"; t=ctyp -> 
@@ -114,6 +114,13 @@ EXTEND
       | t -> Ploc.raise loc (Generic_extension "application or qualified name expected")
       in
       inner t
+    ]
+  ];
+  
+  class_longident: [
+    [ "@"; ci=qname -> 
+      let n::q = rev (snd ci) in
+      rev ((class_t n)::q) 
     ]
   ];
 
