@@ -1,0 +1,88 @@
+diff -rupN camlp5-6.08/etc/pa_o.ml camlp5-6.08-patched/etc/pa_o.ml
+--- camlp5-6.08/etc/pa_o.ml	2012-03-09 18:01:54.000000000 +0400
++++ camlp5-6.08-patched/etc/pa_o.ml	2013-04-29 20:07:59.000000000 +0400
+@@ -38,7 +38,8 @@ do {
+   Grammar.Unsafe.clear_entry class_type;
+   Grammar.Unsafe.clear_entry class_expr;
+   Grammar.Unsafe.clear_entry class_sig_item;
+-  Grammar.Unsafe.clear_entry class_str_item
++  Grammar.Unsafe.clear_entry class_str_item;
++  Grammar.Unsafe.clear_entry class_longident
+ };
+ 
+ Pcaml.parse_interf.val := Grammar.Entry.parse interf;
+@@ -359,7 +360,7 @@ EXTEND
+   GLOBAL: sig_item str_item ctyp patt expr module_type module_expr
+     signature structure class_type class_expr class_sig_item class_str_item
+     let_binding type_decl constructor_declaration label_declaration
+-    match_case with_constr poly_variant;
++    match_case with_constr poly_variant class_longident;
+   module_expr:
+     [ [ "functor"; "("; i = V UIDENT "uid" ""; ":"; t = module_type; ")";
+         "->"; me = SELF ->
+diff -rupN camlp5-6.08/main/pcaml.ml camlp5-6.08-patched/main/pcaml.ml
+--- camlp5-6.08/main/pcaml.ml	2013-04-29 20:22:58.790425877 +0400
++++ camlp5-6.08-patched/main/pcaml.ml	2013-04-29 20:25:04.722429104 +0400
+@@ -48,6 +48,7 @@ value class_sig_item = Grammar.Entry.cre
+ value class_str_item = Grammar.Entry.create gram "class_str_item";
+ value class_type = Grammar.Entry.create gram "class_type";
+ value class_expr = Grammar.Entry.create gram "class_expr";
++value class_longident = Grammar.Entry.create gram "class_longident";
+ 
+ value parse_interf = ref (Grammar.Entry.parse interf);
+ value parse_implem = ref (Grammar.Entry.parse implem);
+diff -rupN camlp5-6.08/main/pcaml.mli camlp5-6.08-patched/main/pcaml.mli
+--- camlp5-6.08/main/pcaml.mli	2012-01-09 18:22:21.000000000 +0400
++++ camlp5-6.08-patched/main/pcaml.mli	2013-04-29 20:04:41.000000000 +0400
+@@ -65,6 +65,7 @@ value class_str_item : Grammar.Entry.e M
+ value class_expr : Grammar.Entry.e MLast.class_expr;
+ value class_type : Grammar.Entry.e MLast.class_type;
+    (** Some entries of the language, set by [pa_o.cmo] and [pa_r.cmo]. *)
++value class_longident : Grammar.Entry.e (list string);
+ 
+ value input_file : ref string;
+    (** The file currently being parsed. *)
+diff -rupN camlp5-6.08/meta/pa_r.ml camlp5-6.08-patched/meta/pa_r.ml
+--- camlp5-6.08/meta/pa_r.ml	2013-02-28 21:27:54.000000000 +0400
++++ camlp5-6.08-patched/meta/pa_r.ml	2013-04-29 20:09:50.000000000 +0400
+@@ -41,7 +41,8 @@ do {
+   Grammar.Unsafe.clear_entry class_type;
+   Grammar.Unsafe.clear_entry class_expr;
+   Grammar.Unsafe.clear_entry class_sig_item;
+-  Grammar.Unsafe.clear_entry class_str_item
++  Grammar.Unsafe.clear_entry class_str_item;
++  Grammar.Unsafe.clear_entry class_longident
+ };
+ 
+ Pcaml.parse_interf.val := Grammar.Entry.parse interf;
+@@ -171,7 +172,7 @@ EXTEND
+   GLOBAL: sig_item str_item ctyp patt expr module_type module_expr
+     signature structure class_type class_expr class_sig_item class_str_item
+     let_binding type_decl constructor_declaration label_declaration
+-    match_case ipatt with_constr poly_variant;
++    match_case ipatt with_constr poly_variant class_longident;
+   module_expr:
+     [ [ "functor"; "("; i = V UIDENT "uid" ""; ":"; t = module_type; ")";
+         "->"; me = SELF ->
+diff -rupN camlp5-6.08/ocaml_src/main/pcaml.ml camlp5-6.08-patched/ocaml_src/main/pcaml.ml
+--- camlp5-6.08/ocaml_src/main/pcaml.ml	2013-03-06 13:34:30.000000000 +0400
++++ camlp5-6.08-patched/ocaml_src/main/pcaml.ml	2013-04-29 20:11:07.000000000 +0400
+@@ -49,6 +49,7 @@ let class_sig_item = Grammar.Entry.creat
+ let class_str_item = Grammar.Entry.create gram "class_str_item";;
+ let class_type = Grammar.Entry.create gram "class_type";;
+ let class_expr = Grammar.Entry.create gram "class_expr";;
++let class_longident = Grammar.Entry.create gram "class_longident";;
+ 
+ let parse_interf = ref (Grammar.Entry.parse interf);;
+ let parse_implem = ref (Grammar.Entry.parse implem);;
+diff -rupN camlp5-6.08/ocaml_src/main/pcaml.mli camlp5-6.08-patched/ocaml_src/main/pcaml.mli
+--- camlp5-6.08/ocaml_src/main/pcaml.mli	2012-06-02 17:23:40.000000000 +0400
++++ camlp5-6.08-patched/ocaml_src/main/pcaml.mli	2013-04-29 20:10:45.000000000 +0400
+@@ -64,6 +64,7 @@ val class_str_item : MLast.class_str_ite
+ val class_expr : MLast.class_expr Grammar.Entry.e;;
+ val class_type : MLast.class_type Grammar.Entry.e;;
+    (** Some entries of the language, set by [pa_o.cmo] and [pa_r.cmo]. *)
++val class_longident : (string list) Grammar.Entry.e;;
+ 
+ val input_file : string ref;;
+    (** The file currently being parsed. *)
