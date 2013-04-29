@@ -19,5 +19,9 @@ class virtual ['e, 'a, 'b] list_t =
     method virtual m_Cons : 'a -> 'e list -> ('a, 'e, 'b) a -> ('a, 'e list, 'b) a -> 'b
   end
 
+let int =
+  let gcata ext t acc n = t#int n acc n in
+  {gcata = gcata; gcata_ext = gcata}
+
 let sum f g = fun ext acc x -> f (fun self acc s -> g (fun _ acc x -> ext self acc x) acc s) acc x
 let (++) = sum

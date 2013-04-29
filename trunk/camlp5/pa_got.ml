@@ -207,14 +207,16 @@ EXTEND
                       | `Processing (args, qname) ->
                           let h::tl = args in
                           let args  = 
-                            h :: 
-                            (map 
-                               (fun a -> 
-                                  try img a with 
-                                  | Not_found -> 
-                                      Ploc.raise loc (Generic_extension (sprintf "unbound type variable '%s" a))
-                               ) 
-                               tl
+                            h ::
+                            (flatten 
+                              (map 
+                                 (fun a -> 
+                                    try [a; img a] with 
+                                    | Not_found -> 
+                                        Ploc.raise loc (Generic_extension (sprintf "unbound type variable '%s" a))
+                                 ) 
+                                 tl
+                              )
                             ) @ 
                             [inh; syn] 
                           in
@@ -243,8 +245,8 @@ EXTEND
                  let summand = function
                  | `Variable _ -> invalid_arg "should not happen"                 
                  | `Processing (args, qname) -> 
-                    let _::t = rev args in
-                    let args = rev t    in
+                    let _::t = args  in
+                    let args = rev t in
                     let typename =
                       match qname with
                       | [n]  -> <:expr< $lid:n$ >>
