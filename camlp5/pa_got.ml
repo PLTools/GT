@@ -575,7 +575,7 @@ EXTEND
                           )
                           args
                       in
-                      let args = [<:ctyp< ($list:args$) >>] in
+                      let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in 
                       <:poly_variant< `$constr$ of $flag:false$ $list:args$ >>
                 ) 
                 d
@@ -649,7 +649,7 @@ EXTEND
 	    	    	     	 if length args = 0 
                                  then <:poly_variant< `$name$ >>         
                                  else                          
-                                   let args = [<:ctyp< ($list:args$) >>] in
+                                   let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in
                                    <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
                               ) x
         in
@@ -676,7 +676,7 @@ EXTEND
           None 
           d
       in
-      let t = map (fun t -> PvInh (loc, t)) t in
+      let t = map (fun t -> <:poly_variant< $t$ >>) t in
       `TypeSum ((<:ctyp< [= $list:t$ ] >>, []), `Sumi (a, t, d))
     ]
   ];
