@@ -1,3 +1,5 @@
+open Generic
+
 generic 'l t = 
     R 
   | W 
@@ -15,14 +17,14 @@ class toString =
     inherit [int, string, unit, string] t_t
     method m_R  () _     = "R"
     method m_W  () _     = "W"
-    method m_L  () _ x   = "L " ^ x
-    method m_S  () _ x   = "S " ^ x
-    method m_B  () _ _ x = "B " ^ x
+    method m_L  () _ x   = "L " ^ ~:x
+    method m_S  () _ x   = "S " ^ ~:x
+    method m_B  () _ _ x = "B " ^ ~:x
     method m_E  () _     = "E"
-    method m_C  () _ x   = "C "  ^ (string_of_int x)
-    method m_J  () _ x   = "J "  ^ (x.Generic.f ())
-    method m_JT () _ x   = "JT " ^ (x.Generic.f ())
-    method m_JF () _ x   = "JF " ^ (x.Generic.f ())
+    method m_C  () _ x   = "C "  ^ (string_of_int ~:x)
+    method m_J  () _ x   = "J "  ^ (x.f ())
+    method m_JT () _ x   = "JT " ^ (x.f ())
+    method m_JF () _ x   = "JF " ^ (x.f ())
   end
 
 class resolve =
@@ -30,22 +32,22 @@ class resolve =
     inherit [string, int, unit, int t] t_t
     method m_R  _ _     = R
     method m_W  _ _     = W
-    method m_L  _ _ x   = L x
-    method m_S  _ _ x   = S x
-    method m_B  _ _ f x = B (f, x)
+    method m_L  _ _ x   = L ~:x
+    method m_S  _ _ x   = S ~:x
+    method m_B  _ _ f x = B (~:f, ~:x)
     method m_E  _ _     = E
-    method m_C  _ _ x   = C x
-    method m_J  _ _ x   = J  (x.Generic.f ())
-    method m_JT _ _ x   = JT (x.Generic.f ())
-    method m_JF _ _ x   = JF (x.Generic.f ())
+    method m_C  _ _ x   = C ~:x
+    method m_J  _ _ x   = J  (x.f ())
+    method m_JT _ _ x   = JT (x.f ())
+    method m_JF _ _ x   = JF (x.f ())
   end
 
 let resolve p = 
   let symbols = ref [] in
   let p = Array.mapi (fun i (s, c) -> if s != "" then symbols := (s, i) :: !symbols; c) p in
-  Array.map (fun i -> t.Generic.gcata (fun _ i -> List.assoc i !symbols) (new resolve) () i) p
+  Array.map (fun i -> t.gcata (fun _ i -> List.assoc i !symbols) (new resolve) () i) p
 
-let toString i  = t.Generic.gcata (fun _ i -> string_of_int i) (new toString) () i
+let toString i  = t.gcata (fun _ i -> string_of_int i) (new toString) () i
 
 type env  = int list * (string -> int) * int list * int list * int
 
@@ -54,14 +56,14 @@ class interpret =
     inherit [int, int, env, env option] t_t    
     method m_R  (      s, m, x::i, o, p) _     = Some (x::s, m, i, o, p+1)
     method m_W  (   x::s, m,    i, o, p) _     = Some (s, m, i, x::o, p+1)
-    method m_L  (      s, m,    i, o, p) _ x   = Some ((m x)::s, m, i, o, p+1)
-    method m_S  (   y::s, m,    i, o, p) _ x   = Some (s, (fun z -> if z = x then y else m z), i, o, p+1)
-    method m_B  (y::z::s, m,    i, o, p) _ f _ = Some ((f z y)::s, m, i, o, p+1)
+    method m_L  (      s, m,    i, o, p) _ x   = Some ((m ~:x)::s, m, i, o, p+1)
+    method m_S  (   y::s, m,    i, o, p) _ x   = Some (s, (fun z -> if z = ~:x then y else m z), i, o, p+1)
+    method m_B  (y::z::s, m,    i, o, p) _ f _ = Some ((~:f z y)::s, m, i, o, p+1)
     method m_E   _ _                           = None
-    method m_C  (      s, m,    i, o, p) _ n   = Some (n::s, m, i, o, p+1)
-    method m_J  (      s, m,    i, o, p) _ n   = Some (s, m, i, o, n.Generic.x)
-    method m_JT (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x != 0 then n.Generic.x else p+1)
-    method m_JF (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x  = 0 then n.Generic.x else p+1)   
+    method m_C  (      s, m,    i, o, p) _ n   = Some (~:n::s, m, i, o, p+1)
+    method m_J  (      s, m,    i, o, p) _ n   = Some (s, m, i, o, ~:n)
+    method m_JT (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x != 0 then ~:n else p+1)
+    method m_JF (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x  = 0 then ~:n else p+1)   
   end
 
 class debug callback =
@@ -81,7 +83,7 @@ class debug callback =
 
 let interpret ii p i =
   let rec inner (_, _, _, o, i) as conf  =
-    match t.Generic.gcata (fun _ i -> i) ii conf p.(i) with
+    match t.gcata (fun _ i -> i) ii conf p.(i) with
     | None      -> List.rev o
     | Some conf -> inner conf
   in
@@ -133,7 +135,7 @@ let sumNS = [|
 
 let _ = 
   let ii = new interpret in
-  let dd = new debug (fun i (_, _, _, _, p) -> Printf.printf "%s @ %d\n" (toString i.Generic.x) p) in
+  let dd = new debug (fun i (_, _, _, _, p) -> Printf.printf "%s @ %d\n" (toString ~:i) p) in
   let main name xx p i = 
     Printf.printf "%s:\n" name;
     List.iter (fun x -> Printf.printf "%d\n" x) (interpret xx p i) 

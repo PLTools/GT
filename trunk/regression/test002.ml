@@ -1,3 +1,5 @@
+open Generic
+
 module Expr =
   struct
   
@@ -7,28 +9,21 @@ module Expr =
       | `Const of [int] 
       | `Binop of [int -> int -> int] * [string] * 'self t * 'self t
     ]
-(*
-    class virtual ['me, 'a, 'b] t_t =
-      object (this)
-        method virtual m_Var   : 'a -> 'me -> string -> 'b
-        method virtual m_Const : 'a -> 'me -> int -> 'b
-        method virtual m_Binop : 'a -> 'me -> (int -> int -> int) -> string -> ('a, 'me, 'b) Generic.a -> ('a, 'me, 'b) Generic.a -> 'b
-      end
-*)
+
     class ['a] toString =
       object (this)
         inherit ['a, unit, string] t_t
-        method m_Var   _ _   s     = s
-        method m_Const _ _   n     = string_of_int n
-        method m_Binop _ _ _ s x y = "(" ^ (x.Generic.f ()) ^ s ^ (y.Generic.f ()) ^ ")"
+        method m_Var   _ _   s     = ~:s
+        method m_Const _ _   n     = string_of_int ~:n
+        method m_Binop _ _ _ s x y = "(" ^ (x.f ()) ^ ~:s ^ (y.f ()) ^ ")"
       end
 
     class ['a] eval s =
       object (this)
         inherit ['a, unit, int] t_t
-        method m_Var   _ _ x       = s x
-        method m_Const _ _ n       = n
-        method m_Binop _ _ f _ x y = f (x.Generic.f ()) (y.Generic.f ())
+        method m_Var   _ _ x       = s ~:x
+        method m_Const _ _ n       = ~:n
+        method m_Binop _ _ f _ x y = ~:f (x.f ()) (y.f ())
       end
 
   end
