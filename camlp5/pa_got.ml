@@ -205,6 +205,27 @@ EXTEND
                                (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
                                [inh; syn]              
              in
+             let tpo_name = generator#generate "tpo" in
+             let tpo =
+               let methods = 
+                 map (fun a -> let e = <:expr< $lid:farg a$ >> in <:class_str_item< method $lid:a$ = $e$ >>) args 
+               in
+               <:expr< object $list:methods$ end >>
+             in
+             let tpt =
+               let methods =
+                 map (fun a -> 
+                        let inh, e, te = <:ctyp< ' $inh$ >>, <:ctyp< ' $a$ >>, <:ctyp< ' $img a$ >> in 
+                        a, fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >>) [inh; e] te 
+                     )
+                     args
+               in
+               <:ctyp< < $list:methods$ > >>  
+             in
+             let foo =
+               let p = <:patt< _ >> in
+               make_fun id [p; p] <:expr< () >>  
+             in
              let metargs     = (map farg args) @ [trans; ext] in
              let args        = metargs @ [acc; subj] in
              match descr with
@@ -274,7 +295,7 @@ EXTEND
                     let func    = <:expr< $func$ . $cata$ >> in
                     make_call of_lid func ((map farg args) @ [trans])
                  in
-                 let h::t = typs in
+                 let h::t    = typs in
                  let generic = <:expr< $uid:"Generic"$ >> in
                  let sum     = <:expr< $lid:"sum"$ >> in
                  let gsum    = <:expr< $generic$ . $sum$ >> in
@@ -355,14 +376,17 @@ EXTEND
                       let met_sig  = 
                         let make_a x y z = 
                           let g  = <:ctyp< $uid:"Generic"$ >> in
-                          let a  = <:ctyp< $lid:"a"$ >> in
-                          let ga = <:ctyp< $g$ . $a$ >> in
-                          let ga = <:ctyp< $ga$ $x$ >> in
-                          let ga = <:ctyp< $ga$ $y$ >> in
-                          <:ctyp< $ga$ $z$ >>
+                          let a  = <:ctyp< $lid:"a"$  >> in
+                          let ga = <:ctyp< $g$ . $a$  >> in
+                          let ga = <:ctyp< $ga$ $x$   >> in
+                          let ga = <:ctyp< $ga$ $y$   >> in
+                          let ga = <:ctyp< $ga$ $z$   >> in
+                          <:ctyp< $ga$ $tpt$ >>                           
                         in
                         let make_typ = function
-                        | `Protected   t    -> replace_t loc true [] current t
+                        | `Protected   t    -> 
+                             let typ = replace_t loc true [] current t in
+                             make_a <:ctyp< ' $inh$ >> typ <:ctyp< $lid:"unit"$ >>
                         | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
                         | `Processing (targs, qname) ->   
                              let typ =
@@ -391,7 +415,7 @@ EXTEND
                           let g = <:expr< $uid:"Generic"$ >> in
                           let m = <:expr< $lid:"make"$ >> in
                           let gm = <:expr< $g$ . $m$ >> in
-                          make_call id gm [f; x]
+                          make_call id gm [f; x; <:expr< $lid:tpo_name$ >>]
                         in
                         make_call id 
                           met 
@@ -399,7 +423,7 @@ EXTEND
                            (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
                            (map (fun (typ, x) -> 
                                    match typ with
-                                   | `Protected _   -> <:expr< $lid:x$ >>
+                                   | `Protected _   -> garg foo <:expr< $lid:x$ >>
                                    | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
                                    | `Processing t   -> 
                                        let name = get_type_handler t in 
@@ -426,7 +450,9 @@ EXTEND
                let local_defs_and_then expr =
                  let local_defs =
                     get_local_defs () @
-                    [<:patt< $lid:"self"$ >>, make_call of_lid <:expr< $lid:cata current$ >> metargs]                               
+                    [<:patt< $lid:"self"$ >>  , make_call of_lid <:expr< $lid:cata current$ >> metargs;
+                     <:patt< $lid:tpo_name$ >>, tpo
+                    ]                                                   
                  in
                  match local_defs with
                  | [] -> expr

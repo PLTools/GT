@@ -1,22 +1,25 @@
 type ('a, 'b) t = {gcata : 'a; gcata_ext : 'b}
-type ('a, 'b, 'c) a = {x : 'b; f : 'a -> 'c; g : 'a -> 'b -> 'c}
+type ('a, 'b, 'c, 'd) a = {x : 'b; f : 'a -> 'c; g : 'a -> 'b -> 'c; t : 'd}
 
-let make f x = {x=x; f=(fun a -> f a x); g=f}
+let (~:) x = x.x
+
+let make f x p = {x=x; f=(fun a -> f a x); g=f; t=p}
 let apply f a x = f a x
 
 let list = 
   let rec gcata ext t fa acc l =
+    let tpo = object method e = fa end in
     let self = gcata ext t fa in
     match l with
     | []    -> t#m_Nil  acc l 
-    | h::tl -> t#m_Cons acc l (make fa h) (make self tl)
+    | h::tl -> t#m_Cons acc l (make fa h tpo) (make self tl tpo)
   in 
   {gcata = gcata; gcata_ext = gcata}
 
 class virtual ['e, 'a, 'b] list_t =
   object (self)
     method virtual m_Nil  : 'a -> 'e list -> 'b
-    method virtual m_Cons : 'a -> 'e list -> ('a, 'e, 'b) a -> ('a, 'e list, 'b) a -> 'b
+    method virtual m_Cons : 'a -> 'e list -> ('a, 'e, 'b, <e : 'e -> 'a -> 'b>) a -> ('a, 'e list, 'b, <e : 'e -> 'a -> 'b>) a -> 'b
   end
 
 let int =
