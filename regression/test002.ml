@@ -15,7 +15,7 @@ module Expr =
         inherit ['a, unit, string] t_t
         method m_Var   _ _   s     = ~:s
         method m_Const _ _   n     = string_of_int ~:n
-        method m_Binop _ _ _ s x y = "(" ^ (x.f ()) ^ ~:s ^ (y.f ()) ^ ")"
+        method m_Binop _ _ _ s x y = "(" ^ (x.fx ()) ^ ~:s ^ (y.fx ()) ^ ")"
       end
 
     class ['a] eval s =
@@ -23,7 +23,7 @@ module Expr =
         inherit ['a, unit, int] t_t
         method m_Var   _ _ x       = s ~:x
         method m_Const _ _ n       = ~:n
-        method m_Binop _ _ f _ x y = ~:f (x.f ()) (y.f ())
+        method m_Binop _ _ f _ x y = ~:f (x.fx ()) (y.fx ())
       end
 
   end

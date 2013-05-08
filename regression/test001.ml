@@ -22,9 +22,9 @@ class toString =
     method m_B  () _ _ x = "B " ^ ~:x
     method m_E  () _     = "E"
     method m_C  () _ x   = "C "  ^ (string_of_int ~:x)
-    method m_J  () _ x   = "J "  ^ (x.f ())
-    method m_JT () _ x   = "JT " ^ (x.f ())
-    method m_JF () _ x   = "JF " ^ (x.f ())
+    method m_J  () _ x   = "J "  ^ (x.fx ())
+    method m_JT () _ x   = "JT " ^ (x.fx ())
+    method m_JF () _ x   = "JF " ^ (x.fx ())
   end
 
 class resolve =
@@ -37,9 +37,9 @@ class resolve =
     method m_B  _ _ f x = B (~:f, ~:x)
     method m_E  _ _     = E
     method m_C  _ _ x   = C ~:x
-    method m_J  _ _ x   = J  (x.f ())
-    method m_JT _ _ x   = JT (x.f ())
-    method m_JF _ _ x   = JF (x.f ())
+    method m_J  _ _ x   = J  (x.fx ())
+    method m_JT _ _ x   = JT (x.fx ())
+    method m_JF _ _ x   = JF (x.fx ())
   end
 
 let resolve p = 
