@@ -41,6 +41,10 @@ let split3 l =
   List.fold_right 
     (fun (a, b, c) (x, y, z) -> a::x, b::y, c::z) l ([], [], []) 
 
+let split4 l = 
+  List.fold_right 
+    (fun (a, b, c, d) (x, y, z, t) -> a::x, b::y, c::z, d::t) l ([], [], [], []) 
+
 let name_generator list =
   let s = ref (fold_right S.add list S.empty) in
   object(self)
@@ -193,18 +197,16 @@ let generate t loc =
            in
            <:expr< object $list:methods$ end >>
          in
-         let tpt =
-           let methods =
-             map (fun a -> 
-                    let inh, e, te = <:ctyp< ' $inh$ >>, <:ctyp< ' $a$ >>, <:ctyp< ' $img a$ >> in 
-                    a, fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >>) [inh; e] te 
-                 )
-                 args
-           in
-           <:ctyp< < $list:methods$ > >>  
+         let tpf =
+           map (fun a -> 
+                  let inh, e, te = <:ctyp< ' $inh$ >>, <:ctyp< ' $a$ >>, <:ctyp< ' $img a$ >> in 
+                  fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >>) [inh; e] te 
+               )
+               args
          in
-         let metargs     = (map farg args) @ [trans; ext] in
-         let args        = metargs @ [acc; subj] in
+         let tpt     = <:ctyp< < $list:combine args tpf$ > >> in
+         let metargs = (map farg args) @ [trans; ext] in
+         let args = metargs @ [acc; subj] in
          match descr with
          | `Sumi (_, _, typs) -> 
            let inherits =
@@ -294,9 +296,11 @@ let generate t loc =
              let sumcata = fold_left (fun l r -> make_call id gsum [l; summand r]) (summand h) t in
              make_call of_lid sumcata [ext; acc; subj]
            in
+           let catype = <:ctyp< $lid:"int"$ >> in
            (<:patt< $lid:cata name$ >>, 
             (make_fun (fun a -> <:patt< $lid:a$ >>) args sum_body)
            ),
+           <:sig_item< value $name$ : $catype$ >>,
            class_def,
 	   class_decl
                 
@@ -425,6 +429,7 @@ let generate t loc =
                       )
                   in
                   (patt, VaVal None, expr), 
+                  [met_name, met_sig],
                   [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
                   [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
                ) 
@@ -435,6 +440,7 @@ let generate t loc =
                                                 VaVal None,
                                                 make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
                                                ),
+                                               [],
                                                [],
                                                []
                                               ]
@@ -452,11 +458,12 @@ let generate t loc =
              | [] -> expr
              | _  -> <:expr< let $list:local_defs$ in $expr$ >>
            in
-           let cases, methods, methods_sig = split3 match_cases in
-           let methods     = flatten methods     in
-           let methods_sig = flatten methods_sig in
-           let class_expr  = <:class_expr< object $list:methods$     end >> in
-           let class_type  = <:class_type< object $list:methods_sig$ end >> in
+           let cases, objt_methods, methods, methods_sig = split4 match_cases in
+           let objt_methods = flatten objt_methods in
+           let methods      = flatten methods      in
+           let methods_sig  = flatten methods_sig  in
+           let class_expr   = <:class_expr< object $list:methods$     end >> in
+           let class_type   = <:class_type< object $list:methods_sig$ end >> in
            let class_info c = { 
               ciLoc = loc;
               ciVir = Ploc.VaVal true;
@@ -467,9 +474,27 @@ let generate t loc =
            in
            let class_def  = <:str_item< class $list:[class_info class_expr]$ >> in
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
+           let catype ext subj = 
+             let gt = 
+               let x = <:ctyp< $uid:"Generic"$ >> in
+               let y = <:ctyp< $lid:"t"$  >> in
+               <:ctyp< $x$ . $y$ >> 
+             in
+             let ft = 
+               let x = <:ctyp< ' $syn$ >> in
+               let y = <:ctyp< $subj$ -> $x$ >> in
+               let z = <:ctyp< ' $inh$ >> in
+               <:ctyp< $z$ -> $y$ >> 
+             in             
+             let trt  = <:ctyp< < $list:objt_methods$ .. > >> in
+             let extt = <:ctyp< $ft$ -> $ft$ >> in
+             fold_right (fun ti t -> <:ctyp< $t$ -> $ti$ >> ) (tpf @ [trt] @ if ext then [extt] else []) ft
+           in
+           let int = <:ctyp< $lid:"int"$>> in
            (<:patt< $lid:cata name$ >>, 
             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
            ),
+           <:sig_item< value $name$ : $catype true int$ >>,
            class_def,
            class_decl
       ) 
@@ -530,13 +555,13 @@ let generate t loc =
   in
   let tuple = <:patt< ( $list:pnames$ ) >> in
   let tup = <:expr< ( $list:tnames$ ) >> in 
-  let defs, class_defs, class_decls = split3 defs in
+  let defs, decls, class_defs, class_decls = split4 defs in
   let def = <:expr< let rec $list:defs$ in $tup$ >> in
   let cata_def  = <:str_item< value $list:[tuple, def]$ >> in
   let type_def  = <:str_item< type $list:t$ >> in
   let type_decl = <:sig_item< type $list:t$ >> in
   <:str_item< declare $list:[type_def; cata_def] @ class_defs$ end >>,
-  <:sig_item< declare $list:[type_decl] @ class_decls$ end >> 
+  <:sig_item< declare $list:[type_decl] @ decls @ class_decls$ end >> 
     
 EXTEND
   GLOBAL: sig_item str_item ctyp class_expr class_longident; 
