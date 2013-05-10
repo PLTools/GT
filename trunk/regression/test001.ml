@@ -17,11 +17,11 @@ class toString =
     inherit [int, string, unit, string] t_t
     method m_R  () _     = "R"
     method m_W  () _     = "W"
-    method m_L  () _ x   = "L " ^ ~:x
-    method m_S  () _ x   = "S " ^ ~:x
-    method m_B  () _ _ x = "B " ^ ~:x
+    method m_L  () _ x   = "L " ^ x
+    method m_S  () _ x   = "S " ^ x
+    method m_B  () _ _ x = "B " ^ x
     method m_E  () _     = "E"
-    method m_C  () _ x   = "C "  ^ (string_of_int ~:x)
+    method m_C  () _ x   = "C "  ^ (string_of_int x)
     method m_J  () _ x   = "J "  ^ (x.fx ())
     method m_JT () _ x   = "JT " ^ (x.fx ())
     method m_JF () _ x   = "JF " ^ (x.fx ())
@@ -32,11 +32,11 @@ class resolve =
     inherit [string, int, unit, int t] t_t
     method m_R  _ _     = R
     method m_W  _ _     = W
-    method m_L  _ _ x   = L ~:x
-    method m_S  _ _ x   = S ~:x
-    method m_B  _ _ f x = B (~:f, ~:x)
+    method m_L  _ _ x   = L x
+    method m_S  _ _ x   = S x
+    method m_B  _ _ f x = B (f, x)
     method m_E  _ _     = E
-    method m_C  _ _ x   = C ~:x
+    method m_C  _ _ x   = C x
     method m_J  _ _ x   = J  (x.fx ())
     method m_JT _ _ x   = JT (x.fx ())
     method m_JF _ _ x   = JF (x.fx ())
@@ -56,11 +56,11 @@ class interpret =
     inherit [int, int, env, env option] t_t    
     method m_R  (      s, m, x::i, o, p) _     = Some (x::s, m, i, o, p+1)
     method m_W  (   x::s, m,    i, o, p) _     = Some (s, m, i, x::o, p+1)
-    method m_L  (      s, m,    i, o, p) _ x   = Some ((m ~:x)::s, m, i, o, p+1)
-    method m_S  (   y::s, m,    i, o, p) _ x   = Some (s, (fun z -> if z = ~:x then y else m z), i, o, p+1)
-    method m_B  (y::z::s, m,    i, o, p) _ f _ = Some ((~:f z y)::s, m, i, o, p+1)
+    method m_L  (      s, m,    i, o, p) _ x   = Some ((m x)::s, m, i, o, p+1)
+    method m_S  (   y::s, m,    i, o, p) _ x   = Some (s, (fun z -> if z = x then y else m z), i, o, p+1)
+    method m_B  (y::z::s, m,    i, o, p) _ f _ = Some ((f z y)::s, m, i, o, p+1)
     method m_E   _ _                           = None
-    method m_C  (      s, m,    i, o, p) _ n   = Some (~:n::s, m, i, o, p+1)
+    method m_C  (      s, m,    i, o, p) _ n   = Some (n::s, m, i, o, p+1)
     method m_J  (      s, m,    i, o, p) _ n   = Some (s, m, i, o, ~:n)
     method m_JT (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x != 0 then ~:n else p+1)
     method m_JF (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x  = 0 then ~:n else p+1)   

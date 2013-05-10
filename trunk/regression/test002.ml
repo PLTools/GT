@@ -13,17 +13,17 @@ module Expr =
     class ['a] toString =
       object (this)
         inherit ['a, unit, string] t_t
-        method m_Var   _ _   s     = ~:s
-        method m_Const _ _   n     = string_of_int ~:n
-        method m_Binop _ _ _ s x y = "(" ^ (x.fx ()) ^ ~:s ^ (y.fx ()) ^ ")"
+        method m_Var   _ _   s     = s
+        method m_Const _ _   n     = string_of_int n
+        method m_Binop _ _ _ s x y = "(" ^ (x.fx ()) ^ s ^ (y.fx ()) ^ ")"
       end
 
     class ['a] eval s =
       object (this)
         inherit ['a, unit, int] t_t
-        method m_Var   _ _ x       = s ~:x
-        method m_Const _ _ n       = ~:n
-        method m_Binop _ _ f _ x y = ~:f (x.fx ()) (y.fx ())
+        method m_Var   _ _ x       = s x
+        method m_Const _ _ n       = n
+        method m_Binop _ _ f _ x y = f (x.fx ()) (y.fx ())
       end
 
   end

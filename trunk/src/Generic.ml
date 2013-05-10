@@ -2,8 +2,9 @@ type ('a, 'b) t = {gcata : 'a; gcata_ext : 'b}
 type ('a, 'b, 'c, 'd) a = {x : 'b; fx : 'a -> 'c; f : 'a -> 'b -> 'c; t : 'd}
 
 let (~:) x = x.x
+let transform t = t.gcata
 
-let make   f x p = {x=x; fx=(fun a -> f a x); f=f; t=p}
+let make  f x p = {x=x; fx=(fun a -> f a x); f=f; t=p}
 let apply f a x = f a x
 
 let list = 
