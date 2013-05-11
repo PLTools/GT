@@ -37,10 +37,6 @@ let get_val (VaVal x) = x
 
 module S = Set.Make (String)
 
-let split3 l = 
-  List.fold_right 
-    (fun (a, b, c) (x, y, z) -> a::x, b::y, c::z) l ([], [], []) 
-
 let split4 l = 
   List.fold_right 
     (fun (a, b, c, d) (x, y, z, t) -> a::x, b::y, c::z, d::t) l ([], [], [], []) 
@@ -172,6 +168,13 @@ let generate t loc =
     map 
       (fun (args, name, descr) ->     
          let of_lid name = <:expr< $lid:name$ >> in
+         let orig_typ, opened_typ =
+           let make t args =
+             fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >> ) t args
+           in
+           make <:ctyp< $lid:name$ >> args,
+           make <:ctyp< $lid:opened name$ >> args
+         in
          let current     = name in
          let extensible, remove_bound_var, is_bound_var, bound_var = 
            match descr with 
@@ -474,27 +477,38 @@ let generate t loc =
            in
            let class_def  = <:str_item< class $list:[class_info class_expr]$ >> in
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
-           let catype ext subj = 
+           let catype = 
              let gt = 
                let x = <:ctyp< $uid:"Generic"$ >> in
                let y = <:ctyp< $lid:"t"$  >> in
                <:ctyp< $x$ . $y$ >> 
              in
-             let ft = 
+             let ft subj = 
                let x = <:ctyp< ' $syn$ >> in
                let y = <:ctyp< $subj$ -> $x$ >> in
                let z = <:ctyp< ' $inh$ >> in
                <:ctyp< $z$ -> $y$ >> 
              in             
-             let trt  = <:ctyp< < $list:objt_methods$ .. > >> in
-             let extt = <:ctyp< $ft$ -> $ft$ >> in
-             fold_right (fun ti t -> <:ctyp< $t$ -> $ti$ >> ) (tpf @ [trt] @ if ext then [extt] else []) ft
+             let trt      = <:ctyp< < $list:objt_methods$ .. > >> in
+             let extt     = <:ctyp< $ft opened_typ$ -> $ft opened_typ$ >> in
+             let orig_typ =
+               if extensible 
+               then
+                 let Some bound_var = bound_var in 
+                 let b = <:ctyp< ' $bound_var$ >> in
+                 <:ctyp< $orig_typ$ as $b$ >>
+               else orig_typ
+             in
+             let ft, ft_ext    = ft orig_typ, ft opened_typ in
+             let cata_type     = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt]) ft in
+             let cata_ext_type = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt; extt]) ft_ext in
+             let x = <:ctyp< $gt$ $cata_type$ >> in
+             <:ctyp< $x$ $cata_ext_type$ >>              
            in
-           let int = <:ctyp< $lid:"int"$>> in
            (<:patt< $lid:cata name$ >>, 
             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
            ),
-           <:sig_item< value $name$ : $catype true int$ >>,
+           <:sig_item< value $name$ : $catype$ >>,
            class_def,
            class_decl
       ) 
