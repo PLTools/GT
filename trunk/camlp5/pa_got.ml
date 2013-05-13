@@ -684,16 +684,16 @@ EXTEND
              }]
            )
         | _ -> (a, n, t), 
-               [{tdNam = VaVal (loc, VaVal (closed n));
+               [{tdNam = VaVal (loc, VaVal n);
                  tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
                  tdPrv = VaVal false;
-                 tdDef = replace_t loc a n def; 
+                 tdDef = def; 
                  tdCon = VaVal cons
                 };
-                {tdNam = VaVal (loc, VaVal n);
+                {tdNam = VaVal (loc, VaVal (closed n));
                  tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
                  tdPrv = VaVal false;
-                 tdDef = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) <:ctyp< $lid:closed n$>> a; 
+                 tdDef = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) <:ctyp< $lid:n$>> a; 
                  tdCon = VaVal cons
                 }
                ]
@@ -764,15 +764,6 @@ EXTEND
           None 
           d
       in
-(*
-      let d = map (function 
-                   | `Processing (a, qname) ->
-                      let h::t = rev qname in
-                      `Processing (a, rev ((closed h) :: t))
-                   | x -> x
-                  ) d 
-      in
-*)
       let t = 
         map 
           (fun t ->
@@ -800,11 +791,11 @@ EXTEND
   ];
 
   typ: [ 
-    [ "["; t=ctyp; "]" -> t, `Protected t ] |
-    [ t=c_typ -> 
+    [ "["; t=c_typ; "]" -> 
       let t, d = t in
       t, (d :> [`Processing of string list * string list | `Variable of string | `Protected of ctyp])
-    ]
+    ] |
+    [  t=ctyp LEVEL "apply" -> t, `Protected t ]
   ];
 
   c_typ: [
