@@ -3,12 +3,12 @@ open Generic
 module Expr =
   struct
   
-    generic 'self t = 'self as
+    generic 'self t = 
     [> 
       | `Var   of [string] 
       | `Const of [int] 
       | `Binop of [int -> int -> int] * [string] * 'self t * 'self t
-    ]
+    ] as 'self
 
     class ['a] toString =
       object (this)
@@ -31,7 +31,7 @@ module Expr =
 module Stmt =
   struct
 
-    generic ('self, 'a) t = 'self as
+    generic ('self, 'a) t = 
     [>
       | `Skip 
       | `Assign of [string] * 'a Expr.t
@@ -40,7 +40,7 @@ module Stmt =
       | `If     of 'a Expr.t * ('self, 'a) t * ('self, 'a) t
       | `While  of 'a Expr.t * ('self, 'a) t  
       | `Seq    of ('self, 'a) t * ('self, 'a) t 
-    ]
+    ] as 'self
 
   end
 let _ =
