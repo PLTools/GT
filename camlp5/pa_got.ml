@@ -722,18 +722,18 @@ EXTEND
   ];
 
   poly: [
+    [ "["; ">"; body=poly_body; "]"; "as"; a=targ ->
+        match body with
+        | `TypeDef (lcons, y) ->
+            (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
+        | `TypeSum s -> s
+    ] |
     [ "["; body=poly_body; "]" -> 
         match body with
         | `TypeDef (lcons, y) ->
            (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
         | `TypeSum s -> s
-    ] |
-    [ a=targ; "as"; "["; ">"; body=poly_body; "]" ->
-        match body with
-        | `TypeDef (lcons, y) ->
-            (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
-        | `TypeSum s -> s
-    ]
+    ]    
   ];
 
   poly_body: [
