@@ -202,6 +202,41 @@ let generate t loc =
                args
          in
          let tpt     = <:ctyp< < $list:combine args tpf$ > >> in
+         let catype  =
+           let gt = 
+             let x = <:ctyp< $uid:"Generic"$ >> in
+             let y = <:ctyp< $lid:"t"$  >> in
+             <:ctyp< $x$ . $y$ >> 
+           in
+           let ft subj = 
+             let x = <:ctyp< ' $syn$ >> in
+             let y = <:ctyp< $subj$ -> $x$ >> in
+             let z = <:ctyp< ' $inh$ >> in
+             <:ctyp< $z$ -> $y$ >> 
+           in             
+           let trt subj =            
+             fold_left 
+               (fun t ti -> <:ctyp< $t$ $ti$ >>) 
+               <:ctyp< # $list:[class_t name]$ >>
+               (subj :: (flatten (map (fun a -> [<:ctyp< ' $a$ >>; <:ctyp< ' $img a$ >>]) args)) @ 
+                        [<:ctyp< ' $inh$ >>; <:ctyp< ' $syn$ >>]
+               )  
+           in
+           let extt = <:ctyp< $ft orig_typ$ -> $ft orig_typ$ >> in
+           let closed_typ =
+             if extensible 
+             then
+               let Some bound_var = bound_var in 
+               let b = <:ctyp< ' $bound_var$ >> in
+               <:ctyp< $closed_typ$ as $b$ >>
+             else closed_typ
+           in
+           let ft, ft_ext    = ft closed_typ, ft orig_typ in
+           let cata_type     = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt closed_typ]) ft in
+           let cata_ext_type = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt orig_typ; extt]) ft_ext in
+           let x = <:ctyp< $gt$ $cata_type$ >> in
+           <:ctyp< $x$ $cata_ext_type$ >> 
+         in
          let metargs = (map farg args) @ [trans; ext] in
          let args = metargs @ [acc; subj] in
          match descr with
@@ -293,7 +328,6 @@ let generate t loc =
              let sumcata = fold_left (fun l r -> make_call id gsum [l; summand r]) (summand h) t in
              make_call of_lid sumcata [ext; acc; subj]
            in
-           let catype = <:ctyp< $lid:"int"$ >> in
            (<:patt< $lid:cata name$ >>, 
             (make_fun (fun a -> <:patt< $lid:a$ >>) args sum_body)
            ),
@@ -471,7 +505,7 @@ let generate t loc =
            in
            let class_def  = <:str_item< class $list:[class_info class_expr]$ >> in
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
-           let catype = 
+           let catype_ = 
              let gt = 
                let x = <:ctyp< $uid:"Generic"$ >> in
                let y = <:ctyp< $lid:"t"$  >> in
@@ -569,7 +603,7 @@ let generate t loc =
   let type_def  = <:str_item< type $list:t$ >> in
   let type_decl = <:sig_item< type $list:t$ >> in
   <:str_item< declare $list:[type_def; cata_def] @ class_defs$ end >>,
-  <:sig_item< declare $list:[type_decl] @ decls @ class_decls$ end >> 
+  <:sig_item< declare $list:[type_decl] @ class_decls @ decls$ end >> 
     
 EXTEND
   GLOBAL: sig_item str_item ctyp class_expr class_longident; 
