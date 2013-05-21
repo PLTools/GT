@@ -1,4 +1,4 @@
-open Generic
+open GT
 
 generic tree = Node of int * tree list
 

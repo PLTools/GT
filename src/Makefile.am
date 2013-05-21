@@ -1,6 +1,6 @@
 
 # type in sources here
-SOURCES = Generic.ml
+SOURCES = GT.ml
 MLI = 
 
 include $(top_srcdir)/m4/Makefile.am.vars

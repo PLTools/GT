@@ -2355,7 +2355,7 @@ fi
 
 
 # Define the identity of the package.
- PACKAGE=GOT
+ PACKAGE=GT
  VERSION=0.1
 
 

@@ -11,7 +11,7 @@ dnl check for MinGW
 AM_CONDITIONAL(MINGW32, [test x"$build_os" = xmingw32])
 
 dnl project name and version
-AM_INIT_AUTOMAKE(GOT, 0.1, nodefine)
+AM_INIT_AUTOMAKE(GT, 0.1, nodefine)
 
 dnl add custom m4 functions
 m4_sinclude(m4/acinclude.m4)

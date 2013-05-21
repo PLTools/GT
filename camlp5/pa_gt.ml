@@ -204,7 +204,7 @@ let generate t loc =
          let tpt     = <:ctyp< < $list:combine args tpf$ > >> in
          let catype  =
            let gt = 
-             let x = <:ctyp< $uid:"Generic"$ >> in
+             let x = <:ctyp< $uid:"GT"$ >> in
              let y = <:ctyp< $lid:"t"$  >> in
              <:ctyp< $x$ . $y$ >> 
            in
@@ -315,14 +315,14 @@ let generate t loc =
                      in
                      <:expr< $q$ . $n$ >>
                 in
-                let generic = <:expr< $uid:"Generic"$ >> in
+                let generic = <:expr< $uid:"GT"$ >> in
                 let cata    = <:expr< $lid:"gcata_ext"$ >> in
                 let func    = <:expr< $typename$ . $generic$ >> in
                 let func    = <:expr< $func$ . $cata$ >> in
                 make_call of_lid func ((map farg args) @ [trans])
              in
              let h::t    = typs in
-             let generic = <:expr< $uid:"Generic"$ >> in
+             let generic = <:expr< $uid:"GT"$ >> in
              let sum     = <:expr< $lid:"sum"$ >> in
              let gsum    = <:expr< $generic$ . $sum$ >> in
              let sumcata = fold_left (fun l r -> make_call id gsum [l; summand r]) (summand h) t in
@@ -359,7 +359,7 @@ let generate t loc =
                                         <:expr< $uid:name$ >> 
                                         names
                             in
-                            let fname = <:expr< $uid:"Generic"$ >> in
+                            let fname = <:expr< $uid:"GT"$ >> in
                             let fname = <:expr< $fname$ . $lid:"gcata"$ >> in
                             <:expr< $base$ . $fname$ >>, []
                       in
@@ -403,7 +403,7 @@ let generate t loc =
                   let met_name = cmethod cname in
                   let met_sig  = 
                     let make_a x y z = 
-                      let g  = <:ctyp< $uid:"Generic"$ >> in
+                      let g  = <:ctyp< $uid:"GT"$ >> in
                       let a  = <:ctyp< $lid:"a"$  >> in
                       let ga = <:ctyp< $g$ . $a$  >> in
                       let ga = <:ctyp< $ga$ $x$   >> in
@@ -438,7 +438,7 @@ let generate t loc =
                     let obj      = <:expr< $lid:trans$ >>        in
                     let met      = <:expr< $obj$ # $met_name$ >> in
                     let garg f x =
-                      let g = <:expr< $uid:"Generic"$ >> in
+                      let g = <:expr< $uid:"GT"$ >> in
                       let m = <:expr< $lid:"make"$ >> in
                       let gm = <:expr< $g$ . $m$ >> in
                       make_call id gm [f; x; <:expr< $lid:tpo_name$ >>]
@@ -507,7 +507,7 @@ let generate t loc =
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
            let catype_ = 
              let gt = 
-               let x = <:ctyp< $uid:"Generic"$ >> in
+               let x = <:ctyp< $uid:"GT"$ >> in
                let y = <:ctyp< $lid:"t"$  >> in
                <:ctyp< $x$ . $y$ >> 
              in
@@ -543,12 +543,12 @@ let generate t loc =
       d
   in
   let generic_cata = 
-    let g = <:patt< $uid:"Generic"$ >> in
+    let g = <:patt< $uid:"GT"$ >> in
     let c = <:patt< $lid:"gcata"$ >> in
     <:patt< $g$ . $c$ >>
   in
   let generic_cata_ext = 
-    let g = <:patt< $uid:"Generic"$ >> in
+    let g = <:patt< $uid:"GT"$ >> in
     let c = <:patt< $lid:"gcata_ext"$ >> in
     <:patt< $g$ . $c$ >>
   in
@@ -578,7 +578,7 @@ let generate t loc =
                                       ), p
 
                                | _ -> 
-                                    let g = <:expr< $uid:"Generic"$ >> in
+                                    let g = <:expr< $uid:"GT"$ >> in
                                     let a = <:expr< $lid:"apply"$ >> in
                                     <:expr< $g$ . $a$ >>, p
                              in                                 
@@ -608,8 +608,8 @@ let generate t loc =
 EXTEND
   GLOBAL: sig_item str_item ctyp class_expr class_longident; 
 
-  ctyp: [
-    [ "@"; t=ctyp -> 
+  ctyp: LEVEL "ctyp2" [
+    [ "@"; t=ctyp LEVEL "ctyp2"-> 
       let rec inner = function
       | <:ctyp< $q$ . $t$ >> -> <:ctyp< $q$ . $inner t$ >>
       | <:ctyp< $t$ $a$ >> -> <:ctyp< $inner t$ $a$ >>

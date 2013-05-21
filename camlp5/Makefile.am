@@ -1,5 +1,5 @@
 # type in sources here
-SOURCES = pa_got.ml
+SOURCES = pa_gt.ml
 SUBDIRS = doc
 
 include $(top_srcdir)/m4/Makefile.am.vars
