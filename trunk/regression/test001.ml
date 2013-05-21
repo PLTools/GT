@@ -1,4 +1,4 @@
-open Generic
+open GT
 
 generic 'l t = 
     R 
