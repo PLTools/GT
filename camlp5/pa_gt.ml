@@ -37,6 +37,10 @@ let get_val (VaVal x) = x
 
 module S = Set.Make (String)
 
+let split3 l = 
+  List.fold_right 
+    (fun (a, b, c) (x, y, z) -> a::x, b::y, c::z) l ([], [], []) 
+
 let split4 l = 
   List.fold_right 
     (fun (a, b, c, d) (x, y, z, t) -> a::x, b::y, c::z, d::t) l ([], [], [], []) 
@@ -114,7 +118,7 @@ let generate t loc =
   let t, d = split   t in
   let t    = flatten t in
   let get_cata =
-    let s = fold_left (fun s (_, n, _) -> S.add n s) S.empty d in
+    let s = fold_left (fun s ((_, n, _), _) -> S.add n s) S.empty d in
     fun name -> 
       if S.mem name s then <:expr< $lid:cata name$ >> 
                       else let name, gcata = <:expr< $lid:name$ >>, <:expr< $lid:"gcata"$ >> in
@@ -123,7 +127,7 @@ let generate t loc =
   let g = 
     let names = 
       fold_left 
-        (fun acc (_, n, d) -> 
+        (fun acc ((_, n, d), _) -> 
            let acc = n::acc in
            match d with
            | `Sumi (_, _, types) ->
@@ -160,7 +164,7 @@ let generate t loc =
   let acc  = g#generate "acc" in
   let defs =
     map 
-      (fun (args, name, descr) ->     
+      (fun ((args, name, descr), deriving) ->     
          let of_lid name = <:expr< $lid:name$ >> in
          let orig_typ, closed_typ =
            let make t args =
@@ -332,8 +336,7 @@ let generate t loc =
             (make_fun (fun a -> <:patt< $lid:a$ >>) args sum_body)
            ),
            <:sig_item< value $name$ : $catype$ >>,
-           class_def,
-	   class_decl
+           [class_def, class_decl]
                 
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs =
@@ -388,17 +391,17 @@ let generate t loc =
              (fun () ->
                 map (fun (_, (_, x)) -> x) !context
              )
-         in
-         let match_cases =
-           map 
-             (fun (cname, cargs) -> 
-                let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
-                let args    = rev args in
-                let patt    =
-                  fold_left 
-                    (fun p id -> let pid = <:patt< $lid:id$ >> in <:patt< $p$ $pid$ >>)
-                    (if polyvar then <:patt< ` $cname$ >> else <:patt< $uid:cname$ >>) 
-                    args
+           in
+           let match_cases =
+             map 
+               (fun (cname, cargs) -> 
+                  let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
+                  let args    = rev args in
+                  let patt    =
+                    fold_left 
+                      (fun p id -> let pid = <:patt< $lid:id$ >> in <:patt< $p$ $pid$ >>)
+                      (if polyvar then <:patt< ` $cname$ >> else <:patt< $uid:cname$ >>) 
+                      args
                   in
                   let met_name = cmethod cname in
                   let met_sig  = 
@@ -446,18 +449,18 @@ let generate t loc =
                     make_call id 
                       met 
                        (<:expr< $lid:acc$  >> :: 
-                       (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
-                       (map (fun (typ, x) -> 
-                               match typ with
-                               | `Protected _   -> <:expr< $lid:x$ >>
-                               | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
-                               | `Processing t   -> 
-                                   let name = get_type_handler t in 
-                                   garg name <:expr< $lid:x$ >>
-                            ) 
-                            (combine cargs args)
+                         (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
+                         (map (fun (typ, x) -> 
+                                 match typ with
+                                 | `Protected _   -> <:expr< $lid:x$ >>
+                                 | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
+                                 | `Processing t   -> 
+                                     let name = get_type_handler t in 
+                                     garg name <:expr< $lid:x$ >>
+                              ) 
+                              (combine cargs args)
+                         )
                        )
-                      )
                   in
                   (patt, VaVal None, expr), 
                   [met_name, met_sig],
@@ -508,8 +511,7 @@ let generate t loc =
             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
            ),
            <:sig_item< value $name$ : $catype$ >>,
-           class_def,
-           class_decl
+           [class_def, class_decl]
       ) 
       d
   in
@@ -525,7 +527,7 @@ let generate t loc =
   in
   let pnames, tnames = 
     split (
-      map (fun (args, name, descr) -> 
+      map (fun ((args, name, descr), deriving) -> 
              let p = snd (fold_left (fun (i, acc) _ -> i+1, (sprintf "p%d" i)::acc) (0, []) (["t"; "acc"; "s"] @ args)) in
              let pe = [
                generic_cata_ext, <:expr< $lid:cata name$ >>; 
@@ -568,7 +570,8 @@ let generate t loc =
   in
   let tuple = <:patt< ( $list:pnames$ ) >> in
   let tup = <:expr< ( $list:tnames$ ) >> in 
-  let defs, decls, class_defs, class_decls = split4 defs in
+  let defs, decls, classes = split3 defs in
+  let class_defs, class_decls = split (flatten classes) in
   let def = <:expr< let rec $list:defs$ in $tup$ >> in
   let cata_def  = <:str_item< value $list:[tuple, def]$ >> in
   let type_def  = <:str_item< type $list:t$ >> in
@@ -608,7 +611,7 @@ EXTEND
 
   t_decl: [
     [ a=fargs; n=LIDENT; "="; t=rhs ->
-      let is_private, ((def, cons), t) = t in
+      let (is_private, ((def, cons), t)), derving = t in
       let descriptor, types =
         match t with
         | `Sumi (var, lpv, _) -> 
@@ -702,12 +705,16 @@ EXTEND
                 }
                ]
       in
-      types, descriptor
+      types, (descriptor, deriving)
     ]
   ];
 
-  rhs: [[ vari ] | [ poly ]];
+  rhs: [[b=rhs_base; d=OPT deriving -> b, match d with None -> [] | Some d -> d]];
 
+  deriving: [["deriving"; s=LIST1 LIDENT SEP "," -> s]];
+
+  rhs_base: [[ vari ] | [ poly ]];
+  
   vari: [
     [ p=OPT "private"; OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
         let x, y = split vari_cons in
