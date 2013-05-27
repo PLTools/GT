@@ -489,8 +489,7 @@ let generate t loc =
              | [] -> expr
              | _  -> <:expr< let $list:local_defs$ in $expr$ >>
            in
-           let cases, objt_methods, methods, methods_sig = split4 match_cases in
-           let objt_methods = flatten objt_methods in
+           let cases, _, methods, methods_sig = split4 match_cases in
            let methods      = flatten methods      in
            let methods_sig  = flatten methods_sig  in
            let class_expr   = <:class_expr< object $list:methods$     end >> in
@@ -505,34 +504,6 @@ let generate t loc =
            in
            let class_def  = <:str_item< class $list:[class_info class_expr]$ >> in
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
-           let catype_ = 
-             let gt = 
-               let x = <:ctyp< $uid:"GT"$ >> in
-               let y = <:ctyp< $lid:"t"$  >> in
-               <:ctyp< $x$ . $y$ >> 
-             in
-             let ft subj = 
-               let x = <:ctyp< ' $syn$ >> in
-               let y = <:ctyp< $subj$ -> $x$ >> in
-               let z = <:ctyp< ' $inh$ >> in
-               <:ctyp< $z$ -> $y$ >> 
-             in             
-             let trt      = <:ctyp< < $list:objt_methods$ .. > >> in
-             let extt     = <:ctyp< $ft orig_typ$ -> $ft orig_typ$ >> in
-             let orig_typ =
-               if extensible 
-               then
-                 let Some bound_var = bound_var in 
-                 let b = <:ctyp< ' $bound_var$ >> in
-                 <:ctyp< $orig_typ$ as $b$ >>
-               else orig_typ
-             in
-             let ft, ft_ext    = ft closed_typ, ft orig_typ in
-             let cata_type     = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt]) ft in
-             let cata_ext_type = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt; extt]) ft_ext in
-             let x = <:ctyp< $gt$ $cata_type$ >> in
-             <:ctyp< $x$ $cata_ext_type$ >>              
-           in
            (<:patt< $lid:cata name$ >>, 
             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
            ),
@@ -636,9 +607,8 @@ EXTEND
   ];
 
   t_decl: [
-    [ a=fargs; n=LIDENT; "="; t=rhs -> 
-      let def, cons = fst t in
-      let t = snd t in
+    [ a=fargs; n=LIDENT; "="; t=rhs ->
+      let is_private, ((def, cons), t) = t in
       let descriptor, types =
         match t with
         | `Sumi (var, lpv, _) -> 
@@ -720,13 +690,13 @@ EXTEND
         | _ -> (a, n, t), 
                [{tdNam = VaVal (loc, VaVal n);
                  tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
-                 tdPrv = VaVal false;
+                 tdPrv = VaVal is_private;
                  tdDef = def; 
                  tdCon = VaVal cons
                 };
                 {tdNam = VaVal (loc, VaVal (closed n));
                  tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
-                 tdPrv = VaVal false;
+                 tdPrv = VaVal is_private;
                  tdDef = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) <:ctyp< $lid:n$>> a; 
                  tdCon = VaVal cons
                 }
@@ -739,9 +709,9 @@ EXTEND
   rhs: [[ vari ] | [ poly ]];
 
   vari: [
-    [ OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
+    [ p=OPT "private"; OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
         let x, y = split vari_cons in
-        (<:ctyp< [ $list:x$ ] >>, []), `Vari y
+        (p <> None), ((<:ctyp< [ $list:x$ ] >>, []), `Vari y)
     ]
   ];
 
@@ -751,12 +721,14 @@ EXTEND
 
   poly: [
     [ "["; ">"; body=poly_body; "]"; "as"; a=targ ->
+        false,
         match body with
         | `TypeDef (lcons, y) ->
             (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
         | `TypeSum s -> s
     ] |
-    [ "["; body=poly_body; "]" -> 
+    [ "["; body=poly_body; "]" ->
+        false, 
         match body with
         | `TypeDef (lcons, y) ->
            (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
