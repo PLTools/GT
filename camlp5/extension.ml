@@ -30,9 +30,41 @@ open Printf
 open Pcaml
 open MLast
 open Ploc
+open Dynlink
 
+exception Bad_plugin of string
 exception Generic_extension of string
-     
+
+let load_path = ref []
+
+let _ =
+  Pcaml.add_option "-L"
+    (Arg.String (fun dir -> load_path := !load_path @ [dir]))
+    "<dir> Add <dir> to the list of include directories."
+
+let load_plugins names =
+  let load_one name =
+    let filename = name ^ ".cmo" in
+    let ok = 
+      fold_left 
+        (fun ok path -> 
+           if not ok then
+             let fullname = Filename.concat path filename in
+             try 
+               loadfile fullname; 
+               true
+             with 
+             | Error (File_not_found _) -> false
+             | Error err -> Pervasives.raise (Bad_plugin (error_message err))
+           else ok         
+        ) 
+        false 
+        !load_path
+    in
+    if not ok then Pervasives.raise (Bad_plugin (sprintf "Plugin \"%s\" bytecode file not found" name))
+  in
+  iter load_one names
+
 let get_val (VaVal x) = x 
 
 module S = Set.Make (String)
@@ -165,6 +197,7 @@ let generate t loc =
   let defs =
     map 
       (fun ((args, name, descr), deriving) ->     
+         load_plugins deriving;
          let of_lid name = <:expr< $lid:name$ >> in
          let orig_typ, closed_typ =
            let make t args =
@@ -611,7 +644,7 @@ EXTEND
 
   t_decl: [
     [ a=fargs; n=LIDENT; "="; t=rhs ->
-      let (is_private, ((def, cons), t)), derving = t in
+      let (is_private, ((def, cons), t)), deriving = t in
       let descriptor, types =
         match t with
         | `Sumi (var, lpv, _) -> 

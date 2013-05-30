@@ -1,8 +1,11 @@
 # type in sources here
-SOURCES = pa_gt.ml
+SOURCES =  $(top_srcdir)/src/GT.ml extension.ml
 SUBDIRS = doc
 
 include $(top_srcdir)/m4/Makefile.am.vars
+
+CMOPK = pa_gt.cmo
+CLEAN_EXTRA += pa_gt.cmi
 
 # overwrite some variables
 PXFLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES)"
@@ -12,7 +15,7 @@ MODULE_INCLUDES += -I "$(CAMLP5LIB)"
 include $(top_srcdir)/m4/Makefile.am.targets
 
 # overwrite some targets
-TARGET := $(CMO) $(CMI)
+TARGET := $(CMOPK)
 
 .PHONY: doc
 doc:
