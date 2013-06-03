@@ -32,38 +32,87 @@ open MLast
 open Ploc
 open Dynlink
 
-exception Bad_plugin of string
+module Plugin =
+  struct
+
+    exception Bad_plugin of string
+
+    let load_path = ref []
+
+    let _ =
+      Pcaml.add_option "-L"
+        (Arg.String (fun dir -> load_path := !load_path @ [dir]))
+        "<dir> Add <dir> to the list of include directories."
+
+    let load_plugins names =
+      let load_one name =
+        match GT.Plugin.get name with
+        | None ->
+          let filename = name ^ ".cmo" in
+          let ok = 
+            fold_left 
+              (fun ok path -> 
+                 if not ok then
+                   let fullname = Filename.concat path filename in
+                   try 
+                     loadfile fullname; 
+                     true
+                   with 
+                   | Error (File_not_found _) -> false
+                   | Error err -> Pervasives.raise (Bad_plugin (error_message err))
+                 else ok         
+              ) 
+              false 
+              !load_path
+          in
+          if not ok 
+          then Pervasives.raise (Bad_plugin (sprintf "Plugin \"%s\" bytecode file not found" name))
+          else begin
+            match GT.Plugin.get name with
+            | None   -> Pervasives.raise (Bad_plugin (sprintf "Plugin \"%s\" was not properly initialized" name))
+            | Some _ -> ()
+          end
+        | Some _ -> ()
+      in
+      iter load_one names
+
+    type properties = {
+      inh     : ctyp;
+      syn     : ctyp;
+      arg_img : string -> ctyp;
+    }
+
+    type type_descriptor = {
+      is_polyvar : bool;
+      is_open    : [`Yes of string | `No];
+      type_args  : string list;
+      name       : string;
+      default    : properties;
+    }
+
+    type constructor = {
+      name : string;
+      inh  : string;
+      subj : string;
+      args : (string * [ `Processed of string list * string list | `Var of string | `Protected of ctyp ]) list;
+    }
+      
+    type t = type_descriptor -> properties * (constructor -> expr)
+
+    module M = Map.Make (String)
+    
+    let m : t M.t ref = ref M.empty
+
+    let register name t =
+      if not (M.mem name !m) 
+      then m := M.add name t !m
+
+    let get name =
+      if not (M.mem name !m) then None else Some (M.find name !m)
+
+  end
+
 exception Generic_extension of string
-
-let load_path = ref []
-
-let _ =
-  Pcaml.add_option "-L"
-    (Arg.String (fun dir -> load_path := !load_path @ [dir]))
-    "<dir> Add <dir> to the list of include directories."
-
-let load_plugins names =
-  let load_one name =
-    let filename = name ^ ".cmo" in
-    let ok = 
-      fold_left 
-        (fun ok path -> 
-           if not ok then
-             let fullname = Filename.concat path filename in
-             try 
-               loadfile fullname; 
-               true
-             with 
-             | Error (File_not_found _) -> false
-             | Error err -> Pervasives.raise (Bad_plugin (error_message err))
-           else ok         
-        ) 
-        false 
-        !load_path
-    in
-    if not ok then Pervasives.raise (Bad_plugin (sprintf "Plugin \"%s\" bytecode file not found" name))
-  in
-  iter load_one names
 
 let get_val (VaVal x) = x 
 
@@ -197,7 +246,7 @@ let generate t loc =
   let defs =
     map 
       (fun ((args, name, descr), deriving) ->     
-         load_plugins deriving;
+         Plugin.load_plugins deriving;
          let of_lid name = <:expr< $lid:name$ >> in
          let orig_typ, closed_typ =
            let make t args =
