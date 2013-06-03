@@ -30,3 +30,43 @@ let int =
 let sum f g = fun ext acc x -> f (fun self acc s -> g (fun _ acc x -> ext self acc x) acc s) acc x
 let (++) = sum
       
+module Plugin =
+  struct
+
+    open MLast
+
+    type properties = {
+      inh     : ctyp;
+      syn     : ctyp;
+      arg_img : string -> ctyp;
+    }
+
+    type type_descriptor = {
+      is_polyvar : bool;
+      is_open    : [`Yes of string | `No];
+      type_args  : string list;
+      name       : string;
+      default    : properties;
+    }
+
+    type constructor = {
+      name : string;
+      inh  : string;
+      subj : string;
+      args : (string * [ `Processed of string list * string list | `Var of string | `Protected of ctyp ]) list;
+    }
+      
+    type t = type_descriptor -> properties * (constructor -> expr)
+
+    module M = Map.Make (String)
+    
+    let m : t M.t ref = ref M.empty
+
+    let register name t =
+      if not (M.mem name !m) 
+      then m := M.add name t !m
+
+    let get name =
+      if not (M.mem name !m) then None else Some (M.find name !m)
+
+  end

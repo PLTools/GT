@@ -10,7 +10,7 @@ CLEAN_EXTRA += pa_gt.cmi
 # overwrite some variables
 PXFLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES)"
 CAMLPXLIB = $(CAMLP5LIB)
-MODULE_INCLUDES += -I "$(CAMLP5LIB)"
+MODULE_INCLUDES += -I $(top_srcdir)/src -I "$(CAMLP5LIB)"
 
 include $(top_srcdir)/m4/Makefile.am.targets
 
