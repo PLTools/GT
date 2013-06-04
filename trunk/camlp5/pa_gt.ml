@@ -1,4 +1,3 @@
-
 (**************************************************************************
  *  Copyright (C) 2012-2013
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
@@ -44,9 +43,54 @@ module Plugin =
         (Arg.String (fun dir -> load_path := !load_path @ [dir]))
         "<dir> Add <dir> to the list of include directories."
 
+    type properties = {
+      inh     : ctyp;
+      syn     : ctyp;
+      arg_img : string -> ctyp;
+    }
+
+    type type_descriptor = {
+      is_polyvar : bool;
+      is_open    : [`Yes of string | `No];
+      type_args  : string list;
+      name       : string;
+      default    : properties;
+    }
+
+    type constructor = {
+      constr : string;
+      acc    : string;
+      subj   : string;
+      args   : (string * [ `Processed of string list * string list | `Var of string | `Protected of ctyp ]) list;
+    }
+
+    type t = type_descriptor -> properties * (constructor -> expr)
+(*
+    let generate_class loc name (prop, _) body =
+    { 
+     ciLoc = loc;
+     ciVir = Ploc.VaVal false;
+     ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
+     ciNam = Ploc.VaVal name;
+     ciExp = body
+    }
+
+    let generate_class_body (_, constrs) = ()
+*)
+    module M = Map.Make (String)
+    
+    let m : t M.t ref = ref M.empty
+
+    let register name t =
+      if not (M.mem name !m) 
+      then m := M.add name t !m
+
+    let get name =
+      if not (M.mem name !m) then None else Some (M.find name !m)
+
     let load_plugins names =
       let load_one name =
-        match GT.Plugin.get name with
+        match get name with
         | None ->
           let filename = name ^ ".cmo" in
           let ok = 
@@ -68,48 +112,14 @@ module Plugin =
           if not ok 
           then Pervasives.raise (Bad_plugin (sprintf "Plugin \"%s\" bytecode file not found" name))
           else begin
-            match GT.Plugin.get name with
+            match get name with
             | None   -> Pervasives.raise (Bad_plugin (sprintf "Plugin \"%s\" was not properly initialized" name))
             | Some _ -> ()
           end
         | Some _ -> ()
       in
       iter load_one names
-
-    type properties = {
-      inh     : ctyp;
-      syn     : ctyp;
-      arg_img : string -> ctyp;
-    }
-
-    type type_descriptor = {
-      is_polyvar : bool;
-      is_open    : [`Yes of string | `No];
-      type_args  : string list;
-      name       : string;
-      default    : properties;
-    }
-
-    type constructor = {
-      name : string;
-      inh  : string;
-      subj : string;
-      args : (string * [ `Processed of string list * string list | `Var of string | `Protected of ctyp ]) list;
-    }
       
-    type t = type_descriptor -> properties * (constructor -> expr)
-
-    module M = Map.Make (String)
-    
-    let m : t M.t ref = ref M.empty
-
-    let register name t =
-      if not (M.mem name !m) 
-      then m := M.add name t !m
-
-    let get name =
-      if not (M.mem name !m) then None else Some (M.find name !m)
-
   end
 
 exception Generic_extension of string
@@ -273,6 +283,19 @@ let generate t loc =
                            (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
                            [inh; syn]              
          in
+         let p_descriptor = {
+           Plugin.is_polyvar = polyvar;
+           Plugin.is_open    = (match bound_var with Some b -> `Yes b | _ -> `No);
+           Plugin.type_args  = args;
+           Plugin.name       = current;
+           Plugin.default    = { 
+             Plugin.inh     = <:ctyp< ' $inh$ >>;
+             Plugin.syn     = <:ctyp< ' $syn$ >>;
+             Plugin.arg_img = (fun a -> <:ctyp< ' $img a$ >>);
+           }
+         } 
+         in
+         let derived = map (fun name -> let Some p = Plugin.get name in name, p p_descriptor) deriving in
          let tpo_name = generator#generate "tpo" in
          let tpo =
            let methods = 
