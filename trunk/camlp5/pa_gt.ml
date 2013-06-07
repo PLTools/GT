@@ -31,6 +31,14 @@ open MLast
 open Ploc
 open Dynlink
 
+let cata    name      = name ^ "_gcata"
+let others            = "others"
+let cmethod c         = "m_" ^ c
+let apply             = "apply"
+let closed  name      = name ^ "'"
+let class_t name      = name ^ "_t"
+let trait_t typ trait = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
+
 module Plugin =
   struct
 
@@ -65,18 +73,47 @@ module Plugin =
     }
 
     type t = type_descriptor -> properties * (constructor -> expr)
-(*
-    let generate_class loc name (prop, _) body =
-    { 
-     ciLoc = loc;
-     ciVir = Ploc.VaVal false;
-     ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
-     ciNam = Ploc.VaVal name;
-     ciExp = body
-    }
+
+    let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
+      let class_targs =
+        (match descr.is_open with `Yes s -> [s] | `No -> []) @
+        flatten (map (fun a -> match prop.arg_img a with <:ctyp< ' $fa$ >> -> [a; fa]| _ -> [a]) descr.type_args) @
+        (match prop.inh with <:ctyp< ' $inh$ >> -> [inh] | _ -> []) @
+        (match prop.syn with <:ctyp< ' $syn$ >> -> [syn] | _ -> [])
+      in 
+      let def b = { 
+        ciLoc = loc;
+        ciVir = Ploc.VaVal false;
+        ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
+        ciNam = Ploc.VaVal (trait_t descr.name trait);
+        ciExp = b
+      } 
+      in
+      <:str_item< class $list:[def b_def]$ >>,
+      <:sig_item< class $list:[def b_decl]$ >>
+
+    let generate_inherit loc qname descr (prop, _) =
+      let args =
+        (match descr.is_open with `Yes s -> [<:ctyp< ' $s$ >>] | _ -> []) @
+        flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
+        [prop.inh; prop.syn]
+      in
+      let ce    = <:class_expr< [ $list:args$ ] $list:qname$ >> in
+      let ct    =
+        let h::t = qname in
+        let ct   = 
+          fold_left 
+            (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 
+            <:class_type< $id:h$ >>  
+            t
+        in
+        <:class_type< $ct$ [ $list:args$ ] >>
+      in
+      <:class_str_item< inherit $ce$ >>,
+      <:class_sig_item< inherit $ct$ >>
 
     let generate_class_body (_, constrs) = ()
-*)
+
     module M = Map.Make (String)
     
     let m : t M.t ref = ref M.empty
@@ -147,13 +184,6 @@ let name_generator list =
         prompt
       )
   end
-
-let cata    name = name ^ "_gcata"
-let others       = "others"
-let cmethod c    = "m_" ^ c
-let apply        = "apply"
-let closed  name = name ^ "'"
-let class_t name = name ^ "_t"
 
 let rec replace_t loc a n typ =
   let replace_t = replace_t loc a n in 
@@ -386,8 +416,6 @@ let generate t loc =
                       in
                       <:class_str_item< inherit $ce$ >>,
                       <:class_sig_item< inherit $ct$ >>
-
-                  | _ -> invalid_arg "should not happen"
                  ) 
                  typs
            in
@@ -406,7 +434,6 @@ let generate t loc =
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in
            let sum_body  =
              let summand = function
-             | `Variable _ -> invalid_arg "should not happen"                 
              | `Processing (args, qname) -> 
                 let _::t = args  in
                 let args = rev t in
@@ -437,11 +464,42 @@ let generate t loc =
              let sumcata = fold_left (fun l r -> make_call id gsum [l; summand r]) (summand h) t in
              make_call of_lid sumcata [ext; acc; subj]
            in
+           let derived_classes =              
+             map (fun (trait, ((prop, _) as dprop)) -> 
+                    let Some p = Plugin.get name in
+                    let inherits =
+                      map 
+                       (function `Processing (b::args, qname) ->
+                          let qname, name = 
+                            let n::t = rev qname in
+                            rev ((trait_t n trait) :: t), n
+                          in
+                          let descr = {
+                            Plugin.is_polyvar = true;
+                            Plugin.is_open    = `Yes b;
+                            Plugin.type_args  = args;
+                            Plugin.name       = name;
+                            Plugin.default    = prop;
+                          }
+                          in
+                          Plugin.generate_inherit loc qname descr (p descr)
+                       ) 
+                       typs
+                    in
+                    let i_def, i_decl = split inherits in
+                    let c_def, c_decl = 
+                      <:class_expr< object $list:i_def$ end >>, 
+                      <:class_type< object $list:i_decl$ end >>
+                    in
+                    Plugin.generate_classes loc trait p_descriptor dprop (c_def, c_decl)
+                 ) 
+                 derived
+           in
            (<:patt< $lid:cata name$ >>, 
             (make_fun (fun a -> <:patt< $lid:a$ >>) args sum_body)
            ),
            <:sig_item< value $name$ : $catype$ >>,
-           [class_def, class_decl]
+           (class_def, class_decl) :: derived_classes
                 
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs =
@@ -743,8 +801,8 @@ EXTEND
 
         | `Poly (`More b, d) ->
            (match a with 
-           | f::_ when f <> b -> invalid_arg (sprintf "type argument \"%s\" should be listed first in type \"%s\" definition." b n) 
-           | [] -> invalid_arg (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b) 
+           | f::_ when f <> b -> Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed first in type \"%s\" definition." b n))
+           | [] -> Pervasives.raise (Generic_extension (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b))
            | _  -> (a, n, t)
            ),
            (let lcons =
@@ -863,25 +921,27 @@ EXTEND
     ] |
     [ OPT "|"; typs=LIST1 c_typ SEP "|" ->
       let t, d = split typs in
-      let Some a = 
-        fold_left 
-          (fun a d -> 
+      let a = ref None in
+      let d = 
+        map
+          (fun d -> 
              match d with
              | `Variable x -> 
                  Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in type sum" x))
              | `Processing ([], _) ->
                  Ploc.raise loc (Generic_extension "polymorphic type expected in type sum")
-             | `Processing (b::_, _) ->
-                 (match a with 
-                 | None -> Some b
+             | `Processing (b::_ as args, qname) ->
+                 (match !a with 
+                 | None -> a := Some b
                  | Some a when a <> b -> 
                     Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types this type sum" a))
-                 | _ -> a
-                 )
+                 | _ -> ()
+                 );
+                 `Processing (args, qname) 
           ) 
-          None 
           d
       in
+      let Some a = !a in
       let t = 
         map 
           (fun t ->
