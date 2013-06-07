@@ -466,7 +466,7 @@ let generate t loc =
            in
            let derived_classes =              
              map (fun (trait, ((prop, _) as dprop)) -> 
-                    let Some p = Plugin.get name in
+                    let Some p = Plugin.get trait in
                     let inherits =
                       map 
                        (function `Processing (b::args, qname) ->
