@@ -74,6 +74,44 @@ module Plugin =
 
     type t = loc -> type_descriptor -> properties * (constructor -> expr)
 
+    module Helper (L : sig val loc : loc end) =
+      struct
+        
+        open L
+
+        let gt_field f e = 
+          let gt = <:expr< $uid:"GT"$ >> in
+          let ff = <:expr< $lid:f$ >> in
+          let e  = <:expr< $e$ . $gt$ >> in
+          <:expr< $e$ . $ff$ >>
+
+        let f      = gt_field "f" 
+        let x      = gt_field "x"
+        let fx     = gt_field "fx"
+        let tp e p = <:expr< $gt_field "t" e$ # $p$ >>
+
+        let tname h::t = 
+          let id s = 
+            if Char.uppercase s.[0] = s.[0] 
+            then <:ctyp< $uid:s$ >> 
+            else <:ctyp< $lid:s$ >> 
+          in
+          fold_left (fun q n -> <:ctyp< $q$ . $id n$ >>) (id h) t
+
+        let qname h::t = 
+          let id s = 
+            if Char.uppercase s.[0] = s.[0] 
+            then <:expr< $uid:s$ >> 
+            else <:expr< $lid:s$ >> 
+          in
+          fold_left (fun q n -> <:expr< $q$ . $id n$ >>) (id h) t
+
+        let apply    f    args = fold_left  (fun e a -> <:expr< $e$ $a$ >>) f args  
+        let seq      exprs     = <:expr< do { $list:exprs$ } >>
+        let abstract args expr = fold_right (fun arg expr -> <:expr< fun [ $list:[arg, VaVal None, expr]$ ] >>) args expr
+
+      end
+  
     let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
       let class_targs =
         (match descr.is_open with `Yes s -> [s] | `No -> []) @
