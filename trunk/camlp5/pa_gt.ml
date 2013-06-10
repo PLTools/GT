@@ -69,10 +69,10 @@ module Plugin =
       constr : string;
       acc    : string;
       subj   : string;
-      args   : (string * [ `Processed of string list * string list | `Var of string | `Protected of ctyp ]) list;
+      args   : (string * [ `Processing of string list * string list | `Variable of string | `Protected of ctyp ]) list;
     }
 
-    type t = type_descriptor -> properties * (constructor -> expr)
+    type t = loc -> type_descriptor -> properties * (constructor -> expr)
 
     let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
       let class_targs =
@@ -325,7 +325,7 @@ let generate t loc =
            }
          } 
          in
-         let derived = map (fun name -> let Some p = Plugin.get name in name, p p_descriptor) deriving in
+         let derived = map (fun name -> let Some p = Plugin.get name in name, p loc p_descriptor) deriving in
          let tpo_name = generator#generate "tpo" in
          let tpo =
            let methods = 
@@ -482,7 +482,7 @@ let generate t loc =
                             Plugin.default    = prop;
                           }
                           in
-                          Plugin.generate_inherit loc qname descr (p descr)
+                          Plugin.generate_inherit loc qname descr (p loc descr)
                        ) 
                        typs
                     in
@@ -555,9 +555,40 @@ let generate t loc =
                 map (fun (_, (_, x)) -> x) !context
              )
            in
+	   let add_derived_method, get_derived_classes =
+             let module M = Map.Make (String) in
+             let get k m = try M.find k m with Not_found -> [] in
+             let mdef, mdecl = ref M.empty, ref M.empty in
+             (fun (cname, cargs) (trait, (_, p_func)) ->
+                let prev_def, prev_decl = get trait !mdef, get trait !mdecl in
+                let args = fst (fold_right (fun _ (acc, i) -> (sprintf "p%d" i)::acc, i+1) cargs ([], 0)) in
+                let constr = {
+                  Plugin.constr = cname;
+                  Plugin.acc    = "acc";
+                  Plugin.subj   = "subj";
+                  Plugin.args   = combine args cargs;
+                }
+                in
+                let m_def = 
+                  cmethod cname,
+                  make_fun (fun a -> <:patt< $lid:a$ >>) ([constr.Plugin.acc; constr.Plugin.subj] @ args) (p_func constr) 
+                in
+                mdef := M.add trait (m_def::prev_def) !mdef
+             ),
+             (fun (trait, p) -> 
+	        let m_defs = 
+                  map (fun (name, body) -> <:class_str_item< method $lid:name$ = $body$ >>) (get trait !mdef) 
+                in 
+                let i_def, i_decl = Plugin.generate_inherit loc [class_t current] p_descriptor p in
+                let ce = <:class_expr< object $list:i_def::m_defs$ end >> in
+                let ct = <:class_type< object $list:[]$ end >> in
+                Plugin.generate_classes loc trait p_descriptor p (ce, ct)                
+	     )
+           in
            let match_cases =
              map 
-               (fun (cname, cargs) -> 
+               (fun (cname, cargs) as case -> 
+                  iter (add_derived_method case) derived;
                   let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
                   let args    = rev args in
                   let patt    =
@@ -674,7 +705,7 @@ let generate t loc =
             (make_fun (fun a -> <:patt< $lid:a$ >>) args (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>))
            ),
            <:sig_item< value $name$ : $catype$ >>,
-           [class_def, class_decl]
+           [class_def, class_decl] @ (map get_derived_classes derived)
       ) 
       d
   in
