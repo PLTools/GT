@@ -11,7 +11,7 @@ class ['a, 'b] tree_map_t f =
 class ['a, 'b] tree_fold_t f =
   object(self)
     inherit ['a, 'b] @tree
-method m_Node acc x n l = List.fold_left (fun acc t -> x.f acc t) (f acc n) l
+    method m_Node acc x n l = List.fold_left (fun acc t -> x.f acc t) (f acc n) l
   end
 
 let num_of_nodes t = 

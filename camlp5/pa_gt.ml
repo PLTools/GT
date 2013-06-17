@@ -69,7 +69,7 @@ module Plugin =
       constr : string;
       acc    : string;
       subj   : string;
-      args   : (string * [ `Processing of string list * string list | `Variable of string | `Protected of ctyp ]) list;
+      args   : (string * [`Specific of string list * string list | `Variable of string | `Generic of ctyp]) list;
     }
 
     type t = loc -> type_descriptor -> properties * (constructor -> expr)
@@ -293,7 +293,7 @@ let generate t loc =
                fold_left 
                  (fun acc t ->
                     match t with
-                    | `Processing (_, [n]) -> n::acc
+                    | `Specific (_, [n]) -> n::acc
                     | _ -> acc
                  ) 
                  acc 
@@ -420,7 +420,7 @@ let generate t loc =
          | `Sumi (_, _, typs) -> 
            let inherits =
              map (function 
-                  | `Processing (args, qname) ->
+                  | `Specific (args, qname) ->
                       let h::tl = args in
                       let args  = 
                         h ::
@@ -471,43 +471,63 @@ let generate t loc =
            let class_def  = <:str_item< class $list:[class_info class_expr]$ >> in
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in
            let sum_body  =
-             let summand = function
-             | `Processing (args, qname) -> 
-                let _::t = args  in
-                let args = rev t in
-                let typename =
-                  match qname with
-                  | [n]  -> <:expr< $lid:n$ >>
-                  | h::t -> 
-                     let n::t = rev t in
-                     let n = <:expr< $lid:n$ >> in
-                     let q = 
-                       fold_left 
-                         (fun q n -> let n = <:expr< $uid:n$ >> in <:expr< $q$ . $n$ >>) 
-                         <:expr< $uid:h$ >> 
-                         (rev t) 
-                     in
-                     <:expr< $q$ . $n$ >>
-                in
-                let generic = <:expr< $uid:"GT"$ >> in
-                let cata    = <:expr< $lid:"gcata_ext"$ >> in
-                let func    = <:expr< $typename$ . $generic$ >> in
-                let func    = <:expr< $func$ . $cata$ >> in
-                make_call of_lid func ((map farg args) @ [trans])
+             let cases =
+               map 
+                 (function `Specific (args, qname) ->
+                    let expr =
+                      let _::t = args  in
+                      let args = rev t in
+                      let typename =
+                        match qname with
+                        | [n]  -> <:expr< $lid:n$ >>
+                        | h::t -> 
+                           let n::t = rev t in
+                           let n = <:expr< $lid:n$ >> in
+                           let q = 
+                             fold_left 
+                               (fun q n -> let n = <:expr< $uid:n$ >> in <:expr< $q$ . $n$ >>) 
+                               <:expr< $uid:h$ >> 
+                               (rev t) 
+                           in
+                           <:expr< $q$ . $n$ >>
+                      in
+                      let generic = <:expr< $uid:"GT"$ >> in
+                      let cata    = <:expr< $lid:"gcata_ext"$ >> in
+                      let func    = <:expr< $typename$ . $generic$ >> in
+                      let func    = <:expr< $func$ . $cata$ >> in
+                      make_call of_lid func ((map farg args) @ [trans; ext; acc; subj])
+                    in
+                    let patt =
+                      let t::r  = rev qname in
+                      let qname = rev (closed t :: r) in
+                      let pvt  = <:patt< # $list:qname$ >> in
+                      let subj = <:patt< $lid:subj$ >> in
+                      <:patt< ( $pvt$ as $subj$ ) >>
+                    in
+                    patt, VaVal None, expr
+                 ) typs
              in
-             let h::t    = typs in
-             let generic = <:expr< $uid:"GT"$ >> in
-             let sum     = <:expr< $lid:"sum"$ >> in
-             let gsum    = <:expr< $generic$ . $sum$ >> in
-             let sumcata = fold_left (fun l r -> make_call id gsum [l; summand r]) (summand h) t in
-             make_call of_lid sumcata [ext; acc; subj]
+             let local_defs_and_then expr =
+               let defs = [<:patt< $lid:"self"$ >>, make_call of_lid <:expr< $lid:cata current$ >> metargs] in
+               <:expr< let $list:defs$ in $expr$ >>
+             in
+             let cases = 
+               let last_case =
+                 let patt = <:patt< $lid:subj$ >> in
+                 let expr = make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; subj] in
+                 patt, VaVal None, expr
+               in
+               cases @ [last_case] 
+             in
+             let subj  = <:expr< $lid:subj$ >> in
+             local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>
            in
            let derived_classes =              
              map (fun (trait, ((prop, _) as dprop)) -> 
                     let Some p = Plugin.get trait in
                     let inherits =
                       map 
-                       (function `Processing (b::args, qname) ->
+                       (function `Specific (b::args, qname) ->
                           let qname, name = 
                             let n::t = rev qname in
                             rev ((trait_t n trait) :: t), n
@@ -647,9 +667,9 @@ let generate t loc =
                       <:ctyp< $ga$ $tpt$ >>                           
                     in
                     let make_typ = function
-                    | `Protected   t    -> t
+                    | `Generic   t    -> t
                     | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
-                    | `Processing (targs, qname) ->   
+                    | `Specific (targs, qname) ->   
                          let typ =
                            let qtype =
                              match rev qname with
@@ -666,7 +686,7 @@ let generate t loc =
                          in
                          make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
                     in
-                    let typs = [<:ctyp< ' $inh$ >>; make_typ (`Processing (orig_args, [name]))] @ (map make_typ cargs) in
+                    let typs = [<:ctyp< ' $inh$ >>; make_typ (`Specific (orig_args, [name]))] @ (map make_typ cargs) in
                     fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
                   in
                   let expr =
@@ -684,9 +704,9 @@ let generate t loc =
                          (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
                          (map (fun (typ, x) -> 
                                  match typ with
-                                 | `Protected _   -> <:expr< $lid:x$ >>
+                                 | `Generic _   -> <:expr< $lid:x$ >>
                                  | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
-                                 | `Processing t   -> 
+                                 | `Specific t   -> 
                                      let name = get_type_handler t in 
                                      garg name <:expr< $lid:x$ >>
                               ) 
@@ -883,9 +903,9 @@ EXTEND
                       let args = 
                         map 
                           (function 
-                           | `Protected t -> replace_t loc a n t
-                           | `Processing (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
-                           | `Processing (targs, qname) ->   
+                           | `Generic t -> replace_t loc a n t
+                           | `Specific (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
+                           | `Specific (targs, qname) ->   
                                let qtype =
                                  match rev qname with
                                  | name::qname -> 
@@ -997,16 +1017,16 @@ EXTEND
              match d with
              | `Variable x -> 
                  Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in type sum" x))
-             | `Processing ([], _) ->
+             | `Specific ([], _) ->
                  Ploc.raise loc (Generic_extension "polymorphic type expected in type sum")
-             | `Processing (b::_ as args, qname) ->
+             | `Specific (b::_ as args, qname) ->
                  (match !a with 
                  | None -> a := Some b
                  | Some a when a <> b -> 
                     Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types this type sum" a))
                  | _ -> ()
                  );
-                 `Processing (args, qname) 
+                 `Specific (args, qname) 
           ) 
           d
       in
@@ -1040,23 +1060,23 @@ EXTEND
   typ: [ 
     [ "["; t=c_typ; "]" -> 
       let t, d = t in
-      t, (d :> [`Processing of string list * string list | `Variable of string | `Protected of ctyp])
+      t, (d :> [`Specific of string list * string list | `Variable of string | `Generic of ctyp])
     ] |
-    [  t=ctyp LEVEL "apply" -> t, `Protected t ]
+    [ t=ctyp LEVEL "apply" -> t, `Generic t ]
   ];
 
   c_typ: [
     [ a=targ; q=OPT qname -> 
        let at = <:ctyp< ' $a$ >> in
        match q with 
-       | Some q -> <:ctyp< $fst q$ $at$ >>, `Processing ([a], snd q)
+       | Some q -> <:ctyp< $fst q$ $at$ >>, `Specific ([a], snd q)
        | None -> <:ctyp< ' $a$ >>, `Variable a
     ] | 
     [ "("; a=LIST1 targ SEP ","; ")"; q=qname -> 
        fold_left (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) (fst q) a, 
-       `Processing (a, snd q) 
+       `Specific (a, snd q) 
     ] |
-    [ q=qname -> fst q, `Processing ([], snd q) ]
+    [ q=qname -> fst q, `Specific ([], snd q) ]
   ];
 
   qname: [
