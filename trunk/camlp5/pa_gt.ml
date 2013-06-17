@@ -495,7 +495,11 @@ let generate t loc =
                       let cata    = <:expr< $lid:"gcata_ext"$ >> in
                       let func    = <:expr< $typename$ . $generic$ >> in
                       let func    = <:expr< $func$ . $cata$ >> in
-                      make_call of_lid func ((map farg args) @ [trans; ext; acc; subj])
+                      let ext     = 
+                        make_fun id [<:patt< _ >>; <:patt< $lid:"acc"$ >>; <:patt< $lid:"x"$ >>] 
+                          (make_call id <:expr< $lid:ext$ >> [<:expr< $lid:"self"$ >>; <:expr< $lid:"acc"$ >>; <:expr< $lid:"x"$ >>])
+                      in
+                      make_call id func ((map (fun a -> <:expr< $lid:farg a$>>) args) @ [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>])
                     in
                     let patt =
                       let t::r  = rev qname in
