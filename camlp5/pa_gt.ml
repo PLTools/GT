@@ -496,8 +496,11 @@ let generate t loc =
                       let func    = <:expr< $typename$ . $generic$ >> in
                       let func    = <:expr< $func$ . $cata$ >> in
                       let ext     = 
+                        make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
+(*
                         make_fun id [<:patt< _ >>; <:patt< $lid:"acc"$ >>; <:patt< $lid:"x"$ >>] 
                           (make_call id <:expr< $lid:ext$ >> [<:expr< $lid:"self"$ >>; <:expr< $lid:"acc"$ >>; <:expr< $lid:"x"$ >>])
+*)
                       in
                       make_call id func ((map (fun a -> <:expr< $lid:farg a$>>) args) @ [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>])
                     in
@@ -574,7 +577,7 @@ let generate t loc =
                       let compound_name = String.concat "_" (args @ qname) in
                       let base_gcata, ext = 
                         match qname with
-                        | [name]      -> get_cata name, if name = current && extensible then [<:expr< $lid:ext$ >>] else [] 
+                        | [name]      -> get_cata name, [<:expr< $lid:ext$ >>]
                         | name::names -> 
                             let base = 
                               fold_left (fun q name -> 
