@@ -497,10 +497,6 @@ let generate t loc =
                       let func    = <:expr< $func$ . $cata$ >> in
                       let ext     = 
                         make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
-(*
-                        make_fun id [<:patt< _ >>; <:patt< $lid:"acc"$ >>; <:patt< $lid:"x"$ >>] 
-                          (make_call id <:expr< $lid:ext$ >> [<:expr< $lid:"self"$ >>; <:expr< $lid:"acc"$ >>; <:expr< $lid:"x"$ >>])
-*)
                       in
                       make_call id func ((map (fun a -> <:expr< $lid:farg a$>>) args) @ [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>])
                     in
@@ -854,11 +850,13 @@ EXTEND
   ];
   
   class_longident: [
-    [ "@"; ci=qname -> 
-      let n::q = rev (snd ci) in
-      rev ((class_t n)::q) 
+    [ "@"; ci=qname; t=OPT trait -> 
+      let n::q = rev (snd ci) in      
+      rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
     ]
   ];
+
+  trait: [[ "["; id=LIDENT; "]" -> id ]];
 
   str_item: LEVEL "top" [
     [ "generic"; t=LIST1 t_decl SEP "and" -> fst (generate t loc) ]
