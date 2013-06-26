@@ -8,37 +8,37 @@ let _ =
        let module H = Helper (struct let loc = loc end) in
        H.(
         {
-          inh = tname ["unit"]; 
-          syn = tname ["string"]; 
-          arg_img = (fun _ -> tname ["string"])
+          inh = T.id "unit"; 
+          syn = T.id "string"; 
+          arg_img = (fun _ -> T.id "string")
         }, 
         (fun constr -> 
-           let concat x y = apply <:expr< $lid:"^"$ >> [x; y] in
+           let concat x y = E.app [E.lid "^"; x; y] in
            concat 
              (snd 
                (List.fold_left 
                   (fun (first, expr as acc) arg ->
                      let append e = 
-                       false, concat expr (if first then e else concat <:expr< $str:", "$ >> e)
+                       false, concat expr (if first then e else concat (E.str ", ") e)
                      in
                      match arg with
                      | arg, (`Variable _ | `Specific _) -> 
-                        append (apply (fx <:expr< $lid:arg$ >>) [<:expr< () >>])
+                        append (E.app [E.fx (E.lid arg); E.unit])
                      | arg, `Generic ctyp -> 
                         match ctyp with
                         | <:ctyp< $lid:tname$ >> -> 
                           (match tname with
-                           | "int"    -> append (apply <:expr< $lid:"string_of_int"$ >> [<:expr< $lid:arg$ >>])
-                           | "string" -> append <:expr< $lid:arg$ >>
+                           | "int"    -> append (E.app [E.lid "string_of_int"; E.lid arg])
+                           | "string" -> append (E.lid arg)
                            | _        -> acc
                           )
                         | _ ->  acc
                   )         
-                  (true, <:expr< $str:constr.constr ^ " ("$ >>)
+                  (true, E.str (constr.constr ^ " ("))
                   constr.args 
                )
              )
-             <:expr< $str:")"$ >>             
+             (E.str ")")
         )
        )
     )

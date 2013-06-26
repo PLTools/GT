@@ -79,37 +79,88 @@ module Plugin =
         
         open L
 
-        let gt_field f e = 
-          let gt = <:expr< $uid:"GT"$ >> in
-          let ff = <:expr< $lid:f$ >> in
-          let e  = <:expr< $e$ . $gt$ >> in
-          <:expr< $e$ . $ff$ >>
+        let id lid uid s = 
+          if String.length s = 0 
+          then invalid_arg "MLComb.id: empty string"
+          else (if s.[0] = Char.uppercase s.[0] then uid else lid) s
 
-        let f      = gt_field "f" 
-        let x      = gt_field "x"
-        let fx     = gt_field "fx"
-        let tp e p = <:expr< $gt_field "t" e$ # $p$ >>
+        let qname acc id = function
+        | []    -> invalid_arg "MLComb.qname: empty string list"
+        | h::tl -> fold_left (fun q n -> acc q (id n)) (id h) tl
 
-        let tname h::t = 
-          let id s = 
-            if Char.uppercase s.[0] = s.[0] 
-            then <:ctyp< $uid:s$ >> 
-            else <:ctyp< $lid:s$ >> 
-          in
-          fold_left (fun q n -> <:ctyp< $q$ . $id n$ >>) (id h) t
+        module T =
+          struct
+            let lid   = (fun s -> <:ctyp< $lid:s$ >>)
+            let uid   = (fun s -> <:ctyp< $uid:s$ >>)
+            let id    = id lid uid
+            let qname = qname (fun x y -> <:ctyp< $x$ . $y$ >>) id 
+          end
+ 
+        module P =
+          struct
+          end
 
-        let qname h::t = 
-          let id s = 
-            if Char.uppercase s.[0] = s.[0] 
-            then <:expr< $uid:s$ >> 
-            else <:expr< $lid:s$ >> 
-          in
-          fold_left (fun q n -> <:expr< $q$ . $id n$ >>) (id h) t
+        module E = 
+          struct
+    
+            let lid   = (fun s -> <:expr< $lid:s$ >>)
+            let uid   = (fun s -> <:expr< $uid:s$ >>)
+            let id    = id lid uid
+            let acc   = qname (fun x y -> <:expr< $x$ . $y$ >>) (fun x -> x) 
+            let qname = qname (fun x y -> <:expr< $x$ . $y$ >>) id 
 
-        let apply    f    args = fold_left  (fun e a -> <:expr< $e$ $a$ >>) f args  
-        let seq      exprs     = <:expr< do { $list:exprs$ } >>
-        let abstract args expr = fold_right (fun arg expr -> <:expr< fun [ $list:[arg, VaVal None, expr]$ ] >>) args expr
+            let app   = function
+            | []    -> invalid_arg "MLComb.E.app: empty expression list"
+            | h::tl -> fold_left (fun e a -> <:expr< $e$ $a$ >>) h tl
+     
+            let abstr       list       = <:expr< fun [ $list:list$ ] >>
+            let aelem       a i        = <:expr< $a$ . ( $i$ ) >>
+            let belem       a i        = <:expr< $a$ . { $i$ } >>
+            let array       list       = <:expr< [| $list:list$ |] >>
+            let assrt       e          = <:expr< assert $e$ >>
+            let assign      x y        = <:expr< $x$ := $y$ >>
+            let char        s          = <:expr< $chr:s$ >>
+            let coerce      e t        = <:expr< ( $e$ :> $t$ ) >>
+            let float       s          = <:expr< $flo:s$ >>
+            let for_to      i l u list = <:expr< for $lid:i$ = $l$ to     $u$ do { $list:list$ } >>
+            let for_downto  i l u list = <:expr< for $lid:i$ = $l$ downto $u$ do { $list:list$ } >>
+            let if_then     c t e      = <:expr< if $c$ then $t$ else $e$ >>
+            let int         s          = <:expr< $int:s$ >>
+            let int32       s          = <:expr< $int32:s$ >>
+            let int64       s          = <:expr< $int64:s$ >>
+            let nat         s          = <:expr< $nativeint:s$ >>
+            let label       p e        = <:expr< ~{$p$ $opt:e$} >>
+            let lazy_e      e          = <:expr< lazy $e$ >>
+            let letrec      pe e       = <:expr< let rec $list:pe$ in $e$ >>
+            let let_nrec    pe e       = <:expr< let $list:pe$ in $e$ >>
+            let let_module  s me e     = <:expr< let module $uid:s$ = $me$ in $e$ >>
+            let match_e     e pe       = <:expr< match $e$ with [ $list:pe$ ] >>
+            let new_e       list       = <:expr< new $list:list$ >>
+            let object_e    p list     = <:expr< object $opt:p$ $list:list$ end >>
+            let opt_label   p oe       = <:expr< ?{ $p$ $opt:oe$ } >>
+            let override    list       = <:expr< {< $list:list$ >} >>
+            let module_e    me         = <:expr< ( module $me$ ) >>
+            let module_t    me t       = <:expr< ( module $me$ : $t$ ) >>
+            let record      list       = <:expr< { $list:list$ } >>
+            let record_with e list     = <:expr< { ($e$) with $list:list$} >>
+            let seq         list       = <:expr< do { $list:list$ } >>
+            let method_call e m        = <:expr< $e$ # $m$ >>
+            let selem       s i        = <:expr< $s$ . [$i$] >>
+            let str         s          = <:expr< $str:s$ >>
+            let try_e       e list     = <:expr< try $e$ with [ $list:list$ ] >>
+            let tuple       list       = <:expr< ( $list:list$ ) >>
+            let constr      e t        = <:expr< ( $e$ : $t$ ) >>
+            let variant     s          = <:expr< ` $s$ >>
+            let while_e     e list     = <:expr< while $e$ do { $list:list$ } >>
+            let unit                   = <:expr< () >>
 
+            let gt_field f e = acc [e; uid "GT"; lid f]
+            let f            = gt_field "f" 
+            let x            = gt_field "x"
+            let fx           = gt_field "fx"
+            let tp e p       = method_call (gt_field "t" e) p
+
+          end
       end
   
     let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
