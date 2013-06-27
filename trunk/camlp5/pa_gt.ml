@@ -140,7 +140,7 @@ module Plugin =
             let id          = id lid uid
             let acc         = qname (fun x y -> <:patt< $x$ . $y$ >>) (fun x -> x)
             let qname       = qname (fun x y -> <:patt< $x$ . $y$ >>) id 
-            let alias t1 t2 = <:patt< ( $t1$ as $t2$ ) >>
+            let alias t1 t2 = <:patt< ($t1$ as $t2$ ) >>
             let wildcard    = <:patt< _ >>
 
             let app = function
@@ -1016,7 +1016,7 @@ EXTEND
 
         | `Poly (`More b, d) ->
            (match a with 
-           | f::_ when f <> b -> Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed first in type \"%s\" definition." b n))
+           | f::_ when f <> b -> Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed first in the type \"%s\" definition." b n))
            | [] -> Pervasives.raise (Generic_extension (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b))
            | _  -> (a, n, t)
            ),
@@ -1142,14 +1142,14 @@ EXTEND
           (fun d -> 
              match d with
              | `Variable x -> 
-                 Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in type sum" x))
+                 Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in the type sum" x))
              | `Specific ([], _) ->
-                 Ploc.raise loc (Generic_extension "polymorphic type expected in type sum")
+                 Ploc.raise loc (Generic_extension "polymorphic type expected in the type sum")
              | `Specific (b::_ as args, qname) ->
                  (match !a with 
                  | None -> a := Some b
                  | Some a when a <> b -> 
-                    Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types this type sum" a))
+                    Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types in this type sum" a))
                  | _ -> ()
                  );
                  `Specific (args, qname) 
