@@ -90,14 +90,84 @@ module Plugin =
 
         module T =
           struct
-            let lid   = (fun s -> <:ctyp< $lid:s$ >>)
-            let uid   = (fun s -> <:ctyp< $uid:s$ >>)
-            let id    = id lid uid
-            let qname = qname (fun x y -> <:ctyp< $x$ . $y$ >>) id 
+
+            let lid         = (fun s -> <:ctyp< $lid:s$ >>)
+            let uid         = (fun s -> <:ctyp< $uid:s$ >>)
+            let id          = id lid uid
+            let acc         = qname (fun x y -> <:ctyp< $x$ . $y$ >>) (fun x -> x)
+            let qname       = qname (fun x y -> <:ctyp< $x$ . $y$ >>) id 
+            let alias t1 t2 = <:ctyp< $t1$ as $t2$ >>
+            let wildcard    = <:ctyp< _ >>
+
+            let app = function
+            | []    -> invalid_arg "MLComb.T.app: empty expression list"
+            | h::tl -> fold_left (fun e a -> <:ctyp< $e$ $a$ >>) h tl
+
+            let arrow = function
+            | []    -> invalid_arg "MLComb.T.arrow: empty expression list"
+            | h::tl -> fold_left (fun e a -> <:ctyp< $e$ -> $a$ >>) h tl    
+
+            let class_t   qname      = <:ctyp< # $list:qname$ >>
+            let label     s t        = <:ctyp< ~$s$: $t$ >>
+            let manifest  t1 priv t2 = <:ctyp< $t1$ == $priv:priv$ $t2$ >>
+            let obj       lst ell    = <:ctyp< < $list:lst$ $flag:ell$ > >>
+            let opt_label s t        = <:ctyp< ?$s$: $t$ >>
+            let package   mt         = <:ctyp< (module $mt$) >>
+            let polymorph lst t      = <:ctyp< ! $list:lst$ . $t$ >>
+            let var       s          = <:ctyp< '$s$ >>
+            let record    lst        = <:ctyp< { $list:lst$ } >>
+            let sum       lst        = <:ctyp< [ $list:lst$ ] >>
+            let tuple     lst        = <:ctyp< ( $list:lst$ ) >>
+
+            let pv_constr s = function
+            | []   -> <:poly_variant< ` $s$ >>
+            | args -> <:poly_variant< ` $s$ of $list:args$ >>
+
+            let pv_and_constr       s args = <:poly_variant< ` $s$ of & $list:args$ >>
+            let pv_type             t      = <:poly_variant< $t$ >>
+            let eq_variant          lpv    = <:ctyp< [ = $list:lpv$ ] >>
+            let more_variant        lpv    = <:ctyp< [ > $list:lpv$ ] >>
+            let less_variant        lpv    = <:ctyp< [ < $list:lpv$ ] >>
+            let less_constr_variant lpv ls = <:ctyp< [ < $list:lpv$ > $list:ls$ ] >>
+
           end
  
         module P =
           struct
+
+            let lid         = (fun s -> <:patt< $lid:s$ >>)
+            let uid         = (fun s -> <:patt< $uid:s$ >>)
+            let id          = id lid uid
+            let acc         = qname (fun x y -> <:patt< $x$ . $y$ >>) (fun x -> x)
+            let qname       = qname (fun x y -> <:patt< $x$ . $y$ >>) id 
+            let alias t1 t2 = <:patt< ( $t1$ as $t2$ ) >>
+            let wildcard    = <:patt< _ >>
+
+            let app = function
+            | []    -> invalid_arg "MLComb.P.app: empty expression list"
+            | h::tl -> fold_left (fun e a -> <:patt< $e$ $a$ >>) h tl
+
+            let array      lp    = <:patt< [| $list:lp$ |] >>
+	    let char       s     = <:patt< $chr:s$ >>
+	    let float      s     = <:patt< $flo:s$ >>
+	    let int        s     = <:patt< $int:s$ >>
+	    let int32      s     = <:patt< $int32:s$ >>
+	    let int64      s     = <:patt< $int64:s$ >>
+	    let nativeint  s     = <:patt< $nativeint:s$ >>
+	    let label      p1 p2 = <:patt< ~{$p1$ $opt:p2$} >>
+	    let lazy_p     p     = <:patt< lazy $p$ >>
+            let newtype    s     = <:patt< (type $lid:s$) >>
+	    let opt_label  p oe  = <:patt< ?{$p$ $opt:oe$} >>
+	    let or_p       p1 p2 = <:patt< $p1$ | $p2$ >>
+            let record     lpp   = <:patt< { $list:lpp$ } >>
+	    let range      p1 p2 = <:patt< $p1$ .. $p2$ >>
+	    let str        s     = <:patt< $str:s$ >>
+	    let tuple      lp    = <:patt< ($list:lp$) >>
+            let constr     p t   = <:patt< ($p$ : $t$) >>
+	    let type_p     ls    = <:patt< # $list:ls$ >>
+	    let module_unp s     = function None -> <:patt< (module $uid:s$) >> | Some mt -> <:patt< (module $uid:s$ : $mt$) >>
+	    let variant    s     = <:patt< ` $s$ >>
+
           end
 
         module E = 
