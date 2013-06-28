@@ -738,29 +738,54 @@ let generate t loc =
                 map (fun (_, (_, x)) -> x) !context
              )
            in
-	   let add_derived_method, get_derived_classes =
+	   let add_derived_member, get_derived_classes =
              let module M = Map.Make (String) in
              let get k m = try M.find k m with Not_found -> [] in
              let mdef, mdecl = ref M.empty, ref M.empty in
-             (fun (cname, cargs) (trait, (_, p_func)) ->
+             (fun case (trait, (prop, p_func) as dprop) ->
+                let Some p = Plugin.get trait in
                 let prev_def, prev_decl = get trait !mdef, get trait !mdecl in
-                let args = fst (fold_right (fun _ (acc, i) -> (sprintf "p%d" i)::acc, i+1) cargs ([], 0)) in
-                let constr = {
-                  Plugin.constr = cname;
-                  Plugin.acc    = "acc";
-                  Plugin.subj   = "subj";
-                  Plugin.args   = combine args cargs;
-                }
+                let def =
+                  match case with
+                  | `Con (cname, cargs) -> 
+                     let args = fst (fold_right (fun _ (acc, i) -> (sprintf "p%d" i)::acc, i+1) cargs ([], 0)) in
+                     let constr = {
+                       Plugin.constr = cname;
+                       Plugin.acc    = "acc";
+                       Plugin.subj   = "subj";
+                       Plugin.args   = combine args cargs;
+                     }
+                     in
+                     let m_def = 
+                       let name = cmethod cname in
+                       let body = make_fun (fun a -> <:patt< $lid:a$ >>) ([constr.Plugin.acc; constr.Plugin.subj] @ args) (p_func constr) in
+                       <:class_str_item< method $lid:name$ = $body$ >>
+                     in
+                     m_def
+
+                  | `Specific (b::args, qname) -> 
+                     let qname, name = 
+                       let n::t = rev qname in
+                       rev ((trait_t n trait) :: t), n
+                     in
+                     let descr = {
+                       Plugin.is_polyvar = true;
+                       Plugin.is_open    = `Yes b;
+                       Plugin.type_args  = args;
+                       Plugin.name       = name;
+                       Plugin.default    = prop;
+                     }
+                     in
+                     let i_def, i_decl = Plugin.generate_inherit loc qname descr (p loc descr) in
+                     i_def
                 in
-                let m_def = 
-                  cmethod cname,
-                  make_fun (fun a -> <:patt< $lid:a$ >>) ([constr.Plugin.acc; constr.Plugin.subj] @ args) (p_func constr) 
-                in
-                mdef := M.add trait (m_def::prev_def) !mdef
+                mdef := M.add trait (def::prev_def) !mdef
              ),
              (fun (trait, p) -> 
-	        let m_defs = 
+	        let m_defs = get trait !mdef
+(*
                   map (fun (name, body) -> <:class_str_item< method $lid:name$ = $body$ >>) (get trait !mdef) 
+*)
                 in 
                 let i_def, i_decl = Plugin.generate_inherit loc [class_t current] p_descriptor p in
                 let ce = <:class_expr< object $list:i_def::m_defs$ end >> in
@@ -771,8 +796,8 @@ let generate t loc =
            let match_cases =
              map 
                (function 
-                | `Con ((cname, cargs) as case) -> 
-                    iter (add_derived_method case) derived;
+                | `Con (cname, cargs) as case -> 
+                    iter (add_derived_member case) derived;
                     let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
                     let args    = rev args in
                     let patt    =
@@ -844,7 +869,8 @@ let generate t loc =
                     [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
                     [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
 
-                | `Specific (args, qname) -> 
+                | `Specific (args, qname) as case -> 
+                    iter (add_derived_member case) derived;
                     let h::tl = args in
                     let targs  = 
                       h ::
