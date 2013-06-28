@@ -1,7 +1,1 @@
-Matching "string" against ""abc"\ and the rest"
-  stream:  and the r...;
-  args  : Q=["], S=["abc"]
-Matching "stringNotLetter" against ""abc" and the rest":
-Matching "stringNotLetter" against ""abc"and the rest":
-  stream: and the re...;
-  args  : Q=["], S=["abc"]
+3
