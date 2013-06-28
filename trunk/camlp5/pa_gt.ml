@@ -410,7 +410,7 @@ let generate t loc =
         (fun acc ((_, n, d), _) -> 
            let acc = n::acc in
            match d with
-           | `Sumi (_, _, types) ->
+           | `Poly (_, comps) ->
                fold_left 
                  (fun acc t ->
                     match t with
@@ -418,7 +418,7 @@ let generate t loc =
                     | _ -> acc
                  ) 
                  acc 
-                 types
+                 comps
            | _ -> acc
         ) 
         [] 
@@ -457,10 +457,10 @@ let generate t loc =
          let current     = name in
          let extensible, remove_bound_var, is_bound_var, bound_var = 
            match descr with 
-           | `Sumi (x, _, _) | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
+           | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
            | _ -> false, (fun x -> x), (fun _ -> false), None
          in
-         let polyvar     = match descr with `Poly _ | `Sumi _ -> true | _ -> false in
+         let polyvar     = match descr with `Poly _ -> true | _ -> false in
          let orig_args   = args                     in
          let args        = remove_bound_var args    in
          let generator   = name_generator args      in
@@ -538,6 +538,7 @@ let generate t loc =
          let metargs = (map farg args) @ [trans; ext] in
          let args = metargs @ [acc; subj] in
          match descr with
+(*
          | `Sumi (_, _, typs) -> 
            let inherits =
              map (function 
@@ -682,7 +683,7 @@ let generate t loc =
            ),
            <:sig_item< value $name$ : $catype$ >>,
            (class_def, class_decl) :: derived_classes
-                
+ *)               
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs =
              let context = ref [] in
@@ -769,88 +770,158 @@ let generate t loc =
            in
            let match_cases =
              map 
-               (fun (cname, cargs) as case -> 
-                  iter (add_derived_method case) derived;
-                  let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
-                  let args    = rev args in
-                  let patt    =
-                    fold_left 
-                      (fun p id -> let pid = <:patt< $lid:id$ >> in <:patt< $p$ $pid$ >>)
-                      (if polyvar then <:patt< ` $cname$ >> else <:patt< $uid:cname$ >>) 
-                      args
-                  in
-                  let met_name = cmethod cname in
-                  let met_sig  = 
-                    let make_a x y z = 
-                      let g  = <:ctyp< $uid:"GT"$ >> in
-                      let a  = <:ctyp< $lid:"a"$  >> in
-                      let ga = <:ctyp< $g$ . $a$  >> in
-                      let ga = <:ctyp< $ga$ $x$   >> in
-                      let ga = <:ctyp< $ga$ $y$   >> in
-                      let ga = <:ctyp< $ga$ $z$   >> in
-                      <:ctyp< $ga$ $tpt$ >>                           
+               (function 
+                | `Con ((cname, cargs) as case) -> 
+                    iter (add_derived_method case) derived;
+                    let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
+                    let args    = rev args in
+                    let patt    =
+                      fold_left 
+                        (fun p id -> let pid = <:patt< $lid:id$ >> in <:patt< $p$ $pid$ >>)
+                        (if polyvar then <:patt< ` $cname$ >> else <:patt< $uid:cname$ >>) 
+                        args
                     in
-                    let make_typ = function
-                    | `Generic   t    -> t
-                    | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
-                    | `Specific (targs, qname) ->   
-                         let typ =
-                           let qtype =
-                             match rev qname with
-                             | name::qname -> 
-                                fold_right 
-                                  (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
-                                  qname 
-                                  <:ctyp< $lid: name$ >>
+                    let met_name = cmethod cname in
+                    let met_sig  = 
+                      let make_a x y z = 
+                        let g  = <:ctyp< $uid:"GT"$ >> in
+                        let a  = <:ctyp< $lid:"a"$  >> in
+                        let ga = <:ctyp< $g$ . $a$  >> in
+                        let ga = <:ctyp< $ga$ $x$   >> in
+                        let ga = <:ctyp< $ga$ $y$   >> in
+                        let ga = <:ctyp< $ga$ $z$   >> in
+                        <:ctyp< $ga$ $tpt$ >>                           
+                      in
+                      let make_typ = function
+                      | `Generic   t    -> t
+                      | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
+                      | `Specific (targs, qname) ->   
+                           let typ =
+                             let qtype =
+                               match rev qname with
+                               | name::qname -> 
+                                  fold_right 
+                                    (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
+                                    qname 
+                                    <:ctyp< $lid: name$ >>
+                             in
+                             fold_left 
+                               (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
+                               qtype 
+                               targs
                            in
-                           fold_left 
-                             (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
-                             qtype 
-                             targs
-                         in
-                         make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
+                           make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
+                      in
+                      let typs = [<:ctyp< ' $inh$ >>; make_typ (`Specific (orig_args, [name]))] @ (map make_typ cargs) in
+                      fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
                     in
-                    let typs = [<:ctyp< ' $inh$ >>; make_typ (`Specific (orig_args, [name]))] @ (map make_typ cargs) in
-                    fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
-                  in
-                  let expr =
-                    let obj      = <:expr< $lid:trans$ >>        in
-                    let met      = <:expr< $obj$ # $met_name$ >> in
-                    let garg f x =
-                      let g = <:expr< $uid:"GT"$ >> in
-                      let m = <:expr< $lid:"make"$ >> in
-                      let gm = <:expr< $g$ . $m$ >> in
-                      make_call id gm [f; x; <:expr< $lid:tpo_name$ >>]
-                    in
-                    make_call id 
-                      met 
-                       (<:expr< $lid:acc$  >> :: 
-                         (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
-                         (map (fun (typ, x) -> 
-                                 match typ with
-                                 | `Generic _   -> <:expr< $lid:x$ >>
-                                 | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
-                                 | `Specific t   -> 
-                                     let name = get_type_handler t in 
-                                     garg name <:expr< $lid:x$ >>
-                              ) 
-                              (combine cargs args)
+                    let expr =
+                      let obj      = <:expr< $lid:trans$ >>        in
+                      let met      = <:expr< $obj$ # $met_name$ >> in
+                      let garg f x =
+                        let g = <:expr< $uid:"GT"$ >> in
+                        let m = <:expr< $lid:"make"$ >> in
+                        let gm = <:expr< $g$ . $m$ >> in
+                        make_call id gm [f; x; <:expr< $lid:tpo_name$ >>]
+                      in
+                      make_call id 
+                        met 
+                         (<:expr< $lid:acc$  >> :: 
+                           (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
+                           (map (fun (typ, x) -> 
+                                   match typ with
+                                   | `Generic _   -> <:expr< $lid:x$ >>
+                                   | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
+                                   | `Specific t   -> 
+                                       let name = get_type_handler t in 
+                                       garg name <:expr< $lid:x$ >>
+                                ) 
+                                (combine cargs args)
+                           )
                          )
-                       )
-                  in
-                  (patt, VaVal None, expr), 
-                  [met_name, met_sig],
-                  [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
-                  [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
+                    in
+                    (patt, VaVal None, expr),
+                    [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
+                    [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
+
+                | `Specific (args, qname) -> 
+                    let h::tl = args in
+                    let targs  = 
+                      h ::
+                      (flatten 
+                        (map 
+                           (fun a -> 
+                              try [a; img a] with 
+                              | Not_found -> 
+                                  Ploc.raise loc (Generic_extension (sprintf "unbound type variable '%s" a))
+                           ) 
+                           tl
+                        )
+                      ) @ 
+                      [inh; syn] 
+                    in
+                    let tqname = 
+                      let h::t = rev qname in
+                      (rev t) @ [class_t h]
+                    in
+                    let targs = map (fun a -> <:ctyp< ' $a$ >>) targs in
+                    let ce    = <:class_expr< [ $list:targs$ ] $list:tqname$ >> in
+                    let ct    =
+                      let h::t = tqname in
+                      let ct   = 
+                        fold_left 
+                          (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 
+                          <:class_type< $id:h$ >>  
+                          t
+                      in
+                      <:class_type< $ct$ [ $list:targs$ ] >>
+                    in
+                    let expr =
+                      let _::t = args  in
+                      let args = rev t in
+                      let typename =
+                        match qname with
+                        | [n]  -> <:expr< $lid:n$ >>
+                        | h::t -> 
+                           let n::t = rev t in
+                           let n = <:expr< $lid:n$ >> in
+                           let q = 
+                             fold_left 
+                               (fun q n -> let n = <:expr< $uid:n$ >> in <:expr< $q$ . $n$ >>) 
+                               <:expr< $uid:h$ >> 
+                               (rev t) 
+                           in
+                           <:expr< $q$ . $n$ >>
+                      in
+                      let generic = <:expr< $uid:"GT"$ >> in
+                      let cata    = <:expr< $lid:"gcata_ext"$ >> in
+                      let func    = <:expr< $typename$ . $generic$ >> in
+                      let func    = <:expr< $func$ . $cata$ >> in
+                      let ext     = 
+                        make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
+                      in
+                      make_call id func ((map (fun a -> <:expr< $lid:farg a$>>) args) @ [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>])
+                    in
+                    let patt =
+                      let t::r  = rev qname in
+                      let qname = rev (closed t :: r) in
+                      let pvt  = <:patt< # $list:qname$ >> in
+                      let subj = <:patt< $lid:subj$ >> in
+                      <:patt< ( $pvt$ as $subj$ ) >>
+                    in
+                    (patt, VaVal None, expr),
+                    [<:class_str_item< inherit $ce$ >>],
+                    [<:class_sig_item< inherit $ct$ >>]
+
+                | `Variable _ -> invalid_arg "should not happen"
                ) 
                (match descr with `Vari cons | `Poly (_, cons) -> cons)
            in
            let match_cases = 
              if extensible then match_cases @ [(<:patt< $lid:others$ >>, 
-                                                VaVal None,
-                                                make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
+                                                 VaVal None,
+                                                 make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
                                                ),
-                                               [],
                                                [],
                                                []
                                               ]
@@ -868,7 +939,7 @@ let generate t loc =
              | [] -> expr
              | _  -> <:expr< let $list:local_defs$ in $expr$ >>
            in
-           let cases, _, methods, methods_sig = split4 match_cases in
+           let cases, methods, methods_sig = split3 match_cases in
            let methods      = flatten methods      in
            let methods_sig  = flatten methods_sig  in
            let class_expr   = <:class_expr< object $list:methods$     end >> in
@@ -909,7 +980,7 @@ let generate t loc =
                generic_cata_ext, <:expr< $lid:cata name$ >>; 
                generic_cata, let ext, p = 
                                match descr with 
-                               | `Poly (`More _, _) | `Sumi _ -> 
+                               | `Poly (`More _, _) -> 
                                     let p = tl p in
                                     let px = <:patt< $lid:"x"$ >> in
                                     let tx = 
@@ -992,6 +1063,7 @@ EXTEND
       let (is_private, ((def, cons), t)), deriving = t in
       let descriptor, types =
         match t with
+(*
         | `Sumi (var, lpv, _) -> 
            ignore (
              match a with
@@ -1013,7 +1085,7 @@ EXTEND
              tdDef = <:ctyp< ' $var$ >>; 
              tdCon = VaVal [<:ctyp< ' $var$ >>, <:ctyp< [ > $list:lpv$ ] >>]
             }]
-
+*)
         | `Poly (`More b, d) ->
            (match a with 
            | f::_ when f <> b -> Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed first in the type \"%s\" definition." b n))
@@ -1022,34 +1094,53 @@ EXTEND
            ),
            (let lcons =
               map 
-                (fun (constr, args) ->                     
-                   match args with
-                   | [] -> <:poly_variant< `$constr$ >>
-                   | _  ->
-                      let args = 
-                        map 
-                          (function 
-                           | `Generic t -> replace_t loc a n t
-                           | `Specific (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
-                           | `Specific (targs, qname) ->   
-                               let qtype =
-                                 match rev qname with
-                                 | name::qname -> 
-                                    fold_right 
-                                      (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
-                                      qname 
-                                      <:ctyp< $lid:name$ >>
-                               in
-                               fold_left 
-                                 (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
-                                 qtype 
-                                 targs
-                           | `Variable a -> <:ctyp< ' $a$ >>
-                          )
-                          args
-                      in
-                      let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in 
-                      <:poly_variant< `$constr$ of $flag:false$ $list:args$ >>
+                (function
+                 | `Con (constr, args) ->
+                     (match args with
+                     | [] -> <:poly_variant< `$constr$ >>
+                     | _  ->
+                        let args = 
+                          map 
+                            (function 
+                             | `Generic t -> replace_t loc a n t
+                             | `Specific (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
+                             | `Specific (targs, qname) ->   
+                                 let qtype =
+                                   match rev qname with
+                                   | name::qname -> 
+                                      fold_right 
+                                        (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
+                                        qname 
+                                        <:ctyp< $lid:name$ >>
+                                 in
+                                 fold_left 
+                                   (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
+                                   qtype 
+                                   targs
+                             | `Variable a -> <:ctyp< ' $a$ >>
+                            )
+                            args
+                        in
+                        let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in 
+                        <:poly_variant< `$constr$ of $flag:false$ $list:args$ >>
+                     )
+
+                 | `Specific (args, qname) -> 
+                     let n::rest = rev qname in
+                     let h::t    = rev (closed n :: rest) in
+		     let base =		     
+                       fold_left 
+                        (fun q t -> 
+                           let t = <:ctyp< $uid:t$ >> in 
+                           <:ctyp< $q$ . $t$ >>
+                        ) 
+                        <:ctyp< $uid:h$ >> 
+                        t
+                     in
+		     let t = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) base args in
+		     <:poly_variant< $t$ >>
+
+                 | `Variable _ -> invalid_arg "should not happen"
                 ) 
                 d
             in
@@ -1101,39 +1192,83 @@ EXTEND
   ];
 
   vari_con: [
-    [ c=UIDENT; a=con_args -> (loc, VaVal c, fst a, None), (c, snd a) ]
+    [ c=UIDENT; a=con_args -> (loc, VaVal c, fst a, None), `Con (c, snd a) ]
   ];
 
   poly: [
     [ "["; ">"; body=poly_body; "]"; "as"; a=targ ->
+        let lcons, y = body in
+        let y = 
+          map
+            (function
+             | `Con      x -> `Con x
+             | `Variable x -> 
+                 Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in the type sum" x))
+             | `Specific ([], _) ->
+                 Ploc.raise loc (Generic_extension "polymorphic type expected in the type sum")
+             | `Specific (b::_ as args, qname) ->
+                 if b <> a then Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types in this type sum" a));
+                `Specific (args, qname) 
+            )
+            y
+        in
+        let lcons = 
+          map 
+            (function 
+             | `Con con -> con
+             | `Type t ->
+                let rec replace = function
+                | <:ctyp< $t1$ $t2$ >> -> <:ctyp< $replace t1$ $t2$ >>
+                | <:ctyp< $t1$ . $t2$ >> -> <:ctyp< $t1$ . $replace t2$ >>
+                | <:ctyp< $lid:n$ >> -> <:ctyp< $lid:closed n$ >>
+                | t -> t
+                in 
+                <:poly_variant< $replace t$ >>
+            ) 
+            lcons
+        in
         false,
-        match body with
-        | `TypeDef (lcons, y) ->
-            (<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y)
-        | `TypeSum s -> s
+        ((<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y))
     ] |
     [ "["; body=poly_body; "]" ->
+        let lcons, y = body in
+        let lcons =
+          map (function 
+               | `Con con -> con 
+               | `Type t  -> 
+                  let rec replace = function
+                  | <:ctyp< $t1$ $t2$ >> -> <:ctyp< $replace t1$ $t2$ >>
+                  | <:ctyp< $t1$ . $t2$ >> -> <:ctyp< $t1$ . $replace t2$ >>
+                  | <:ctyp< $lid:n$ >> -> <:ctyp< $lid:closed n$ >>
+                  | t -> t
+                  in 
+                  <:poly_variant< $replace t$ >>
+              ) 
+              lcons
+        in
         false, 
-        match body with
-        | `TypeDef (lcons, y) ->
-           (<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y) 
-        | `TypeSum s -> s
+        ((<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y)) 
     ]    
   ];
 
   poly_body: [
     [ OPT "|"; poly_cons=LIST1 poly_con SEP "|" ->
         let x, y = split poly_cons in
-        let lcons = map (fun (loc, name, args, _) ->                                  
-	    	    	     	 if length args = 0 
-                                 then <:poly_variant< `$name$ >>         
-                                 else                          
-                                   let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in
-                                   <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
-                              ) x
+        let lcons = map (function 
+                         | `Con (loc, name, args, _) ->
+	    	    	     if length args = 0 
+                             then `Con <:poly_variant< `$name$ >>         
+                             else                          
+                               let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in
+                               `Con <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
+                         | `Type t -> `Type t
+                        ) 
+                        x
         in
-        `TypeDef (lcons, y)
-    ] |
+        lcons, y
+    ] 
+(*
+|
     [ OPT "|"; typs=LIST1 c_typ SEP "|" ->
       let t, d = split typs in
       let a = ref None in
@@ -1172,10 +1307,12 @@ EXTEND
       in
       `TypeSum ((<:ctyp< [= $list:t$ ] >>, []), `Sumi (a, t, d))
     ]
+*)
   ];
 
   poly_con: [
-    [ "`"; c=UIDENT; a=con_args -> (loc, c, get_val (fst a), None), (c, snd a) ]
+    [ "`"; c=UIDENT; a=con_args -> `Con (loc, c, get_val (fst a), None), `Con (c, snd a) ] |
+    [ t=c_typ -> `Type (fst t), match snd t with `Specific x -> `Specific x | `Variable x -> `Variable x ]
   ];
 
   con_args: [
@@ -1185,8 +1322,8 @@ EXTEND
 
   typ: [ 
     [ "["; t=c_typ; "]" -> 
-      let t, d = t in
-      t, (d :> [`Specific of string list * string list | `Variable of string | `Generic of ctyp])
+       let t, d = t in 
+       t, (d :> [`Specific of string list * string list | `Variable of string | `Generic of ctyp])  
     ] |
     [ t=ctyp LEVEL "apply" -> t, `Generic t ]
   ];

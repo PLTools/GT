@@ -1,42 +1,57 @@
-open Ostap
-open Regexp
-open Printf
+(*
+module GenericExpr =
+  struct
 
-module Stream = Stream_ostap
+    generic t = 
+      Var   of string 
+    | Const of int 
+    | Add   of [t] * [t]
+    | Sub   of [t] * [t] deriving show
+
+    let show = GT.transform(t) (new @t[show]) () 
+
+    class eval = object
+      inherit [string -> int, int] @t
+      method m_Var   s _ v = s v
+      method m_Const _ _ i = i
+      method m_Add   s _ x y = (x.GT.fx s) + (y.GT.fx s)
+      method m_Sub   s _ x y = (x.GT.fx s) - (y.GT.fx s)
+    end
+
+    class better_show = object
+      inherit @t[show]
+      method m_Var _ _ s = s
+    end
+
+  end
+
+module NaivePoly =
+  struct
+
+  end
+*)
+
+generic 'a ident = [> `Var of string ] as 'a
+
+class ['a, 'v] ident_eval = object 
+  inherit ['a, string -> 'v, 'v] @ident      
+  method m_Var s _ x = s x
+end
+
+generic 'a arith = [> `Add of ['a arith] * ['a arith] | `Sub of ['a arith] * ['a arith]] as 'a
+
+class ['a, 'b] arith_eval = object
+  inherit ['a, 'b, int] @arith
+  method m_Add inh _ x y = x.GT.fx inh + y.GT.fx inh
+  method m_Sub inh _ x y = x.GT.fx inh - y.GT.fx inh
+end
+
+generic 'a expr = [> 'a ident | 'a arith ] as 'a 
+
+class ['a] expr_eval = object
+  inherit ['a, int] ident_eval
+  inherit ['a, string -> int] arith_eval
+end
 
 let _ =
-  let module S = View.List (View.String) in
-  let rest  s = sprintf "%s..." (Stream.takeStr 10 s) in 
-  let print names s = 
-    Stream.iter 
-      (fun (s, b) -> 
-         printf "  stream: %s;\n  args  : %s\n" 
-           (rest s) 
-           (S.toString (List.map (fun n -> sprintf "%s=[%s]" n (b n)) names))
-      ) 
-      s 
-  in
-  let letter = Test ("letter", fun c -> (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) in
-  let noid   = Test ("noid"  , fun c -> (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) in
-  let digit  = Test ("digit" , fun c -> c >= '0' && c <= '9'                            ) in
-  let nodig  = Test ("nodig" , fun c -> c < '0' || c > '9'                              ) in
-  let ws     = Test ("ws"    , fun c -> c = ' '                                         ) in
-  let nows   = Test ("nows"  , fun c -> c != ' '                                        ) in
-  
-  let quote   = Test ("quote"  , fun c -> c = '\'' || c = '"'                           ) in
-  let noquote = Test ("noquote", fun c -> c != '\'' && c != '"'                         ) in
-
-  let string          = Bind ("S", Juxt [Bind ("Q", quote); Aster noquote; Arg "Q"]) in
-  let stringNotLetter = Juxt [string; Before letter]                                 in
-
-  let m0 = matchAllStr string          in
-  let m1 = matchAllStr stringNotLetter in
-
-  (*  printf "%s" (Diagram.toDOT (Diagram.make string)); *)
-  printf "Matching \"string\" against \"\"abc\"\ and the rest\"\n";
-  print ["Q"; "S"] (m0 (Stream.fromString "\"abc\" and the rest"));
-  printf "Matching \"stringNotLetter\" against \"\"abc\" and the rest\":\n";
-  print ["Q"; "S"] (m1 (Stream.fromString "\"abc\" and the rest"));
-  printf "Matching \"stringNotLetter\" against \"\"abc\"and the rest\":\n";
-  print ["Q"; "S"] (m1 (Stream.fromString "\"abc\"and the rest"))
-;;
+  Printf.printf "%d\n" (GT.transform(expr) (new expr_eval) (function "x" -> 1 | "y" -> 2) (`Add (`Var "x", `Var "y")))
