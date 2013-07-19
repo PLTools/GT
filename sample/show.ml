@@ -8,9 +8,10 @@ let _ =
        let module H = Helper (struct let loc = loc end) in
        H.(
         {
-          inh = T.id "unit"; 
-          syn = T.id "string"; 
-          arg_img = (fun _ -> T.id "string")
+          inh         = T.id "unit"; 
+          syn         = T.id "string";
+          proper_args = d.type_args; 
+          arg_img     = (fun _ -> T.id "string")
         }, 
         (fun constr -> 
            let concat x y = E.app [E.lid "^"; x; y] in

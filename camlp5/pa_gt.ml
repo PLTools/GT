@@ -52,9 +52,10 @@ module Plugin =
         "<dir> Add <dir> to the list of include directories."
 
     type properties = {
-      inh     : ctyp;
-      syn     : ctyp;
-      arg_img : string -> ctyp;
+      inh         : ctyp;
+      syn         : ctyp;
+      proper_args : string list;
+      arg_img     : string -> ctyp;
     }
 
     type type_descriptor = {
@@ -236,9 +237,7 @@ module Plugin =
     let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
       let class_targs =
         (match descr.is_open with `Yes s -> [s] | `No -> []) @
-        flatten (map (fun a -> match prop.arg_img a with <:ctyp< ' $fa$ >> -> [a; fa]| _ -> [a]) descr.type_args) @
-        (match prop.inh with <:ctyp< ' $inh$ >> -> [inh] | _ -> []) @
-        (match prop.syn with <:ctyp< ' $syn$ >> -> [syn] | _ -> [])
+        prop.proper_args 
       in 
       let def b = { 
         ciLoc = loc;
@@ -251,11 +250,14 @@ module Plugin =
       <:str_item< class $list:[def b_def]$ >>,
       <:sig_item< class $list:[def b_decl]$ >>
 
-    let generate_inherit loc qname descr (prop, _) =
+    let generate_inherit base_class loc qname descr (prop, _) =
       let args =
         (match descr.is_open with `Yes s -> [<:ctyp< ' $s$ >>] | _ -> []) @
-        flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
-        [prop.inh; prop.syn]
+        if base_class 
+        then
+          flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
+          [prop.inh; prop.syn]      
+        else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
       in
       let ce    = <:class_expr< [ $list:args$ ] $list:qname$ >> in
       let ct    =
@@ -270,8 +272,6 @@ module Plugin =
       in
       <:class_str_item< inherit $ce$ >>,
       <:class_sig_item< inherit $ct$ >>
-
-    let generate_class_body (_, constrs) = ()
 
     module M = Map.Make (String)
     
@@ -468,9 +468,9 @@ let generate t loc =
          let img name    = assoc name targs         in
          let inh         = generator#generate "inh" in
          let syn         = generator#generate "syn" in
+         let proper_args = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn] in
          let class_targs = (match bound_var with None -> [] | Some x -> [x]) @ 
-                           (flatten (map (fun (x, y) -> [x; y]) targs)) @ 
-                           [inh; syn]              
+                           proper_args           
          in
          let p_descriptor = {
            Plugin.is_polyvar = polyvar;
@@ -478,9 +478,10 @@ let generate t loc =
            Plugin.type_args  = args;
            Plugin.name       = current;
            Plugin.default    = { 
-             Plugin.inh     = <:ctyp< ' $inh$ >>;
-             Plugin.syn     = <:ctyp< ' $syn$ >>;
-             Plugin.arg_img = (fun a -> <:ctyp< ' $img a$ >>);
+             Plugin.inh         = <:ctyp< ' $inh$ >>;
+             Plugin.syn         = <:ctyp< ' $syn$ >>;
+             Plugin.proper_args = proper_args;
+             Plugin.arg_img     = (fun a -> <:ctyp< ' $img a$ >>);
            }
          } 
          in
@@ -630,14 +631,14 @@ let generate t loc =
                        Plugin.default    = prop;
                      }
                      in
-                     let i_def, i_decl = Plugin.generate_inherit loc qname descr (p loc descr) in
+                     let i_def, i_decl = Plugin.generate_inherit false loc qname descr (p loc descr) in
                      i_def
                 in
                 mdef := M.add trait (def::prev_def) !mdef
              ),
              (fun (trait, p) -> 
 	        let m_defs = get trait !mdef in 
-                let i_def, i_decl = Plugin.generate_inherit loc [class_t current] p_descriptor p in
+                let i_def, i_decl = Plugin.generate_inherit true loc [class_t current] p_descriptor p in
                 let ce = <:class_expr< object $list:i_def::m_defs$ end >> in
                 let ct = <:class_type< object $list:[]$ end >> in
                 Plugin.generate_classes loc trait p_descriptor p (ce, ct)                
