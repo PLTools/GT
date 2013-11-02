@@ -56,19 +56,31 @@ class show_n' env =
 
 class show_m =
   object (this)
-    method m_M   = (new show_m' this)#m_M
-    method m_N   = (new show_m' this)#m_N
-    method t_int = (new show_m' this)#t_int
+    val shn = ref (new show_n' (Obj.magic 0))
+    val shm = ref (new show_m' (Obj.magic 0))
+
+    initializer shn := new show_n' this;
+                shm := new show_m' this
+
+    method m_M   = !shm#m_M
+    method m_N   = !shm#m_N
+    method t_int = !shm#t_int
     method t_m   = transform_m this
-    method t_n   = transform_n (new show_n' this)      
+    method t_n   = transform_n !shn      
   end
 
 class show_n =
   object (this)
-    method m_K      = (new show_n' this)#m_K
-    method m_L      = (new show_n' this)#m_L
-    method t_string = (new show_n' this)#t_string
-    method t_m      = transform_m (new show_m' this)
+    val shn = ref (new show_n' (Obj.magic 0))
+    val shm = ref (new show_m' (Obj.magic 0))
+
+    initializer shn := new show_n' this;
+                shm := new show_m' this
+
+    method m_K      = !shn#m_K
+    method m_L      = !shn#m_L
+    method t_string = !shn#t_string
+    method t_m      = transform_m !shm
     method t_n      = transform_n this      
   end
 
