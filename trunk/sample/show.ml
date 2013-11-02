@@ -13,7 +13,7 @@ let _ =
           proper_args = d.type_args; 
           arg_img     = (fun _ -> T.id "string")
         }, 
-        (fun constr -> 
+        (fun env constr -> 
            let concat x y = E.app [E.lid "^"; x; y] in
            concat 
              (snd 

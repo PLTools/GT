@@ -23,7 +23,7 @@ module Expr =
     | Add  (x, y) -> eval s x + eval s y 
     | Sub  (x, y) -> eval s x - eval s y 
 
-    module OnjectEncoded =
+    module ObjectEncoded =
       struct
 
         let rec generic_show t e = 
@@ -57,7 +57,7 @@ module GenericExpr =
       Var   of string 
     | Const of int 
     | Add   of [t] * [t]
-    | Sub   of [t] * [t] deriving show
+    | Sub   of [t] * [t] deriving show   
 
     let show = GT.transform(t) (new @t[show]) () 
 
