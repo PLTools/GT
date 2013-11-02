@@ -73,7 +73,13 @@ module Plugin =
       args   : (string * [`Specific of string list * string list | `Variable of string | `Generic of ctyp]) list;
     }
 
-    type t = loc -> type_descriptor -> properties * (constructor -> expr)
+    type env = {
+      get_name      : string -> string;
+      get_trait     : string list -> expr;
+      get_transform : string list -> expr;
+    }
+
+    type t = loc -> type_descriptor -> properties * (env -> constructor -> expr)
 
     module Helper (L : sig val loc : loc end) =
       struct
@@ -404,28 +410,26 @@ let generate t loc =
                       else let name, gcata = <:expr< $lid:name$ >>, <:expr< $lid:"gcata"$ >> in
                            <:expr< $name$ . $gcata$ >>
   in
-  let g = 
-    let names = 
-      fold_left 
-        (fun acc ((_, n, d), _) -> 
-           let acc = n::acc in
-           match d with
-           | `Poly (_, comps) ->
-               fold_left 
-                 (fun acc t ->
-                    match t with
-                    | `Specific (_, [n]) -> n::acc
-                    | _ -> acc
-                 ) 
-                 acc 
-                 comps
-           | _ -> acc
-        ) 
-        [] 
-        d 
-    in
-    name_generator names
+  let cluster_names = 
+    fold_left 
+      (fun acc ((_, n, d), _) -> 
+         let acc = n::acc in
+         match d with
+         | `Poly (_, comps) ->
+             fold_left 
+               (fun acc t ->
+                  match t with
+                  | `Specific (_, [n]) -> n::acc
+                  | _ -> acc
+               ) 
+               acc 
+               comps
+         | _ -> acc
+      ) 
+      [] 
+      d 
   in
+  let g = name_generator cluster_names in
   let trans = g#generate "t"   in
   let ext   = g#generate "ext" in
   let farg  = 
@@ -469,9 +473,7 @@ let generate t loc =
          let inh         = generator#generate "inh" in
          let syn         = generator#generate "syn" in
          let proper_args = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn] in
-         let class_targs = (match bound_var with None -> [] | Some x -> [x]) @ 
-                           proper_args           
-         in
+         let class_targs = (match bound_var with None -> [] | Some x -> [x]) @ proper_args in
          let p_descriptor = {
            Plugin.is_polyvar = polyvar;
            Plugin.is_open    = (match bound_var with Some b -> `Yes b | _ -> `No);
@@ -594,26 +596,39 @@ let generate t loc =
              )
            in
 	   let add_derived_member, get_derived_classes =
-             let module M = Map.Make (String) in
-             let get k m = try M.find k m with Not_found -> [] in
+             let module M    = Map.Make (String) in
+             let get k m     = try M.find k m with Not_found -> [] in
              let mdef, mdecl = ref M.empty, ref M.empty in
+             let addp_g      = name_generator cluster_names in
+             let addp        = ref [] in
+             (*let register_p  = function
+             | `Transform name     ->
+             | `Trait (typ, trait) ->
+             in*)
              (fun case (trait, (prop, p_func) as dprop) ->
                 let Some p = Plugin.get trait in
                 let prev_def, prev_decl = get trait !mdef, get trait !mdecl in
                 let def =
                   match case with
-                  | `Con (cname, cargs) -> 
-                     let args = fst (fold_right (fun _ (acc, i) -> (sprintf "p%d" i)::acc, i+1) cargs ([], 0)) in
+                  | `Con (cname, cargs) ->
+                     let g = name_generator cluster_names in                      
+                     let args = fst (fold_right (fun _ (acc, i) -> (g#generate (sprintf "p%d" i))::acc, i+1) cargs ([], 0)) in
                      let constr = {
                        Plugin.constr = cname;
-                       Plugin.acc    = "acc";
-                       Plugin.subj   = "subj";
+                       Plugin.acc    = g#generate "acc";
+                       Plugin.subj   = g#generate "subj";
                        Plugin.args   = combine args cargs;
                      }
                      in
+                     let env = {
+                       Plugin.get_name      = (fun s -> g#generate s); 
+                       Plugin.get_trait     = (fun s -> invalid_arg ""); 
+                       Plugin.get_transform = (fun s -> invalid_arg "")
+                     } 
+                     in
                      let m_def = 
                        let name = cmethod cname in
-                       let body = make_fun (fun a -> <:patt< $lid:a$ >>) ([constr.Plugin.acc; constr.Plugin.subj] @ args) (p_func constr) in
+                       let body = make_fun (fun a -> <:patt< $lid:a$ >>) ([constr.Plugin.acc; constr.Plugin.subj] @ args) (p_func env constr) in
                        <:class_str_item< method $lid:name$ = $body$ >>
                      in
                      m_def
@@ -777,7 +792,10 @@ let generate t loc =
                       let ext     = 
                         make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
                       in
-                      make_call id func ((map (fun a -> <:expr< $lid:farg a$>>) args) @ [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>])
+                      make_call id func 
+                        ((map (fun a -> <:expr< $lid:farg a$>>) args) @ 
+                         [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>]
+                        )
                     in
                     let patt =
                       let t::r  = rev qname in
@@ -855,9 +873,9 @@ let generate t loc =
              let p = snd (fold_left (fun (i, acc) _ -> i+1, (sprintf "p%d" i)::acc) (0, []) (["t"; "acc"; "s"] @ args)) in
              let pe = [
                generic_cata_ext, <:expr< $lid:cata name$ >>; 
-               generic_cata, let ext, p = 
-                               match descr with 
-                               | `Poly (`More _, _) -> 
+               generic_cata, (let ext, p = 
+                                match descr with 
+                                | `Poly (`More _, _) -> 
                                     let p = tl p in
                                     let px = <:patt< $lid:"x"$ >> in
                                     let tx = 
@@ -874,17 +892,18 @@ let generate t loc =
                                          [<:expr< $lid:"acc"$ >>; <:expr< $lid:"x"$ >>]
                                       ), p
 
-                               | _ -> 
+                                | _ -> 
                                     let g = <:expr< $uid:"GT"$ >> in
                                     let a = <:expr< $lid:"apply"$ >> in
                                     <:expr< $g$ . $a$ >>, p
-                             in                                 
-                             let args =
+                              in                                 
+                              let args =
                                 let x :: y :: a = rev (map (fun arg -> <:expr< $lid:arg$ >>) p) in
                                 rev a @ [ext; y; x]
-                             in
-                             let cata = <:expr< $lid:cata name$ >> in
-                             make_fun (fun a -> <:patt< $lid:a$ >>) p (make_call id cata args)
+                              in
+                              let cata = <:expr< $lid:cata name$ >> in
+                              make_fun (fun a -> <:patt< $lid:a$ >>) p (make_call id cata args)
+                             ) 
              ] 
              in 
              <:patt< $lid:name$ >>, <:expr< { $list:pe$ } >>
