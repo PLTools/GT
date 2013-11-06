@@ -1,10 +1,11 @@
 # type in sources here
-SOURCES = pa_gt.ml
+SOURCES = plugin.ml core.ml extension.ml
 MLI = 
 SUBDIRS = doc
 
 include $(top_srcdir)/m4/Makefile.am.vars
 
+CMOPK = pa_gt.cmo
 CLEAN_EXTRA += pa_gt.cmi
 
 # overwrite some variables
@@ -15,7 +16,7 @@ MODULE_INCLUDES += -I $(top_srcdir)/src -I "$(CAMLP5LIB)"
 include $(top_srcdir)/m4/Makefile.am.targets
 
 # overwrite some targets
-TARGET := $(CMO) pa_gt.cmi
+TARGET := $(CMOPK)
 
 .PHONY: doc
 doc:
