@@ -1,4 +1,4 @@
-type ('a, 'b, 'c) t = {gcata : 'a; gcata_ext : 'b; traits: 'c}
+type ('a, 'b (*, 'c*)) t = {gcata : 'a; gcata_ext : 'b (*; traits: 'c*)}
 type ('a, 'b, 'c, 'd) a = {x : 'b; fx : 'a -> 'c; f : 'a -> 'b -> 'c; t : 'd}
 
 let (~:) x = x.x
@@ -15,7 +15,7 @@ let list =
     | []    -> t#m_Nil  acc l 
     | h::tl -> t#m_Cons acc l (make fa h tpo) (make self tl tpo)
   in  
-  {gcata = gcata; gcata_ext = gcata; traits=object end}
+  {gcata = gcata; gcata_ext = gcata(*; traits=object end*)}
 
 class virtual ['e, 'a, 'b] list_t =
   object (self)
@@ -25,7 +25,7 @@ class virtual ['e, 'a, 'b] list_t =
 
 let int =
   let gcata ext t acc n = t#int n acc n in
-  {gcata = gcata; gcata_ext = gcata; traits=object end}
+  {gcata = gcata; gcata_ext = gcata(*; traits=object end*)}
 
 let sum f g = fun ext acc x -> f (fun self acc s -> g (fun _ acc x -> ext self acc x) acc s) acc x
 let (++) = sum
