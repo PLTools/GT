@@ -33,7 +33,7 @@ open Plugin
 open Core
 
 EXTEND
-  GLOBAL: sig_item str_item ctyp class_expr class_longident; 
+  GLOBAL: sig_item str_item ctyp class_expr expr; 
 
   ctyp: LEVEL "ctyp2" [
     [ "@"; t=ctyp LEVEL "ctyp2"-> 
@@ -46,12 +46,28 @@ EXTEND
       inner t
     ]
   ];
-  
+
+  class_expr: BEFORE "simple" [
+    [ "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
+      <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >> 
+    | "["; ct = ctyp; "]"; ci = class_longident ->
+      <:class_expr< [ $ct$ ] $list:ci$ >>
+    | ci = class_longident -> <:class_expr< $list:ci$ >> ]
+  ];
+
+  expr: BEFORE "simple" [
+   LEFTA [ "new"; i = V class_longident "list" -> <:expr< new $_list:i$ >> ]
+  ];
+
+  ctyp: BEFORE "simple" [
+    [ "#"; id = V class_longident "list" -> <:ctyp< # $_list:id$ >> ]
+  ];
+
   class_longident: [
     [ "@"; ci=qname; t=OPT trait -> 
       let n::q = rev (snd ci) in      
       rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
-    ]
+    | ci=qname -> snd ci ]
   ];
 
   trait: [[ "["; id=LIDENT; "]" -> id ]];
