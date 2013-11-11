@@ -122,11 +122,11 @@ let generate t loc =
       (fun acc ((_, n, d), _) -> 
          let acc = n::acc in
          match d with
-         | `Poly (_, comps) ->
+         | `OpenPoly (_, comps) | `ClosedPoly comps->
              fold_left 
                (fun acc t ->
                   match t with
-                  | `Specific (_, [n]) -> n::acc
+                  | `Type (Specific (Instance (_, [n]))) -> n::acc
                   | _ -> acc
                ) 
                acc 
@@ -168,10 +168,10 @@ let generate t loc =
          let current     = name in
          let extensible, remove_bound_var, is_bound_var, bound_var = 
            match descr with 
-           | `Poly (`More x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
+           | `OpenPoly (x, _) -> true, filter (fun s -> s <> x), (fun s -> s = x), Some x
            | _ -> false, (fun x -> x), (fun _ -> false), None
          in
-         let polyvar     = match descr with `Poly _ -> true | _ -> false in
+         let polyvar     = match descr with `OpenPoly _ | `ClosedPoly _ -> true | _ -> false in
          let orig_args   = args                     in
          let args        = remove_bound_var args    in
          let generator   = name_generator args      in
@@ -248,7 +248,7 @@ let generate t loc =
          let metargs = (map farg args) @ [trans; ext] in
          let args = metargs @ [acc; subj] in
          match descr with
-         | (`Poly _ | `Vari _) as descr -> 
+         | (`OpenPoly _ | `ClosedPoly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs =
              let context = ref [] in
              (fun (args, qname) as typ ->
@@ -340,7 +340,9 @@ let generate t loc =
                      in
                      m_def
 
-                  | `Specific (b::args, qname) -> 
+                  | `Type (Specific (Instance (b::args, qname))) -> 
+                     let b::args = map (function Variable a -> a) (b::args) in (* TODO *)
+
                      let qname, name = 
                        let n::t = rev qname in
                        rev ((trait_t n trait) :: t), n
@@ -391,9 +393,10 @@ let generate t loc =
                         <:ctyp< $ga$ $tpt$ >>                           
                       in
                       let make_typ = function
-                      | `Generic   t    -> t
-                      | `Variable    name -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
-                      | `Specific (targs, qname) ->   
+                      | Generic t    -> t
+                      | Specific (Variable name) -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
+                      | Specific (Instance (targs, qname)) ->   
+                           let targs = map (function Variable a -> a) targs in (* TODO *)
                            let typ =
                              let qtype =
                                match rev qname with
@@ -410,7 +413,7 @@ let generate t loc =
                            in
                            make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
                       in
-                      let typs = [<:ctyp< ' $inh$ >>; make_typ (`Specific (orig_args, [name]))] @ (map make_typ cargs) in
+                      let typs = [<:ctyp< ' $inh$ >>; make_typ (Specific (Instance (map (fun a -> Variable a) (* TODO *) orig_args, [name])))] @ (map make_typ cargs) in
                       fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
                     in
                     let expr =
@@ -428,10 +431,11 @@ let generate t loc =
                            (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
                            (map (fun (typ, x) -> 
                                    match typ with
-                                   | `Generic _   -> <:expr< $lid:x$ >>
-                                   | `Variable name -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
-                                   | `Specific t   -> 
-                                       let name = get_type_handler t in 
+                                   | Generic _   -> <:expr< $lid:x$ >>
+                                   | Specific (Variable name) -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
+                                   | Specific (Instance (args, t)) -> 
+				       let args = map (function Variable a -> a) args (* TODO *) in
+                                       let name = get_type_handler (args, t) in 
                                        garg name <:expr< $lid:x$ >>
                                 ) 
                                 (combine cargs args)
@@ -442,7 +446,8 @@ let generate t loc =
                     [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
                     [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
 
-                | `Specific (args, qname) as case -> 
+                | `Type (Specific (Instance (args, qname))) as case -> 
+                    let args = map (function Variable a -> a) args in (* TODO *)
                     iter (add_derived_member case) derived;
                     let h::tl = args in
                     let targs  = 
@@ -515,9 +520,9 @@ let generate t loc =
                     [<:class_str_item< inherit $ce$ >>],
                     [<:class_sig_item< inherit $ct$ >>]
 
-                | `Variable _ -> invalid_arg "should not happen"
+                | `Type (Specific (Variable _)) -> invalid_arg "should not happen"
                ) 
-               (match descr with `Vari cons | `Poly (_, cons) -> cons)
+               (match descr with `Vari cons | `ClosedPoly cons | `OpenPoly (_, cons) -> cons)
            in
            let match_cases = 
              if extensible then match_cases @ [(<:patt< $lid:others$ >>, 
@@ -582,7 +587,7 @@ let generate t loc =
                generic_cata_ext, <:expr< $lid:cata name$ >>; 
                generic_cata, (let ext, p = 
                                 match descr with 
-                                | `Poly (`More _, _) -> 
+                                | `OpenPoly _ -> 
                                     let p = tl p in
                                     let px = <:patt< $lid:"x"$ >> in
                                     let tx = 
