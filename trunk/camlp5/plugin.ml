@@ -31,6 +31,13 @@ open Dynlink
 open List 
 open Printf
 
+type typ  = Generic  of ctyp |
+            Specific of st  
+
+(* Specific type *)
+and st = Variable of string                | (* type variable                                                              *)
+         Instance of st list * string list   (* polymorphic type instantiation: list of type parameters and qualified name *)
+
 exception Bad_plugin of string
 
 let cata    name      = name ^ "_gcata"
@@ -67,7 +74,7 @@ type constructor = {
     constr : string;
     acc    : string;
     subj   : string;
-    args   : (string * [`Specific of string list * string list | `Variable of string | `Generic of ctyp]) list;
+    args   : (string * typ) list;
   }
       
 type env = {

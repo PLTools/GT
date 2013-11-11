@@ -35,8 +35,8 @@ open Core
 EXTEND
   GLOBAL: sig_item str_item ctyp class_expr expr; 
 
-  ctyp: LEVEL "ctyp2" [
-    [ "@"; t=ctyp LEVEL "ctyp2"-> 
+  ctyp: LEVEL "ctyp2" [[
+    "@"; t=ctyp LEVEL "ctyp2"-> 
       let rec inner = function
       | <:ctyp< $q$ . $t$ >> -> <:ctyp< $q$ . $inner t$ >>
       | <:ctyp< $t$ $a$ >> -> <:ctyp< $inner t$ $a$ >>
@@ -44,55 +44,54 @@ EXTEND
       | t -> Ploc.raise loc (Generic_extension "application or qualified name expected")
       in
       inner t
-    ]
-  ];
+  ]];
 
-  class_expr: BEFORE "simple" [
-    [ "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
+  class_expr: BEFORE "simple" [[
+    "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
       <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >> 
-    | "["; ct = ctyp; "]"; ci = class_longident ->
+  | "["; ct = ctyp; "]"; ci = class_longident ->
       <:class_expr< [ $ct$ ] $list:ci$ >>
-    | ci = class_longident -> <:class_expr< $list:ci$ >> ]
-  ];
+  | ci = class_longident -> <:class_expr< $list:ci$ >> 
+  ]];
 
   expr: BEFORE "simple" [
    LEFTA [ "new"; i = V class_longident "list" -> <:expr< new $_list:i$ >> ]
   ];
 
-  ctyp: BEFORE "simple" [
-    [ "#"; id = V class_longident "list" -> <:ctyp< # $_list:id$ >> ]
-  ];
+  ctyp: BEFORE "simple" [[
+    "#"; id = V class_longident "list" -> <:ctyp< # $_list:id$ >> 
+  ]];
 
-  class_longident: [
-    [ "@"; ci=qname; t=OPT trait -> 
+  class_longident: [[
+    "@"; ci=qname; t=OPT trait -> 
       let n::q = rev (snd ci) in      
       rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
-    | ci=qname -> snd ci ]
-  ];
+  | ci=qname -> snd ci 
+  ]];
 
   trait: [[ "["; id=LIDENT; "]" -> id ]];
 
-  str_item: LEVEL "top" [
-    [ "generic"; t=LIST1 t_decl SEP "and" -> fst (generate t loc) ]
-  ];
+  str_item: LEVEL "top" [[
+    "generic"; t=LIST1 t_decl SEP "and" -> fst (generate t loc) 
+  ]];
 
-  sig_item: LEVEL "top" [
-    [ "generic"; t=LIST1 t_decl SEP "and" -> snd (generate t loc) ]
-  ];
+  sig_item: LEVEL "top" [[
+    "generic"; t=LIST1 t_decl SEP "and" -> snd (generate t loc)
+  ]];
 
-  t_decl: [
-    [ a=fargs; n=LIDENT; "="; t=rhs ->
+  t_decl: [[
+    a=fargs; n=LIDENT; "="; t=rhs ->
       let (is_private, ((def, cons), t)), deriving = t in
       let descriptor, types =
         match t with
-        | `Poly (`More b, d) ->
+        | `OpenPoly (b, d) ->
            (match a with 
            | f::_ when f <> b -> 
-               Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed first in the type \"%s\" definition." b n))
+               Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed the first in the type \"%s\" definition." b n))
            | [] -> Pervasives.raise (Generic_extension (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b))
            | _  -> (a, n, t)
            ),
-           (let lcons =
+           (let lcons = 
               map 
                 (function
                  | `Con (constr, args) ->
@@ -102,9 +101,12 @@ EXTEND
                         let args = 
                           map 
                             (function 
-                             | `Generic t -> replace_t loc a n t
-                             | `Specific (targs, [name]) when name = n && targs = a -> <:ctyp< ' $hd a$ >>
-                             | `Specific (targs, qname) ->   
+                             | Generic t -> replace_t loc a n t
+                             | Specific (Instance (targs, [name])) when name = n && 
+                                 (map (function Variable a -> a) targs)  (* TODO: can be Variable | Instance *)
+                                 (*targs*) = a -> <:ctyp< ' $hd a$ >>
+                             | Specific (Instance (targs, qname)) ->   
+                                 let targs = map (function Variable a -> a) targs in (* TODO: can be Variable | Instance *)
                                  let qtype =
                                    match rev qname with
                                    | name::qname -> 
@@ -117,7 +119,7 @@ EXTEND
                                    (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
                                    qtype 
                                    targs
-                             | `Variable a -> <:ctyp< ' $a$ >>
+                             | Specific (Variable a) -> <:ctyp< ' $a$ >> 
                             )
                             args
                         in
@@ -125,7 +127,8 @@ EXTEND
                         <:poly_variant< `$constr$ of $flag:false$ $list:args$ >>
                      )
 
-                 | `Specific (args, qname) -> 
+                 | `Type (Specific (Instance (args, qname))) -> 
+                     let args = map (function Variable a -> a) args in (* TODO: can be Variable | Instance *)
                      let n::rest = rev qname in
                      let h::t    = rev (closed n :: rest) in
 		     let base =		     
@@ -139,10 +142,8 @@ EXTEND
                      in
 		     let t = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) base args in
 		     <:poly_variant< $t$ >>
-
-                 | `Variable _ -> invalid_arg "should not happen"
                 ) 
-                d
+                d 
             in
             [{
               tdNam = VaVal (loc, VaVal n);
@@ -158,7 +159,7 @@ EXTEND
               tdDef = <:ctyp< [ = $list:lcons$ ] >>; 
               tdCon = VaVal []            
              }]
-           )
+           ) 
         | _ -> (a, n, t), 
                [{tdNam = VaVal (loc, VaVal n);
                  tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
@@ -175,40 +176,39 @@ EXTEND
                ]
       in
       types, (descriptor, deriving)
-    ]
-  ];
+  ]];
 
   rhs: [[b=rhs_base; d=OPT deriving -> b, match d with None -> [] | Some d -> d]];
 
   deriving: [["deriving"; s=LIST1 LIDENT SEP "," -> s]];
 
-  rhs_base: [[ vari ] | [ poly ]];
+  rhs_base: [[ vari | poly ]];
   
-  vari: [
-    [ p=OPT "private"; OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
-        let x, y = split vari_cons in
-        (p <> None), ((<:ctyp< [ $list:x$ ] >>, []), `Vari y)
-    ]
-  ];
+  vari: [[
+    p=OPT "private"; OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
+      let x, y = split vari_cons in
+      (p <> None), ((<:ctyp< [ $list:x$ ] >>, []), `Vari y)
+  ]];
 
-  vari_con: [
-    [ c=UIDENT; a=con_args -> (loc, VaVal c, fst a, None), `Con (c, snd a) ]
-  ];
+  vari_con: [[
+    c=UIDENT; a=con_args -> (loc, VaVal c, fst a, None), `Con (c, snd a) 
+  ]];
 
-  poly: [
-    [ "["; ">"; body=poly_body; "]"; "as"; a=targ ->
+  poly: [[  
+    "["; ">"; body=poly_body; "]"; "as"; a=targ ->
         let lcons, y = body in
         let y = 
           map
             (function
-             | `Con      x -> `Con x
-             | `Variable x -> 
+             | `Type (Specific (Variable x)) -> 
                  Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in the type sum" x))
-             | `Specific ([], _) ->
+             | `Type (Specific (Instance([], _))) ->
                  Ploc.raise loc (Generic_extension "polymorphic type expected in the type sum")
-             | `Specific (b::_ as args, qname) ->
+             | `Type (Specific (Instance (b::_ as args, qname))) ->
+                 let Variable b = b in (* TODO *)
                  if b <> a then Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types in this type sum" a));
-                `Specific (args, qname) 
+                `Type (Specific (Instance (args, qname)))
+	     | x -> x
             )
             y
         in
@@ -228,9 +228,9 @@ EXTEND
             lcons
         in
         false,
-        ((<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `Poly (`More a, y))
-    ] |
-    [ "["; body=poly_body; "]" ->
+        ((<:ctyp< ' $a$ >>, [<:ctyp< ' $a$ >>, <:ctyp< [ > $list:lcons$ ] >>]), `OpenPoly (a, y))
+
+    | "["; body=poly_body; "]" ->
         let lcons, y = body in
         let lcons =
           map (function 
@@ -247,59 +247,51 @@ EXTEND
               lcons
         in
         false, 
-        ((<:ctyp< [ = $list:lcons$ ] >>, []), `Poly (`Equal, y)) 
-    ]    
-  ];
+        ((<:ctyp< [ = $list:lcons$ ] >>, []), `ClosedPoly y)
+  ]];
 
-  poly_body: [
-    [ OPT "|"; poly_cons=LIST1 poly_con SEP "|" ->
-        let x, y = split poly_cons in
-        let lcons = map (function 
-                         | `Con (loc, name, args, _) ->
-	    	    	     if length args = 0 
-                             then `Con <:poly_variant< `$name$ >>         
-                             else                          
-                               let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in
-                               `Con <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
-                         | `Type t -> `Type t
-                        ) 
-                        x
-        in
-        lcons, y
-    ] 
-  ];
+  poly_body: [[
+    OPT "|"; poly_cons=LIST1 poly_con SEP "|" ->
+      let x, y = split poly_cons in
+      let lcons = map (function 
+                       | `Con (loc, name, args, _) ->
+                          if length args = 0 
+                          then `Con <:poly_variant< `$name$ >>         
+                          else                          
+                            let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in
+                            `Con <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
+                       | `Type t -> `Type t
+                      ) 
+                      x
+      in
+      lcons, y
+  ]];
 
-  poly_con: [
-    [ "`"; c=UIDENT; a=con_args -> `Con (loc, c, get_val (fst a), None), `Con (c, snd a) ] |
-    [ t=c_typ -> `Type (fst t), match snd t with `Specific x -> `Specific x | `Variable x -> `Variable x ]
-  ];
+  poly_con: [[
+    "`"; c=UIDENT; a=con_args -> `Con (loc, c, get_val (fst a), None), `Con (c, snd a) 
+  | t=c_typ -> `Type (fst t), `Type (Specific (snd t))
+  ]];
 
-  con_args: [
-    [ "of"; a=LIST1 typ SEP "*" -> let x, y = split a in VaVal x, y ] |
-    [ -> VaVal [], [] ]
-  ];
+  con_args: [[
+    "of"; a=LIST1 typ SEP "*" -> let x, y = split a in VaVal x, y 
+  | -> VaVal [], [] 
+  ]];
 
-  typ: [ 
-    [ "["; t=c_typ; "]" -> 
-       let t, d = t in 
-       t, (d :> [`Specific of string list * string list | `Variable of string | `Generic of ctyp])  
-    ] |
-    [ t=ctyp LEVEL "apply" -> t, `Generic t ]
-  ];
+  typ: [[    
+   "["; t=ctyp LEVEL "apply"; "]" -> t, Generic t
+  | t=c_typ -> fst t, Specific (snd t)
+  ]];
 
-  c_typ: [
-    [ a=targ; q=OPT qname -> 
-       let at = <:ctyp< ' $a$ >> in
-       match q with 
-       | Some q -> <:ctyp< $fst q$ $at$ >>, `Specific ([a], snd q)
-       | None -> <:ctyp< ' $a$ >>, `Variable a
-    ] | 
-    [ "("; a=LIST1 targ SEP ","; ")"; q=qname -> 
-       fold_left (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) (fst q) a, 
-       `Specific (a, snd q) 
-    ] |
-    [ q=qname -> fst q, `Specific ([], snd q) ]
-  ];
+  c_typ: [[
+    a=targ -> <:ctyp< ' $a$ >>, Variable a
+  | "("; a=LIST1 SELF SEP ","; ")"; q=qname -> 
+       let a, ad = split a in
+       fold_left (fun acc a -> <:ctyp< $acc$ $a$ >>) (fst q) a, 
+       Instance (ad, snd q)
+  | a=SELF; b=qname -> <:ctyp< $fst b$ $fst a$ >>, Instance ([snd a], snd b)
+  | q=qname -> fst q, Instance ([], snd q)
+  ]];
+
 
   qname: [
     [ q=LIST0 qualifier; x=LIDENT ->
@@ -320,18 +312,14 @@ EXTEND
     ]
   ];
 
-  qualifier: [
-    [ x=UIDENT; "." -> x ]
-  ];
+  qualifier: [[ x=UIDENT; "." -> x ]];
 
-  fargs: [
-    [ a=targ -> [a] ] |
-    [ "("; a=LIST1 targ SEP ","; ")" -> a ] |
-    [ -> [] ]
-  ];
+  fargs: [[
+    a=targ -> [a]  
+  |  "("; a=LIST1 targ SEP ","; ")" -> a  
+  | -> [] 
+  ]];
 
-  targ: [
-    [ "'"; a=LIDENT -> a ]
-  ];
+  targ: [[ "'"; a=LIDENT -> a ]];
   
 END;

@@ -54,10 +54,10 @@ module GenericExpr =
   struct
 
     generic t = 
-      Var   of string 
-    | Const of int 
-    | Add   of [t] * [t]
-    | Sub   of [t] * [t] deriving show   
+      Var   of [string] 
+    | Const of [int] 
+    | Add   of t * t
+    | Sub   of t * t deriving show   
 
     let show = GT.transform(t) (new @t[show]) () 
 
@@ -132,14 +132,14 @@ module NaivePoly =
 module Poly =
   struct
 
-    generic 'a ident = [> `Var of string ] as 'a
+    generic 'a ident = [> `Var of [string] ] as 'a
 
     class ['a, 'v] ident_eval = object 
       inherit ['a, string -> 'v, 'v] @ident      
       method m_Var s _ x = s x
     end
 
-    generic 'a arith = [> `Add of ['a arith] * ['a arith] | `Sub of ['a arith] * ['a arith]] as 'a
+    generic 'a arith = [> `Add of 'a arith * 'a arith | `Sub of 'a arith * 'a arith] as 'a
 
     class ['a, 'b] arith_eval = object
       inherit ['a, 'b, int] @arith

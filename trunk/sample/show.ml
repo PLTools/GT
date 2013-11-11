@@ -23,9 +23,9 @@ let _ =
                        false, concat expr (if first then e else concat (E.str ", ") e)
                      in
                      match arg with
-                     | arg, (`Variable _ | `Specific _) -> 
+                     | arg, Specific _ -> 
                         append (E.app [E.fx (E.lid arg); E.unit])
-                     | arg, `Generic ctyp -> 
+                     | arg, Generic ctyp -> 
                         match ctyp with
                         | <:ctyp< $lid:tname$ >> -> 
                           (match tname with
