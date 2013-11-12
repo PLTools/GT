@@ -57,7 +57,7 @@ module GenericExpr =
       Var   of [string] 
     | Const of [int] 
     | Add   of t * t
-    | Sub   of t * t deriving show   
+    | Sub   of t * t deriving show
 
     let show = GT.transform(t) (new @t[show]) () 
 
@@ -170,3 +170,4 @@ let _ =
      printf "%d\n" (GT.transform(expr) (new expr_eval) (function "x" -> 1 | "y" -> 2) (`Add (`Var "x", `Var "y")))
     )
   )
+
