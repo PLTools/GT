@@ -33,6 +33,8 @@ open Plugin
 
 exception Generic_extension of string
 
+let oops loc str = Ploc.raise loc (Generic_extension str)
+
 let get_val (VaVal x) = x 
 
 module S = Set.Make (String)
@@ -97,6 +99,17 @@ let rec replace_t loc a n typ =
   | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
   | typ -> typ
 
+let ctyp_of_qname loc (m::qname) =
+  let id s = 
+    if Char.lowercase s.[0] = s.[0] 
+       then <:ctyp< $lid:s$ >> 
+       else <:ctyp< $uid:s$ >> 
+  in
+  fold_left (fun q n -> <:ctyp< $q$ . $id n$ >> ) (id m) qname
+
+let ctyp_of_instance loc args qname =
+  fold_left (fun t a -> <:ctyp< $t$ $a$ >>) qname args
+
 let generate t loc =
   let make_call g f args =
     fold_left (fun e a -> <:expr< $e$ $g a$ >>) f args
@@ -126,7 +139,7 @@ let generate t loc =
              fold_left 
                (fun acc t ->
                   match t with
-                  | `Type (Specific (Instance (_, [n]))) -> n::acc
+                  | `Type (Instance (_, _, [n])) -> n::acc
                   | _ -> acc
                ) 
                acc 
@@ -176,7 +189,7 @@ let generate t loc =
          let args        = remove_bound_var args    in
          let generator   = name_generator args      in
          let targs       = map (fun arg -> arg, generator#generate ("t" ^ arg)) args in
-         let img name    = assoc name targs         in
+         let img name    = try assoc name targs with Not_found -> oops loc (sprintf "Internal error: type parameter %s not found in \"img\"" name) in
          let inh         = generator#generate "inh" in
          let syn         = generator#generate "syn" in
          let proper_args = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn] in
@@ -340,8 +353,8 @@ let generate t loc =
                      in
                      m_def
 
-                  | `Type (Specific (Instance (b::args, qname))) -> 
-                     let b::args = map (function Variable a -> a) (b::args) in (* TODO *)
+                  | `Type (Instance (_, b::args, qname)) -> 
+                     let b::args = map (function Variable (_, a) -> a) (b::args) in (* TODO *)
 
                      let qname, name = 
                        let n::t = rev qname in
@@ -393,9 +406,12 @@ let generate t loc =
                         <:ctyp< $ga$ $tpt$ >>                           
                       in
                       let make_typ = function
-                      | Generic t    -> t
-                      | Specific (Variable name) -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
-                      | Specific (Instance (targs, qname)) ->   
+                      | Arbitrary t -> t
+                      | Variable (t, name) -> make_a <:ctyp< ' $inh$ >> t <:ctyp< ' $img name$ >>
+                      | Instance (t, _, _) -> make_a <:ctyp< ' $inh$ >> t <:ctyp< ' $syn$ >>
+(*
+                      | Specific (_, Variable name) -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
+                      | Specific (_, Instance (targs, qname)) ->   
                            let targs = map (function Variable a -> a) targs in (* TODO *)
                            let typ =
                              let qtype =
@@ -412,8 +428,15 @@ let generate t loc =
                                targs
                            in
                            make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
+*)
                       in
-                      let typs = [<:ctyp< ' $inh$ >>; make_typ (Specific (Instance (map (fun a -> Variable a) (* TODO *) orig_args, [name])))] @ (map make_typ cargs) in
+                      let typs = [<:ctyp< ' $inh$ >>; 
+                                  let t = ctyp_of_instance loc (map (fun a -> <:ctyp< ' $a$ >>) orig_args ) (ctyp_of_qname loc [name]) in
+                                   make_a <:ctyp< ' $inh$ >> t <:ctyp< ' $syn$ >>
+                                  (*make_typ (Instance (map (fun a -> Variable a) orig_args, [name]))*)
+                                 ] @ 
+                                 (map make_typ cargs) 
+                      in
                       fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
                     in
                     let expr =
@@ -431,10 +454,10 @@ let generate t loc =
                            (garg <:expr< $lid:"self"$ >> <:expr< $lid:subj$ >>) :: 
                            (map (fun (typ, x) -> 
                                    match typ with
-                                   | Generic _   -> <:expr< $lid:x$ >>
-                                   | Specific (Variable name) -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
-                                   | Specific (Instance (args, t)) -> 
-				       let args = map (function Variable a -> a) args (* TODO *) in
+                                   | Arbitrary _        -> <:expr< $lid:x$ >>
+                                   | Variable (_, name) -> garg <:expr< $lid:farg name$ >> <:expr< $lid:x$ >>
+                                   | Instance (_, args, t) -> 
+				       let args = map (function Variable (_, a) -> a) args (* TODO *) in 
                                        let name = get_type_handler (args, t) in 
                                        garg name <:expr< $lid:x$ >>
                                 ) 
@@ -446,8 +469,8 @@ let generate t loc =
                     [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
                     [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
 
-                | `Type (Specific (Instance (args, qname))) as case -> 
-                    let args = map (function Variable a -> a) args in (* TODO *)
+                | `Type (Instance (_, args, qname)) as case -> 
+                    let args = map (function Variable (_, a) -> a) args in (* TODO *)
                     iter (add_derived_member case) derived;
                     let h::tl = args in
                     let targs  = 
@@ -456,8 +479,7 @@ let generate t loc =
                         (map 
                            (fun a -> 
                               try [a; img a] with 
-                              | Not_found -> 
-                                  Ploc.raise loc (Generic_extension (sprintf "unbound type variable '%s" a))
+                              | Not_found -> oops loc (sprintf "unbound type variable '%s" a)
                            ) 
                            tl
                         )
@@ -520,7 +542,7 @@ let generate t loc =
                     [<:class_str_item< inherit $ce$ >>],
                     [<:class_sig_item< inherit $ct$ >>]
 
-                | `Type (Specific (Variable _)) -> invalid_arg "should not happen"
+                | `Type (Variable _) -> invalid_arg "should not happen"
                ) 
                (match descr with `Vari cons | `ClosedPoly cons | `OpenPoly (_, cons) -> cons)
            in

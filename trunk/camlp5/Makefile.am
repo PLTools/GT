@@ -6,6 +6,7 @@ include $(top_srcdir)/m4/Makefile.am.vars
 
 CMOPK = pa_gt.cmo
 CLEAN_EXTRA += pa_gt.cmi
+DEBUG = -g
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)

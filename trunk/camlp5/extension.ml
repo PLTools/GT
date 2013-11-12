@@ -41,7 +41,7 @@ EXTEND
       | <:ctyp< $q$ . $t$ >> -> <:ctyp< $q$ . $inner t$ >>
       | <:ctyp< $t$ $a$ >> -> <:ctyp< $inner t$ $a$ >>
       | <:ctyp< $lid:name$ >> -> <:ctyp< $lid:closed name$ >>
-      | t -> Ploc.raise loc (Generic_extension "application or qualified name expected")
+      | t -> oops loc "application or qualified name expected"
       in
       inner t
   ]];
@@ -64,9 +64,9 @@ EXTEND
 
   class_longident: [[
     "@"; ci=qname; t=OPT trait -> 
-      let n::q = rev (snd ci) in      
+      let n::q = rev ci in      
       rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
-  | ci=qname -> snd ci 
+  | ci=qname -> ci 
   ]];
 
   trait: [[ "["; id=LIDENT; "]" -> id ]];
@@ -87,8 +87,8 @@ EXTEND
         | `OpenPoly (b, d) ->
            (match a with 
            | f::_ when f <> b -> 
-               Pervasives.raise (Generic_extension (sprintf "type argument \"%s\" should be listed the first in the type \"%s\" definition." b n))
-           | [] -> Pervasives.raise (Generic_extension (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b))
+               oops loc (sprintf "type argument \"%s\" should be listed the first in the type \"%s\" definition." b n)
+           | [] -> oops loc (sprintf "type \"%s\" should atleast have type argument \"%s\"." n b)
            | _  -> (a, n, t)
            ),
            (let lcons = 
@@ -101,12 +101,12 @@ EXTEND
                         let args = 
                           map 
                             (function 
-                             | Generic t -> replace_t loc a n t
-                             | Specific (Instance (targs, [name])) when name = n && 
-                                 (map (function Variable a -> a) targs)  (* TODO: can be Variable | Instance *)
+                             | Arbitrary t -> replace_t loc a n t
+                             | Instance (_, targs, [name]) when name = n && 
+                                 (map (function Variable (_, a) -> a) targs)  (* TODO: can be Variable | Instance *)
                                  (*targs*) = a -> <:ctyp< ' $hd a$ >>
-                             | Specific (Instance (targs, qname)) ->   
-                                 let targs = map (function Variable a -> a) targs in (* TODO: can be Variable | Instance *)
+                             | Instance (_, targs, qname) ->   
+                                 let targs = map (function Variable (_, a) -> a) targs in (* TODO: can be Variable | Instance *)
                                  let qtype =
                                    match rev qname with
                                    | name::qname -> 
@@ -119,7 +119,7 @@ EXTEND
                                    (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
                                    qtype 
                                    targs
-                             | Specific (Variable a) -> <:ctyp< ' $a$ >> 
+                             | Variable (t, _) -> t 
                             )
                             args
                         in
@@ -127,8 +127,8 @@ EXTEND
                         <:poly_variant< `$constr$ of $flag:false$ $list:args$ >>
                      )
 
-                 | `Type (Specific (Instance (args, qname))) -> 
-                     let args = map (function Variable a -> a) args in (* TODO: can be Variable | Instance *)
+                 | `Type (Instance (_, args, qname)) -> 
+                     let args = map (function Variable (_, a) -> a) args in (* TODO: can be Variable | Instance *)
                      let n::rest = rev qname in
                      let h::t    = rev (closed n :: rest) in
 		     let base =		     
@@ -200,14 +200,13 @@ EXTEND
         let y = 
           map
             (function
-             | `Type (Specific (Variable x)) -> 
-                 Ploc.raise loc (Generic_extension (sprintf "type variable ('%s) is not allowed in the type sum" x))
-             | `Type (Specific (Instance([], _))) ->
-                 Ploc.raise loc (Generic_extension "polymorphic type expected in the type sum")
-             | `Type (Specific (Instance (b::_ as args, qname))) ->
-                 let Variable b = b in (* TODO *)
-                 if b <> a then Ploc.raise loc (Generic_extension (sprintf "type variable '%s should be the first parameter of all types in this type sum" a));
-                `Type (Specific (Instance (args, qname)))
+             | `Type (Variable (_, x))     -> oops loc (sprintf "type variable ('%s) is not allowed in the type sum" x)
+             | `Type (Instance (_, [], _)) -> oops loc "polymorphic type expected in the type sum"
+             | `Type (Instance (_, (b::_ as args), qname) as t) ->
+                 (match b with 
+                  | Variable (_, b) when b = a -> `Type t
+                  | _ -> oops loc (sprintf "type variable '%s should be the first parameter of all types in this type sum" a);
+                 )
 	     | x -> x
             )
             y
@@ -269,30 +268,28 @@ EXTEND
 
   poly_con: [[
     "`"; c=UIDENT; a=con_args -> `Con (loc, c, get_val (fst a), None), `Con (c, snd a) 
-  | t=c_typ -> `Type (fst t), `Type (Specific (snd t))
+  | t=c_typ -> `Type (ctyp_of t), `Type t
   ]];
 
   con_args: [[
-    "of"; a=LIST1 typ SEP "*" -> let x, y = split a in VaVal x, y 
+    "of"; a=LIST1 typ SEP "*" -> VaVal (map ctyp_of a), a
   | -> VaVal [], [] 
   ]];
 
   typ: [[    
-   "["; t=ctyp LEVEL "apply"; "]" -> t, Generic t
-  | t=c_typ -> fst t, Specific (snd t)
+   "["; t=ctyp LEVEL "apply"; "]" -> Arbitrary t
+  | t=c_typ -> t
   ]];
 
   c_typ: [[
-    a=targ -> <:ctyp< ' $a$ >>, Variable a
+    a=targ -> Variable (<:ctyp< ' $a$ >>, a)
   | "("; a=LIST1 SELF SEP ","; ")"; q=qname -> 
-       let a, ad = split a in
-       fold_left (fun acc a -> <:ctyp< $acc$ $a$ >>) (fst q) a, 
-       Instance (ad, snd q)
-  | a=SELF; b=qname -> <:ctyp< $fst b$ $fst a$ >>, Instance ([snd a], snd b)
-  | q=qname -> fst q, Instance ([], snd q)
+      Instance (ctyp_of_instance loc (map ctyp_of a) (ctyp_of_qname loc q), a, q)
+  | a=SELF; b=qname -> Instance (<:ctyp< $ctyp_of_qname loc b$ $ctyp_of a$ >>, [a], b)
+  | q=qname -> Instance (ctyp_of_qname loc q, [], q)
   ]];
 
-
+(*
   qname: [
     [ q=LIST0 qualifier; x=LIDENT ->
       let x' = <:ctyp< $lid:x$ >> in
@@ -313,6 +310,12 @@ EXTEND
   ];
 
   qualifier: [[ x=UIDENT; "." -> x ]];
+*)
+
+  qname: [[
+    m=UIDENT; "."; q=SELF -> m::q
+  | n=LIDENT -> [n]
+  ]];
 
   fargs: [[
     a=targ -> [a]  

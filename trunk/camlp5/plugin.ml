@@ -31,12 +31,12 @@ open Dynlink
 open List 
 open Printf
 
-type typ  = Generic  of ctyp |
-            Specific of st  
+type typ = 
+  Arbitrary of ctyp  
+| Variable  of ctyp * string
+| Instance  of ctyp * typ list * string list
 
-(* Specific type *)
-and st = Variable of string                | (* type variable                                                              *)
-         Instance of st list * string list   (* polymorphic type instantiation: list of type parameters and qualified name *)
+let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
 
 exception Bad_plugin of string
 

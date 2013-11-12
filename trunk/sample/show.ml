@@ -22,18 +22,19 @@ let _ =
                      let append e = 
                        false, concat expr (if first then e else concat (E.str ", ") e)
                      in
-                     match arg with
-                     | arg, Specific _ -> 
+                     match arg with                     
+                     | arg, Arbitrary ctyp -> 
+                        (match ctyp with
+                         | <:ctyp< $lid:tname$ >> -> 
+                           (match tname with
+                            | "int"    -> append (E.app [E.lid "string_of_int"; E.lid arg])
+                            | "string" -> append (E.lid arg)
+                            | _        -> acc
+                           )
+                         | _ ->  acc
+			)
+		     | arg, _ -> 
                         append (E.app [E.fx (E.lid arg); E.unit])
-                     | arg, Generic ctyp -> 
-                        match ctyp with
-                        | <:ctyp< $lid:tname$ >> -> 
-                          (match tname with
-                           | "int"    -> append (E.app [E.lid "string_of_int"; E.lid arg])
-                           | "string" -> append (E.lid arg)
-                           | _        -> acc
-                          )
-                        | _ ->  acc
                   )         
                   (true, E.str (constr.constr ^ " ("))
                   constr.args 
