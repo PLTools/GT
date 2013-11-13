@@ -261,17 +261,13 @@ EXTEND
   ]];
 
   con_args: [[
-    "of"; a=LIST1 typ SEP "*" -> VaVal (map ctyp_of a), a
+    "of"; a=LIST1 c_typ SEP "*" -> VaVal (map ctyp_of a), a
   | -> VaVal [], [] 
-  ]];
-
-  typ: [[    
-   "["; t=ctyp LEVEL "apply"; "]" -> Arbitrary t
-  | t=c_typ -> t
   ]];
 
   c_typ: [[
     a=targ -> Variable (<:ctyp< ' $a$ >>, a)
+  |"["; t=ctyp LEVEL "apply"; "]" -> Arbitrary t
   | "("; a=LIST1 SELF SEP ","; ")"; q=qname -> 
       Instance (ctyp_of_instance loc (map ctyp_of a) (ctyp_of_qname loc q), a, q)
   | a=SELF; b=qname -> Instance (<:ctyp< $ctyp_of_qname loc b$ $ctyp_of a$ >>, [a], b)
