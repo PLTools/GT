@@ -10,7 +10,7 @@ let _ =
         {
           inh         = T.id "unit"; 
           syn         = T.id "string";
-          proper_args = d.type_args; 
+          proper_args = List.map (fun (Variable (_, a)) -> a) d.type_args; 
           arg_img     = (fun _ -> T.id "string")
         }, 
         (fun env constr -> 

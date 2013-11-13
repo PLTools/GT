@@ -197,7 +197,7 @@ let generate t loc =
          let p_descriptor = {
            Plugin.is_polyvar = polyvar;
            Plugin.is_open    = (match bound_var with Some b -> `Yes b | _ -> `No);
-           Plugin.type_args  = args;
+           Plugin.type_args  = map (fun a -> Variable (<:ctyp< ' $a$ >>, a)) args;
            Plugin.name       = current;
            Plugin.default    = { 
              Plugin.inh         = <:ctyp< ' $inh$ >>;
@@ -354,8 +354,8 @@ let generate t loc =
                      m_def
 
                   | `Type (Instance (_, b::args, qname)) -> 
-                     let b::args = map (function Variable (_, a) -> a) (b::args) in (* TODO *)
-
+                  (*   let b::args = map (function Variable (_, a) -> a) (b::args) in (* TODO *) *)
+                     let Variable (_, b) = b in
                      let qname, name = 
                        let n::t = rev qname in
                        rev ((trait_t n trait) :: t), n
@@ -409,26 +409,6 @@ let generate t loc =
                       | Arbitrary t -> t
                       | Variable (t, name) -> make_a <:ctyp< ' $inh$ >> t <:ctyp< ' $img name$ >>
                       | Instance (t, _, _) -> make_a <:ctyp< ' $inh$ >> t <:ctyp< ' $syn$ >>
-(*
-                      | Specific (_, Variable name) -> make_a <:ctyp< ' $inh$ >> <:ctyp< ' $name$ >> <:ctyp< ' $img name$ >>
-                      | Specific (_, Instance (targs, qname)) ->   
-                           let targs = map (function Variable a -> a) targs in (* TODO *)
-                           let typ =
-                             let qtype =
-                               match rev qname with
-                               | name::qname -> 
-                                  fold_right 
-                                    (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
-                                    qname 
-                                    <:ctyp< $lid: name$ >>
-                             in
-                             fold_left 
-                               (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
-                               qtype 
-                               targs
-                           in
-                           make_a <:ctyp< ' $inh$ >> typ <:ctyp< ' $syn$ >>
-*)
                       in
                       let typs = [<:ctyp< ' $inh$ >>; 
                                   let t = ctyp_of_instance loc (map (fun a -> <:ctyp< ' $a$ >>) orig_args ) (ctyp_of_qname loc [name]) in
@@ -542,7 +522,7 @@ let generate t loc =
                     [<:class_str_item< inherit $ce$ >>],
                     [<:class_sig_item< inherit $ct$ >>]
 
-                | `Type (Variable _) -> invalid_arg "should not happen"
+                | `Type (Variable (_, name)) -> oops loc (sprintf "type variable '%s is not allowed here" name)
                ) 
                (match descr with `Vari cons | `ClosedPoly cons | `OpenPoly (_, cons) -> cons)
            in

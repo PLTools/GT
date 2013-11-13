@@ -65,7 +65,7 @@ type properties = {
 type type_descriptor = {
     is_polyvar : bool;
     is_open    : [`Yes of string | `No];
-    type_args  : string list;
+    type_args  : typ list;
     name       : string;
     default    : properties;
   }
@@ -265,7 +265,7 @@ let generate_inherit base_class loc qname descr (prop, _) =
     (match descr.is_open with `Yes s -> [<:ctyp< ' $s$ >>] | _ -> []) @
     if base_class 
     then
-      flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
+      flatten (map (fun (Variable (t, a)) -> [t; prop.arg_img a]) descr.type_args) @
       [prop.inh; prop.syn]      
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
