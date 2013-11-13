@@ -102,23 +102,20 @@ EXTEND
                           map 
                             (function 
                              | Arbitrary t -> replace_t loc a n t
-                             | Instance (_, targs, [name]) when name = n && 
-                                 (map (function Variable (_, a) -> a) targs)  (* TODO: can be Variable | Instance *)
-                                 (*targs*) = a -> <:ctyp< ' $hd a$ >>
-                             | Instance (_, targs, qname) ->   
-                                 let targs = map (function Variable (_, a) -> a) targs in (* TODO: can be Variable | Instance *)
-                                 let qtype =
-                                   match rev qname with
-                                   | name::qname -> 
-                                      fold_right 
-                                        (fun a acc -> let t = <:ctyp< $uid:a$ >> in <:ctyp< $t$ . $acc$ >>) 
-                                        qname 
-                                        <:ctyp< $lid:name$ >>
-                                 in
-                                 fold_left 
-                                   (fun acc a -> let at = <:ctyp< ' $a$ >> in <:ctyp< $acc$ $at$ >>) 
-                                   qtype 
-                                   targs
+                             | Instance (t, targs, qname) -> 
+                                 (match qname with
+                                  | [name] when name = n ->
+                                      (try if a = map (function 
+                                                       | Variable (_, a) -> a 
+                                                       | _ -> Pervasives.raise (Invalid_argument "not matched")
+                                                      ) targs
+                                           then <:ctyp< ' $hd a$ >>
+                                           else t
+                                       with Invalid_argument "not matched" -> t
+                                      )
+                                  | _ -> t
+                                 )
+ 
                              | Variable (t, _) -> t 
                             )
                             args
@@ -128,20 +125,12 @@ EXTEND
                      )
 
                  | `Type (Instance (_, args, qname)) -> 
-                     let args = map (function Variable (_, a) -> a) args in (* TODO: can be Variable | Instance *)
                      let n::rest = rev qname in
-                     let h::t    = rev (closed n :: rest) in
-		     let base =		     
-                       fold_left 
-                        (fun q t -> 
-                           let t = <:ctyp< $uid:t$ >> in 
-                           <:ctyp< $q$ . $t$ >>
-                        ) 
-                        <:ctyp< $uid:h$ >> 
-                        t
-                     in
-		     let t = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) base args in
+                     let base    = ctyp_of_qname loc (rev (closed n :: rest)) in
+		     let t       = ctyp_of_instance loc (map ctyp_of args) base in
 		     <:poly_variant< $t$ >>
+
+		 | `Type _ -> oops loc "type instantiation only is allowed here"
                 ) 
                 d 
             in
@@ -202,7 +191,7 @@ EXTEND
             (function
              | `Type (Variable (_, x))     -> oops loc (sprintf "type variable ('%s) is not allowed in the type sum" x)
              | `Type (Instance (_, [], _)) -> oops loc "polymorphic type expected in the type sum"
-             | `Type (Instance (_, (b::_ as args), qname) as t) ->
+             | `Type (Instance (_, b::_, qname) as t) ->
                  (match b with 
                   | Variable (_, b) when b = a -> `Type t
                   | _ -> oops loc (sprintf "type variable '%s should be the first parameter of all types in this type sum" a);
@@ -288,29 +277,6 @@ EXTEND
   | a=SELF; b=qname -> Instance (<:ctyp< $ctyp_of_qname loc b$ $ctyp_of a$ >>, [a], b)
   | q=qname -> Instance (ctyp_of_qname loc q, [], q)
   ]];
-
-(*
-  qname: [
-    [ q=LIST0 qualifier; x=LIDENT ->
-      let x' = <:ctyp< $lid:x$ >> in
-      match q with
-      | []   -> x', [x]
-      | h::t -> 
-         let q' =
-           fold_left 
-             (fun q t -> 
-                let t = <:ctyp< $uid:t$ >> in 
-                <:ctyp< $q$ . $t$ >>
-             ) 
-             <:ctyp< $uid:h$ >> 
-            t
-         in
-         <:ctyp< $q'$ . $x'$ >>, q@[x]
-    ]
-  ];
-
-  qualifier: [[ x=UIDENT; "." -> x ]];
-*)
 
   qname: [[
     m=UIDENT; "."; q=SELF -> m::q
