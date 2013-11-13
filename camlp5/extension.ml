@@ -261,7 +261,7 @@ EXTEND
   ]];
 
   con_args: [[
-    "of"; a=LIST1 c_typ SEP "*" -> VaVal (map ctyp_of a), a
+    "of"; a=LIST1 c_typ SEP "*" ->  VaVal (map ctyp_of a), a 
   | -> VaVal [], [] 
   ]];
 
