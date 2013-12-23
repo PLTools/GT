@@ -41,8 +41,11 @@ let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
 exception Bad_plugin of string
 
 let cata    name      = name ^ "_gcata"
+let targ    name      = "p" ^ name
+let tname   name      = "t" ^ name
 let others            = "others"
-let cmethod c         = "m_" ^ c
+let cmethod c         = "c_" ^ c
+let tmethod t         = "t_" ^ t
 let apply             = "apply"
 let closed  name      = name ^ "'"
 let class_t name      = name ^ "_t"

@@ -104,15 +104,8 @@ EXTEND
                              | Arbitrary t -> replace_t loc a n t
                              | Instance (t, targs, qname) -> 
                                  (match qname with
-                                  | [name] when name = n ->
-                                      (try if a = map (function 
-                                                       | Variable (_, a) -> a 
-                                                       | _ -> Pervasives.raise (Invalid_argument "not matched")
-                                                      ) targs
-                                           then <:ctyp< ' $hd a$ >>
-                                           else t
-                                       with Invalid_argument "not matched" -> t
-                                      )
+                                  | [name] when name = n && a = map (function Variable (_, a) -> a | _ -> "") targs -> 
+				      <:ctyp< ' $hd a$ >>
                                   | _ -> t
                                  )
  

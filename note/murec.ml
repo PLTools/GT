@@ -13,7 +13,7 @@ class virtual ['i, 's] m_t =
     method virtual t_m   : 'i -> m -> 's
   end
 
-let rec transform_m : 'i 's . ('i, 's) #m_t -> 'i -> m -> 's = fun t acc x ->
+let rec transform_m t acc x =
   let self = transform_m t in
   match x with
   | M y -> t#m_M acc (self, x) (t#t_int, y)
@@ -28,7 +28,7 @@ class virtual ['i, 's] n_t =
     method virtual t_n      : 'i -> n -> 's
   end
 
-let rec transform_n : 'i 's . ('i, 's) #n_t -> 'i -> n -> 's = fun t acc x ->
+let rec transform_n t acc x =
   let self = transform_n t in
   match x with
   | K y -> t#m_K acc (self, x) (t#t_m, y)
