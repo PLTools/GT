@@ -17,11 +17,14 @@ PXFLAGS = $(P5FLAGS)
 CAMLPXLIB = $(CAMLP5LIB)
 MODULE_INCLUDES += -I $(CAMLP5LIB)
 
-TARGET = 
+TARGET = show.cmo 
 
 CLEAN_EXTRA += $(addsuffix .cmi, $(TESTS)) $(addsuffix .cmo, $(TESTS))
 CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
-CLEAN_EXTRA += *.diff *.log
+CLEAN_EXTRA += *.diff *.log show.cmo
+
+show.cmo: show.ml
+	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I `ocamlfind -query GT` GT.cma show.ml
 
 include $(top_srcdir)/m4/Makefile.am.targets
 

@@ -3,43 +3,43 @@ open GT
 generic 'l t = 
     R 
   | W 
-  | L  of string 
-  | S  of string 
-  | B  of (int -> int -> int) * string
+  | L  of [string] 
+  | S  of [string] 
+  | B  of [int -> int -> int] * [string]
   | E
-  | C  of int
-  | J  of ['l]
-  | JT of ['l]
-  | JF of ['l]
+  | C  of [int]
+  | J  of 'l
+  | JT of 'l
+  | JF of 'l
 
 class toString =
   object (this)
     inherit [int, string, unit, string] t_t
-    method m_R  () _     = "R"
-    method m_W  () _     = "W"
-    method m_L  () _ x   = "L " ^ x
-    method m_S  () _ x   = "S " ^ x
-    method m_B  () _ _ x = "B " ^ x
-    method m_E  () _     = "E"
-    method m_C  () _ x   = "C "  ^ (string_of_int x)
-    method m_J  () _ x   = "J "  ^ (x.fx ())
-    method m_JT () _ x   = "JT " ^ (x.fx ())
-    method m_JF () _ x   = "JF " ^ (x.fx ())
+    method c_R  () _     = "R"
+    method c_W  () _     = "W"
+    method c_L  () _ x   = "L " ^ x
+    method c_S  () _ x   = "S " ^ x
+    method c_B  () _ _ x = "B " ^ x
+    method c_E  () _     = "E"
+    method c_C  () _ x   = "C "  ^ (string_of_int x)
+    method c_J  () _ x   = "J "  ^ (x.fx ())
+    method c_JT () _ x   = "JT " ^ (x.fx ())
+    method c_JF () _ x   = "JF " ^ (x.fx ())
   end
 
 class resolve =
   object (this)
     inherit [string, int, unit, int t] t_t
-    method m_R  _ _     = R
-    method m_W  _ _     = W
-    method m_L  _ _ x   = L x
-    method m_S  _ _ x   = S x
-    method m_B  _ _ f x = B (f, x)
-    method m_E  _ _     = E
-    method m_C  _ _ x   = C x
-    method m_J  _ _ x   = J  (x.fx ())
-    method m_JT _ _ x   = JT (x.fx ())
-    method m_JF _ _ x   = JF (x.fx ())
+    method c_R  _ _     = R
+    method c_W  _ _     = W
+    method c_L  _ _ x   = L x
+    method c_S  _ _ x   = S x
+    method c_B  _ _ f x = B (f, x)
+    method c_E  _ _     = E
+    method c_C  _ _ x   = C x
+    method c_J  _ _ x   = J  (x.fx ())
+    method c_JT _ _ x   = JT (x.fx ())
+    method c_JF _ _ x   = JF (x.fx ())
   end
 
 let resolve p = 
@@ -54,31 +54,31 @@ type env  = int list * (string -> int) * int list * int list * int
 class interpret =
   object (this)
     inherit [int, int, env, env option] t_t    
-    method m_R  (      s, m, x::i, o, p) _     = Some (x::s, m, i, o, p+1)
-    method m_W  (   x::s, m,    i, o, p) _     = Some (s, m, i, x::o, p+1)
-    method m_L  (      s, m,    i, o, p) _ x   = Some ((m x)::s, m, i, o, p+1)
-    method m_S  (   y::s, m,    i, o, p) _ x   = Some (s, (fun z -> if z = x then y else m z), i, o, p+1)
-    method m_B  (y::z::s, m,    i, o, p) _ f _ = Some ((f z y)::s, m, i, o, p+1)
-    method m_E   _ _                           = None
-    method m_C  (      s, m,    i, o, p) _ n   = Some (n::s, m, i, o, p+1)
-    method m_J  (      s, m,    i, o, p) _ n   = Some (s, m, i, o, ~:n)
-    method m_JT (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x != 0 then ~:n else p+1)
-    method m_JF (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x  = 0 then ~:n else p+1)   
+    method c_R  (      s, m, x::i, o, p) _     = Some (x::s, m, i, o, p+1)
+    method c_W  (   x::s, m,    i, o, p) _     = Some (s, m, i, x::o, p+1)
+    method c_L  (      s, m,    i, o, p) _ x   = Some ((m x)::s, m, i, o, p+1)
+    method c_S  (   y::s, m,    i, o, p) _ x   = Some (s, (fun z -> if z = x then y else m z), i, o, p+1)
+    method c_B  (y::z::s, m,    i, o, p) _ f _ = Some ((f z y)::s, m, i, o, p+1)
+    method c_E   _ _                           = None
+    method c_C  (      s, m,    i, o, p) _ n   = Some (n::s, m, i, o, p+1)
+    method c_J  (      s, m,    i, o, p) _ n   = Some (s, m, i, o, ~:n)
+    method c_JT (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x != 0 then ~:n else p+1)
+    method c_JF (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x  = 0 then ~:n else p+1)   
   end
 
 class debug callback =
   object (this)
     inherit interpret as super
-    method m_R  c i     = callback i c; super#m_R  c i
-    method m_W  c i     = callback i c; super#m_W  c i
-    method m_L  c i x   = callback i c; super#m_L  c i x
-    method m_S  c i x   = callback i c; super#m_S  c i x
-    method m_B  c i x y = callback i c; super#m_B  c i x y
-    method m_E  c i     = callback i c; super#m_E  c i 
-    method m_C  c i x   = callback i c; super#m_C  c i x
-    method m_J  c i x   = callback i c; super#m_J  c i x
-    method m_JT c i x   = callback i c; super#m_JT c i x
-    method m_JF c i x   = callback i c; super#m_JF c i x
+    method c_R  c i     = callback i c; super#c_R  c i
+    method c_W  c i     = callback i c; super#c_W  c i
+    method c_L  c i x   = callback i c; super#c_L  c i x
+    method c_S  c i x   = callback i c; super#c_S  c i x
+    method c_B  c i x y = callback i c; super#c_B  c i x y
+    method c_E  c i     = callback i c; super#c_E  c i 
+    method c_C  c i x   = callback i c; super#c_C  c i x
+    method c_J  c i x   = callback i c; super#c_J  c i x
+    method c_JT c i x   = callback i c; super#c_JT c i x
+    method c_JF c i x   = callback i c; super#c_JF c i x
   end
 
 let interpret ii p i =

@@ -1,17 +1,17 @@
 open GT
 
-generic tree = Node of int * tree list
+generic tree = Node of [int] * [tree list]
 
 class ['a, 'b] tree_map_t f =
   object(self)
     inherit ['a, 'b] @tree
-    method m_Node _ x n l = Node (f n, List.map (fun t -> x.f () t) l)
+    method c_Node _ x n l = Node (f n, List.map (fun t -> x.f () t) l)
   end
 
 class ['a, 'b] tree_fold_t f =
   object(self)
     inherit ['a, 'b] @tree
-    method m_Node acc x n l = List.fold_left (fun acc t -> x.f acc t) (f acc n) l
+    method c_Node acc x n l = List.fold_left (fun acc t -> x.f acc t) (f acc n) l
   end
 
 let num_of_nodes t = 
