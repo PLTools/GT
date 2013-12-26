@@ -10,7 +10,7 @@ MODULE_INCLUDES += -I $(top_srcdir)/src
 EXTRA_CMA += $(PACKAGE).cma
 
 # OCaml parser call with flags
-AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pr_o.cmo pa_gt.cmo -L ."
+AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pa_gt.cmo -L ."
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)
