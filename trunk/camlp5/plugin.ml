@@ -40,16 +40,18 @@ let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
 
 exception Bad_plugin of string
 
-let cata    name      = name ^ "_gcata"
-let targ    name      = "p" ^ name
-let tname   name      = "t" ^ name
-let others            = "others"
-let cmethod c         = "c_" ^ c
-let tmethod t         = "t_" ^ t
-let apply             = "apply"
-let closed  name      = name ^ "'"
-let class_t name      = name ^ "_t"
-let trait_t typ trait = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
+let cata    name           = name ^ "_gcata"
+let targ    name           = "p" ^ name
+let tname   name           = "t" ^ name
+let others                 = "others"
+let cmethod c              = "c_" ^ c
+let tmethod t              = "t_" ^ t
+let apply                  = "apply"
+let closed  name           = name ^ "'"
+let class_t name           = name ^ "_t"
+let trait_t typ trait      = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
+let transformer_name t     = "transform_" ^ t
+let transformer_ext_name t = (transformer_name t) ^ "_ext"
 
 let load_path = ref []
 
