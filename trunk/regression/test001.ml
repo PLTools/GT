@@ -27,9 +27,9 @@ class toString =
     method c_JF () _ x   = "JF " ^ (x.fx ())
   end
 
-class resolve =
+class ['a] map_t =
   object (this)
-    inherit [int, unit, int t] t_t
+    inherit ['a, unit, 'a t] t_t
     method c_R  _ _     = R
     method c_W  _ _     = W
     method c_L  _ _ x   = L x
@@ -42,12 +42,22 @@ class resolve =
     method c_JF _ _ x   = JF (x.fx ())
   end
 
+class resolve =
+  object (this)
+    inherit [int] map_t
+  end
+
+class string_t =
+  object (this)
+    inherit [string] map_t
+  end
+
 let resolve p = 
   let symbols = ref [] in
   let p = Array.mapi (fun i (s, c) -> if s != "" then symbols := (s, i) :: !symbols; c) p in
   Array.map (fun i -> t.transform_t (*gcata*) (fun _ i -> List.assoc i !symbols) (new resolve) () i) p
 
-let toString f i  = t.transform_t (*gcata*) f (new toString) () i
+let toString f i  = t.transform_t f (new toString) () i
 
 type env  = int list * (string -> int) * int list * int list * int
 
@@ -66,21 +76,19 @@ class interpret =
     method c_JF ((   x::s, m,    i, o, p) as env) _ n   = Some (s, m, i, o, if x  = 0 then (*~:n*) n.GT.fx env  else p+1)   
   end
 
-type callback = {callback : 'l . 'l t -> env -> unit} 
-
 class debug callback =
   object (this)
     inherit interpret as super
-    method c_R  c i     = callback.callback ~:i c; super#c_R  c i
-    method c_W  c i     = callback.callback ~:i c; super#c_W  c i
-    method c_L  c i x   = callback.callback ~:i c; super#c_L  c i x
-    method c_S  c i x   = callback.callback ~:i c; super#c_S  c i x
-    method c_B  c i x y = callback.callback ~:i c; super#c_B  c i x y
-    method c_E  c i     = callback.callback ~:i c; super#c_E  c i 
-    method c_C  c i x   = callback.callback ~:i c; super#c_C  c i x
-    method c_J  c i x   = callback.callback ~:i c; super#c_J  c i x
-    method c_JT c i x   = callback.callback ~:i c; super#c_JT c i x
-    method c_JF c i x   = callback.callback ~:i c; super#c_JF c i x
+    method c_R  c i     = callback c; super#c_R  c i
+    method c_W  c i     = callback c; super#c_W  c i
+    method c_L  c i x   = callback c; super#c_L  c i x
+    method c_S  c i x   = callback c; super#c_S  c i x
+    method c_B  c i x y = callback c; super#c_B  c i x y
+    method c_E  c i     = callback c; super#c_E  c i 
+    method c_C  c i x   = callback c; super#c_C  c i x
+    method c_J  c i x   = callback c; super#c_J  c i x
+    method c_JT c i x   = callback c; super#c_JT c i x
+    method c_JF c i x   = callback c; super#c_JF c i x
   end
 
 let interpret ii p i =
@@ -137,7 +145,12 @@ let sumNS = [|
 
 let _ = 
   let ii = new interpret in
-  let dd = new debug {callback = fun i (_, _, _, _, p) -> Printf.printf "%s @ %d\n" "" p} in
+  let log = ref [] in
+  let print p =
+    List.iter (fun i -> Printf.printf "%s @ %d\n" (toString (fun _ x -> string_of_int x) p.(i)) i) (List.rev !log);
+    log := []
+  in
+  let dd = new debug (fun (_, _, _, _, p) -> log := p :: !log) in
   let main name xx p i = 
     Printf.printf "%s:\n" name;
     List.iter (fun x -> Printf.printf "%d\n" x) (interpret xx p i) 
@@ -146,8 +159,11 @@ let _ =
   main "sumN" ii sumN [10; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10];
 
   main "sum with debug"  dd sum [2; 3];
+  print sum;
+
   main "sumN with debug" dd sumN [10; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10];
-   
+  print sumN;
+  
   main "sum"  ii (resolve sumS) [2; 3];
   main "sumN" ii (resolve sumNS) [10; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10];
 
