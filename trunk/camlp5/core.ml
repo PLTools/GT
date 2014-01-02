@@ -120,6 +120,7 @@ let ctyp_of_instance loc args qname =
   fold_left (fun t a -> <:ctyp< $t$ $a$ >>) qname args
 
 let generate t loc =
+  let module H = Plugin.Helper (struct let loc = loc end) in
   let make_call g f args =
     fold_left (fun e a -> <:expr< $e$ $g a$ >>) f args
   in
@@ -226,7 +227,7 @@ let generate t loc =
          let p_descriptor  = {
            Plugin.is_polyvar = polyvar;
            Plugin.is_open    = (match bound_var with Some b -> `Yes b | _ -> `No);
-           Plugin.type_args  = map (fun a -> Variable (<:ctyp< ' $a$ >>, a)) args;
+           Plugin.type_args  = args;
            Plugin.name       = current;
            Plugin.default    = { 
              Plugin.inh         = <:ctyp< ' $inh$ >>;
@@ -417,7 +418,7 @@ let generate t loc =
                      let descr = {
                        Plugin.is_polyvar = true;
                        Plugin.is_open    = `Yes b;
-                       Plugin.type_args  = args;
+                       Plugin.type_args  = map (fun (Variable (_, a)) -> a) args; (* TODO *)
                        Plugin.name       = name;
                        Plugin.default    = prop;
                      }
@@ -504,20 +505,7 @@ let generate t loc =
                 | `Type (Instance (_, args, qname)) as case -> 
                     let args = map (function Variable (_, a) -> a) args in (* TODO *)
                     iter (add_derived_member case) derived;
-                    let h::tl = args in
-                    let targs  = 
-                      h ::
-                      (flatten 
-                        (map 
-                           (fun a -> 
-                              try [a; img a] with 
-                              | Not_found -> oops loc (sprintf "unbound type variable '%s" a)
-                           ) 
-                           tl
-                        )
-                      ) @ 
-                      [inh; syn] 
-                    in
+                    let targs = (map img args) @ [inh; syn] in
                     let tqname = map_last class_t qname in
                     let targs = map (fun a -> <:ctyp< ' $a$ >>) targs in
                     let ce    = <:class_expr< [ $list:targs$ ] $list:tqname$ >> in
@@ -532,8 +520,9 @@ let generate t loc =
                       <:class_type< $ct$ [ $list:targs$ ] >>
                     in
                     let expr =
-                      let _::t = args  in
-                      let args = rev t in
+(*
+                      let args = match args with _::t -> rev t | _ -> []in
+*)
                       let typename =
                         match qname with
                         | [n]  -> <:expr< $lid:n$ >>
@@ -548,6 +537,7 @@ let generate t loc =
                            in
                            <:expr< $q$ . $n$ >>
                       in
+(*
                       let generic = <:expr< $uid:"GT"$ >> in
                       let cata    = <:expr< $lid:"gcata_ext"$ >> in
                       let func    = <:expr< $typename$ . $generic$ >> in
@@ -555,9 +545,11 @@ let generate t loc =
                       let ext     = 
                         make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
                       in
+*)
+		      let func = H.E.qname (qname @ (map_last transformer_name qname)) in
                       make_call id func 
                         ((map (fun a -> <:expr< $lid:farg a$>>) args) @ 
-                         [<:expr< $lid:trans$ >>; ext; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>]
+                         [<:expr< $lid:trans$ >> (*; ext*); <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>]
                         )
                     in
                     let patt =

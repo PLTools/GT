@@ -27,7 +27,7 @@ module Expr =
       end
 
   end
-
+(*
 module Stmt =
   struct
 
@@ -43,9 +43,10 @@ module Stmt =
     ] as 'self
 
   end
+*)
 let _ =
   let e = `Binop ((+), "+", `Const 1, `Var "a") in
-  let s = Expr.t.GT.gcata (new Expr.toString) () e in
-  let v = Expr.t.GT.gcata (new Expr.eval (fun "a" -> 2)) () e in
+  let s = Expr.t.Expr.transform_t (new Expr.toString) () e in
+  let v = Expr.t.Expr.transform_t (new Expr.eval (fun "a" -> 2)) () e in
   Printf.printf "%s\n" s;
   Printf.printf "%d\n" v
