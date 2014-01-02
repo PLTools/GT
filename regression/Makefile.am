@@ -1,4 +1,5 @@
-TESTS = test000 test001 test002 test003 test005 test006
+#TESTS = test000 test001 test002 test003 test005 test006
+TESTS = test000 test001 test002 test008 #test009 test010 test011
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
 
