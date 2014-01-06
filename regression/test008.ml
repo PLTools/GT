@@ -21,6 +21,6 @@ class ['a] expr_eval = object
 end
 
 let _ =
-  let rec eval f x = expr.transform_expr eval (new expr_eval) f x in
+  let rec eval f x = GT.transform(expr) eval (new expr_eval) f x in
   Printf.printf "%d\n" (eval (function "x" -> 1 | "y" -> 2) (`Add (`Var "x", `Var "y")))
 

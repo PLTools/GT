@@ -15,16 +15,16 @@ class ['a, 'b] tree_fold_t f =
   end
 
 let num_of_nodes t = 
-  tree.transform_tree (*gcata*) (new tree_fold_t (fun n _ -> n+1))
+  transform(tree) (new tree_fold_t (fun n _ -> n+1))
     0 t
 
 let increment t =
-  tree.transform_tree (*gcata*) (new tree_map_t (fun x -> x + 1))
+  transform(tree) (new tree_map_t (fun x -> x + 1))
     () t
 
 let toString t =
   Buffer.contents (
-    tree.transform_tree (*gcata*)
+    transform(tree)
       (new tree_fold_t (fun buf n -> 
                           Buffer.add_string buf (string_of_int n);
                           buf

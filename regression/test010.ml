@@ -31,7 +31,7 @@ class ['a, 'v] lambda_eval = object
 
  end
 
-let rec eval1 s e = (* GT.transform(lambda)*) lambda.transform_lambda eval1 (new lambda_eval) s e
+let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e
 
 generic 'a var_expr = [ var | `Num of [int] | `Add of 'a * 'a | `Mult of 'a * 'a ] 
 
@@ -49,7 +49,7 @@ class ['a, 'v] var_expr_eval = object
     | x, y -> `Mult (x, y)
  end
 
-let rec eval2 s e = var_expr.transform_var_expr (*GT.transform(var_expr)*) eval2 (new var_expr_eval) s e
+let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e
 
 generic 'a expr = [ 'a lambda | 'a var_expr ]
 
@@ -59,7 +59,7 @@ class ['a, 'v] expr_eval = object
   inherit ['a, 'v] var_expr_eval
 end 
 
-let rec eval3 s e = expr.transform_expr (*GT.transform(expr)*) eval3 (new expr_eval) s e
+let rec eval3 s e = GT.transform(expr) eval3 (new expr_eval) s e
 
 let _ =
   Printf.printf "%s\n" (to_string (eval3 ["x", `Num 5; "y", `Num 6] (`Add (`Var "x", `Mult (`Num 2, `Var "y"))))) 
