@@ -307,7 +307,7 @@ let generate t loc =
            <:ctyp< $x$ $cata_ext_type$ >>
          in
 (**)
-         let metargs = (map farg args) @ [trans; ext] in
+         let metargs = (map farg args) @ [trans(*; ext*)] in
          let args = metargs @ [acc; subj] in
          match descr with
          | (`OpenPoly _ | `ClosedPoly _ | `Vari _) as descr -> 
@@ -542,16 +542,16 @@ let generate t loc =
                            in
                            <:expr< $q$ . $n$ >>
                       in
-(*
+
                       let generic = <:expr< $uid:"GT"$ >> in
-                      let cata    = <:expr< $lid:"gcata_ext"$ >> in
+                      let cata    = <:expr< $lid:"gcata"$ >> in
                       let func    = <:expr< $typename$ . $generic$ >> in
                       let func    = <:expr< $func$ . $cata$ >> in
                       let ext     = 
                         make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
                       in
-*)
-		      let func = H.E.qname (qname @ (map_last transformer_name qname)) in
+
+		     (* let func = H.E.qname (qname @ (map_last transformer_name qname)) in *)
                       make_call id func 
                         ((map (fun a -> <:expr< $lid:farg a$>>) args) @ 
                          [<:expr< $lid:trans$ >> (*; ext*); <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>]
@@ -586,9 +586,9 @@ let generate t loc =
            let local_defs_and_then expr =
              let local_defs =
                 get_local_defs () @
-                [<:patt< $lid:"self"$ >>  , make_call of_lid (*<:expr< $lid:cata current$ >>*) (let t = <:expr< $lid:current$ >> in 
+                [<:patt< $lid:"self"$ >>  , make_call of_lid <:expr< $lid:cata current$ >> (*let t = <:expr< $lid:current$ >> in 
                                                                                                 let f = <:expr< $lid:transformer_ext_name current$ >> in
-                                                                                                <:expr< $t$ . $f$ >>) metargs;
+                                                                                                <:expr< $t$ . $f$ >>*) metargs;
                  <:patt< $lid:tpo_name$ >>, tpo
                 ]                                                   
              in
@@ -615,10 +615,14 @@ let generate t loc =
            let cata_name = <:patt< $lid:cata name$ >> in
            let p  = snd (fold_left (fun (i, acc) _ -> i+1, (sprintf "p%d" i)::acc) (0, []) (["t"; "acc"; "s"] @ orig_args)) in
            let pe = [
-             (*generic_cata_ext*) <:patt< $lid:transformer_ext_name current$ >>, ((make_fun (fun a -> <:patt< $lid:a$ >>) 
+             (*generic_cata_ext*) (*<:patt< $lid:transformer_ext_name current$ >>*) generic_cata, 
+(*
+((make_fun (fun a -> <:patt< $lid:a$ >>) 
 			  args 
 			  (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>)
-		       )) (*<:expr< $lid:cata name$ >>*); 
+		       )) 
+*)<:expr< $lid:cata name$ >>;
+(* 
              (*generic_cata*) <:patt< $lid:transformer_name current$ >>, (let ext, p = 
                match descr with 
                | `OpenPoly _ -> 
@@ -647,13 +651,15 @@ let generate t loc =
                let x :: y :: a = rev (map (fun arg -> <:expr< $lid:arg$ >>) p) in
                rev a @ [ext; y; x]
              in
-             let cata = (*<:expr< $lid:cata name$ >>*) 
+             let cata = <:expr< $lid:cata name$ >>
+(*
                let t = <:expr< $lid:current$ >> in
                let f = <:expr< $lid:transformer_ext_name current$ >> in          
                <:expr< $t$ . $f$ >>
+*)
              in
              make_fun (fun a -> <:patt< $lid:a$ >>) p (make_call id cata args)
-                           )
+                           ) *)
            ] 
            in 
            let transformer_type =
@@ -696,32 +702,32 @@ let generate t loc =
 	   let pname = <:patt< $lid:name$ >> in
            transformer_type,
            (pname, <:expr< { $list:pe$ } >>),
-(*
+(**)
            (cata_name, (make_fun (fun a -> <:patt< $lid:a$ >>) 
 			  args 
 			  (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>)
 		       )
 	   ),
-*)
+(**)
            <:sig_item< value $name$ : $catype$ >>,
            [class_def, class_decl] @ (map get_derived_classes derived)
       ) 
       d
   in
-  let transformer_types, tuples (*, defs*), decls, classes = split4 defs in
+  let transformer_types, tuples (**), defs(**), decls, classes = split5 defs in
   let pnames, tnames = split tuples in
-(*  
+(**)  
 let tuple = <:patt< ( $list:pnames$ ) >> in
   let tup = <:expr< ( $list:tnames$ ) >> in 
-*)
+(**)
   let class_defs, class_decls = split (flatten classes) in
-(*
+(**)
   let def = <:expr< let rec $list:defs$ in $tup$ >> in
-  *)
-(*
+  (**)
+(**)
   let cata_def    = <:str_item< value $list:[tuple, def]$ >> in
-  *)
-  let cata_def    = <:str_item< value rec $list:tuples$ >> in
+  (**)
+ (* let cata_def    = <:str_item< value rec $list:tuples$ >> in *)
   
   let type_def    = <:str_item< type $list:t$ >> in
   let type_decl   = <:sig_item< type $list:t$ >> in
