@@ -5,21 +5,19 @@ class ['v] ident_eval = object
   method c_Var s _ x = s x
 end
 
-
 generic 'a arith = [ `Add of 'a * 'a | `Sub of 'a * 'a] 
 
-
-class ['b] arith_eval = object
-  inherit [int, 'b, int] @arith
+class ['a, 'b] arith_eval = object
+  inherit ['a, int, 'b, int] @arith
   method c_Add inh _ x y = x.GT.fx inh + y.GT.fx inh
   method c_Sub inh _ x y = x.GT.fx inh - y.GT.fx inh
 end
 
 generic 'a expr = [ ident | 'a arith ] 
 
-class expr_eval = object
+class ['a] expr_eval = object
   inherit [int] ident_eval
-  inherit [string -> int] arith_eval
+  inherit ['a, string -> int] arith_eval
 end
 
 let _ =

@@ -3,14 +3,13 @@ sum:
 sumN:
 55
 sum with debug:
-5
 R @ 0
 R @ 1
 B + @ 2
 W @ 3
 E @ 4
+5
 sumN with debug:
-55
 R @ 0
 S n @ 1
 C 0 @ 2
@@ -130,6 +129,7 @@ JF 15 @ 5
 L s @ 15
 W @ 16
 E @ 17
+55
 sum:
 5
 sumN:

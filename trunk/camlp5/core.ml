@@ -220,8 +220,13 @@ let generate t loc =
          let img name      = try assoc name targs with Not_found -> oops loc (sprintf "Internal error: type parameter %s not found in \"img\"" name) in
          let inh           = generator#generate "inh" in
          let syn           = generator#generate "syn" in
+(*
          let polyargs, pas = split targs in
+*)
+	 let polyargs      = [] in (* TODO *)
+         let pas           = flatten (map (fun (x, y) -> [x; y]) targs) in
          let wrap          = match polyargs with [] -> (fun t -> t) | _ -> (fun t -> <:ctyp< ! $list:polyargs$ . $t$ >>) in
+
          let proper_args   = pas @ [inh; syn] in
          let class_targs   = (match bound_var with None -> [] | Some x -> [x]) @ proper_args in
          let p_descriptor  = {
@@ -355,7 +360,7 @@ let generate t loc =
              (fun () -> (map (fun (name, (_, (_, args, t))) -> 
                                let targs   = map (fun a -> funtype [<:ctyp< ' $inh$ >>; <:ctyp< ' $a$ >>; <:ctyp< ' $img a$ >>]) args in
                                let msig    = funtype (targs @ [<:ctyp< ' $inh$ >>; t; <:ctyp< ' $name$ >>]) in
-                               let msig    = match args with [] -> msig | _ -> <:ctyp< ! $list:args$ . $msig$ >> in
+                               (*let msig    = match args with [] -> msig | _ -> <:ctyp< ! $list:args$ . $msig$ >> in *) (* TODO *)
                                <:class_str_item< method virtual $lid:tmethod name$ : $msig$ >>,
                                <:class_sig_item< method virtual $lid:tmethod name$ : $msig$ >>
                             ) 
@@ -505,7 +510,7 @@ let generate t loc =
                 | `Type (Instance (_, args, qname)) as case -> 
                     let args = map (function Variable (_, a) -> a) args in (* TODO *)
                     iter (add_derived_member case) derived;
-                    let targs = (map img args) @ [inh; syn] in
+                    let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
                     let tqname = map_last class_t qname in
                     let targs = map (fun a -> <:ctyp< ' $a$ >>) targs in
                     let ce    = <:class_expr< [ $list:targs$ ] $list:tqname$ >> in
