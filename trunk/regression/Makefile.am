@@ -1,5 +1,4 @@
-#TESTS = test000 test001 test002 test003 test005 test006
-TESTS = test000 test001 test002 test008 test010 # test011
+TESTS = test000 test001 test002 test008 test010
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
 
@@ -11,7 +10,7 @@ MODULE_INCLUDES += -I $(top_srcdir)/src
 EXTRA_CMA += $(PACKAGE).cma
 
 # OCaml parser call with flags
-AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pa_gt.cmo -L ."
+AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pr_o.cmo pa_gt.cmo -L ."
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)
@@ -24,6 +23,8 @@ CLEAN_EXTRA += $(addsuffix .cmi, $(TESTS)) $(addsuffix .cmo, $(TESTS))
 CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
 CLEAN_EXTRA += *.diff *.log show.cmo
 
+%.cmi: %.mli
+	$(OCAMLC) -c -pp $(CAMLP5O) -I `ocamlfind -query GT` $<
 show.cmo: show.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I `ocamlfind -query GT` GT.cma show.ml
 
@@ -39,7 +40,7 @@ uninstall-am:
 	touch .depend
 
 # Rules to build tests
-%: %.ml
+%: %.ml %.cmi
 	$(OCAMLC) $(BFLAGS) $(EXTRA_CMA) $(PXFLAGS) -o $@$(EXEEXT) $<
 
 include $(top_srcdir)/m4/Makefile.am.rules

@@ -43,15 +43,15 @@ exception Bad_plugin of string
 let cata    name           = name ^ "_gcata"
 let targ    name           = "p" ^ name
 let tname   name           = "t" ^ name
-let others                 = "others"
+(*let others                 = "others"*)
 let cmethod c              = "c_" ^ c
 let tmethod t              = "t_" ^ t
 let apply                  = "apply"
-let closed  name           = name ^ "'"
+(*let closed  name           = name ^ "'"*)
 let class_t name           = name ^ "_t"
 let trait_t typ trait      = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
 let transformer_name t     = "transform_" ^ t
-let transformer_ext_name t = (transformer_name t) ^ "_ext"
+(*let transformer_ext_name t = (transformer_name t) ^ "_ext"*)
 
 let load_path = ref []
 
@@ -69,7 +69,6 @@ type properties = {
 
 type type_descriptor = {
     is_polyvar : bool;
-    is_open    : [`Yes of string | `No];
     type_args  : string list;
     name       : string;
     default    : properties;
@@ -117,11 +116,11 @@ module Helper (L : sig val loc : loc end) =
 
         let app = function
         | []    -> invalid_arg "Plugin.Helper.T.app: empty expression list"
-        | h::tl -> fold_left (fun e a -> <:ctyp< $e$ $a$ >>) h tl
+        | h::tl -> fold_left (fun a e -> <:ctyp< $a$ $e$ >>) h tl
 
         let arrow = function
-        | []    -> invalid_arg "Plugin.Helper.T.arrow: empty expression list"
-        | h::tl -> fold_left (fun e a -> <:ctyp< $e$ -> $a$ >>) h tl    
+        | [] -> invalid_arg "Plugin.Helper.T.arrow: empty expression list"
+        | ll -> let h::tl = rev ll in fold_right (fun e a -> <:ctyp< $e$ -> $a$ >>) (rev tl) h
 
         let class_t   qname      = <:ctyp< # $list:qname$ >>
         let label     s t        = <:ctyp< ~$s$: $t$ >>
@@ -250,10 +249,7 @@ module Helper (L : sig val loc : loc end) =
   end
   
 let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
-  let class_targs =
-    (match descr.is_open with `Yes s -> [s] | `No -> []) @
-    prop.proper_args 
-  in 
+  let class_targs = prop.proper_args in 
   let def b = { 
     ciLoc = loc;
     ciVir = Ploc.VaVal false;
@@ -267,7 +263,6 @@ let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
 
 let generate_inherit base_class loc qname descr (prop, _) =
   let args =
-    (match descr.is_open with `Yes s -> [<:ctyp< ' $s$ >>] | _ -> []) @
     if base_class 
     then
       (map prop.arg_img descr.type_args) @

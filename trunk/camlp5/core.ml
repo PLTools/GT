@@ -68,46 +68,6 @@ let name_generator list =
       )
   end
 
-let rec replace_t loc a n typ =
-  let replace_t = replace_t loc a n in 
-  let replace_pv lpv = 
-    map 
-      (function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
-         let args = map replace_t args in
-         <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
-      ) 
-      lpv 
-  in
-  match typ with
-  | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
-  | <:ctyp< $t1$ $t2$ >> -> 
-      (match t1 with
-       | <:ctyp< $lid:s$ >> as typ when s = n ->
-            let rec inner args t =
-              match args, t with
-              | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else typ
-              | arg::args, <:ctyp< $t1$ $t2$ >> ->
-                  (match t1 with 
-                   | <:ctyp< ' $b$ >> when arg = b -> inner args t2
-                   | _ -> typ
-                  )
-              | _ -> typ
-              in
-              inner a t2
-       | _ -> <:ctyp< $replace_t t1$ $replace_t t2$ >>
-      )
-  | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $replace_t t1$ -> $replace_t t2$ >>
-  | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $replace_t t$ >>
-  | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $replace_t t1$ == private $replace_t t2$ >>
-  | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $replace_t t1$ == $replace_t t2$ >>
-  | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $replace_t t$ >>
-  | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map replace_t lt$ ) >> 
-  | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:replace_pv lpv$ ] >>
-  | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:replace_pv lpv$ ] >>
-  | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ > >>
-  | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
-  | typ -> typ
-
 let ctyp_of_qname loc (m::qname) =
   let id s = 
     if Char.lowercase s.[0] = s.[0] 
@@ -121,6 +81,7 @@ let ctyp_of_instance loc args qname =
 
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
+
   let make_call g f args =
     fold_left (fun e a -> <:expr< $e$ $g a$ >>) f args
   in
@@ -131,21 +92,21 @@ let generate t loc =
       body
   in
   let id x = x in
+
   let t, d = split   t in
   let t    = flatten t in
   let get_cata =
     let s = fold_left (fun s ((_, n, _), _) -> S.add n s) S.empty d in
     fun name -> 
-      if S.mem name s then <:expr< $lid:cata name$ >> 
-                      else let name, gcata = <:expr< $lid:name$ >>, <:expr< $lid:"gcata"$ >> in
-                           <:expr< $name$ . $gcata$ >>
+      if S.mem name s then H.E.id  (cata name)
+                      else H.E.acc [H.E.id name; H.E.id "GT"; H.E.id "gcata"]
   in
   let cluster_names = 
     fold_left 
       (fun acc ((_, n, d), _) -> 
          let acc = n::acc in
          match d with
-         | `OpenPoly (_, comps) | `ClosedPoly comps->
+         | `Poly comps->
              fold_left 
                (fun acc t ->
                   match t with
@@ -159,7 +120,7 @@ let generate t loc =
       [] 
       d 
   in
-  let g = name_generator cluster_names in
+  let g     = name_generator cluster_names in
   let trans = g#generate "t"   in
   let ext   = g#generate "ext" in
   let farg  = 
@@ -174,77 +135,37 @@ let generate t loc =
            n
     ) 
   in
-  let subj = g#generate "s"   in
-  let acc  = g#generate "acc" in
-  let generic_cata = 
-    let g = <:patt< $uid:"GT"$ >> in
-    let c = <:patt< $lid:"gcata"$ >> in
-    <:patt< $g$ . $c$ >>
-  in
-  let generic_cata_ext = 
-    let g = <:patt< $uid:"GT"$ >> in
-    let c = <:patt< $lid:"gcata_ext"$ >> in
-    <:patt< $g$ . $c$ >>
-  in
+  let subj         = g#generate "s"          in
+  let acc          = g#generate "acc"        in
+  let generic_cata = H.P.acc [H.P.id "GT"; H.P.id "gcata"] in
   let defs =
     map 
       (fun ((args, name, descr), deriving) ->     
          Plugin.load_plugins deriving;
-         let of_lid name = <:expr< $lid:name$ >> in
-         let current     = name in
-         let extensible, remove_bound_var, remove_bound_var_from_types, is_bound_var, bound_var = 
-           match descr with 
-           | `OpenPoly (x, _) -> 
-               true, 
-               filter (fun s -> s <> x), 
-               (let rec f args = 
-                  rev (fold_left 
-                         (fun acc t -> 
-                            match t with 
-			    | Variable (_, s) when s = x -> acc 
-                            | Instance (t, a, q) -> Instance (t, f a, q) :: acc 
-                            | _ -> t::acc
-                         ) [] args
-                  )
-                in f                
-               ), 
-               (fun s -> s = x), 
-               Some x
-           | _ -> false, id, id, (fun _ -> false), None
-         in
-         let polyvar       = match descr with `OpenPoly _ | `ClosedPoly _ -> true | _ -> false in
-         let orig_args     = args                     in
-         let generator     = name_generator args      in
-         let args          = remove_bound_var args    in
+         let current       = name in
+         let polyvar       = match descr with `Poly _ -> true | _ -> false            in
+         let orig_args     = args                                                     in
+         let generator     = name_generator args                                      in
          let targs         = map (fun arg -> arg, generator#generate (targ arg)) args in
-         let img name      = try assoc name targs with Not_found -> oops loc (sprintf "Internal error: type parameter %s not found in \"img\"" name) in
-         let inh           = generator#generate "inh" in
-         let syn           = generator#generate "syn" in
-(*
-         let polyargs, pas = split targs in
-*)
-	 let polyargs      = [] in (* TODO *)
-         let pas           = flatten (map (fun (x, y) -> [x; y]) targs) in
-         let wrap          = match polyargs with [] -> (fun t -> t) | _ -> (fun t -> <:ctyp< ! $list:polyargs$ . $t$ >>) in
-
-         let proper_args   = pas @ [inh; syn] in
-         let class_targs   = (match bound_var with None -> [] | Some x -> [x]) @ proper_args in
+         let img name      = assoc name targs                                         in
+         let inh           = generator#generate "inh"                                 in
+         let syn           = generator#generate "syn"                                 in
+         let proper_args   = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn]  in
          let p_descriptor  = {
            Plugin.is_polyvar = polyvar;
-           Plugin.is_open    = (match bound_var with Some b -> `Yes b | _ -> `No);
            Plugin.type_args  = args;
            Plugin.name       = current;
            Plugin.default    = { 
-             Plugin.inh         = <:ctyp< ' $inh$ >>;
-             Plugin.syn         = <:ctyp< ' $syn$ >>;
+             Plugin.inh         = H.T.var inh;
+             Plugin.syn         = H.T.var syn;
              Plugin.proper_args = proper_args;
-             Plugin.arg_img     = (fun a -> <:ctyp< ' $img a$ >>);
+             Plugin.arg_img     = (fun a -> H.T.var (img a));
            }
          } 
          in
-         let derived = map (fun name -> let Some p = Plugin.get name in name, p loc p_descriptor) deriving in
+         let derived  = map (fun name -> let Some p = Plugin.get name in name, p loc p_descriptor) deriving in
          let tpo_name = generator#generate "tpo" in
-         let tpo =
+         let tpo      =
            let methods = 
              map (fun a -> let e = <:expr< $lid:farg a$ >> in <:class_str_item< method $lid:a$ = $e$ >>) args 
            in
@@ -258,66 +179,25 @@ let generate t loc =
                args
          in
          let tpt = <:ctyp< < $list:combine args tpf$ > >> in
-
-         let orig_typ =
-	     let make t args =
-	       fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >> ) t args
-	     in
-	     make <:ctyp< $lid:name$ >> orig_args 
-	 in
-(**)
-         let catype  =
-           let orig_typ, closed_typ =
-	     let make t args =
-	       fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >> ) t args
-	     in
-	     (match bound_var with None -> make <:ctyp< $lid:name$ >> args | Some b -> <:ctyp< ' $generator#generate b$ >>),
-	     make <:ctyp< $lid:closed name$ >> orig_args
-           in
-           let gt = 
-             let x = <:ctyp< $uid:"GT"$ >> in
-             let y = <:ctyp< $lid:"t"$  >> in
-             <:ctyp< $x$ . $y$ >> 
-           in
-           let ft subj = 
-             let x = <:ctyp< ' $syn$ >> in
-             let y = <:ctyp< $subj$ -> $x$ >> in
-             let z = <:ctyp< ' $inh$ >> in
-             <:ctyp< $z$ -> $y$ >> 
-           in             
-           let trt subj =            
-             fold_left 
-               (fun t ti -> <:ctyp< $t$ $ti$ >>) 
-               <:ctyp< # $list:[class_t name]$ >>
-                 ((match bound_var with None -> [] | Some b -> [subj]) @ [<:ctyp< ' $inh$ >>; <:ctyp< ' $syn$ >>])
-           in
-           let extt = <:ctyp< $ft orig_typ$ -> $ft orig_typ$ >> in
-(*           let closed_typ =
-             match bound_var with
-	     | Some bound_var ->
-		 let b = <:ctyp< ' $bound_var$ >> in
-		 <:ctyp< $closed_typ$ as $b$ >>
-             | _ -> closed_typ
-           in
-*)
-           let ft, ft_ext    = ft closed_typ, ft orig_typ in
-           let cata_type     = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt closed_typ]) ft in
-           let cata_ext_type = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt orig_typ; extt]) ft_ext in
-           let x = <:ctyp< $gt$ $cata_type$ >> in
-           <:ctyp< $x$ $cata_ext_type$ >>
+         let catype =
+           let typ = H.T.app (H.T.id name :: map H.T.var args) in
+           let gt  = H.T.acc [H.T.id "GT"; H.T.id "t"] in
+           let ft  = H.T.arrow [H.T.var inh; typ; H.T.var syn] in
+           let trt = H.T.app (H.T.class_t [class_t name] :: map H.T.var proper_args) in
+           let cata_type  = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [trt]) ft in
+           <:ctyp< $gt$ $cata_type$ >>
          in
 (**)
-         let metargs = (map farg args) @ [trans(*; ext*)] in
+         let metargs = (map farg args) @ [trans] in
          let args = metargs @ [acc; subj] in
          match descr with
-         | (`OpenPoly _ | `ClosedPoly _ | `Vari _) as descr -> 
-           let get_type_handler, get_local_defs, get_type_methods, get_extra_class_args =
+         | (`Poly _ | `Vari _) as descr -> 
+           let get_type_handler, get_local_defs, get_type_methods =
              let context = ref [] in
              let get_type_handler (ctyp, args, qname) as typ =
 	       if orig_args = map (function (Variable (_, a)) -> a | _ -> "") args && qname = [current] 
 	       then <:expr< $lid:"self"$ >>
 	       else		  
-		 let args = match qname with [name] when name = current -> remove_bound_var_from_types args | _ -> args in
 		 let compound_name = 
                    let b = Buffer.create 64 in
                    let u =
@@ -360,21 +240,12 @@ let generate t loc =
              (fun () -> (map (fun (name, (_, (_, args, t))) -> 
                                let targs   = map (fun a -> funtype [<:ctyp< ' $inh$ >>; <:ctyp< ' $a$ >>; <:ctyp< ' $img a$ >>]) args in
                                let msig    = funtype (targs @ [<:ctyp< ' $inh$ >>; t; <:ctyp< ' $name$ >>]) in
-                               (*let msig    = match args with [] -> msig | _ -> <:ctyp< ! $list:args$ . $msig$ >> in *) (* TODO *)
                                <:class_str_item< method virtual $lid:tmethod name$ : $msig$ >>,
                                <:class_sig_item< method virtual $lid:tmethod name$ : $msig$ >>
                             ) 
                             !context
-			) (*@ 
-                        (let b     = funtype [<:ctyp< ' $inh$ >>; orig_typ; <:ctyp< ' $syn$ >>] in
-                         let ext   = funtype [b; b] in
-                         let targs = map (fun a -> funtype [<:ctyp< ' $inh$ >>; <:ctyp< ' $a$ >>; <:ctyp< ' $img a$ >>]) orig_args in			 
-                         let msig  = wrap (funtype (targs @ [ext; b])) in
-			 [<:class_str_item< method virtual $lid:"self"$ : $msig$ >>,
-                          <:class_sig_item< method virtual $lid:"self"$ : $msig$ >>]
-			)*)
-             ),
-             (fun () -> map (fun (name, _) -> name) !context)
+			) 
+             )
            in
 	   let add_derived_member, get_derived_classes =
              let module M    = Map.Make (String) in
@@ -422,7 +293,6 @@ let generate t loc =
                      in
                      let descr = {
                        Plugin.is_polyvar = true;
-                       Plugin.is_open    = `Yes b;
                        Plugin.type_args  = map (fun (Variable (_, a)) -> a) args; (* TODO *)
                        Plugin.name       = name;
                        Plugin.default    = prop;
@@ -476,7 +346,7 @@ let generate t loc =
                                  ] @ 
                                  (map make_typ cargs) 
                       in
-                      wrap (fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>)
+                      fold_right (fun t s -> <:ctyp< $t$ -> $s$ >> ) typs <:ctyp< ' $syn$ >>
                     in
                     let expr =
                       let obj      = <:expr< $lid:trans$ >>        in
@@ -525,9 +395,6 @@ let generate t loc =
                       <:class_type< $ct$ [ $list:targs$ ] >>
                     in
                     let expr =
-(*
-                      let args = match args with _::t -> rev t | _ -> []in
-*)
                       let typename =
                         match qname with
                         | [n]  -> <:expr< $lid:n$ >>
@@ -550,16 +417,12 @@ let generate t loc =
                       let ext     = 
                         make_fun id [<:patt< _ >>] <:expr< $lid:"self"$ >> 
                       in
-
-		     (* let func = H.E.qname (qname @ (map_last transformer_name qname)) in *)
                       make_call id func 
                         ((map (fun a -> <:expr< $lid:farg a$>>) args) @ 
-                         [<:expr< $lid:trans$ >> (*; ext*); <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>]
+                         [<:expr< $lid:trans$ >>; <:expr< $lid:acc$ >>; <:expr< $lid:subj$ >>]
                         )
                     in
                     let patt =
-                      let t::r  = rev qname in
-                      let qname = rev (closed t :: r) in
                       let pvt  = <:patt< # $list:qname$ >> in
                       let subj = <:patt< $lid:subj$ >> in
                       <:patt< ( $pvt$ as $subj$ ) >>
@@ -570,25 +433,13 @@ let generate t loc =
 
                 | `Type (Variable (_, name)) -> oops loc (sprintf "type variable '%s is not allowed here" name)
                ) 
-               (match descr with `Vari cons | `ClosedPoly cons | `OpenPoly (_, cons) -> cons)
-           in
-           let match_cases = 
-             if extensible then match_cases @ [(<:patt< $lid:others$ >>, 
-                                                 VaVal None,
-                                                 make_call of_lid <:expr< $lid:ext$ >> ["self"; acc; others]
-                                               ),
-                                               [],
-                                               []
-                                              ]
-                           else match_cases
+               (match descr with `Vari cons | `Poly cons -> cons)
            in
            let subj = <:expr< $lid:subj$ >> in 
            let local_defs_and_then expr =
              let local_defs =
                 get_local_defs () @
-                [<:patt< $lid:"self"$ >>  , make_call of_lid <:expr< $lid:cata current$ >> (*let t = <:expr< $lid:current$ >> in 
-                                                                                                let f = <:expr< $lid:transformer_ext_name current$ >> in
-                                                                                                <:expr< $t$ . $f$ >>*) metargs;
+                [<:patt< $lid:"self"$ >>  , H.E.app (H.E.id (cata current) :: map H.E.id metargs);
                  <:patt< $lid:tpo_name$ >>, tpo
                 ]                                                   
              in
@@ -605,7 +456,7 @@ let generate t loc =
            let class_info c = { 
               ciLoc = loc;
               ciVir = Ploc.VaVal true;
-              ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) (class_targs @ (get_extra_class_args ()))));
+              ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) proper_args));
               ciNam = Ploc.VaVal (class_t name);
               ciExp = c;
              } 
@@ -614,61 +465,14 @@ let generate t loc =
            let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
            let cata_name = <:patt< $lid:cata name$ >> in
            let p  = snd (fold_left (fun (i, acc) _ -> i+1, (sprintf "p%d" i)::acc) (0, []) (["t"; "acc"; "s"] @ orig_args)) in
-           let pe = [
-             (*generic_cata_ext*) (*<:patt< $lid:transformer_ext_name current$ >>*) generic_cata, 
+           let pe = [generic_cata, <:expr< $lid:cata name$ >>] in 
 (*
-((make_fun (fun a -> <:patt< $lid:a$ >>) 
-			  args 
-			  (local_defs_and_then <:expr< match $subj$ with [ $list:cases$ ] >>)
-		       )) 
-*)<:expr< $lid:cata name$ >>;
-(* 
-             (*generic_cata*) <:patt< $lid:transformer_name current$ >>, (let ext, p = 
-               match descr with 
-               | `OpenPoly _ -> 
-                   let p = tl p in
-                   let px = <:patt< $lid:"x"$ >> in
-                   let tx = 
-                     fold_left 
-                       (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) 
-                       <:ctyp< $lid:closed name$ >> 
-                     orig_args
-                   in                                        
-                   make_fun 
-                     id 
-                     [<:patt< $lid:"f"$ >>; <:patt< $lid:"acc"$ >>; <:patt< ( $px$ : $tx$ ) >>] 
-                     (make_call id 
-                        <:expr< $lid:"f"$ >> 
-                      [<:expr< $lid:"acc"$ >>; <:expr< $lid:"x"$ >>]
-                     ), p
-		     
-               | _ -> 
-                   let g = <:expr< $uid:"GT"$ >> in
-                   let a = <:expr< $lid:"apply"$ >> in
-                   <:expr< $g$ . $a$ >>, p
-             in                                 
-             let args =
-               let x :: y :: a = rev (map (fun arg -> <:expr< $lid:arg$ >>) p) in
-               rev a @ [ext; y; x]
-             in
-             let cata = <:expr< $lid:cata name$ >>
-(*
-               let t = <:expr< $lid:current$ >> in
-               let f = <:expr< $lid:transformer_ext_name current$ >> in          
-               <:expr< $t$ . $f$ >>
-*)
-             in
-             make_fun (fun a -> <:patt< $lid:a$ >>) p (make_call id cata args)
-                           ) *)
-           ] 
-           in 
            let transformer_type =
              let orig_typ, closed_typ =
   	       let make t args =
 	         fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >> ) t args
 	       in
-	       (match bound_var with None -> make <:ctyp< $lid:name$ >> orig_args | Some b -> <:ctyp< ' $b$ >>),
-	       make <:ctyp< $lid:closed name$ >> orig_args
+	       make <:ctyp< $lid:name$ >> orig_args, make <:ctyp< $lid:closed name$ >> orig_args
              in
              let gt = 
                let x = <:ctyp< $uid:"GT"$ >> in
@@ -684,23 +488,24 @@ let generate t loc =
              let extra_arg     = generator#generate "t" in             
              let extt          = <:ctyp< $ft orig_typ$ -> $ft orig_typ$ >> in
              let ft, ft_ext    = ft closed_typ, ft orig_typ in
-             let cata_type     = wrap (fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [<:ctyp< ' $extra_arg$ >>]) ft) in
-             let cata_ext_type = wrap (fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [<:ctyp< ' $extra_arg$ >>; extt]) ft_ext) in
+             let cata_type     = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [<:ctyp< ' $extra_arg$ >>]) ft in
+             let cata_ext_type = fold_right (fun ti t -> <:ctyp< $ti$ -> $t$ >> ) (tpf @ [<:ctyp< ' $extra_arg$ >>; extt]) ft_ext in
              let fields        = [loc, transformer_name current, false, cata_type; loc, transformer_ext_name current, false, cata_ext_type] in
              let tdef          = <:ctyp< { $list:fields$ } >> in
-             let targs         = map (fun a -> VaVal (Some a), None) (class_targs @ (get_extra_class_args ()) @ [extra_arg]) in
+             let targs         = map (fun a -> VaVal (Some a), None) (proper_args @ [extra_arg]) in
              let trt           =            
                fold_left 
                  (fun t ti -> <:ctyp< $t$ $ti$ >>) 
                  <:ctyp< # $list:[class_t name]$ >>
-                 (map (fun a -> <:ctyp< ' $a$ >>) (class_targs @ (get_extra_class_args ())))
+                 (map (fun a -> <:ctyp< ' $a$ >>) proper_args)
              in
              let tcons     = [<:ctyp< ' $extra_arg$ >>, trt] in
              let tdecl     = {tdNam = VaVal (loc, VaVal (transformer_name current)); tdPrm = VaVal targs; tdPrv = VaVal false; tdDef = tdef; tdCon = VaVal tcons} in
              tdecl
            in
+*)
 	   let pname = <:patt< $lid:name$ >> in
-           transformer_type,
+(*           transformer_type,*)
            (pname, <:expr< { $list:pe$ } >>),
 (**)
            (cata_name, (make_fun (fun a -> <:patt< $lid:a$ >>) 
@@ -714,7 +519,7 @@ let generate t loc =
       ) 
       d
   in
-  let transformer_types, tuples (**), defs(**), decls, classes = split5 defs in
+  let (*transformer_types,*) tuples (**), defs(**), decls, classes = split4 defs in
   let pnames, tnames = split tuples in
 (**)  
 let tuple = <:patt< ( $list:pnames$ ) >> in
@@ -731,8 +536,10 @@ let tuple = <:patt< ( $list:pnames$ ) >> in
   
   let type_def    = <:str_item< type $list:t$ >> in
   let type_decl   = <:sig_item< type $list:t$ >> in
+(*
   let trtype_def  = <:str_item< type $list:transformer_types$ >> in
   let trtype_decl = <:sig_item< type $list:transformer_types$ >> in
-  <:str_item< declare $list:[type_def ]@class_defs@[trtype_def; cata_def]$ end >>,
-  <:sig_item< declare $list:[type_decl]@class_decls@[trtype_decl]@decls$ end >> 
+*)
+  <:str_item< declare $list:[type_def ]@class_defs@[(*trtype_def;*) cata_def]$ end >>,
+  <:sig_item< declare $list:[type_decl]@class_decls(*@[trtype_decl]*)@decls$ end >> 
     

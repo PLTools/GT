@@ -1,6 +1,6 @@
 open GT
 
-generic 'l t = 
+@type 'l t = 
     R 
   | W 
   | L  of [string] 
