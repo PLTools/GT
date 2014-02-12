@@ -6,16 +6,16 @@ let rec to_string = function
 | `Add  (x, y) -> "(" ^ to_string x ^ " + " ^ to_string y ^ ")"
 | `Mult (x, y) -> "(" ^ to_string x ^ " * " ^ to_string y ^ ")"
 
-let gensym = let n = ref 0 in fun () -> incr n; "_" ^ string_of_int !n
+let gensym = let n = ref 0 in fun () -> incr n; "_" ^ string_of_int !n;;
 
-generic var = [`Var of [string] ]
+@type var = [`Var of [string] ]
 
 class ['v] var_eval = object
   inherit [(string * 'v) list, 'v] @var
   method c_Var s v name = try List.assoc name s with Not_found -> `Var name 
 end
 
-generic 'a lambda = [ var | `Abs of [string] * 'a | `App of 'a * 'a ] 
+@type 'a lambda = [ var | `Abs of [string] * 'a | `App of 'a * 'a ] 
 
 class ['a, 'v] lambda_eval = object
   inherit ['a, 'v, (string * 'v) list, 'v] @lambda
@@ -31,9 +31,9 @@ class ['a, 'v] lambda_eval = object
 
  end
 
-let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e
+let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e;;
 
-generic 'a var_expr = [ var | `Num of [int] | `Add of 'a * 'a | `Mult of 'a * 'a ] 
+@type 'a var_expr = [ var | `Num of [int] | `Add of 'a * 'a | `Mult of 'a * 'a ] 
 
 class ['a, 'v] var_expr_eval = object
   inherit ['a, 'v, (string * 'v) list, 'v] @var_expr
@@ -49,10 +49,9 @@ class ['a, 'v] var_expr_eval = object
     | x, y -> `Mult (x, y)
  end
 
-let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e
+let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e;;
 
-generic 'a expr = [ 'a lambda | 'a var_expr ]
-
+@type 'a expr = [ 'a lambda | 'a var_expr ]
 
 class ['a, 'v] expr_eval = object
   inherit ['a, 'v] lambda_eval

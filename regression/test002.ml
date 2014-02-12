@@ -3,7 +3,7 @@ open GT
 module Expr =
   struct
   
-    generic 'self t = 
+    @type 'self t = 
     [ 
       | `Var   of [string] 
       | `Const of [int] 

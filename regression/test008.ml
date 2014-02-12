@@ -1,11 +1,11 @@
-generic ident = [ `Var of [string] ] 
+@type ident = [`Var of [string]] 
 
 class ['v] ident_eval = object 
   inherit [string -> 'v, 'v] @ident      
   method c_Var s _ x = s x
 end
 
-generic 'a arith = [ `Add of 'a * 'a | `Sub of 'a * 'a] 
+@type 'a arith = [ `Add of 'a * 'a | `Sub of 'a * 'a] 
 
 class ['a, 'b] arith_eval = object
   inherit ['a, int, 'b, int] @arith
@@ -13,7 +13,7 @@ class ['a, 'b] arith_eval = object
   method c_Sub inh _ x y = x.GT.fx inh - y.GT.fx inh
 end
 
-generic 'a expr = [ ident | 'a arith ] 
+@type 'a expr = [ ident | 'a arith ] 
 
 class ['a] expr_eval = object
   inherit [int] ident_eval
