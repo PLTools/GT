@@ -10,7 +10,7 @@ MODULE_INCLUDES += -I $(top_srcdir)/src
 EXTRA_CMA += $(PACKAGE).cma
 
 # OCaml parser call with flags
-AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pr_o.cmo pa_gt.cmo -L ."
+AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pr_o.cmo ../camlp5/pa_gt.cmo -L ."
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)
@@ -24,9 +24,9 @@ CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
 CLEAN_EXTRA += *.diff *.log show.cmo
 
 %.cmi: %.mli
-	$(OCAMLC) -c -pp $(CAMLP5O) -I `ocamlfind -query GT` $<
+	$(OCAMLC) -c -pp $(CAMLP5O) -I ../src $<
 show.cmo: show.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I `ocamlfind -query GT` GT.cma show.ml
+	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma show.ml
 
 include $(top_srcdir)/m4/Makefile.am.targets
 

@@ -35,18 +35,6 @@ open Core
 EXTEND
   GLOBAL: sig_item str_item ctyp class_expr expr; 
 
-(*
-  ctyp: LEVEL "ctyp2" [[
-    "@"; t=ctyp LEVEL "ctyp2"-> 
-      let rec inner = function
-      | <:ctyp< $q$ . $t$ >> -> <:ctyp< $q$ . $inner t$ >>
-      | <:ctyp< $t$ $a$ >> -> <:ctyp< $inner t$ $a$ >>
-      | <:ctyp< $lid:name$ >> -> <:ctyp< $lid:closed name$ >>
-      | t -> oops loc "application or qualified name expected"
-      in
-      inner t
-  ]];
-*)
   class_expr: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
       <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >> 
@@ -83,23 +71,16 @@ EXTEND
   t_decl: [[
     a=fargs; n=LIDENT; "="; t=rhs ->
       let (is_private, ((def, cons), t)), deriving = t in
-      let descriptor, types =
+      let descriptor, typ =
         (a, n, t), 
-        [{tdNam = VaVal (loc, VaVal n);
+        {tdNam = VaVal (loc, VaVal n);
           tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
           tdPrv = VaVal is_private;
           tdDef = def; 
           tdCon = VaVal cons
-         } (*;
-         {tdNam = VaVal (loc, VaVal (closed n));
-          tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
-          tdPrv = VaVal is_private;
-          tdDef = fold_left (fun t a -> let a = <:ctyp< ' $a$ >> in <:ctyp< $t$ $a$ >>) <:ctyp< $lid:n$>> a; 
-          tdCon = VaVal cons
-         }*)
-        ]
+        }         
       in
-      types, (descriptor, deriving)
+      typ, (descriptor, deriving)
   ]];
 
   rhs: [[b=rhs_base; d=OPT deriving -> b, match d with None -> [] | Some d -> d]];
