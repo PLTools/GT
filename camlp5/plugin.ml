@@ -40,18 +40,14 @@ let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
 
 exception Bad_plugin of string
 
-let cata    name           = name ^ "_gcata"
-let targ    name           = "p" ^ name
-let tname   name           = "t" ^ name
-(*let others                 = "others"*)
-let cmethod c              = "c_" ^ c
-let tmethod t              = "t_" ^ t
-let apply                  = "apply"
-(*let closed  name           = name ^ "'"*)
-let class_t name           = name ^ "_t"
-let trait_t typ trait      = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
-let transformer_name t     = "transform_" ^ t
-(*let transformer_ext_name t = (transformer_name t) ^ "_ext"*)
+let cata    name       = name ^ "_gcata"
+let targ    name       = "p" ^ name
+let tname   name       = "t" ^ name
+let cmethod c          = "c_" ^ c
+let tmethod t          = "t_" ^ t
+let class_t name       = name ^ "_t"
+let trait_t typ trait  = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
+let transformer_name t = "transform_" ^ t
 
 let load_path = ref []
 
@@ -196,9 +192,13 @@ module Helper (L : sig val loc : loc end) =
 
         let app   = function
         | []    -> invalid_arg "Plugin.Helper.E.app: empty expression list"
-        | h::tl -> fold_left (fun e a -> <:expr< $e$ $a$ >>) h tl
+        | h::tl -> fold_left (fun a e -> <:expr< $a$ $e$ >>) h tl
      
         let abstr       list       = <:expr< fun [ $list:list$ ] >>
+        let func        args body  = fold_right 
+                                       (fun arg expr -> <:expr< fun [ $list:[arg, VaVal None, expr]$ ] >>)                  
+                                       args
+                                       body
         let aelem       a i        = <:expr< $a$ . ( $i$ ) >>
         let belem       a i        = <:expr< $a$ . { $i$ } >>
         let array       list       = <:expr< [| $list:list$ |] >>
@@ -221,7 +221,7 @@ module Helper (L : sig val loc : loc end) =
         let let_module  s me e     = <:expr< let module $uid:s$ = $me$ in $e$ >>
         let match_e     e pe       = <:expr< match $e$ with [ $list:pe$ ] >>
         let new_e       list       = <:expr< new $list:list$ >>
-        let object_e    p list     = <:expr< object $opt:p$ $list:list$ end >>
+        let obj         p list     = <:expr< object $opt:p$ $list:list$ end >>
         let opt_label   p oe       = <:expr< ?{ $p$ $opt:oe$ } >>
         let override    list       = <:expr< {< $list:list$ >} >>
         let module_e    me         = <:expr< ( module $me$ ) >>
