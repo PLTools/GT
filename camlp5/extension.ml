@@ -70,7 +70,8 @@ EXTEND
 
   t_decl: [[
     a=fargs; n=LIDENT; "="; t=rhs ->
-      let (is_private, ((def, cons), t)), deriving = t in
+      let a                                        = fst a in
+      let (is_private, ((def, cons), t)), deriving = t     in
       let descriptor, typ =
         (a, n, t), 
         {tdNam = VaVal (loc, VaVal n);
@@ -141,12 +142,11 @@ EXTEND
   ]];
 
   c_typ: [[
-    a=targ                         -> Variable (<:ctyp< ' $a$ >>, a)
-  | "["; t=ctyp LEVEL "apply"; "]" -> Arbitrary t
-  | "("; a=LIST1 SELF SEP ","; ")"; q=qname -> 
-      Instance (ctyp_of_instance loc (map ctyp_of a) (ctyp_of_qname loc q), a, q)
-  | a=SELF; b=qname -> Instance (<:ctyp< $ctyp_of_qname loc b$ $ctyp_of a$ >>, [a], b)
-  | q=qname         -> Instance (ctyp_of_qname loc q, [], q)
+    a=targ                                  -> Variable  (snd a, fst a)
+  | "["; t=ctyp LEVEL "apply"; "]"          -> Arbitrary  t
+  | "("; a=LIST1 targ SEP ","; ")"; q=qname -> let a, b = split a in Instance (ctyp_of_instance loc b (ctyp_of_qname loc q), a, q)
+  | a=targ; q=qname                         -> Instance  (ctyp_of_instance loc [snd a] (ctyp_of_qname loc q), [fst a], q)
+  | q=qname                                 -> Instance  (ctyp_of_qname loc q, [], q)
   ]];
 
   qname: [[
@@ -155,11 +155,11 @@ EXTEND
   ]];
 
   fargs: [[
-    a=targ                         -> [a]  
-  | "("; a=LIST1 targ SEP ","; ")" -> a  
-  |                                -> [] 
+    "("; a=LIST1 targ SEP ","; ")" -> split a  
+  | a=targ                         -> [fst a], [snd a]
+  |                                -> [], [] 
   ]];
 
-  targ: [[ "'"; a=LIDENT -> a ]];
+  targ: [[ "'"; a=LIDENT -> a, <:ctyp< ' $a$ >> ]];
   
 END;

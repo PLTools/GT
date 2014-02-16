@@ -34,7 +34,7 @@ open Printf
 type typ = 
   Arbitrary of ctyp  
 | Variable  of ctyp * string
-| Instance  of ctyp * typ list * string list
+| Instance  of ctyp * string list * string list
 
 let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
 

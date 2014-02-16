@@ -162,7 +162,7 @@ let generate t loc =
            let get_type_handler, get_local_defs, get_type_methods =
              let context = ref [] in
              let get_type_handler (ctyp, args, qname) as typ =
-	       if orig_args = map (function (Variable (_, a)) -> a | _ -> "") args && qname = [current] 
+	       if orig_args = (*map (function (Variable (_, a)) -> a | _ -> "")*) args && qname = [current] 
 	       then H.E.id "self"
 	       else		  
 		 let compound_name = 
@@ -175,7 +175,7 @@ let generate t loc =
                    let rec filler = function
 		     | Variable (_, name) -> u (); s (targ name)
                      | Instance (_, args, qname) -> 
-			 iter filler args; 
+			 iter (fun name -> u (); s (targ name)) args; 
                          u ();
 			 iter s (map_last tname qname)
                    in
@@ -185,13 +185,15 @@ let generate t loc =
 		 let name = 
                    try fst (assoc compound_name !context) with
                      Not_found ->
-		       let args =
+		       let args = fold_left (fun args name -> if mem name args then args else name :: args) [] args in
+(*
 			 let rec find_args args = function
 			   | Variable (_, name) -> if mem name args then args else args @ [name]
 			   | Instance (_, a, _) -> fold_left find_args args a
 			 in
                          fold_left find_args [] args
                        in
+*)
                        let body = H.E.app ((H.E.method_call (H.E.id trans) (tmethod compound_name)) :: 
                                             map (fun a -> H.E.id (farg a)) args
                                   ) in
@@ -253,14 +255,14 @@ let generate t loc =
                      m_def
 
                   | `Type (Instance (_, b::args, qname)) -> 
-                     let Variable (_, b) = b in
+                     (*let Variable (_, b) = b in*)
                      let qname, name = 
                        let n::t = rev qname in
                        rev ((trait_t n trait) :: t), n
                      in
                      let descr = {
                        Plugin.is_polyvar = true;
-                       Plugin.type_args  = map (fun (Variable (_, a)) -> a) args; (* TODO *)
+                       Plugin.type_args  = (* map (fun (Variable (_, a)) -> a)*) args; (* TODO *)
                        Plugin.name       = name;
                        Plugin.default    = prop;
                      }
@@ -325,7 +327,7 @@ let generate t loc =
                     [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
 
                 | `Type (Instance (_, args, qname)) as case -> 
-                    let args = map (function Variable (_, a) -> a) args in (* TODO *)
+(*                    let args = map (function Variable (_, a) -> a) args in (* TODO *) *)
                     iter (add_derived_member case) derived;
                     let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
                     let tqname = map_last class_t qname in
