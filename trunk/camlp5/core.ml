@@ -31,18 +31,11 @@ open MLast
 open Ploc
 open Plugin
 
-exception Generic_extension of string
-
-let oops loc str = Ploc.raise loc (Generic_extension str)
-
-let get_val (VaVal x) = x 
-
 module S = Set.Make (String)
 
-let map_last f l = 
-  match rev l with
-  | []    -> invalid_arg "empty list in map_last"
-  | h::tl -> rev (f h :: tl)
+let map_last loc f l = 
+  let h, tl = hdtl loc (rev l) in
+  rev (f h :: tl)
   
 let split3 l = 
   List.fold_right 
@@ -74,12 +67,14 @@ let ctyp_of_instance loc args qname =
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
   let t, d = split t in
+(*
   let get_cata =
     let s = fold_left (fun s ((_, n, _), _) -> S.add n s) S.empty d in
     fun name -> 
       if S.mem name s then H.E.id  (cata name)
                       else H.E.acc [H.E.id name; H.E.id "GT"; H.E.id "gcata"]
   in
+*)
   let cluster_names = 
     fold_left 
       (fun acc ((_, n, d), _) -> 
@@ -141,7 +136,7 @@ let generate t loc =
            }
          } 
          in
-         let derived  = map (fun name -> let Some p = Plugin.get name in name, p loc p_descriptor) deriving in
+         let derived  = map (fun name -> name, (option loc (Plugin.get name)) loc p_descriptor) deriving in
          let tpo_name = generator#generate "tpo" in
          let tpo      =
 	   H.E.obj None (map (fun a -> <:class_str_item< method $lid:a$ = $H.E.id (farg a)$ >>) args )
@@ -161,7 +156,7 @@ let generate t loc =
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs, get_type_methods =
              let context = ref [] in
-             let get_type_handler (ctyp, args, qname) as typ =
+             let get_type_handler (ctyp, args, qname) =
 	       if orig_args = args && qname = [current] 
 	       then H.E.id "self"
 	       else		  
@@ -172,14 +167,12 @@ let generate t loc =
                      (fun () -> if not !a then Buffer.add_string b "_"; a := false)
 		   in
                    let s = Buffer.add_string b in
-                   let rec filler = function
-		     | Variable (_, name) -> u (); s (targ name)
-                     | Instance (_, args, qname) -> 
-			 iter (fun name -> u (); s (targ name)) args; 
-                         u ();
-			 iter s (map_last tname qname)
+                   let filler args qname = 
+		     iter (fun name -> u (); s (targ name)) args; 
+                     u ();
+		     iter s (map_last loc tname qname)
                    in
-                   filler (Instance (H.T.var "foo", args, qname));
+                   filler args qname;
                    Buffer.contents b
 		 in
 		 let name = 
@@ -212,14 +205,16 @@ let generate t loc =
              let module M    = Map.Make (String) in
              let get k m     = try M.find k m with Not_found -> [] in
              let mdef, mdecl = ref M.empty, ref M.empty in
+(*
              let addp_g      = name_generator cluster_names in
              let addp        = ref [] in
+*)
              (*let register_p  = function
              | `Transform name     ->
              | `Trait (typ, trait) ->
              in*)
-             (fun case (trait, (prop, p_func) as dprop) ->
-                let Some p = Plugin.get trait in
+             (fun case (trait, (prop, p_func)) ->
+                let p = option loc (Plugin.get trait) in
                 let prev_def, prev_decl = get trait !mdef, get trait !mdecl in
                 let def =
                   match case with
@@ -248,7 +243,7 @@ let generate t loc =
 
                   | `Type (args, qname) -> 
                      let qname, name = 
-                       let n::t = rev qname in
+                       let n, t = hdtl loc (rev qname) in
                        rev ((trait_t n trait) :: t), n
                      in
                      let descr = {
@@ -320,11 +315,11 @@ let generate t loc =
                 | `Type (args, qname) as case -> 
                     iter (add_derived_member case) derived;
                     let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
-                    let tqname = map_last class_t qname in
+                    let tqname = map_last loc class_t qname in
                     let targs = map H.T.var targs in
                     let ce    = <:class_expr< [ $list:targs$ ] $list:tqname$ >> in
                     let ct    =
-                      let h::t = tqname in
+                      let h, t = hdtl loc tqname in
                       let ct   = 
                         fold_left 
                           (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 

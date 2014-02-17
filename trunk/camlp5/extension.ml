@@ -53,8 +53,10 @@ EXTEND
 
   class_longident: [[
     "@"; ci=qname; t=OPT trait -> 
-      let n::q = rev ci in      
-      rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
+      (match rev ci with
+       | n::q -> rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
+       | _    -> oops loc "empty qname (should not happen)"
+      )
   | ci=qname -> ci 
   ]];
 
@@ -132,7 +134,7 @@ EXTEND
   ]];
 
   poly_con: [[
-    "`"; c=UIDENT; a=con_args -> `Con  (loc, c, get_val (fst a), None), `Con (c, snd a) 
+    "`"; c=UIDENT; a=con_args -> `Con  (loc, c, get_val loc (fst a), None), `Con (c, snd a) 
   | t=instance                -> let t, a, q = t in `Type t, `Type (a, q)
   ]];
 
