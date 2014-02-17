@@ -108,8 +108,8 @@ let generate t loc =
            n
     ) 
   in
-  let subj         = g#generate "s"          in
-  let acc          = g#generate "acc"        in
+  let subj         = g#generate "s"                        in
+  let acc          = g#generate "acc"                      in
   let generic_cata = H.P.acc [H.P.id "GT"; H.P.id "gcata"] in
   let defs =
     map 
@@ -120,7 +120,7 @@ let generate t loc =
          let orig_args     = args                                                     in
          let generator     = name_generator args                                      in
          let targs         = map (fun arg -> arg, generator#generate (targ arg)) args in
-         let img name      = assoc name targs                                         in
+         let img name      = try assoc name targs with Not_found -> oops loc "type variable image not found (should not happen)" in
          let inh           = generator#generate "inh"                                 in
          let syn           = generator#generate "syn"                                 in
          let proper_args   = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn]  in
