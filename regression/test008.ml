@@ -1,11 +1,11 @@
-@type ident = [`Var of [string]] 
+@type ident = [`Var of string] 
 
 class ['v] ident_eval = object 
   inherit [string -> 'v, 'v] @ident      
   method c_Var s _ x = s x
 end
 
-@type 'a arith = [ `Add of 'a * 'a | `Sub of 'a * 'a] 
+@type 'a arith = [ `Add of ['a] * ['a] | `Sub of ['a] * ['a]] 
 
 class ['a, 'b] arith_eval = object
   inherit ['a, int, 'b, int] @arith

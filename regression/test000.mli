@@ -1,1 +1,1 @@
-@type tree = Node of [int] * [tree list]
+@type tree = Node of int * tree list

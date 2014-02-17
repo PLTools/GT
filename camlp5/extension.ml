@@ -133,7 +133,7 @@ EXTEND
 
   poly_con: [[
     "`"; c=UIDENT; a=con_args -> `Con  (loc, c, get_val (fst a), None), `Con (c, snd a) 
-  | t=c_typ                   -> `Type (ctyp_of t), `Type t
+  | t=instance                -> let t, a, q = t in `Type t, `Type (a, q)
   ]];
 
   con_args: [[
@@ -141,16 +141,18 @@ EXTEND
   |                             -> VaVal [], [] 
   ]];
 
+  instance: [[
+    a=fargs; q=qname -> ctyp_of_instance loc (snd a) (ctyp_of_qname loc q), fst a, q
+  ]];
+
   c_typ: [[
-    a=targ                                  -> Variable  (snd a, fst a)
-  | "["; t=ctyp LEVEL "apply"; "]"          -> Arbitrary  t
-  | "("; a=LIST1 targ SEP ","; ")"; q=qname -> let a, b = split a in Instance (ctyp_of_instance loc b (ctyp_of_qname loc q), a, q)
-  | a=targ; q=qname                         -> Instance  (ctyp_of_instance loc [snd a] (ctyp_of_qname loc q), [fst a], q)
-  | q=qname                                 -> Instance  (ctyp_of_qname loc q, [], q)
+    "["; a=targ; "]"     -> Variable (snd a, fst a) 
+  | "["; t=instance; "]" -> let t, a, q = t in Instance (t, a, q)
+  | t=ctyp LEVEL "apply" -> Arbitrary  t
   ]];
 
   qname: [[
-    m=UIDENT; "."; q=SELF -> m::q
+    m=UIDENT; "."; q=SELF -> m :: q
   | n=LIDENT              -> [n]
   ]];
 
