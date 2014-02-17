@@ -1,6 +1,6 @@
 open GT
 
-@type tree = Node of [int] * [tree list]
+@type tree = Node of int * tree list
 
 class ['a, 'b] tree_map_t f =
   object(self)

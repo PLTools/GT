@@ -89,7 +89,7 @@ let generate t loc =
              fold_left 
                (fun acc t ->
                   match t with
-                  | `Type (Instance (_, _, [n])) -> n::acc
+                  | `Type (_, [n]) -> n::acc
                   | _ -> acc
                ) 
                acc 
@@ -162,7 +162,7 @@ let generate t loc =
            let get_type_handler, get_local_defs, get_type_methods =
              let context = ref [] in
              let get_type_handler (ctyp, args, qname) as typ =
-	       if orig_args = (*map (function (Variable (_, a)) -> a | _ -> "")*) args && qname = [current] 
+	       if orig_args = args && qname = [current] 
 	       then H.E.id "self"
 	       else		  
 		 let compound_name = 
@@ -186,14 +186,6 @@ let generate t loc =
                    try fst (assoc compound_name !context) with
                      Not_found ->
 		       let args = fold_left (fun args name -> if mem name args then args else name :: args) [] args in
-(*
-			 let rec find_args args = function
-			   | Variable (_, name) -> if mem name args then args else args @ [name]
-			   | Instance (_, a, _) -> fold_left find_args args a
-			 in
-                         fold_left find_args [] args
-                       in
-*)
                        let body = H.E.app ((H.E.method_call (H.E.id trans) (tmethod compound_name)) :: 
                                             map (fun a -> H.E.id (farg a)) args
                                   ) in
@@ -254,15 +246,14 @@ let generate t loc =
                      in
                      m_def
 
-                  | `Type (Instance (_, b::args, qname)) -> 
-                     (*let Variable (_, b) = b in*)
+                  | `Type (args, qname) -> 
                      let qname, name = 
                        let n::t = rev qname in
                        rev ((trait_t n trait) :: t), n
                      in
                      let descr = {
                        Plugin.is_polyvar = true;
-                       Plugin.type_args  = (* map (fun (Variable (_, a)) -> a)*) args; (* TODO *)
+                       Plugin.type_args  = args;
                        Plugin.name       = name;
                        Plugin.default    = prop;
                      }
@@ -326,8 +317,7 @@ let generate t loc =
                     [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
                     [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
 
-                | `Type (Instance (_, args, qname)) as case -> 
-(*                    let args = map (function Variable (_, a) -> a) args in (* TODO *) *)
+                | `Type (args, qname) as case -> 
                     iter (add_derived_member case) derived;
                     let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
                     let tqname = map_last class_t qname in
@@ -353,8 +343,6 @@ let generate t loc =
                     (H.P.alias (H.P.type_p qname) (H.P.id subj), VaVal None, expr),
                     [<:class_str_item< inherit $ce$ >>],
                     [<:class_sig_item< inherit $ct$ >>]
-
-                | `Type (Variable (_, name)) -> oops loc (sprintf "type variable '%s is not allowed here" name)
                ) 
                (match descr with `Vari cons | `Poly cons -> cons)
            in
