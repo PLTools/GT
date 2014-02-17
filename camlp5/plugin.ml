@@ -38,6 +38,22 @@ type typ =
 
 let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
 
+exception Generic_extension of string
+
+let oops loc str = Ploc.raise loc (Generic_extension str)
+
+let get_val loc = function 
+| VaVal x -> x 
+| _       -> oops loc "could not get VaVal _ (should not happen)"
+
+let hdtl loc = function
+| h::t -> (h, t)
+| _    -> oops loc "empty list (should not happen)"
+
+let option loc = function
+| Some p -> p
+| _      -> oops loc "empty option (should not happen)"
+
 exception Bad_plugin of string
 
 let cata    name       = name ^ "_gcata"
@@ -116,7 +132,7 @@ module Helper (L : sig val loc : loc end) =
 
         let arrow = function
         | [] -> invalid_arg "Plugin.Helper.T.arrow: empty expression list"
-        | ll -> let h::tl = rev ll in fold_right (fun e a -> <:ctyp< $e$ -> $a$ >>) (rev tl) h
+        | ll -> let h, tl = hdtl loc (rev ll) in fold_right (fun e a -> <:ctyp< $e$ -> $a$ >>) (rev tl) h
 
         let class_t   qname      = <:ctyp< # $list:qname$ >>
         let label     s t        = <:ctyp< ~$s$: $t$ >>
@@ -271,7 +287,7 @@ let generate_inherit base_class loc qname descr (prop, _) =
   in
   let ce    = <:class_expr< [ $list:args$ ] $list:qname$ >> in
   let ct    =
-    let h::t = qname in
+    let h, t = hdtl loc qname in
     let ct   = 
       fold_left 
         (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 
