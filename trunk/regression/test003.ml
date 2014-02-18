@@ -1,1 +1,1 @@
-@type ('a, 'b) t = A of ['a] | B of ['b] | C of [('b, 'a) T.t]
+@type ('a, 'b) t = A of ['a] | B of ['b] | C of [('b, 'a) t] deriving show
