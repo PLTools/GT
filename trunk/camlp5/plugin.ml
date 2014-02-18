@@ -73,8 +73,8 @@ let _ =
     "<dir> Add <dir> to the list of include directories."
 
 type properties = {
-    inh         : ctyp;
-    syn         : ctyp;
+    inh_t       : ctyp;
+    syn_t       : ctyp;
     proper_args : string list;
     arg_img     : string -> ctyp;
   }
@@ -88,7 +88,7 @@ type type_descriptor = {
 
 type constructor = {
     constr : string;
-    acc    : string;
+    inh    : string;
     subj   : string;
     args   : (string * typ) list;
   }
@@ -282,7 +282,7 @@ let generate_inherit base_class loc qname descr (prop, _) =
     if base_class 
     then
       (map prop.arg_img descr.type_args) @
-      [prop.inh; prop.syn]      
+      [prop.inh_t; prop.syn_t]
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
   let ce    = <:class_expr< [ $list:args$ ] $list:qname$ >> in
