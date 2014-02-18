@@ -74,6 +74,18 @@ EXTEND
     a=fargs; n=LIDENT; "="; t=rhs ->
       let a                                        = fst a in
       let (is_private, ((def, cons), t)), deriving = t     in
+      (match t with
+       | `Vari y | `Poly y -> 
+	   iter (function 
+	         | `Type _        -> ()
+	         | `Con (_, args) -> 
+                     iter (function 
+		           | Instance (_, _, qname) when qname <> [n] -> 
+			       oops loc (sprintf "only recursive type (%s) abbreviation is alowed here" n)
+		           | _ -> ()
+			  ) args
+		) y
+      );
       let descriptor, typ =
         (a, n, t), 
         {tdNam = VaVal (loc, VaVal n);
@@ -150,7 +162,7 @@ EXTEND
   c_typ: [[
     "["; a=targ; "]"     -> Variable (snd a, fst a) 
   | "["; t=instance; "]" -> let t, a, q = t in Instance (t, a, q)
-  | t=ctyp LEVEL "apply" -> Arbitrary  t
+  | t=ctyp LEVEL "apply" -> Arbitrary t
   ]];
 
   qname: [[

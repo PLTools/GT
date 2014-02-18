@@ -95,7 +95,7 @@ let generate t loc =
       d 
   in
   let g     = name_generator cluster_names in
-  let trans = g#generate "t"   in
+  let trans = g#generate "trans" in
   let farg  = 
     let module M = Map.Make (String) in
     let m = ref M.empty in
@@ -108,8 +108,8 @@ let generate t loc =
            n
     ) 
   in
-  let subj         = g#generate "s"                        in
-  let acc          = g#generate "acc"                      in
+  let subj         = g#generate "subj"                     in
+  let acc          = g#generate "inh"                      in
   let generic_cata = H.P.acc [H.P.id "GT"; H.P.id "gcata"] in
   let defs =
     map 
@@ -120,7 +120,8 @@ let generate t loc =
          let orig_args     = args                                                     in
          let generator     = name_generator args                                      in
          let targs         = map (fun arg -> arg, generator#generate (targ arg)) args in
-         let img name      = try assoc name targs with Not_found -> oops loc "type variable image not found (should not happen)" in
+         let img name      = try assoc name targs with Not_found -> 
+                               oops loc "type variable image not found (should not happen)" in
          let inh           = generator#generate "inh"                                 in
          let syn           = generator#generate "syn"                                 in
          let proper_args   = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn]  in
@@ -129,8 +130,8 @@ let generate t loc =
            Plugin.type_args  = args;
            Plugin.name       = current;
            Plugin.default    = { 
-             Plugin.inh         = H.T.var inh;
-             Plugin.syn         = H.T.var syn;
+             Plugin.inh_t       = H.T.var inh;
+             Plugin.syn_t       = H.T.var syn;
              Plugin.proper_args = proper_args;
              Plugin.arg_img     = (fun a -> H.T.var (img a));
            }
@@ -168,9 +169,8 @@ let generate t loc =
 		   in
                    let s = Buffer.add_string b in
                    let filler args qname = 
-		     iter (fun name -> u (); s (targ name)) args; 
-                     u ();
-		     iter s (map_last loc tname qname)
+		     iter (fun name -> u (); s name) args;                      
+		     iter (fun name -> u (); s name) qname
                    in
                    filler args qname;
                    Buffer.contents b
@@ -193,7 +193,7 @@ let generate t loc =
              (fun () -> map (fun (_, (_, (x, _, _))) -> x) !context),
              (fun () -> (map (fun (name, (_, (_, args, t))) -> 
                                let targs   = map (fun a -> H.T.arrow [H.T.var inh; H.T.var a; H.T.var (img a)]) args in
-                               let msig    = H.T.arrow (targs @ [H.T.var inh; t; H.T.var name]) in
+                               let msig    = H.T.arrow (targs @ [H.T.var inh; t; H.T.var syn]) in
                                <:class_str_item< method virtual $lid:tmethod name$ : $msig$ >>,
                                <:class_sig_item< method virtual $lid:tmethod name$ : $msig$ >>
                             ) 
@@ -223,7 +223,7 @@ let generate t loc =
                      let args = fst (fold_right (fun _ (acc, i) -> (g#generate (sprintf "p%d" i))::acc, i+1) cargs ([], 0)) in
                      let constr = {
                        Plugin.constr = cname;
-                       Plugin.acc    = g#generate "acc";
+                       Plugin.inh    = g#generate "inh";
                        Plugin.subj   = g#generate "subj";
                        Plugin.args   = combine args cargs;
                      }
@@ -236,7 +236,7 @@ let generate t loc =
                      in
                      let m_def = 
                        let name = cmethod cname in
-                       let body = H.E.func (map H.P.id ([constr.Plugin.acc; constr.Plugin.subj] @ args)) (p_func env constr) in
+                       let body = H.E.func (map H.P.id ([constr.Plugin.inh; constr.Plugin.subj] @ args)) (p_func env constr) in
                        <:class_str_item< method $lid:name$ = $body$ >>
                      in
                      m_def
