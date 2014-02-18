@@ -281,7 +281,7 @@ let generate_inherit base_class loc qname descr (prop, _) =
   let args =
     if base_class 
     then
-      (map prop.arg_img descr.type_args) @
+      flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
       [prop.inh_t; prop.syn_t]
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
