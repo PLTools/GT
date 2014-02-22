@@ -28,7 +28,6 @@ class ['a, 'v] lambda_eval = object
     match l1.GT.fx s with
      `Abs (s, body) -> v.GT.t#a [s, l2'] body  
     | l1' -> `App (l1', l2')
-
  end
 
 let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e;;
@@ -54,6 +53,7 @@ let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e;;
 @type 'a expr = ['a lambda | 'a var_expr]
 
 class ['a, 'v] expr_eval = object
+  inherit ['a, 'v, (string * 'v) list, 'v] @expr
   inherit ['a, 'v] lambda_eval
   inherit ['a, 'v] var_expr_eval
 end 

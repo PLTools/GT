@@ -53,10 +53,13 @@ EXTEND
 
   class_longident: [[
     "@"; ci=qname; t=OPT trait -> 
-      (match rev ci with
-       | n::q -> rev ((match t with None -> class_t n | Some t -> trait_t n t)::q) 
-       | _    -> oops loc "empty qname (should not happen)"
-      )
+      let n, q = hdtl loc (rev ci) in
+      rev ((match t with None -> class_t n | Some t -> trait_t t n)::q)
+
+  | "+"; ci=qname; t=trait -> 
+      let n, q = hdtl loc (rev ci) in
+      rev ((proto_trait_t t n) :: q)
+
   | ci=qname -> ci 
   ]];
 

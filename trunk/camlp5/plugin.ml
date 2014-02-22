@@ -56,14 +56,17 @@ let option loc = function
 
 exception Bad_plugin of string
 
-let cata    name       = name ^ "_gcata"
-let targ    name       = "p" ^ name
-let tname   name       = "t" ^ name
-let cmethod c          = "c_" ^ c
-let tmethod t          = "t_" ^ t
-let class_t name       = name ^ "_t"
-let trait_t typ trait  = class_t (if trait <> "" then sprintf "%s_%s" typ trait else typ)
-let transformer_name t = "transform_" ^ t
+let cata    name            = name ^ "_gcata"
+let targ    name            = "p" ^ name
+let farg    name            = "f" ^ name
+let tname   name            = "t" ^ name
+let cmethod c               = "c_" ^ c
+let tmethod t               = "t_" ^ t
+let class_t name            = name ^ "_t"
+let class_proto_t name      = name ^ "_proto_t"
+let trait_t typ trait       = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
+let proto_trait_t typ trait = sprintf "%s_proto_%s" trait typ
+let transformer_name t      = "transform_" ^ t
 
 let load_path = ref []
 

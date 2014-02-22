@@ -13,7 +13,7 @@ open GT
   | JF of ['l]
 
 class toString =
-  object (this)
+  object
     inherit [int, string, unit, string] t_t
     method c_R  () _     = "R"
     method c_W  () _     = "W"
@@ -28,7 +28,7 @@ class toString =
   end
 
 class resolve =
-  object (this)
+  object
     inherit [string, int, unit, int t] t_t
     method c_R  _ _     = R
     method c_W  _ _     = W
@@ -52,7 +52,7 @@ let toString i  = transform(t) (fun _ i -> string_of_int i) (new toString) () i
 type env  = int list * (string -> int) * int list * int list * int
 
 class interpret =
-  object (this)
+  object
     inherit [int, int, env, env option] t_t    
     method c_R  (      s, m, x::i, o, p) _     = Some (x::s, m, i, o, p+1)
     method c_W  (   x::s, m,    i, o, p) _     = Some (s, m, i, x::o, p+1)
