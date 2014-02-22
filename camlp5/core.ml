@@ -41,9 +41,9 @@ let split3 l =
   List.fold_right 
     (fun (a, b, c) (x, y, z) -> a::x, b::y, c::z) l ([], [], []) 
 
-let split4 l = 
+let split5 l = 
   List.fold_right 
-    (fun (a, b, c, d) (x, y, z, t) -> a::x, b::y, c::z, d::t) l ([], [], [], []) 
+    (fun (a, b, c, d, e) (x, y, z, t, h) -> a::x, b::y, c::z, d::t, e::h) l ([], [], [], [], []) 
 
 let name_generator list =
   let s = ref (fold_right S.add list S.empty) in
@@ -100,7 +100,7 @@ let generate t loc =
     let module M = Map.Make (String) in
     let m = ref M.empty in
     (fun a -> 
-       let p = "f" ^ a in
+       let p = farg a in
        try M.find p !m with
          Not_found -> 
            let n = g#generate p in
@@ -115,7 +115,7 @@ let generate t loc =
     map 
       (fun ((args, name, descr), deriving) ->     
          Plugin.load_plugins deriving;
-         let current       = name in
+         let current       = name                                                     in
          let polyvar       = match descr with `Poly _ -> true | _ -> false            in
          let orig_args     = args                                                     in
          let generator     = name_generator args                                      in
@@ -148,7 +148,7 @@ let generate t loc =
            let typ = H.T.app (H.T.id name :: map H.T.var args) in
            let gt  = H.T.acc [H.T.id "GT"; H.T.id "t"] in
            let ft  = H.T.arrow [H.T.var inh; typ; H.T.var syn] in
-           let trt = H.T.app (H.T.class_t [class_t name] :: map H.T.var proper_args) in
+           let trt = H.T.app (H.T.class_t [class_proto_t name] :: map H.T.var proper_args) in
            H.T.app [gt; H.T.arrow (tpf @ [trt; ft])]
          in
          let metargs = (map farg args) @ [trans] in
@@ -156,7 +156,8 @@ let generate t loc =
          match descr with
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs, get_type_methods =
-             let context = ref [] in
+             let method_decls = ref [current, (H.E.id current, (orig_args, H.T.app (H.T.id current :: map H.T.var orig_args)))] in
+             let method_defs  = ref [] in
              let get_type_handler (ctyp, args, qname) =
 	       if orig_args = args && qname = [current] 
 	       then H.E.id "self"
@@ -176,7 +177,7 @@ let generate t loc =
                    Buffer.contents b
 		 in
 		 let name = 
-                   try fst (assoc compound_name !context) with
+                   try fst (assoc compound_name !method_decls) with
                      Not_found ->
 		       let args = fold_left (fun args name -> if mem name args then args else name :: args) [] args in
                        let body = H.E.app ((H.E.method_call (H.E.id trans) (tmethod compound_name)) :: 
@@ -184,20 +185,21 @@ let generate t loc =
                                   ) in
 		       let impl = H.P.id compound_name, body in 
 		       let name = H.E.id compound_name in
-		       context := (compound_name, (name, (impl, args, ctyp))) :: !context;
+		       method_decls := (compound_name, (name, (args, ctyp))) :: !method_decls;
+                       method_defs  := impl :: !method_defs;
 		       name
 		 in
 		 name
 	     in 
 	     get_type_handler, 
-             (fun () -> map (fun (_, (_, (x, _, _))) -> x) !context),
-             (fun () -> (map (fun (name, (_, (_, args, t))) -> 
+             (fun () -> !method_defs),
+             (fun () -> (map (fun (name, (_, (args, t))) -> 
                                let targs   = map (fun a -> H.T.arrow [H.T.var inh; H.T.var a; H.T.var (img a)]) args in
                                let msig    = H.T.arrow (targs @ [H.T.var inh; t; H.T.var syn]) in
                                <:class_str_item< method virtual $lid:tmethod name$ : $msig$ >>,
                                <:class_sig_item< method virtual $lid:tmethod name$ : $msig$ >>
                             ) 
-                            !context
+                            !method_decls
 			) 
              )
            in
@@ -357,31 +359,51 @@ let generate t loc =
 	   let type_methods, type_methods_sig = split (get_type_methods ()) in
            let methods      = (flatten methods) @ type_methods         in
            let methods_sig  = (flatten methods_sig) @ type_methods_sig in
-           let class_expr   = <:class_expr< object $list:methods$     end >> in
-           let class_type   = <:class_type< object $list:methods_sig$ end >> in
-           let class_info c = { 
+           let proto_class_expr  = <:class_expr< object $list:methods$     end >> in
+           let proto_class_type  = <:class_type< object $list:methods_sig$ end >> in	   
+           let class_expr = 
+	     let this = generator#generate "this" in
+             let ce   = <:class_expr< [ $list:map H.T.var proper_args$ ] $list:[class_proto_t name]$ >> in
+             let inh  = <:class_str_item< inherit $ce$ >> in
+             let body = 
+	       let args = map farg orig_args in 
+	       H.E.func (map H.P.id args) (H.E.app ((H.E.acc (map H.E.id ["GT"; "transform"])) :: map H.E.id (name::args@[this])))
+	     in
+             let met = <:class_str_item< method $lid:tmethod name$ = $body$ >> in
+             <:class_expr< object ($H.P.id this$) $list:[inh; met]$ end >> 
+           in
+           let class_type = 
+             let id   = <:class_type< $id:class_proto_t name$ >> in
+             let args = map H.T.var proper_args in
+             <:class_type< $id$ [ $list:args$ ] >> 
+	   in
+           let class_info name c = { 
               ciLoc = loc;
               ciVir = Ploc.VaVal true;
               ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) proper_args));
-              ciNam = Ploc.VaVal (class_t name);
+              ciNam = Ploc.VaVal name;
               ciExp = c;
              } 
-           in
-           let class_def  = <:str_item< class $list:[class_info class_expr]$ >> in
-           let class_decl = <:sig_item< class $list:[class_info class_type]$ >> in 
-	   (H.P.id name, H.E.record [generic_cata, H.E.id (cata name)]),
+           in           
+           let proto_class_def  = <:str_item< class $list:[class_info (class_proto_t name) proto_class_expr]$ >> in
+           let proto_class_decl = <:sig_item< class $list:[class_info (class_proto_t name) proto_class_type]$ >> in 
+           let class_def  = <:str_item< class $list:[class_info (class_t name) class_expr]$ >> in
+           let class_decl = <:sig_item< class $list:[class_info (class_t name) class_type]$ >> in 
+	   (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
            (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
            <:sig_item< value $name$ : $catype$ >>,
-           [class_def, class_decl] @ (map get_derived_classes derived)
+           (proto_class_def, proto_class_decl),
+           (class_def, class_decl) :: map get_derived_classes derived
       ) 
       d
   in
-  let tuples, defs, decls, classes = split4 defs in
-  let pnames, tnames               = split tuples in
-  let class_defs, class_decls      = split (flatten classes) in
-  let cata_def                     = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
-  let type_def                     = <:str_item< type $list:t$ >> in
-  let type_decl                    = <:sig_item< type $list:t$ >> in
-  <:str_item< declare $list:type_def::class_defs@[cata_def]$ end >>,
-  <:sig_item< declare $list:type_decl::class_decls@decls$ end >> 
+  let tuples, defs, decls, classes, derived_classes = split5 defs in
+  let pnames, tnames                                = split tuples in
+  let class_defs, class_decls                       = split classes in
+  let derived_class_defs, derived_class_decls       = split (flatten derived_classes) in
+  let cata_def  = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
+  let type_def  = <:str_item< type $list:t$ >> in
+  let type_decl = <:sig_item< type $list:t$ >> in
+  <:str_item< declare $list:type_def::class_defs@[cata_def]@derived_class_defs$ end >>,
+  <:sig_item< declare $list:type_decl::class_decls@decls@derived_class_decls$ end >> 
     

@@ -1,6 +1,6 @@
 @type ident = [`Var of string] 
 
-class ['v] ident_eval = object 
+class ['v] ident_eval = object
   inherit [string -> 'v, 'v] @ident      
   method c_Var s _ x = s x
 end
@@ -15,7 +15,8 @@ end
 
 @type 'a expr = [ ident | 'a arith ] 
 
-class ['a] expr_eval = object
+class ['a] expr_eval = object(this)
+  inherit ['a, int, string->int, int] @expr
   inherit [int] ident_eval
   inherit ['a, string -> int] arith_eval
 end

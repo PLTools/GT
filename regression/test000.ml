@@ -3,13 +3,13 @@ open GT
 @type tree = Node of int * tree list
 
 class ['a, 'b] tree_map_t f =
-  object(self)
+  object
     inherit ['a, 'b] @tree
     method c_Node _ x n l = Node (f n, List.map (fun t -> x.f () t) l)
   end
 
 class ['a, 'b] tree_fold_t f =
-  object(self)
+  object
     inherit ['a, 'b] @tree
     method c_Node acc x n l = List.fold_left (fun acc t -> x.f acc t) (f acc n) l
   end

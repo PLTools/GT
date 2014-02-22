@@ -11,7 +11,7 @@ module Expr =
     ] 
 
     class ['a] toString =
-      object (this)
+      object
         inherit ['a, string, unit, string] t_t
         method c_Var   _ _   s     = s
         method c_Const _ _   n     = string_of_int n
@@ -19,7 +19,7 @@ module Expr =
       end
 
     class ['a] eval s =
-      object (this)
+      object
         inherit ['a, int, unit, int] t_t
         method c_Var   _ _ x       = s x
         method c_Const _ _ n       = n
