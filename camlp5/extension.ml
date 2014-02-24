@@ -58,7 +58,7 @@ EXTEND
 
   | "+"; ci=qname; t=trait -> 
       let n, q = hdtl loc (rev ci) in
-      rev ((proto_trait_t t n) :: q)
+      rev ((trait_proto_t t n) :: q)
 
   | ci=qname -> ci 
   ]];

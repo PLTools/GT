@@ -65,7 +65,7 @@ let tmethod t               = "t_" ^ t
 let class_t name            = name ^ "_t"
 let class_proto_t name      = name ^ "_proto_t"
 let trait_t typ trait       = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
-let proto_trait_t typ trait = sprintf "%s_proto_%s" trait typ
+let trait_proto_t typ trait = sprintf "%s_proto_%s" trait typ
 let transformer_name t      = "transform_" ^ t
 
 let load_path = ref []
@@ -266,19 +266,24 @@ module Helper (L : sig val loc : loc end) =
 
       end
   end
-  
-let generate_classes loc trait descr (prop, _) (b_def, b_decl) =
+
+let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b_decl) =
   let class_targs = prop.proper_args in 
-  let def b = { 
+  let def n b = { 
     ciLoc = loc;
     ciVir = Ploc.VaVal false;
     ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
-    ciNam = Ploc.VaVal (trait_t descr.name trait);
+    ciNam = Ploc.VaVal n;
     ciExp = b
   } 
   in
-  <:str_item< class $list:[def b_def]$ >>,
-  <:sig_item< class $list:[def b_decl]$ >>
+  let ce = 
+    let p = <:patt< $lid:env$ >> in
+    <:class_expr< fun $p$ -> $b_proto_def$ >>
+  in
+  <:str_item< class $list:[def (trait_proto_t descr.name trait) ce]$ >>,
+  <:str_item< class $list:[def (trait_t descr.name trait) b_def]$ >>, 
+  <:sig_item< class $list:[def (trait_proto_t descr.name trait) b_decl]$ >>
 
 let generate_inherit base_class loc qname descr (prop, _) =
   let args =

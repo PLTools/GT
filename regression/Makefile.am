@@ -1,4 +1,4 @@
-TESTS = test000 test001 test002 test008 test010
+TESTS = test000 test001 test002 test003 test008 test010
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
 
