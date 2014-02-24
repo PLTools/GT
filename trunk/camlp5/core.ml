@@ -41,6 +41,10 @@ let split3 l =
   List.fold_right 
     (fun (a, b, c) (x, y, z) -> a::x, b::y, c::z) l ([], [], []) 
 
+let split4 l = 
+  List.fold_right 
+    (fun (a, b, c, d) (x, y, z, t) -> a::x, b::y, c::z, d::t) l ([], [], [], []) 
+
 let split5 l = 
   List.fold_right 
     (fun (a, b, c, d, e) (x, y, z, t, h) -> a::x, b::y, c::z, d::t, e::h) l ([], [], [], [], []) 
@@ -67,18 +71,12 @@ let ctyp_of_instance loc args qname =
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
   let t, d = split t in
-(*
-  let get_cata =
-    let s = fold_left (fun s ((_, n, _), _) -> S.add n s) S.empty d in
-    fun name -> 
-      if S.mem name s then H.E.id  (cata name)
-                      else H.E.acc [H.E.id name; H.E.id "GT"; H.E.id "gcata"]
-  in
-*)
-  let cluster_names = 
+  let cluster_names  = map (fun ((_, n, d), _) -> n) d in
+  let in_cluster     = match cluster_names with [_] -> false | _ -> true in
+  let is_murec name  = try ignore (find (fun n -> name = n) cluster_names); true with Not_found -> false in
+  let reserved_names = 
     fold_left 
       (fun acc ((_, n, d), _) -> 
-         let acc = n::acc in
          match d with
          | `Poly comps->
              fold_left 
@@ -91,10 +89,10 @@ let generate t loc =
                comps
          | _ -> acc
       ) 
-      [] 
+      cluster_names
       d 
   in
-  let g     = name_generator cluster_names in
+  let g     = name_generator reserved_names in
   let trans = g#generate "trans" in
   let farg  = 
     let module M = Map.Make (String) in
@@ -204,24 +202,65 @@ let generate t loc =
              )
            in
 	   let add_derived_member, get_derived_classes =
-             let module M    = Map.Make (String) in
-             let get k m     = try M.find k m with Not_found -> [] in
-             let mdef, mdecl = ref M.empty, ref M.empty in
-(*
-             let addp_g      = name_generator cluster_names in
-             let addp        = ref [] in
-*)
-             (*let register_p  = function
-             | `Transform name     ->
-             | `Trait (typ, trait) ->
-             in*)
+             let murec   = length cluster_names > 1 in
+             let module M = 
+	       struct
+
+		 type t = {
+		   gen         : < generate : string -> string >;
+                   proto_items : class_str_item list;
+		   items       : class_str_item list;
+                   self_name   : string;
+                   in_cluster  : bool;
+		   this        : string;
+		   env         : string;
+                 }
+
+		 module M = Map.Make (String) 
+
+		 let m = ref M.empty
+		 let get trait = 
+		   try M.find trait !m 
+		   with Not_found -> 
+		     let g    = name_generator reserved_names in
+		     let this = g#generate "this" in
+		     let env  = g#generate "env"  in
+		     let cn   = g#generate ("c_" ^ name) in
+                     let vals, inits, methods = split3 (
+		       map 
+			 (fun t ->
+			   let ct      = if name = t then cn else g#generate ("c_" ^ t) in
+			   let proto_t = trait_proto_t t trait in
+			   let mt      = tmethod t             in
+			   <:class_str_item< value mutable $lid:ct$ = $H.E.app [H.E.acc [H.E.id "Obj"; H.E.id "magic"]; H.E.unit]$ >>,
+			   (H.E.assign (H.E.id ct) (H.E.app [H.E.new_e [proto_t]; H.E.id this])),
+			   (if t <> name then [<:class_str_item< method $mt$ = $H.E.method_call (H.E.id ct) mt$ >>] else [])
+			 ) 
+			 cluster_names
+		      ) 
+		     in
+		     let items = vals @ [<:class_str_item< initializer $H.E.seq inits$ >>] @ (flatten methods) in
+		     {gen         = g; 
+		      this        = this;
+		      env         = env;
+		      proto_items = []; 
+		      items       = items;
+                      in_cluster  = murec;
+                      self_name   = cn;
+		     }
+
+                 let put trait t = 
+                   m := M.add trait t !m
+
+	       end
+	     in
              (fun case (trait, (prop, p_func)) ->
-                let p = option loc (Plugin.get trait) in
-                let prev_def, prev_decl = get trait !mdef, get trait !mdecl in
-                let def =
+                let p       = option loc (Plugin.get trait) in
+                let context = M.get trait in
+		let g       = context.M.gen in
+                let context =
                   match case with
                   | `Con (cname, cargs) ->
-                     let g = name_generator cluster_names in                      
                      let args = fst (fold_right (fun _ (acc, i) -> (g#generate (sprintf "p%d" i))::acc, i+1) cargs ([], 0)) in
                      let constr = {
                        Plugin.constr = cname;
@@ -241,7 +280,12 @@ let generate t loc =
                        let body = H.E.func (map H.P.id ([constr.Plugin.inh; constr.Plugin.subj] @ args)) (p_func env constr) in
                        <:class_str_item< method $lid:name$ = $body$ >>
                      in
-                     m_def
+		     let bridge_def = 
+		       let name = cmethod cname in
+		       let body = H.E.method_call (H.E.id context.M.self_name) name in
+		       <:class_str_item< method $lid:name$ = $body$ >>
+		     in
+                     {context with M.proto_items = m_def :: context.M.proto_items; M.items = context.M.items @ [bridge_def]}
 
                   | `Type (args, qname) -> 
                      let qname, name = 
@@ -256,16 +300,17 @@ let generate t loc =
                      }
                      in
                      let i_def, i_decl = Plugin.generate_inherit false loc qname descr (p loc descr) in
-                     i_def
+                     {context with M.proto_items = i_def :: context.M.proto_items}
                 in
-                mdef := M.add trait (def::prev_def) !mdef
+		M.put trait context
              ),
              (fun (trait, p) -> 
-	        let m_defs = get trait !mdef in 
-                let i_def, i_decl = Plugin.generate_inherit true loc [class_t current] p_descriptor p in
-                let ce = <:class_expr< object $list:i_def::m_defs$ end >> in
-                let ct = <:class_type< object $list:[]$ end >> in
-                Plugin.generate_classes loc trait p_descriptor p (ce, ct)                
+	       let context       = M.get trait in 
+               let i_def, i_decl = Plugin.generate_inherit true loc [class_t current] p_descriptor p in
+               let cproto   = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
+               let ce       = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
+               let cproto_t = <:class_type< object $list:[]$ end >> in
+               Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, cproto, ce, cproto_t)
 	     )
            in
            let match_cases =
@@ -393,14 +438,19 @@ let generate t loc =
            (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
            <:sig_item< value $name$ : $catype$ >>,
            (proto_class_def, proto_class_decl),
-           (class_def, class_decl) :: map get_derived_classes derived
+           (let protos, defs, decls = split3 (map get_derived_classes derived) in
+            class_def, protos, defs, class_decl::decls 
+	   )
       ) 
       d
   in
   let tuples, defs, decls, classes, derived_classes = split5 defs in
   let pnames, tnames                                = split tuples in
   let class_defs, class_decls                       = split classes in
-  let derived_class_defs, derived_class_decls       = split (flatten derived_classes) in
+  let derived_class_defs, derived_class_decls       = 
+    let class_defs, protos, defs, class_decls = split4 derived_classes in
+    class_defs@(flatten protos)@(flatten defs), flatten class_decls
+  in
   let cata_def  = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
   let type_def  = <:str_item< type $list:t$ >> in
   let type_decl = <:sig_item< type $list:t$ >> in
