@@ -71,9 +71,9 @@ let ctyp_of_instance loc args qname =
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
   let t, d = split t in
-  let cluster_names  = map (fun ((_, n, d), _) -> n) d in
-  let in_cluster     = match cluster_names with [_] -> false | _ -> true in
-  let is_murec name  = try ignore (find (fun n -> name = n) cluster_names); true with Not_found -> false in
+  let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
+  let in_cluster     = match cluster_specs with [_] -> false | _ -> true in
+  let is_murec name  = try ignore (find (fun (_, n) -> name = n) cluster_specs); true with Not_found -> false in
   let reserved_names = 
     fold_left 
       (fun acc ((_, n, d), _) -> 
@@ -89,7 +89,7 @@ let generate t loc =
                comps
          | _ -> acc
       ) 
-      cluster_names
+      (map snd cluster_specs)
       d 
   in
   let g     = name_generator reserved_names in
@@ -146,7 +146,7 @@ let generate t loc =
            let typ = H.T.app (H.T.id name :: map H.T.var args) in
            let gt  = H.T.acc [H.T.id "GT"; H.T.id "t"] in
            let ft  = H.T.arrow [H.T.var inh; typ; H.T.var syn] in
-           let trt = H.T.app (H.T.class_t [class_proto_t name] :: map H.T.var proper_args) in
+           let trt = H.T.app (H.T.class_t [class_tt name] :: map H.T.var proper_args) in
            H.T.app [gt; H.T.arrow (tpf @ [trt; ft])]
          in
          let metargs = (map farg args) @ [trans] in
@@ -195,14 +195,14 @@ let generate t loc =
                                let targs   = map (fun a -> H.T.arrow [H.T.var inh; H.T.var a; H.T.var (img a)]) args in
                                let msig    = H.T.arrow (targs @ [H.T.var inh; t; H.T.var syn]) in
                                <:class_str_item< method virtual $lid:tmethod name$ : $msig$ >>,
-                               <:class_sig_item< method virtual $lid:tmethod name$ : $msig$ >>
+                               <:class_sig_item< method $lid:tmethod name$ : $msig$ >>
                             ) 
                             !method_decls
 			) 
              )
            in
 	   let add_derived_member, get_derived_classes =
-             let murec   = length cluster_names > 1 in
+             let murec   = length cluster_specs > 1 in
              let module M = 
 	       struct
 
@@ -214,6 +214,7 @@ let generate t loc =
                    in_cluster  : bool;
 		   this        : string;
 		   env         : string;
+                   env_sig     : (string * ctyp) list;
                  }
 
 		 module M = Map.Make (String) 
@@ -226,23 +227,46 @@ let generate t loc =
 		     let this = g#generate "this" in
 		     let env  = g#generate "env"  in
 		     let cn   = g#generate ("c_" ^ name) in
-                     let vals, inits, methods = split3 (
+                     let vals, inits, methods, env_methods = split4 (
 		       map 
-			 (fun t ->
+			 (fun (args, t) ->
 			   let ct      = if name = t then cn else g#generate ("c_" ^ t) in
 			   let proto_t = trait_proto_t t trait in
 			   let mt      = tmethod t             in
 			   <:class_str_item< value mutable $lid:ct$ = $H.E.app [H.E.acc [H.E.id "Obj"; H.E.id "magic"]; H.E.unit]$ >>,
 			   (H.E.assign (H.E.id ct) (H.E.app [H.E.new_e [proto_t]; H.E.id this])),
-			   (if t <> name then [<:class_str_item< method $mt$ = $H.E.method_call (H.E.id ct) mt$ >>] else [])
+			   (if t <> name then [<:class_str_item< method $mt$ = $H.E.method_call (H.E.id ct) mt$ >>] else []),
+			   (if t <> name 
+			    then 
+			      let args          = map g#generate args in
+			      let targs         = map (fun a -> a, g#generate (targ a)) args in
+                              let p_descriptor  = {
+                                Plugin.is_polyvar = false;
+                                Plugin.type_args  = args;
+                                Plugin.name       = t;
+                                Plugin.default    = { 
+                                  Plugin.inh_t       = H.T.var inh;
+                                  Plugin.syn_t       = H.T.var syn;
+                                  Plugin.proper_args = args;
+                                  Plugin.arg_img     = (fun a -> H.T.var (assoc a targs));
+                                }
+                              } 
+			      in
+                              let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
+                              let typ     = H.T.app (H.T.id t :: map H.T.var args) in
+			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) prop.Plugin.proper_args in
+			      [tmethod t, H.T.arrow (targs @ [prop.Plugin.inh_t; typ; prop.Plugin.syn_t])]
+			    else []
+			   )
 			 ) 
-			 cluster_names
-		      ) 
+			 cluster_specs
+		      )
 		     in
 		     let items = vals @ [<:class_str_item< initializer $H.E.seq inits$ >>] @ (flatten methods) in
 		     {gen         = g; 
 		      this        = this;
 		      env         = env;
+                      env_sig     = flatten env_methods;
 		      proto_items = []; 
 		      items       = items;
                       in_cluster  = murec;
@@ -306,10 +330,13 @@ let generate t loc =
              ),
              (fun (trait, p) -> 
 	       let context       = M.get trait in 
-               let i_def, i_decl = Plugin.generate_inherit true loc [class_t current] p_descriptor p in
+               let i_def, _      = Plugin.generate_inherit true loc [class_t  current] p_descriptor p in
+               let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] p_descriptor p in
                let cproto   = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
                let ce       = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
-               let cproto_t = <:class_type< object $list:[]$ end >> in
+	       let env_t    = H.T.obj context.M.env_sig true in
+	       let env_sig  = map (fun (name, typ) -> <:class_sig_item< method $name$ : $typ$ >>) context.M.env_sig in
+               let cproto_t = <:class_type< [ $env_t$ ] -> object $list:[i_decl]$ end >> in
                Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, cproto, ce, cproto_t)
 	     )
            in
@@ -357,16 +384,16 @@ let generate t loc =
                     in
                     (patt, VaVal None, expr),
                     [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
-                    [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>]
+                    [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>],
+                    [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>]
 
                 | `Type (args, qname) as case -> 
                     iter (add_derived_member case) derived;
                     let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
-                    let tqname = map_last loc class_t qname in
                     let targs = map H.T.var targs in
-                    let ce    = <:class_expr< [ $list:targs$ ] $list:tqname$ >> in
-                    let ct    =
-                      let h, t = hdtl loc tqname in
+                    let ce    = <:class_expr< [ $list:targs$ ] $list:map_last loc class_t qname$ >> in
+                    let ct f  =
+                      let h, t = hdtl loc (map_last loc f qname) in
                       let ct   = 
                         fold_left 
                           (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 
@@ -384,7 +411,8 @@ let generate t loc =
                     in
                     (H.P.alias (H.P.type_p qname) (H.P.id subj), VaVal None, expr),
                     [<:class_str_item< inherit $ce$ >>],
-                    [<:class_sig_item< inherit $ct$ >>]
+                    [<:class_sig_item< inherit $ct class_t$  >>],
+                    [<:class_sig_item< inherit $ct class_tt$ >>]
                ) 
                (match descr with `Vari cons | `Poly cons -> cons)
            in
@@ -400,40 +428,34 @@ let generate t loc =
              | [] -> expr
              | _  -> H.E.letrec local_defs expr
            in
-           let cases, methods, methods_sig    = split3 match_cases in
+           let cases, methods, methods_sig, methods_sig_t = split4 match_cases in
 	   let type_methods, type_methods_sig = split (get_type_methods ()) in
-           let methods      = (flatten methods) @ type_methods         in
-           let methods_sig  = (flatten methods_sig) @ type_methods_sig in
-           let proto_class_expr  = <:class_expr< object $list:methods$     end >> in
-           let proto_class_type  = <:class_type< object $list:methods_sig$ end >> in	   
+           let methods       = flatten methods in
+           let methods_sig   = flatten methods_sig in
+	   let methods_sig_t = flatten methods_sig_t in
+           let proto_class_type = <:class_type< object $list:methods_sig_t@type_methods_sig$ end >> in
            let class_expr = 
 	     let this = generator#generate "this" in
-             let ce   = <:class_expr< [ $list:map H.T.var proper_args$ ] $list:[class_proto_t name]$ >> in
-             let inh  = <:class_str_item< inherit $ce$ >> in
              let body = 
 	       let args = map farg orig_args in 
 	       H.E.func (map H.P.id args) (H.E.app ((H.E.acc (map H.E.id ["GT"; "transform"])) :: map H.E.id (name::args@[this])))
 	     in
              let met = <:class_str_item< method $lid:tmethod name$ = $body$ >> in
-             <:class_expr< object ($H.P.id this$) $list:[inh; met]$ end >> 
+             <:class_expr< object ($H.P.id this$) $list:methods@[met]$ end >> 
            in
-           let class_type = 
-             let id   = <:class_type< $id:class_proto_t name$ >> in
-             let args = map H.T.var proper_args in
-             <:class_type< $id$ [ $list:args$ ] >> 
-	   in
-           let class_info name c = { 
+           let class_type = <:class_type< object $list:methods_sig@type_methods_sig$ end >> in
+           let class_info v name c = { 
               ciLoc = loc;
-              ciVir = Ploc.VaVal true;
+              ciVir = Ploc.VaVal v;
               ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) proper_args));
               ciNam = Ploc.VaVal name;
               ciExp = c;
              } 
            in           
-           let proto_class_def  = <:str_item< class $list:[class_info (class_proto_t name) proto_class_expr]$ >> in
-           let proto_class_decl = <:sig_item< class $list:[class_info (class_proto_t name) proto_class_type]$ >> in 
-           let class_def  = <:str_item< class $list:[class_info (class_t name) class_expr]$ >> in
-           let class_decl = <:sig_item< class $list:[class_info (class_t name) class_type]$ >> in 
+           let proto_class_def  = <:str_item< class type $list:[class_info false (class_tt name) proto_class_type]$ >> in
+           let proto_class_decl = <:sig_item< class type $list:[class_info false (class_tt name) proto_class_type]$ >> in 
+           let class_def  = <:str_item< class $list:[class_info true (class_t name) class_expr]$ >> in
+           let class_decl = <:sig_item< class $list:[class_info true (class_t name) class_type]$ >> in 
 	   (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
            (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
            <:sig_item< value $name$ : $catype$ >>,
