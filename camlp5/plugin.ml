@@ -267,7 +267,7 @@ module Helper (L : sig val loc : loc end) =
       end
   end
 
-let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b_decl) =
+let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b_proto_decl, b_decl) =
   let class_targs = prop.proper_args in 
   let def n b = { 
     ciLoc = loc;
@@ -283,7 +283,8 @@ let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b
   in
   <:str_item< class $list:[def (trait_proto_t descr.name trait) ce]$ >>,
   <:str_item< class $list:[def (trait_t descr.name trait) b_def]$ >>, 
-  <:sig_item< class $list:[def (trait_proto_t descr.name trait) b_decl]$ >>
+  <:sig_item< class $list:[def (trait_proto_t descr.name trait) b_proto_decl]$ >>,
+  <:sig_item< class $list:[def (trait_t descr.name trait) b_decl]$ >>
 
 let generate_inherit base_class loc qname descr (prop, _) =
   let args =
