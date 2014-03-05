@@ -337,7 +337,8 @@ let generate t loc =
 	       let env_t    = H.T.obj context.M.env_sig true in
 	       let env_sig  = map (fun (name, typ) -> <:class_sig_item< method $name$ : $typ$ >>) context.M.env_sig in
                let cproto_t = <:class_type< [ $env_t$ ] -> object $list:[i_decl]$ end >> in
-               Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, cproto, ce, cproto_t)
+	       let ct       = <:class_type< object $list:i_decl::env_sig$ end >> in
+               Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, cproto, ce, cproto_t, ct)
 	     )
            in
            let match_cases =
@@ -430,9 +431,9 @@ let generate t loc =
            in
            let cases, methods, methods_sig, methods_sig_t = split4 match_cases in
 	   let type_methods, type_methods_sig = split (get_type_methods ()) in
-           let methods       = flatten methods in
-           let methods_sig   = flatten methods_sig in
-	   let methods_sig_t = flatten methods_sig_t in
+           let methods          = flatten methods       in
+           let methods_sig      = flatten methods_sig   in
+	   let methods_sig_t    = flatten methods_sig_t in
            let proto_class_type = <:class_type< object $list:methods_sig_t@type_methods_sig$ end >> in
            let class_expr = 
 	     let this = generator#generate "this" in
@@ -460,8 +461,8 @@ let generate t loc =
            (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
            <:sig_item< value $name$ : $catype$ >>,
            (proto_class_def, proto_class_decl),
-           (let protos, defs, decls = split3 (map get_derived_classes derived) in
-            class_def, protos, defs, class_decl::decls 
+           (let protos, defs, pdecls, decls = split4 (map get_derived_classes derived) in
+            class_def, protos, defs, class_decl::pdecls@decls 
 	   )
       ) 
       d
