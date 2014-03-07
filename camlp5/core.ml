@@ -312,9 +312,9 @@ let generate t loc =
                      {context with M.proto_items = m_def :: context.M.proto_items; M.items = context.M.items @ [bridge_def]}
 
                   | `Type (args, qname) -> 
-                     let qname, name = 
+                     let qname, qname_proto, name = 
                        let n, t = hdtl loc (rev qname) in
-                       rev ((trait_t n trait) :: t), n
+                       rev ((trait_t n trait) :: t), rev ((trait_proto_t n trait) :: t), n
                      in
                      let descr = {
                        Plugin.is_polyvar = true;
@@ -323,15 +323,16 @@ let generate t loc =
                        Plugin.default    = prop;
                      }
                      in
-                     let i_def, i_decl = Plugin.generate_inherit false loc qname descr (p loc descr) in
-                     {context with M.proto_items = i_def :: context.M.proto_items}
+                     let i_def      , i_decl       = Plugin.generate_inherit false loc qname       None descr (p loc descr) in
+                     let i_def_proto, i_decl_proto = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.env, H.T.id "unit")) descr (p loc descr) in
+                     {context with M.items = i_def :: context.M.items; M.proto_items = i_def_proto :: context.M.proto_items}
                 in
 		M.put trait context
              ),
              (fun (trait, p) -> 
 	       let context       = M.get trait in 
-               let i_def, _      = Plugin.generate_inherit true loc [class_t  current] p_descriptor p in
-               let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] p_descriptor p in
+               let i_def, _      = Plugin.generate_inherit true loc [class_t  current] None p_descriptor p in
+               let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] None p_descriptor p in
                let cproto   = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
                let ce       = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
 	       let env_t    = H.T.obj context.M.env_sig true in

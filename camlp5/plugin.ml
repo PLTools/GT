@@ -56,17 +56,18 @@ let option loc = function
 
 exception Bad_plugin of string
 
-let cata    name            = name ^ "_gcata"
-let targ    name            = "p" ^ name
-let farg    name            = "f" ^ name
-let tname   name            = "t" ^ name
-let cmethod c               = "c_" ^ c
-let tmethod t               = "t_" ^ t
-let class_t name            = name ^ "_t"
-let class_tt name           = name ^ "_tt"
-let trait_t typ trait       = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
-let trait_proto_t typ trait = sprintf "%s_proto_%s" trait typ
-let transformer_name t      = "transform_" ^ t
+let cata             name      = name ^ "_gcata"
+let targ             name      = "p" ^ name
+let farg             name      = "f" ^ name
+let tname            name      = "t" ^ name
+let cmethod          c         = "c_" ^ c
+let tmethod          t         = "t_" ^ t
+let class_t          name      = name ^ "_t"
+let class_tt         name      = name ^ "_tt"
+let trait_t          typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
+let trait_proto_t    typ trait = sprintf "%s_proto_%s" trait typ
+let env_tt           typ trait = (trait_t typ trait) ^ "_tt"
+let transformer_name t         = "transform_" ^ t
 
 let load_path = ref []
 
@@ -286,7 +287,7 @@ let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b
   <:sig_item< class $list:[def (trait_proto_t descr.name trait) b_proto_decl]$ >>,
   <:sig_item< class $list:[def (trait_t descr.name trait) b_decl]$ >>
 
-let generate_inherit base_class loc qname descr (prop, _) =
+let generate_inherit base_class loc qname arg descr (prop, _) =
   let args =
     if base_class 
     then
@@ -294,8 +295,13 @@ let generate_inherit base_class loc qname descr (prop, _) =
       [prop.inh_t; prop.syn_t]
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
-  let ce    = <:class_expr< [ $list:args$ ] $list:qname$ >> in
-  let ct    =
+  let ce = 
+    let ce = <:class_expr< [ $list:args$ ] $list:qname$ >> in
+    match arg with 
+    | None -> ce
+    | Some (e, _) -> <:class_expr< $ce$ $e$ >>
+  in
+  let ct =
     let h, t = hdtl loc qname in
     let ct   = 
       fold_left 
@@ -303,7 +309,10 @@ let generate_inherit base_class loc qname descr (prop, _) =
         <:class_type< $id:h$ >>  
       t
     in
-    <:class_type< $ct$ [ $list:args$ ] >>
+    let ct = <:class_type< $ct$ [ $list:args$ ] >> in
+    match arg with
+    | None -> ct
+    | Some (_, t) -> <:class_type< [ $t$ ] -> $ct$ >>
   in
   <:class_str_item< inherit $ce$ >>,
   <:class_sig_item< inherit $ct$ >>

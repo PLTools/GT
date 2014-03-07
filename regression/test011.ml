@@ -32,7 +32,7 @@ class ['a, 'v] lambda_eval = object
 
 let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e;;
 
-@type 'a var_expr = [var | `Num of int | `Add of ['a] * ['a] | `Mult of ['a] * ['a]] 
+@type 'a var_expr = [var | `Num of int | `Add of ['a] * ['a] | `Mult of ['a] * ['a]]  deriving show
 
 class ['a, 'v] var_expr_eval = object
   inherit ['a, 'v, (string * 'v) list, 'v] @var_expr
@@ -50,7 +50,7 @@ class ['a, 'v] var_expr_eval = object
 
 let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e;;
 
-@type 'a expr = ['a lambda | 'a var_expr]
+@type 'a expr = ['a lambda | 'a var_expr] deriving show
 
 class ['a, 'v] expr_eval = object
   inherit ['a, 'v, (string * 'v) list, 'v] @expr
