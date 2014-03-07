@@ -333,12 +333,12 @@ let generate t loc =
 	       let context       = M.get trait in 
                let i_def, _      = Plugin.generate_inherit true loc [class_t  current] None p_descriptor p in
                let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] None p_descriptor p in
-               let cproto   = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
-               let ce       = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
-	       let env_t    = H.T.obj context.M.env_sig true in
-	       let env_sig  = map (fun (name, typ) -> <:class_sig_item< method $name$ : $typ$ >>) context.M.env_sig in
-               let cproto_t = <:class_type< [ $env_t$ ] -> object $list:[i_decl]$ end >> in
-	       let ct       = <:class_type< object $list:i_decl::env_sig$ end >> in
+               let cproto        = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
+               let ce            = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
+	       let env_t         = H.T.obj context.M.env_sig true in
+	       let env_sig       = map (fun (name, typ) -> <:class_sig_item< method $name$ : $typ$ >>) context.M.env_sig in
+               let cproto_t      = <:class_type< [ $env_t$ ] -> object $list:[i_decl]$ end >> in
+	       let ct            = <:class_type< object $list:i_decl::env_sig$ end >> in
                Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, cproto, ce, cproto_t, ct)
 	     )
            in
