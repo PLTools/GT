@@ -66,7 +66,7 @@ let class_t          name      = name ^ "_t"
 let class_tt         name      = name ^ "_tt"
 let trait_t          typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
 let trait_proto_t    typ trait = sprintf "%s_proto_%s" trait typ
-let env_tt           typ trait = (trait_t typ trait) ^ "_tt"
+let env_tt           typ trait = trait ^ "_" ^ typ ^ "_env_tt"
 let transformer_name t         = "transform_" ^ t
 
 let load_path = ref []
@@ -268,12 +268,12 @@ module Helper (L : sig val loc : loc end) =
       end
   end
 
-let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b_proto_decl, b_decl) =
+let generate_classes loc trait descr (prop, _) (this, env, env_t, b_proto_def, b_def, b_proto_decl, b_decl) =
   let class_targs = prop.proper_args in 
-  let def n b = { 
+  let def a n b = { 
     ciLoc = loc;
     ciVir = Ploc.VaVal false;
-    ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
+    ciPrm = (loc, Ploc.VaVal (if a then map (fun a -> Ploc.VaVal (Some a), None) class_targs else []));
     ciNam = Ploc.VaVal n;
     ciExp = b
   } 
@@ -282,12 +282,14 @@ let generate_classes loc trait descr (prop, _) (this, env, b_proto_def, b_def, b
     let p = <:patt< $lid:env$ >> in
     <:class_expr< fun $p$ -> $b_proto_def$ >>
   in
-  <:str_item< class $list:[def (trait_proto_t descr.name trait) ce]$ >>,
-  <:str_item< class $list:[def (trait_t descr.name trait) b_def]$ >>, 
-  <:sig_item< class $list:[def (trait_proto_t descr.name trait) b_proto_decl]$ >>,
-  <:sig_item< class $list:[def (trait_t descr.name trait) b_decl]$ >>
+  <:str_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>,
+  <:str_item< class $list:[def true (trait_proto_t descr.name trait) ce]$ >>,
+  <:str_item< class $list:[def true (trait_t descr.name trait) b_def]$ >>, 
+  <:sig_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>,
+  <:sig_item< class $list:[def true (trait_proto_t descr.name trait) b_proto_decl]$ >>,
+  <:sig_item< class $list:[def true (trait_t descr.name trait) b_decl]$ >>
 
-let generate_inherit base_class loc qname arg descr (prop, _) =
+let generate_inherit base_class loc qname arg descr prop =
   let args =
     if base_class 
     then
@@ -296,7 +298,7 @@ let generate_inherit base_class loc qname arg descr (prop, _) =
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
   let ce = 
-    let ce = <:class_expr< [ $list:args$ ] $list:qname$ >> in
+    let ce = match args with [] -> <:class_expr< $list:qname$ >> | _ -> <:class_expr< [ $list:args$ ] $list:qname$ >> in
     match arg with 
     | None -> ce
     | Some (e, _) -> <:class_expr< $ce$ $e$ >>
@@ -309,7 +311,7 @@ let generate_inherit base_class loc qname arg descr (prop, _) =
         <:class_type< $id:h$ >>  
       t
     in
-    let ct = <:class_type< $ct$ [ $list:args$ ] >> in
+    let ct = match args with [] -> ct | _ -> <:class_type< $ct$ [ $list:args$ ] >> in
     match arg with
     | None -> ct
     | Some (_, t) -> <:class_type< [ $t$ ] -> $ct$ >>
