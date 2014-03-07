@@ -49,6 +49,10 @@ let split5 l =
   List.fold_right 
     (fun (a, b, c, d, e) (x, y, z, t, h) -> a::x, b::y, c::z, d::t, e::h) l ([], [], [], [], []) 
 
+let split6 l = 
+  List.fold_right 
+    (fun (a, b, c, d, e, f) (x, y, z, t, h, i) -> a::x, b::y, c::z, d::t, e::h, f::i) l ([], [], [], [], [], []) 
+
 let name_generator list =
   let s = ref (fold_right S.add list S.empty) in
   object(self)
@@ -202,7 +206,7 @@ let generate t loc =
              )
            in
 	   let add_derived_member, get_derived_classes =
-             let murec   = length cluster_specs > 1 in
+             let murec = length cluster_specs > 1 in
              let module M = 
 	       struct
 
@@ -214,7 +218,7 @@ let generate t loc =
                    in_cluster  : bool;
 		   this        : string;
 		   env         : string;
-                   env_sig     : (string * ctyp) list;
+                   env_sig     : class_sig_item list;
                  }
 
 		 module M = Map.Make (String) 
@@ -255,7 +259,7 @@ let generate t loc =
                               let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
                               let typ     = H.T.app (H.T.id t :: map H.T.var args) in
 			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) prop.Plugin.proper_args in
-			      [tmethod t, H.T.arrow (targs @ [prop.Plugin.inh_t; typ; prop.Plugin.syn_t])]
+			      [<:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [prop.Plugin.inh_t; typ; prop.Plugin.syn_t])$ >>]
 			    else []
 			   )
 			 ) 
@@ -312,9 +316,12 @@ let generate t loc =
                      {context with M.proto_items = m_def :: context.M.proto_items; M.items = context.M.items @ [bridge_def]}
 
                   | `Type (args, qname) -> 
-                     let qname, qname_proto, name = 
+                     let qname, qname_proto, env_tt, name = 
                        let n, t = hdtl loc (rev qname) in
-                       rev ((trait_t n trait) :: t), rev ((trait_proto_t n trait) :: t), n
+                       rev ((trait_t n trait) :: t), 
+		       rev ((trait_proto_t n trait) :: t), 
+		       rev ((env_tt n trait) :: t), 
+		       n
                      in
                      let descr = {
                        Plugin.is_polyvar = true;
@@ -323,23 +330,31 @@ let generate t loc =
                        Plugin.default    = prop;
                      }
                      in
-                     let i_def      , i_decl       = Plugin.generate_inherit false loc qname       None descr (p loc descr) in
-                     let i_def_proto, i_decl_proto = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.env, H.T.id "unit")) descr (p loc descr) in
-                     {context with M.items = i_def :: context.M.items; M.proto_items = i_def_proto :: context.M.proto_items}
+		     let prop               = fst (p loc descr) in
+                     let i_def      , _     = Plugin.generate_inherit false loc qname       None descr prop in
+                     let i_def_proto, _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.env, H.T.id "unit")) descr prop in
+		     let _          , i_env = Plugin.generate_inherit false loc env_tt      None descr {prop with Plugin.proper_args = []} in
+                     {context with M.items = i_def :: context.M.items; 
+		                   M.proto_items = i_def_proto :: context.M.proto_items;
+                                   M.env_sig     = i_env :: context.M.env_sig
+		     }
                 in
 		M.put trait context
              ),
              (fun (trait, p) -> 
 	       let context       = M.get trait in 
-               let i_def, _      = Plugin.generate_inherit true loc [class_t  current] None p_descriptor p in
-               let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] None p_descriptor p in
+               let i_def, _      = Plugin.generate_inherit true loc [class_t  current] None p_descriptor (fst p) in
+               let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] None p_descriptor (fst p) in
                let cproto        = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
                let ce            = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
-	       let env_t         = H.T.obj context.M.env_sig true in
-	       let env_sig       = map (fun (name, typ) -> <:class_sig_item< method $name$ : $typ$ >>) context.M.env_sig in
-               let cproto_t      = <:class_type< [ $env_t$ ] -> object $list:[i_decl]$ end >> in
-	       let ct            = <:class_type< object $list:i_decl::env_sig$ end >> in
-               Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, cproto, ce, cproto_t, ct)
+               let env_t         = <:class_type< object $list:context.M.env_sig$ end >> in
+               let cproto_t      = <:class_type< [ $H.T.id (env_tt current trait)$ ] -> object $list:[i_decl]$ end >> in
+	       let ct            = 
+                 let ct = <:class_type< $id:env_tt current trait$ >> in
+		 let env_inh = <:class_sig_item< inherit $ct$ >> in
+		 <:class_type< object $list:[i_decl; env_inh]$ end >> 
+	       in
+               Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, env_t, cproto, ce, cproto_t, ct)
 	     )
            in
            let match_cases =
@@ -462,8 +477,8 @@ let generate t loc =
            (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
            <:sig_item< value $name$ : $catype$ >>,
            (proto_class_def, proto_class_decl),
-           (let protos, defs, pdecls, decls = split4 (map get_derived_classes derived) in
-            class_def, protos, defs, class_decl::pdecls@decls 
+           (let env, protos, defs, edecls, pdecls, decls = split6 (map get_derived_classes derived) in
+            class_def, env@protos, defs, class_decl::edecls@pdecls@decls 
 	   )
       ) 
       d
