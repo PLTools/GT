@@ -11,7 +11,7 @@ include $(top_srcdir)/m4/Makefile.am.vars
 CMO := $(SORTED:.ml=.cmo)
 
 # OCaml parser call with flags
-AM_P5FLAGS := -pp "$(CAMLP5O) $(PARSER_INCLUDES)"
+AM_P5FLAGS := -pp "$(CAMLP5O) ../camlp5/pa_gt.cmo $(PARSER_INCLUDES)"
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)
