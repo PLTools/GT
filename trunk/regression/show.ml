@@ -24,6 +24,11 @@ let _ =
                      in
                      match arg with                     
                      | arg, Arbitrary ctyp -> 
+			 (match env.trait "show" ctyp with
+			  | Some e -> append (E.app [e; E.unit; E.lid arg])
+			  | None   -> append (E.str "*not supported*")
+			 )
+(*
                         (match ctyp with
                          | <:ctyp< $lid:tname$ >> -> 
                            (match tname with
@@ -33,8 +38,9 @@ let _ =
                            )
                          | _ ->  acc
 			)
+*)
 		     | arg, _ -> 
-                        append (E.app [E.fx (E.lid arg); E.unit])
+                        append (E.app [E.gt_fx (E.lid arg); E.unit])
                   )         
                   (true, E.str (constr.constr ^ " ("))
                   constr.args 

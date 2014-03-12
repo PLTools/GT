@@ -98,9 +98,8 @@ type constructor = {
   }
       
 type env = {
-    get_name      : string -> string;
-    get_trait     : string list -> expr;
-    get_transform : string list -> expr;
+    new_name : string -> string;
+    trait    : string -> ctyp -> expr option;
 }
 
 type t = loc -> type_descriptor -> properties * (env -> constructor -> expr)
@@ -260,10 +259,10 @@ module Helper (L : sig val loc : loc end) =
         let unit                   = <:expr< () >>
 
         let gt_field f e = acc [e; uid "GT"; lid f]
-        let f            = gt_field "f" 
-        let x            = gt_field "x"
-        let fx           = gt_field "fx"
-        let tp e p       = method_call (gt_field "t" e) p
+        let gt_f         = gt_field "f" 
+        let gt_x         = gt_field "x"
+        let gt_fx        = gt_field "fx"
+        let gt_tp e p    = method_call (gt_field "t" e) p
 
       end
   end

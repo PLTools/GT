@@ -1,4 +1,4 @@
-type ('a(*, 'b*) (*, 'c*)) t = {gcata : 'a;(* gcata_ext : 'b*) (*; traits: 'c*)}
+type 'a t = {gcata : 'a}
 type ('a, 'b, 'c, 'd) a = {x : 'b; fx : 'a -> 'c; f : 'a -> 'b -> 'c; t : 'd}
 
 let (~:) x = x.x
@@ -6,6 +6,50 @@ let transform t = t.gcata
 
 let make  f x p = {x=x; fx=(fun a -> f a x); f=f; t=p}
 let apply f a x = f a x
+
+class virtual ['a, 'inh, 'syn] primitive =
+  object
+    method virtual value : 'a -> 'inh -> 'syn
+  end
+
+type pint = int
+type int = pint
+
+class virtual ['inh, 'syn] int_t = 
+  object(this)
+    inherit [int, 'inh, 'syn] primitive
+    method t_int inh x = this#value x inh
+  end
+
+class show_int_t =
+  object
+    inherit [unit, string] @int
+    method value x _ = string_of_int x
+  end
+
+let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
+  let int_gcata t inh x = t#value x inh in
+  {gcata = int_gcata}
+
+type pstring = string
+type string = pstring
+
+class virtual ['inh, 'syn] string_t = 
+  object(this)
+    inherit [string, 'inh, 'syn] primitive
+    method t_string inh x = this#value x inh
+  end
+
+class show_string_t =
+  object
+    inherit [unit, string] @string
+    method value x _ = x
+  end
+
+let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
+  let string_gcata t inh x = t#value x inh in
+  {gcata = string_gcata}
+
 
 (*
 let list = 
