@@ -31,8 +31,6 @@ open MLast
 open Ploc
 open Plugin
 
-module S = Set.Make (String)
-
 let map_last loc f l = 
   let h, tl = hdtl loc (rev l) in
   rev (f h :: tl)
@@ -52,18 +50,6 @@ let split5 l =
 let split6 l = 
   List.fold_right 
     (fun (a, b, c, d, e, f) (x, y, z, t, h, i) -> a::x, b::y, c::z, d::t, e::h, f::i) l ([], [], [], [], [], []) 
-
-let name_generator list =
-  let s = ref (fold_right S.add list S.empty) in
-  object(self)
-    method generate prompt =
-      if S.mem prompt !s 
-      then self#generate (prompt ^ "_")
-      else (
-        s := S.add prompt !s;
-        prompt
-      )
-  end
 
 let ctyp_of_qname loc qname =
   let module H = Plugin.Helper (struct let loc = loc end) in H.T.acc (map H.T.id qname)
@@ -300,33 +286,37 @@ let generate t loc =
                      let env = {
                        Plugin.new_name = (fun s -> g#generate s); 
                        Plugin.trait    = 
-		       (fun s t -> 
-			 if s = trait 
-			 then 
-			   let apply x = function None -> x | Some y -> H.E.app [x; y] in
-			   let rec qname = function
-			     | <:ctyp< $lid:x$ >> | <:ctyp< $uid:x$ >> -> [x]
-			     | <:ctyp< $t1$ . $t2$ >> -> qname t1 @ qname t2
-			     | _ -> invalid_arg "Unsupported type"
-			   in
-			   let rec inner = function
-			     | <:ctyp< ' $a$ >>     -> H.E.gt_tp (H.E.id constr.Plugin.subj) a, None
-			     | <:ctyp< $t1$ $t2$ >> -> 
-				 let t1, tt1 = inner t1 in
-				 let t2, tt2 = inner t2 in
-				 H.E.app [t1; apply t2 tt2], tt1
-			     | t -> 
-				 let qname = qname t in
-				 (match qname with
-				  | [t] when is_murec t -> H.E.method_call (H.E.id context.M.env) (tmethod t), None
-				  | _  -> 
-				      let tobj = H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) in
-				      H.E.app [H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)], Some tobj
-				 )
-			   in
-                           (try let t, tt = inner t in Some (apply t tt) with Invalid_argument "Unsupported type" -> None)
-			 else None
-		       ); 
+		         (fun s t -> 
+			   if s = trait 
+			   then 
+			     let apply x = function None -> x | Some y -> H.E.app [x; y] in
+			     let rec qname = function
+			       | <:ctyp< $lid:x$ >> | <:ctyp< $uid:x$ >> -> [x]
+			       | <:ctyp< $t1$ . $t2$ >> -> qname t1 @ qname t2
+			       | _ -> invalid_arg "Unsupported type"
+			     in
+			     let rec inner = function
+			       | <:ctyp< ' $a$ >>     -> H.E.gt_tp (H.E.id constr.Plugin.subj) a, None
+			       | <:ctyp< $t1$ $t2$ >> -> 
+				   let t1, tt1 = inner t1 in
+				   let t2, tt2 = inner t2 in
+				   H.E.app [t1; apply t2 tt2], tt1
+			       | t -> 
+				   let qname = qname t in
+				   (match qname with
+				   | [t] when is_murec t && t <> current -> H.E.method_call (H.E.id context.M.env) (tmethod t), None
+				   | _  -> 
+				       let tobj = 
+					 match qname with 
+					 | [t] when t = current -> H.E.id "this"
+					 | _ -> H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) 
+				       in
+				       H.E.app [H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)], Some tobj
+				   )
+			     in
+                             (try let t, tt = inner t in Some (apply t tt) with Invalid_argument "Unsupported type" -> None)
+			   else None
+			 ); 
                      } 
                      in
                      let m_def = 

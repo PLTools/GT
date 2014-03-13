@@ -27,6 +27,12 @@ class show_int_t =
     method value _ x = string_of_int x
   end
 
+class map_int_t =
+  object
+    inherit [unit, int] @int
+    method value _ x = x
+  end
+
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
   let int_gcata t inh x = t#value inh x in
   {gcata = int_gcata}
@@ -41,6 +47,12 @@ class virtual ['inh, 'syn] string_t =
   end
 
 class show_string_t =
+  object
+    inherit [unit, string] @string
+    method value _ x = x
+  end
+
+class map_string_t =
   object
     inherit [unit, string] @string
     method value _ x = x
@@ -87,8 +99,14 @@ class virtual ['a, 'pa, 'inh, 'syn] list_t =
 
 class ['a] show_list_t =
   object
-    inherit ['a, string, unit, string] list_t
+    inherit ['a, string, unit, string] @list
     method c_Nil  _ _      = ""
     method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> ", " ^ xs.fx ())
   end
       
+class ['a, 'pa] map_list_t =
+  object
+    inherit ['a, 'pa, unit, 'pa list] @list
+    method c_Nil _ _ = []
+    method c_Cons _ _ x xs = x.fx () :: xs.fx ()
+  end

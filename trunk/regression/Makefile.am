@@ -1,4 +1,4 @@
-TESTS = test000 test001 test002 test003 test004 test005 test008 test010 test011
+TESTS = test000 test001 test002 test003 test004 test005 test006 test008 test010 test011
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
 
@@ -17,16 +17,18 @@ PXFLAGS = $(P5FLAGS)
 CAMLPXLIB = $(CAMLP5LIB)
 MODULE_INCLUDES += -I $(CAMLP5LIB)
 
-TARGET = show.cmo 
+TARGET = show.cmo map.cmo
 
 CLEAN_EXTRA += $(addsuffix .cmi, $(TESTS)) $(addsuffix .cmo, $(TESTS))
 CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
-CLEAN_EXTRA += *.diff *.log show.cmo
+CLEAN_EXTRA += *.diff *.log show.cmo map.cmo
 
 %.cmi: %.mli
 	$(OCAMLC) -c -pp $(CAMLP5O) -I ../src $<
 show.cmo: show.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma show.ml
+map.cmo: map.ml
+	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma map.ml
 
 include $(top_srcdir)/m4/Makefile.am.targets
 
