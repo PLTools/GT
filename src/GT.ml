@@ -9,69 +9,86 @@ let apply f a x = f a x
 
 class virtual ['a, 'inh, 'syn] primitive =
   object
-    method virtual value : 'a -> 'inh -> 'syn
+    method virtual value : 'inh -> 'a -> 'syn
   end
 
 type pint = int
 type int = pint
 
 class virtual ['inh, 'syn] int_t = 
-  object(this)
+  object (this)
     inherit [int, 'inh, 'syn] primitive
-    method t_int inh x = this#value x inh
+    method t_int = this#value
   end
 
 class show_int_t =
   object
     inherit [unit, string] @int
-    method value x _ = string_of_int x
+    method value _ x = string_of_int x
   end
 
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
-  let int_gcata t inh x = t#value x inh in
+  let int_gcata t inh x = t#value inh x in
   {gcata = int_gcata}
 
 type pstring = string
 type string = pstring
 
 class virtual ['inh, 'syn] string_t = 
-  object(this)
+  object (this)
     inherit [string, 'inh, 'syn] primitive
-    method t_string inh x = this#value x inh
+    method t_string = this#value
   end
 
 class show_string_t =
   object
     inherit [unit, string] @string
-    method value x _ = x
+    method value _ x = x
   end
 
 let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
-  let string_gcata t inh x = t#value x inh in
+  let string_gcata t inh x = t#value inh x in
   {gcata = string_gcata}
 
+type 'a plist = 'a list
+type 'a list = 'a plist
 
-(*
-let list = 
-  let rec gcata ext t fa acc l =
-    let tpo = object method e = fa end in
-    let self = gcata ext t fa in
-    match l with
-    | []    -> t#m_Nil  acc l 
-    | h::tl -> t#m_Cons acc l (make fa h tpo) (make self tl tpo)
-  in  
-  {gcata = gcata; gcata_ext = gcata(*; traits=object end*)}
-
-class virtual ['e, 'a, 'b] list_t =
-  object (self)
-    method virtual m_Nil  : 'a -> 'e list -> 'b
-    method virtual m_Cons : 'a -> 'e list -> ('a, 'e, 'b, <e : 'e -> 'a -> 'b>) a -> ('a, 'e list, 'b, <e : 'e -> 'a -> 'b>) a -> 'b
+class type ['a, 'pa, 'inh, 'syn] list_tt =
+  object
+    method c_Nil  : 'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method c_Cons : 'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
+                                    ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a ->
+                                    ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method t_list : ('inh -> 'a -> 'pa) -> 'inh -> 'a list -> 'syn
   end
 
-let int =
-  let gcata ext t acc n = t#int n acc n in
-  {gcata = gcata; gcata_ext = gcata(*; traits=object end*)}
-*)
-let sum f g = fun ext acc x -> f (fun self acc s -> g (fun _ acc x -> ext self acc x) acc s) acc x
-let (++) = sum
+let list : (('inh -> 'a -> 'pa) -> ('a, 'pa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn) t =
+  let rec list_gcata fa trans inh subj =
+    let rec self = list_gcata fa trans
+    and tpo = object method a = fa end in
+    match subj with
+      [] -> trans#c_Nil inh (make self subj tpo)
+    | p1::p2 ->
+        trans#c_Cons inh (make self subj tpo) (make fa p1 tpo)
+          (make self p2 tpo)
+  in
+  {gcata = list_gcata}
+
+class virtual ['a, 'pa, 'inh, 'syn] list_t =
+  object (this)
+    method virtual c_Nil :
+      'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method virtual c_Cons :
+      'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
+        ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a ->
+        ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method t_list fa = transform list fa this
+  end
+
+class ['a] show_list_t =
+  object
+    inherit ['a, string, unit, string] list_t
+    method c_Nil  _ _      = ""
+    method c_Cons _ _ x xs = x.fx () ^ ", " ^ xs.fx ()
+  end
       
