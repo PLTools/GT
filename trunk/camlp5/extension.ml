@@ -159,18 +159,27 @@ EXTEND
   ]];
 
   instance: [[
-    a=fargs; q=qname -> ctyp_of_instance loc (snd a) (ctyp_of_qname loc q), fst a, q
+    a=fargs; q=qname -> ctyp_of_instance loc (snd a) (ctyp_of_qname loc q), (fst a), q
+  ]];
+
+  instance_var: [[
+    "("; a=LIST1 targ SEP ","; ")"; q=qname -> let f, s = split a in 
+                                               Instance (ctyp_of_instance loc s (ctyp_of_qname loc q), f, q)
+  | a=targ; q=OPT qname -> (match q with 
+                            | None -> Variable (snd a, fst a) 
+                            | Some q -> Instance (ctyp_of_instance loc [snd a] (ctyp_of_qname loc q), [fst a], q)
+			   )
+  | q=qname -> Instance (ctyp_of_instance loc [] (ctyp_of_qname loc q), [], q)
   ]];
 
   c_typ: [[
-    "["; a=targ; "]"     -> Variable (snd a, fst a) 
-  | "["; t=instance; "]" -> let t, a, q = t in Instance (t, a, q)
-  | t=ctyp LEVEL "apply" -> Arbitrary t
+   "["; t=instance_var; "]" -> t
+  | t=ctyp LEVEL "apply"    -> Arbitrary t
   ]];
 
   qname: [[
-    m=UIDENT; "."; q=SELF -> m :: q
-  | n=LIDENT              -> [n]
+    n=LIDENT              -> [n]
+  | m=UIDENT; "."; q=SELF -> m :: q
   ]];
 
   fargs: [[
