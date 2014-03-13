@@ -56,6 +56,19 @@ let option loc = function
 
 exception Bad_plugin of string
 
+let name_generator list =
+  let module S = Set.Make (String) in
+  let s = ref (fold_right S.add list S.empty) in
+  object(self)
+    method generate prompt =
+      if S.mem prompt !s 
+      then self#generate (prompt ^ "_")
+      else (
+        s := S.add prompt !s;
+        prompt
+      )
+  end
+
 let cata             name      = name ^ "_gcata"
 let targ             name      = "p" ^ name
 let farg             name      = "f" ^ name

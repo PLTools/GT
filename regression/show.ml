@@ -28,21 +28,10 @@ let _ =
 			  | Some e -> append (E.app [e; E.unit; E.lid arg])
 			  | None   -> append (E.str "*not supported*")
 			 )
-(*
-                        (match ctyp with
-                         | <:ctyp< $lid:tname$ >> -> 
-                           (match tname with
-                            | "int"    -> append (E.app [E.lid "string_of_int"; E.lid arg])
-                            | "string" -> append (E.lid arg)
-                            | _        -> acc
-                           )
-                         | _ ->  acc
-			)
-*)
 		     | arg, _ -> 
                         append (E.app [E.gt_fx (E.lid arg); E.unit])
                   )         
-                  (true, E.str (constr.constr ^ " ("))
+                  (true, E.str ((if d.is_polyvar then "`" else "") ^ constr.constr ^ " ("))
                   constr.args 
                )
              )
