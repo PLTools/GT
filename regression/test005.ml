@@ -1,18 +1,24 @@
 @type a = [`A of b | `C of GT.int] deriving show
 and   b = [`B of a | `D of GT.string] deriving show
 
-@type c = [`E of GT.int | b] deriving show
+@type c = [`E of GT.int GT.list | b] deriving show
 
-class show_a' =
+class show_c' =
   object(this)
-    inherit @show[a]
-    method c_A _ _ x = GT.transform(b) (new +show[b] this) () x
+    inherit @show[c] as super
+    method c_E i x y = "new " ^ super#c_E i x y
+    method c_B i x y = "new " ^ super#c_B i x y
   end
 
 let _ =
   let x = `A (`B (`C 3)) in
   let y = `B (`A (`D "3")) in
+  let z = `E [1; 2; 3] in
   Printf.printf "%s\n" (GT.transform(a) (new @show[a]) () x);
   Printf.printf "%s\n" (GT.transform(b) (new @show[b]) () y);
-  Printf.printf "%s\n" (GT.transform(a) (new show_a') () x);
+  Printf.printf "%s\n" (GT.transform(c) (new @show[c]) () z);
+  Printf.printf "%s\n" (GT.transform(c) (new @show[c]) () y);
+  Printf.printf "%s\n" (GT.transform(c) (new show_c') () z);
+  Printf.printf "%s\n" (GT.transform(c) (new show_c') () y)
+
 

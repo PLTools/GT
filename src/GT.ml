@@ -89,6 +89,6 @@ class ['a] show_list_t =
   object
     inherit ['a, string, unit, string] list_t
     method c_Nil  _ _      = ""
-    method c_Cons _ _ x xs = x.fx () ^ ", " ^ xs.fx ()
+    method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> ", " ^ xs.fx ())
   end
       
