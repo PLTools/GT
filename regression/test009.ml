@@ -1,18 +1,9 @@
- generic ident = [ `Var of string ]
- 
-class ['v] ident_eval = object
-  inherit [string -> 'v, 'v] ident_t
-  method m_Var s id = s id
-end
-      
-generic 'a arith = [`Add of 'a * 'a | `Sub of 'a * 'a]
+@type ('a, 'b) a = A of 'a | B of 'b deriving show, map
+@type ('a, 'b) t = X of ('a, 'b) a * ('a, 'b) t GT.list | 
+                   Y of ('b, 'a) a * ('a, 'b) t GT.list  deriving show, map
 
-class ['a, 'inh] arith_eval = object
-  inherit ['a, int, 'inh, int] arith_t
-  method m_Add self inh x y = self inh x + self inh y
-  method m_Sub self inh x y = self inh x - self inh y
-end
-
-generic expr = [ ident | expr arith ]
-
- 
+let _ =
+  let x = X (A 1, [Y (A "2", []); X (A 2, []); Y (A "3", [])]) in
+  let y = GT.transform(t) (fun _ x -> string_of_int x) (fun _ x -> int_of_string x) new @map[t] () x in
+  Printf.printf "%s\n" (GT.transform(t) (fun _ x -> string_of_int x) (fun _ x -> x) new @show[t] () x);
+  Printf.printf "%s\n" (GT.transform(t) (fun _ x -> x) (fun _ x -> string_of_int x) new @show[t] () y)
