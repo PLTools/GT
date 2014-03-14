@@ -33,6 +33,12 @@ class map_int_t =
     method value _ x = x
   end
 
+class ['syn] fold_int_t =
+  object
+    inherit ['syn, 'syn] @int
+    method value s _ = s
+  end
+
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
   let int_gcata t inh x = t#value inh x in
   {gcata = int_gcata}
@@ -56,6 +62,12 @@ class map_string_t =
   object
     inherit [unit, string] @string
     method value _ x = x
+  end
+
+class ['syn] fold_string_t =
+  object
+    inherit ['syn, 'syn] @string
+    method value s _ = s
   end
 
 let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
@@ -109,4 +121,11 @@ class ['a, 'pa] map_list_t =
     inherit ['a, 'pa, unit, 'pa list] @list
     method c_Nil _ _ = []
     method c_Cons _ _ x xs = x.fx () :: xs.fx ()
+  end
+
+class ['a, 'syn] fold_list_t =
+  object
+    inherit ['a, 'syn, 'syn, 'syn] @list
+    method c_Nil s _ = s
+    method c_Cons s _ x xs = xs.fx (x.fx s)
   end
