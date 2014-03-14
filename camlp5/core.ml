@@ -244,7 +244,7 @@ let generate t loc =
 			      in
                               let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
                               let typ     = H.T.app (H.T.id t :: map H.T.var args) in
-			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) prop.Plugin.proper_args in
+			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) (*prop.Plugin.proper_args*) p_descriptor.Plugin.type_args in
 			      [<:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [prop.Plugin.inh_t; typ; prop.Plugin.syn_t])$ >>]
 			    else []
 			   )
