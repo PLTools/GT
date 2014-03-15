@@ -1,4 +1,4 @@
-TESTS = test000 test001 test002 test003 test004 test005 test006 test007 test008 test009 test010 test011 test014 test015
+TESTS = test000 test001 test002 test003 test004 test005 test006 test007 test008 test009 test010 test011 test014 test015 test016
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
 
@@ -17,11 +17,11 @@ PXFLAGS = $(P5FLAGS)
 CAMLPXLIB = $(CAMLP5LIB)
 MODULE_INCLUDES += -I $(CAMLP5LIB)
 
-TARGET = show.cmo map.cmo foldl.cmo foldr.cmo
+TARGET = show.cmo map.cmo foldl.cmo foldr.cmo eq.cmo
 
 CLEAN_EXTRA += $(addsuffix .cmi, $(TESTS)) $(addsuffix .cmo, $(TESTS))
 CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
-CLEAN_EXTRA += *.diff *.log show.cmo map.cmo foldr.cmo foldl.cmo
+CLEAN_EXTRA += *.diff *.log show.cmo map.cmo foldr.cmo foldl.cmo eq.cmo
 
 %.cmi: %.mli
 	$(OCAMLC) -c -pp $(CAMLP5O) -I ../src $<
@@ -31,8 +31,10 @@ map.cmo: map.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma map.ml
 foldl.cmo: foldl.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma foldl.ml
-foldr.cmo: foldl.ml
+foldr.cmo: foldr.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma foldr.ml
+eq.cmo: eq.ml
+	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma eq.ml
 
 include $(top_srcdir)/m4/Makefile.am.targets
 

@@ -44,6 +44,14 @@ class ['syn] foldr_int_t =
     inherit ['syn] @foldl[int]
   end
 
+type eq_int_tags = [`tint of int]
+
+class eq_int_t =
+  object
+    inherit [int, eq_int_tags, bool] primitive
+    method value inh x = match inh with `tint y -> x = y | _ -> false
+  end
+
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
   let int_gcata t inh x = t#value inh x in
   {gcata = int_gcata}
@@ -78,6 +86,14 @@ class ['syn] foldl_string_t =
 class ['syn] foldr_string_t = 
   object
     inherit ['syn] @foldl[string]
+  end
+
+type eq_string_tags = [`tstring of string]
+
+class eq_string_t =
+  object
+    inherit [string, eq_string_tags, bool] primitive
+    method value inh x = match inh with `tstring y -> x = y | _ -> false
   end
 
 let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
@@ -144,4 +160,19 @@ class ['a, 'syn] foldr_list_t =
   object
     inherit ['a, 'syn] @foldl[list]
     method c_Cons s _ x xs = x.fx (xs.fx s)
+  end
+
+type 'a eq_list_tags = [`tlist of 'a list | `aa of 'a]
+
+class ['a] eq_list_t =
+  object
+    inherit ['a, bool, 'a eq_list_tags, bool] @list
+    method c_Nil inh subj = 
+      match inh with 
+      | `tlist [] -> true 
+      | _ -> false
+    method c_Cons inh subj x xs = 
+      match inh with 
+      | `tlist (y::ys) -> x.fx (`aa y) && xs.fx (`tlist ys) 
+      | _ -> false
   end

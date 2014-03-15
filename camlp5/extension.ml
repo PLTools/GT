@@ -92,10 +92,10 @@ EXTEND
       let descriptor, typ =
         (a, n, t), 
         {tdNam = VaVal (loc, VaVal n);
-          tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
-          tdPrv = VaVal is_private;
-          tdDef = def; 
-          tdCon = VaVal cons
+         tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+         tdPrv = VaVal is_private;
+         tdDef = def; 
+         tdCon = VaVal cons
         }         
       in
       typ, (descriptor, deriving)

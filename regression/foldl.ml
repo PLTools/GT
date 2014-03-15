@@ -17,20 +17,23 @@ let _ =
           proper_args = flatten (map (fun a -> [a; syn]) d.type_args); 
           arg_img     = (fun _ -> T.var syn)
         }, 
-        (fun env constr ->
-	   fold_left 
-                (fun inh (arg, typ) ->
-		  let arg = E.id arg in
-		  match typ with
-		  | Arbitrary ctyp ->
-		      (match env.trait "foldl" ctyp with
-		       | None   -> inh
-		       | Some e -> E.app [e; inh; arg]
-		      )
-		  | _ -> E.app [E.gt_fx arg; inh]
-		)
-                (E.id constr.inh)
-	        constr.args
-	)
+        object
+	  method header     = []
+	  method header_sig = []
+	  method constr env constr =
+	    fold_left 
+              (fun inh (arg, typ) ->
+		let arg = E.id arg in
+		match typ with
+		| Arbitrary ctyp ->
+		    (match env.trait "foldl" ctyp with
+		    | None   -> inh
+		    | Some e -> E.app [e; inh; arg]
+		    )
+		| _ -> E.app [E.gt_fx arg; inh]
+	      )
+              (E.id env.inh)
+	      constr.args
+	end
        )
     )

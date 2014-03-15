@@ -197,7 +197,7 @@ let generate t loc =
 	       struct
 
 		 type t = {
-		   gen         : < generate : string -> string >;
+		   gen         : < generate : string -> string; copy : 'a > as 'a;
                    proto_items : class_str_item list;
 		   items       : class_str_item list;
                    self_name   : string;
@@ -244,7 +244,7 @@ let generate t loc =
 			      in
                               let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
                               let typ     = H.T.app (H.T.id t :: map H.T.var args) in
-			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) (*prop.Plugin.proper_args*) p_descriptor.Plugin.type_args in
+			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
 			      [<:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [prop.Plugin.inh_t; typ; prop.Plugin.syn_t])$ >>]
 			    else []
 			   )
@@ -268,22 +268,22 @@ let generate t loc =
 
 	       end
 	     in
-             (fun case (trait, (prop, p_func)) ->
+             (fun case (trait, (prop, generator)) ->
                 let p       = option loc (Plugin.get trait) in
-                let context = M.get trait in
-		let g       = context.M.gen in
+                let context = M.get trait                   in
+		let g       = context.M.gen#copy            in
                 let context =
                   match case with
                   | `Con (cname, cargs) ->
                      let args = fst (fold_right (fun _ (acc, i) -> (g#generate (sprintf "p%d" i))::acc, i+1) cargs ([], 0)) in
                      let constr = {
                        Plugin.constr = cname;
-                       Plugin.inh    = g#generate "inh";
-                       Plugin.subj   = g#generate "subj";
                        Plugin.args   = combine args cargs;
                      }
                      in
-                     let env = {
+                     let rec env = {
+                       Plugin.inh      = g#generate "inh";
+                       Plugin.subj     = g#generate "subj";
                        Plugin.new_name = (fun s -> g#generate s); 
                        Plugin.trait    = 
 		         (fun s t -> 
@@ -296,7 +296,7 @@ let generate t loc =
 			       | _ -> invalid_arg "Unsupported type"
 			     in
 			     let rec inner = function
-			       | <:ctyp< ' $a$ >>     -> H.E.gt_tp (H.E.id constr.Plugin.subj) a, None
+			       | <:ctyp< ' $a$ >>     -> H.E.gt_tp (H.E.id env.Plugin.subj) a, None
 			       | <:ctyp< $t1$ $t2$ >> -> 
 				   let t1, tt1 = inner t1 in
 				   let t2, tt2 = inner t2 in
@@ -321,7 +321,7 @@ let generate t loc =
                      in
                      let m_def = 
                        let name = cmethod cname in
-                       let body = H.E.func (map H.P.id ([constr.Plugin.inh; constr.Plugin.subj] @ args)) (p_func env constr) in
+                       let body = H.E.func (map H.P.id ([env.Plugin.inh; env.Plugin.subj] @ args)) (generator#constr env constr) in
                        <:class_str_item< method $lid:name$ = $body$ >>
                      in
 		     let bridge_def = 
@@ -494,7 +494,7 @@ let generate t loc =
            <:sig_item< value $name$ : $catype$ >>,
            (proto_class_def, proto_class_decl),
            (let env, protos, defs, edecls, pdecls, decls = split6 (map get_derived_classes derived) in
-            class_def, env@protos, defs, class_decl::edecls@pdecls@decls 
+            class_def, (flatten env)@protos, defs, class_decl::(flatten edecls)@pdecls@decls 
 	   )
       ) 
       d

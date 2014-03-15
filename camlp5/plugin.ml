@@ -56,10 +56,11 @@ let option loc = function
 
 exception Bad_plugin of string
 
-let name_generator list =
+let rec name_generator list =
   let module S = Set.Make (String) in
   let s = ref (fold_right S.add list S.empty) in
   object(self)
+    method copy = name_generator (S.elements !s)
     method generate prompt =
       if S.mem prompt !s 
       then self#generate (prompt ^ "_")
@@ -105,17 +106,22 @@ type type_descriptor = {
 
 type constructor = {
     constr : string;
-    inh    : string;
-    subj   : string;
     args   : (string * typ) list;
   }
       
 type env = {
+    inh      : string;
+    subj     : string;
     new_name : string -> string;
     trait    : string -> ctyp -> expr option;
 }
 
-type t = loc -> type_descriptor -> properties * (env -> constructor -> expr)
+type generator = 
+  < header     : str_item list; 
+    header_sig : sig_item list;
+    constr     : env -> constructor -> expr 
+  >
+type t = loc -> type_descriptor -> properties * generator 
 
 module Helper (L : sig val loc : loc end) =
   struct
@@ -280,7 +286,7 @@ module Helper (L : sig val loc : loc end) =
       end
   end
 
-let generate_classes loc trait descr (prop, _) (this, env, env_t, b_proto_def, b_def, b_proto_decl, b_decl) =
+let generate_classes loc trait descr (prop, generator) (this, env, env_t, b_proto_def, b_def, b_proto_decl, b_decl) =
   let class_targs = prop.proper_args in 
   let def a n b = { 
     ciLoc = loc;
@@ -294,10 +300,10 @@ let generate_classes loc trait descr (prop, _) (this, env, env_t, b_proto_def, b
     let p = <:patt< $lid:env$ >> in
     <:class_expr< fun $p$ -> $b_proto_def$ >>
   in
-  <:str_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>,
+  generator#header @ [<:str_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>],
   <:str_item< class $list:[def true (trait_proto_t descr.name trait) ce]$ >>,
   <:str_item< class $list:[def true (trait_t descr.name trait) b_def]$ >>, 
-  <:sig_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>,
+  generator#header_sig @ [<:sig_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>],
   <:sig_item< class $list:[def true (trait_proto_t descr.name trait) b_proto_decl]$ >>,
   <:sig_item< class $list:[def true (trait_t descr.name trait) b_decl]$ >>
 
