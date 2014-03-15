@@ -22,19 +22,22 @@ let _ =
 			     raise (Generic_extension (sprintf "arg_img not found (%s)" a))
 			)
         }, 
-        (fun env constr ->
-	   E.app (((if d.is_polyvar then E.variant else E.id) constr.constr)::
-                 map 
-	           (function 
-		    | arg, Arbitrary ctyp ->
-			(match env.trait "map" ctyp with
-			 | None   -> E.id arg
-			 | Some e -> E.app [e; E.unit; E.id arg]
-			)
-		    | arg, _ -> E.app [E.gt_fx (E.lid arg); E.unit]
-		   ) 
-	           constr.args
-		 )
-        )
+        object
+	  method header     = []
+	  method header_sig = []
+	  method constr env constr =
+	    E.app (((if d.is_polyvar then E.variant else E.id) constr.constr)::
+                   map 
+	             (function 
+		       | arg, Arbitrary ctyp ->
+			   (match env.trait "map" ctyp with
+			   | None   -> E.id arg
+			   | Some e -> E.app [e; E.unit; E.id arg]
+			   )
+		       | arg, _ -> E.app [E.gt_fx (E.lid arg); E.unit]
+		     ) 
+	             constr.args
+		  )
+        end
        )
     )
