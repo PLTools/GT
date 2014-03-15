@@ -33,10 +33,15 @@ class map_int_t =
     method value _ x = x
   end
 
-class ['syn] fold_int_t =
+class ['syn] foldl_int_t =
   object
     inherit ['syn, 'syn] @int
     method value s _ = s
+  end
+
+class ['syn] foldr_int_t = 
+  object
+    inherit ['syn] @foldl[int]
   end
 
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
@@ -64,10 +69,15 @@ class map_string_t =
     method value _ x = x
   end
 
-class ['syn] fold_string_t =
+class ['syn] foldl_string_t =
   object
     inherit ['syn, 'syn] @string
     method value s _ = s
+  end
+
+class ['syn] foldr_string_t = 
+  object
+    inherit ['syn] @foldl[string]
   end
 
 let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
@@ -123,9 +133,15 @@ class ['a, 'pa] map_list_t =
     method c_Cons _ _ x xs = x.fx () :: xs.fx ()
   end
 
-class ['a, 'syn] fold_list_t =
+class ['a, 'syn] foldl_list_t =
   object
     inherit ['a, 'syn, 'syn, 'syn] @list
     method c_Nil s _ = s
     method c_Cons s _ x xs = xs.fx (x.fx s)
+  end
+
+class ['a, 'syn] foldr_list_t =
+  object
+    inherit ['a, 'syn] @foldl[list]
+    method c_Cons s _ x xs = x.fx (xs.fx s)
   end

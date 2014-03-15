@@ -17,11 +17,11 @@ PXFLAGS = $(P5FLAGS)
 CAMLPXLIB = $(CAMLP5LIB)
 MODULE_INCLUDES += -I $(CAMLP5LIB)
 
-TARGET = show.cmo map.cmo fold.cmo
+TARGET = show.cmo map.cmo foldl.cmo foldr.cmo
 
 CLEAN_EXTRA += $(addsuffix .cmi, $(TESTS)) $(addsuffix .cmo, $(TESTS))
 CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
-CLEAN_EXTRA += *.diff *.log show.cmo map.cmo fold.cmo
+CLEAN_EXTRA += *.diff *.log show.cmo map.cmo foldr.cmo foldl.cmo
 
 %.cmi: %.mli
 	$(OCAMLC) -c -pp $(CAMLP5O) -I ../src $<
@@ -29,8 +29,10 @@ show.cmo: show.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma show.ml
 map.cmo: map.ml
 	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma map.ml
-fold.cmo: fold.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma fold.ml
+foldl.cmo: foldl.ml
+	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma foldl.ml
+foldr.cmo: foldl.ml
+	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma foldr.ml
 
 include $(top_srcdir)/m4/Makefile.am.targets
 
