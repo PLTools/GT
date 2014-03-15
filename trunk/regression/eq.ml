@@ -50,7 +50,13 @@ let _ =
 			 | Arbitrary ctyp ->
 			     (match env.trait "eq" ctyp with
 			     | None   -> E.uid "true"
-			     | Some e -> E.app [e; (*inh;*) E.id b]
+			     | Some e -> 
+				 let rec name = function
+				   | <:ctyp< $t$ _ >> | <:ctyp< _ . $t$ >> -> name t
+				   | <:ctyp< $lid:n$ >> -> E.app [e; E.app [E.variant (type_tag n); E.id (arg b)]; E.id b]
+				   | _ -> E.uid "true"
+				 in
+				 name ctyp
 			     )
 			 | Variable (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (arg_tag a      ); E.id (arg b)]]
 			 | Instance _      -> E.app [E.gt_fx (E.id b); E.app [E.variant (type_tag d.name); E.id (arg b)]]
