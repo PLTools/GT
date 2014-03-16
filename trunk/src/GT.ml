@@ -48,8 +48,44 @@ type eq_int_tags = [`tint of int]
 
 class eq_int_t =
   object
-    inherit [int, eq_int_tags, bool] primitive
-    method value inh x = match inh with `tint y -> x = y | _ -> false
+    inherit [eq_int_tags, bool] @int
+    method value inh x = match inh with `tint y -> x = y 
+  end
+
+type comparison = LT | EQ | GT
+
+let chain_compare x f = 
+  match x with
+  | EQ -> f ()
+  | _  -> x
+
+let compare_primitive x y = 
+  if x < y 
+  then LT
+  else if x > y   
+       then GT
+       else EQ
+
+let poly_tag x =
+  let x = Obj.magic x in
+  (Obj.magic (if Obj.is_block x then Obj.field x 0 else x) : int)
+
+let vari_tag x =
+  if Obj.is_block x then Obj.tag x else Obj.magic x
+
+let compare_poly x y = 
+  compare_primitive (poly_tag x) (poly_tag y)
+
+let compare_vari x y =
+  let x, y = Obj.magic x, Obj.magic y in
+  match compare_primitive (Obj.is_block x) (Obj.is_block y) with
+  | EQ -> compare_primitive (vari_tag x) (vari_tag y)
+  | c  -> x
+
+class compare_int_t =
+  object
+    inherit [eq_int_tags, comparison] @int
+    method value inh x = match inh with `tint y -> compare_primitive y x
   end
 
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
@@ -92,8 +128,14 @@ type eq_string_tags = [`tstring of string]
 
 class eq_string_t =
   object
-    inherit [string, eq_string_tags, bool] primitive
-    method value inh x = match inh with `tstring y -> x = y | _ -> false
+    inherit [eq_string_tags, bool] @string
+    method value inh x = match inh with `tstring y -> x = y 
+  end
+
+class compare_string_t =
+  object
+    inherit [eq_string_tags, comparison] @string
+    method value inh s = match inh with `tstring d -> compare_primitive d s 
   end
 
 let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
@@ -175,4 +217,23 @@ class ['a] eq_list_t =
       match inh with 
       | `tlist (y::ys) -> x.fx (`aa y) && xs.fx (`tlist ys) 
       | _ -> false
+  end
+
+class ['a] compare_list_t =
+  object
+    inherit ['a, comparison, 'a eq_list_tags, comparison] @list
+    method c_Nil inh subj =
+      match inh with
+      | `tlist [] -> EQ
+      | `tlist _  -> GT
+      | _ -> invalid_arg "type error (should not happen)"
+    method c_Cons inh subj x xs =
+      match inh with
+      | `tlist [] -> LT
+      | `tlist (y::ys) -> 
+	  (match x.fx (`aa y) with
+	  | EQ -> xs.fx (`tlist ys)
+	  | c  -> c
+	  )
+      | _ -> invalid_arg "type error (should not happen)"
   end

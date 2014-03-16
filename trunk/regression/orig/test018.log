@@ -1,0 +1,3 @@
+x == x: EQ
+x == y: LT
+x == z: LT
