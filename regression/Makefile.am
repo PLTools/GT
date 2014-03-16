@@ -1,4 +1,4 @@
-TESTS = test000 test001 test002 test003 test004 test005 test006 test007 test008 test009 test010 test011 test014 test015 test016 test017
+TESTS = test000 test001 test002 test003 test004 test005 test006 test007 test008 test009 test010 test011 test014 test015 test016 test017 test018 test019
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
 
@@ -10,31 +10,21 @@ MODULE_INCLUDES += -I $(top_srcdir)/src
 EXTRA_CMA += $(PACKAGE).cma
 
 # OCaml parser call with flags
-AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) ../camlp5/pa_gt.cmo -L ."
+AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) ../camlp5/pa_gt.cmo -L ../plugins"
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)
 CAMLPXLIB = $(CAMLP5LIB)
 MODULE_INCLUDES += -I $(CAMLP5LIB)
 
-TARGET = show.cmo map.cmo foldl.cmo foldr.cmo eq.cmo
+TARGET = 
 
 CLEAN_EXTRA += $(addsuffix .cmi, $(TESTS)) $(addsuffix .cmo, $(TESTS))
 CLEAN_EXTRA += $(addsuffix $(EXEEXT), $(TESTS))
-CLEAN_EXTRA += *.diff *.log show.cmo map.cmo foldr.cmo foldl.cmo eq.cmo
+CLEAN_EXTRA += *.diff *.log
 
 %.cmi: %.mli
 	$(OCAMLC) -c -pp $(CAMLP5O) -I ../src $<
-show.cmo: show.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma show.ml
-map.cmo: map.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma map.ml
-foldl.cmo: foldl.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma foldl.ml
-foldr.cmo: foldr.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma foldr.ml
-eq.cmo: eq.ml
-	$(OCAMLC) -c -pp $(CAMLP5O) -I +camlp5 -I ../src -I ../camlp5 GT.cma eq.ml
 
 include $(top_srcdir)/m4/Makefile.am.targets
 

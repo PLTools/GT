@@ -1,8 +1,0 @@
-Patch to camlp5-6.08.
-Apply *AFTER* the official patch-6.08-1.
-
-Copy camlp5-6.08.patch into camlp5-6.08 directory and perform
-
-     patch -p 1 < camlp5-6.08.patch
-
-Then configure, make and install as always.

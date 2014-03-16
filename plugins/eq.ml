@@ -52,7 +52,7 @@ let _ =
 			     | None   -> E.uid "true"
 			     | Some e -> 
 				 let rec name = function
-				   | <:ctyp< $t$ _ >> | <:ctyp< _ . $t$ >> -> name t
+				   | <:ctyp< $t$ $_$ >> | <:ctyp< $_$ . $t$ >> -> name t
 				   | <:ctyp< $lid:n$ >> -> E.app [e; E.app [E.variant (type_tag n); E.id (arg b)]; E.id b]
 				   | _ -> E.uid "true"
 				 in

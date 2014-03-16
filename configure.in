@@ -75,6 +75,7 @@ Makefile
 src/Makefile
 camlp5/Makefile
 camlp5/doc/Makefile
+plugins/Makefile
 regression/Makefile
 ])
 AC_OUTPUT

@@ -4063,7 +4063,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile camlp5/Makefile camlp5/doc/Makefile regression/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile camlp5/Makefile camlp5/doc/Makefile plugins/Makefile regression/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -4806,6 +4806,7 @@ do
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "camlp5/Makefile") CONFIG_FILES="$CONFIG_FILES camlp5/Makefile" ;;
     "camlp5/doc/Makefile") CONFIG_FILES="$CONFIG_FILES camlp5/doc/Makefile" ;;
+    "plugins/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/Makefile" ;;
     "regression/Makefile") CONFIG_FILES="$CONFIG_FILES regression/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
