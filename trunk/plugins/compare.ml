@@ -25,8 +25,7 @@ let _ =
           arg_img     = (fun _ -> T.acc [T.id "GT"; T.id "comparison"])
         }, 
         object
-	  method header     = []
-	  method header_sig = []
+	  inherit generator
 	  method constr env constr =
 	    let gen    = name_generator (map fst constr.args) in
 	    let other  = gen#generate "other" in
@@ -40,19 +39,19 @@ let _ =
 			 E.func 
 			   [P.wildcard]
 			   (match typ with
-			   | Arbitrary ctyp ->
-			       (match env.trait "compare" ctyp with
+			   | Instance (_, _, qname) ->
+			       (match env.trait "compare" typ with
 			       | None   -> E.acc [E.id "GT"; E.uid "EQ"]
 			       | Some e -> 
 				   let rec name = function
-				     | <:ctyp< $t$ $_$ >> | <:ctyp< $_$ . $t$ >> -> name t
-				     | <:ctyp< $lid:n$ >> -> E.app [e; E.app [E.variant (type_tag n); E.id (arg b)]; E.id b]
-				     | t -> E.acc [E.id "GT"; E.uid "EQ"]
+				   | _::t -> name t
+				   | [n]  -> E.app [e; E.app [E.variant (type_tag n); E.id (arg b)]; E.id b]
 				   in
-				   name ctyp
+				   name qname
 			       )
-			   | Variable (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (arg_tag a      ); E.id (arg b)]]
-			   | Instance _      -> E.app [E.gt_fx (E.id b); E.app [E.variant (type_tag d.name); E.id (arg b)]]
+			   | Variable  (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (arg_tag a      ); E.id (arg b)]]
+			   | Self      _      -> E.app [E.gt_fx (E.id b); E.app [E.variant (type_tag d.name); E.id (arg b)]]
+			   | Arbitrary _      -> E.acc [E.id "GT"; E.uid "EQ"]
 			   )
 		       ]
 		)

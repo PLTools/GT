@@ -15,7 +15,7 @@ class ['v] var_eval = object
   method c_Var s v name = try List.assoc name s with Not_found -> `Var name 
 end
 
-@type 'a lambda = [var | `Abs of GT.string * ['a] | `App of ['a] * ['a]] deriving show
+@type 'a lambda = [var | `Abs of GT.string * 'a | `App of 'a * 'a] deriving show
 
 class ['a, 'v] lambda_eval = object
   inherit ['a, 'v, (string * 'v) list, 'v] @lambda
@@ -32,7 +32,7 @@ class ['a, 'v] lambda_eval = object
 
 let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e;;
 
-@type 'a var_expr = [var | `Num of GT.int | `Add of ['a] * ['a] | `Mult of ['a] * ['a]]  deriving show
+@type 'a var_expr = [var | `Num of GT.int | `Add of 'a * 'a | `Mult of 'a * 'a]  deriving show
 
 class ['a, 'v] var_expr_eval = object
   inherit ['a, 'v, (string * 'v) list, 'v] @var_expr

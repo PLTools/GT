@@ -14,8 +14,7 @@ let _ =
           arg_img     = (fun _ -> T.id "string")
         }, 
         object
-	  method header     = []
-	  method header_sig = []
+	  inherit generator
 	  method constr env constr =
             let concat x y = E.app [E.lid "^"; x; y] in
             concat 
@@ -26,13 +25,13 @@ let _ =
 			false, concat expr (if first then e else concat (E.str ", ") e)
                       in
                       match arg with                     
-                      | arg, Arbitrary ctyp -> 
-			  (match env.trait "show" ctyp with
-			  | Some e -> append (E.app [e; E.unit; E.lid arg])
-			  | None   -> append (E.str "*not supported*")
-			  )
-		      | arg, _ -> 
+		      | arg, (Variable _ | Self _) -> 
                           append (E.app [E.gt_fx (E.lid arg); E.unit])
+                      | arg, typ -> 
+			  (match env.trait "show" typ with
+			  | Some e -> append (E.app [e; E.unit; E.lid arg])
+			  | None   -> acc
+			  )
                     )         
                     (true, E.str ((if d.is_polyvar then "`" else "") ^ constr.constr ^ " ("))
                     constr.args 

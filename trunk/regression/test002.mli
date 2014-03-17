@@ -4,7 +4,7 @@ module Expr : sig
     [ 
       | `Var   of string 
       | `Const of int 
-      | `Binop of (int -> int -> int) * string * ['self] * ['self] 
+      | `Binop of [int -> int -> int] * string * 'self * 'self 
     ] 
 
   end

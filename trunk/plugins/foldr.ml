@@ -18,19 +18,17 @@ let _ =
           arg_img     = (fun _ -> T.var syn)
         }, 
         object
-	  method header     = []
-	  method header_sig = []
+	  inherit generator
 	  method constr env constr =
 	    fold_right
               (fun (arg, typ) inh ->
 		let arg = E.id arg in
 		match typ with
-		| Arbitrary ctyp ->
-		    (match env.trait "foldr" ctyp with
+		| Variable _ | Self _ -> E.app [E.gt_fx arg; inh]
+		| _ ->
+		    match env.trait "foldr" typ with
 		    | None   -> inh
 		    | Some e -> E.app [e; inh; arg]
-		    )
-		| _ -> E.app [E.gt_fx arg; inh]
 	      )
 	      constr.args
               (E.id env.inh)

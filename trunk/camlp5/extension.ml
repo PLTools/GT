@@ -77,18 +77,36 @@ EXTEND
     a=fargs; n=LIDENT; "="; t=rhs ->
       let a                                        = fst a in
       let (is_private, ((def, cons), t)), deriving = t     in
-      (match t with
-       | `Vari y | `Poly y -> 
-	   iter (function 
-	         | `Type _        -> ()
-	         | `Con (_, args) -> 
-                     iter (function 
-		           | Instance (_, _, qname) when qname <> [n] -> 
-			       oops loc (sprintf "only recursive type (%s) abbreviation is alowed here" n)
-		           | _ -> ()
-			  ) args
-		) y
-      );
+      let t =
+	match t with
+	| `Vari y | `Poly y -> 
+	    let y =
+	      map (function 
+	           | `Type _ as t  -> t
+	           | `Con (name, args) -> 
+		       `Con (name, 
+			     map (function
+                                  | Instance (t, args, qname) as orig when qname = [n] ->
+				      (try
+				 	 let args = map (function 
+					                 | Variable (_, a) -> a
+					 		 | _ -> invalid_arg "Not a variable"
+						        ) 
+					                args 
+					 in
+					 Self (t, args, qname)
+				       with Invalid_argument "Not a variable" -> orig
+				      )
+				      
+		                  | x -> x
+				 ) 
+			         args
+			    )
+		  ) 
+	          y
+	    in
+	    match t with `Vari _ -> `Vari y | _ -> `Poly y
+      in
       let descriptor, typ =
         (a, n, t), 
         {tdNam = VaVal (loc, VaVal n);
@@ -150,7 +168,10 @@ EXTEND
 
   poly_con: [[
     "`"; c=UIDENT; a=con_args -> `Con  (loc, c, get_val loc (fst a), None), `Con (c, snd a) 
-  | t=instance                -> let t, a, q = t in `Type t, `Type (a, q)
+  | t=instance -> 
+      match t with 
+      | Instance (t, a, q) -> `Type t, `Type (a, q) 
+      | _ -> invalid_arg "should not happen"
   ]];
 
   con_args: [[
@@ -158,24 +179,23 @@ EXTEND
   |                             -> VaVal [], [] 
   ]];
 
-  instance: [[
-    a=fargs; q=qname -> ctyp_of_instance loc (snd a) (ctyp_of_qname loc q), (fst a), q
-  ]];
-
-  instance_var: [[
-    "("; a=LIST1 targ SEP ","; ")"; q=qname -> let f, s = split a in 
-                                               Instance (ctyp_of_instance loc s (ctyp_of_qname loc q), f, q)
-  | a=targ; q=OPT qname -> (match q with 
-                            | None -> Variable (snd a, fst a) 
-                            | Some q -> Instance (ctyp_of_instance loc [snd a] (ctyp_of_qname loc q), [fst a], q)
-			   )
-  | q=qname -> Instance (ctyp_of_instance loc [] (ctyp_of_qname loc q), [], q)
-  ]];
-
   c_typ: [[
-   "["; t=instance_var; "]" -> t
-  | t=ctyp LEVEL "apply"    -> Arbitrary t
+    t=instance       -> t
+  | "["; t=ctyp; "]" -> Arbitrary t
   ]];
+
+  instance: [
+     "apply" LEFTA
+     [ a=SELF; q=qname ->       
+       Instance (ctyp_of_instance loc [ctyp_of a] (ctyp_of_qname loc q), [a], q)
+     ] |
+     "simple"   
+     [   "'"; a=LIDENT -> Variable (<:ctyp< ' $a$ >>, a)
+       | "("; args=LIST1 instance SEP ","; ")"; q=qname -> 
+          Instance (ctyp_of_instance loc (map ctyp_of args) (ctyp_of_qname loc q), args, q)
+       | q=qname -> Instance (ctyp_of_qname loc q, [], q)
+     ]
+  ];
 
   qname: [[
     n=LIDENT              -> [n]

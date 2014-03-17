@@ -34,9 +34,10 @@ open Printf
 type typ = 
   Arbitrary of ctyp  
 | Variable  of ctyp * string
-| Instance  of ctyp * string list * string list
+| Self      of ctyp * string list * string list
+| Instance  of ctyp * typ list * string list
 
-let ctyp_of = function Arbitrary t | Variable (t, _) | Instance (t, _, _) -> t
+let ctyp_of = function Arbitrary t | Variable (t, _) | Self (t, _, _) | Instance (t, _, _) -> t 
 
 exception Generic_extension of string
 
@@ -113,14 +114,16 @@ type env = {
     inh      : string;
     subj     : string;
     new_name : string -> string;
-    trait    : string -> ctyp -> expr option;
+    trait    : string -> typ -> expr option;
 }
 
-type generator = 
-  < header     : str_item list; 
-    header_sig : sig_item list;
-    constr     : env -> constructor -> expr 
-  >
+class virtual generator =
+  object
+    method header     = ([] : str_item list)
+    method header_sig = ([] : sig_item list)
+    method virtual constr : env -> constructor -> expr 
+  end
+
 type t = loc -> type_descriptor -> properties * generator 
 
 module Helper (L : sig val loc : loc end) =
