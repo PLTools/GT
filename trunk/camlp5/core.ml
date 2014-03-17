@@ -480,6 +480,71 @@ let generate t loc =
            let proto_class_decl = <:sig_item< class type $list:[class_info false (class_tt name) proto_class_type]$ >> in 
            let class_def  = <:str_item< class $list:[class_info true (class_t name) class_expr]$ >> in
            let class_decl = <:sig_item< class $list:[class_info true (class_t name) class_type]$ >> in 
+           let tags =
+	     let g  = name_generator orig_args in
+             let tt = g#generate "t" in
+	     let td = {
+               tdNam = VaVal (loc, VaVal (tags_t current));
+               tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (tt::orig_args));
+               tdPrv = VaVal false;
+               tdDef = 
+	         H.T.eq_variant (
+                   (H.T.pv_constr (type_tag current) [H.T.var tt])::
+                   (map (fun a -> H.T.pv_constr (arg_tag a) [H.T.var a]) orig_args)
+                 ); 
+               tdCon = VaVal []
+              }     
+	     in
+	     let iargs = 
+	       let n = ref 0 in
+	       map (fun a -> let b, c = wrap_t current !n, rewrap_t current !n in incr n; a, b, c) orig_args
+	     in
+	     let tagdefs =
+	       flatten (
+	         map (fun (arg, warg, rewarg) -> 
+                        [<:str_item< value $list:[H.P.id warg, 
+                                                  H.E.func [H.P.id "x"] 
+                                                           (H.E.app [H.E.variant (arg_tag arg); H.E.id "x"])
+                                                 ]$ 
+                         >>;
+                         <:str_item< value $list:[H.P.id rewarg,
+                                                  H.E.func 
+                                                    [H.P.id "f"]
+                                                    (H.E.abstr [
+                                                      H.P.app [H.P.variant (arg_tag arg); H.P.id "x"], 
+                                                      VaVal None,  
+                                                      H.E.app [H.E.id "f"; H.E.id "x"];
+
+			 	  	              H.P.wildcard, 
+					              VaVal None, 
+					              H.E.app [H.E.id "invalid_arg"; 
+                                                               H.E.str "type error (must not happen)"
+                                                              ]
+                                                     ])
+                                                 ]$
+                         >>
+                        ]
+		     ) iargs
+	      )
+	     in
+	     let a = H.T.var (g#generate "a") in 
+	     let tags_ctype = H.T.app (H.T.id (tags_t current)::map H.T.var (tt::orig_args)) in
+             let tagdecls =
+	       flatten (
+	         map (fun (arg, warg, rewarg) ->		    
+	                [<:sig_item< value $warg$ : $H.T.arrow [H.T.var arg; tags_ctype]$ >>;
+	 	         <:sig_item< value $rewarg$: $H.T.arrow [
+		                                        H.T.arrow [H.T.var arg; a];
+                                                        tags_ctype;		                                    
+                                                        a
+                                                      ]$ >>
+                        ]
+	  	     ) iargs
+	       ) 
+	     in
+	     td, tagdefs, tagdecls
+	   in
+	   tags,
 	   (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
            (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
            <:sig_item< value $name$ : $catype$ >>,
@@ -490,16 +555,20 @@ let generate t loc =
       ) 
       d
   in
-  let tuples, defs, decls, classes, derived_classes = split5 defs in
-  let pnames, tnames                                = split tuples in
-  let class_defs, class_decls                       = split classes in
-  let derived_class_defs, derived_class_decls       = 
+  let tags, tuples, defs, decls, classes, derived_classes = split6 defs in
+  let tag_types, tag_defs, tag_decls                      = split3 tags in
+  let tag_defs, tag_decls                                 = flatten tag_defs, flatten tag_decls in
+  let pnames, tnames                                      = split tuples in
+  let class_defs, class_decls                             = split classes in
+  let derived_class_defs, derived_class_decls             = 
     let class_defs, protos, defs, class_decls = split4 derived_classes in
     class_defs@(flatten protos)@(flatten defs), flatten class_decls
   in
-  let cata_def  = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
-  let type_def  = <:str_item< type $list:t$ >> in
-  let type_decl = <:sig_item< type $list:t$ >> in
-  <:str_item< declare $list:type_def::class_defs@[cata_def]@derived_class_defs$ end >>,
-  <:sig_item< declare $list:type_decl::class_decls@decls@derived_class_decls$ end >> 
+  let cata_def      = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
+  let type_def      = <:str_item< type $list:t$ >> in
+  let type_decl     = <:sig_item< type $list:t$ >> in
+  let tag_type_def  = <:str_item< type $list:tag_types$ >> in
+  let tag_type_decl = <:sig_item< type $list:tag_types$ >> in
+  <:str_item< declare $list:type_def::tag_type_def::tag_defs@class_defs@[cata_def]@derived_class_defs$ end >>,
+  <:sig_item< declare $list:type_decl::tag_type_decl::tag_decls@class_decls@decls@derived_class_decls$ end >> 
     
