@@ -62,7 +62,6 @@ let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
   let t, d = split t in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
-  let in_cluster     = match cluster_specs with [_] -> false | _ -> true in
   let is_murec name  = try ignore (find (fun (_, n) -> name = n) cluster_specs); true with Not_found -> false in
   let reserved_names = 
     fold_left 
@@ -287,35 +286,25 @@ let generate t loc =
                        Plugin.new_name = (fun s -> g#generate s); 
                        Plugin.trait    = 
 		         (fun s t -> 
-			   if s = trait 
-			   then 
-			     let apply x = function None -> x | Some y -> H.E.app [x; y] in
-			     let rec qname = function
-			       | <:ctyp< $lid:x$ >> | <:ctyp< $uid:x$ >> -> [x]
-			       | <:ctyp< $t1$ . $t2$ >> -> qname t1 @ qname t2
-			       | _ -> invalid_arg "Unsupported type"
-			     in
-			     let rec inner = function
-			       | <:ctyp< ' $a$ >>     -> H.E.gt_tp (H.E.id env.Plugin.subj) a, None
-			       | <:ctyp< $t1$ $t2$ >> -> 
-				   let t1, tt1 = inner t1 in
-				   let t2, tt2 = inner t2 in
-				   H.E.app [t1; apply t2 tt2], tt1
-			       | t -> 
-				   let qname = qname t in
+			    if s = trait
+			    then
+			      let rec inner = function
+			       | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
+			       | Instance (_, args, qname) -> 
 				   (match qname with
-				   | [t] when is_murec t && t <> current -> H.E.method_call (H.E.id context.M.env) (tmethod t), None
-				   | _  -> 
+				    | [t] when is_murec t && t <> current -> H.E.method_call (H.E.id context.M.env) (tmethod t)				    
+				    | _  -> 
 				       let tobj = 
 					 match qname with 
 					 | [t] when t = current -> H.E.id "this"
 					 | _ -> H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) 
 				       in
-				       H.E.app [H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)], Some tobj
+				       H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ map inner args @ [tobj])
 				   )
-			     in
-                             (try let t, tt = inner t in Some (apply t tt) with Invalid_argument "Unsupported type" -> None)
-			   else None
+			       | Arbitrary _ -> invalid_arg "Unsupported type"
+			       | Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
+			      in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
+			    else None
 			 ); 
                      } 
                      in
@@ -332,6 +321,7 @@ let generate t loc =
                      {context with M.proto_items = m_def :: context.M.proto_items; M.items = context.M.items @ [bridge_def]}
 
                   | `Type (args, qname) -> 
+		     let args = map (function Variable (_, a) -> a) args in (* TODO *)
                      let qname, qname_proto, env_tt, name = 
                        let n, t = hdtl loc (rev qname) in
                        rev ((trait_t n trait) :: t), 
@@ -385,9 +375,9 @@ let generate t loc =
                     let met_sig  = 
                       let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
                       let make_typ = function
-                      | Arbitrary t        -> t
+                      | Arbitrary t | Instance (t, _, _) -> t
                       | Variable (t, name) -> make_a (H.T.var inh) t (H.T.var (img name))
-                      | Instance (t, _, _) -> make_a (H.T.var inh) t (H.T.var syn)
+                      | Self     (t, _, _) -> make_a (H.T.var inh) t (H.T.var syn)
                       in
                       let typs = [H.T.var inh; 
                                   make_a (H.T.var inh) (H.T.app (H.T.id name :: map H.T.var orig_args)) (H.T.var syn)
@@ -405,9 +395,9 @@ let generate t loc =
                         [met; H.E.id acc; garg (H.E.id "self") (H.E.id subj)] @
                         (map (fun (typ, x) -> 
                                 match typ with
-                                | Arbitrary _        ->  H.E.id x
+                                | Arbitrary _ | Instance _ ->  H.E.id x
                                 | Variable (_, name) -> garg (H.E.id (farg name)) (H.E.id x)
-                                | Instance (typ, args, t) -> 
+                                | Self     (typ, args, t) -> 
 				    let name = get_type_handler (typ, args, t) in 
                                     garg name (H.E.id x)
                              ) 
@@ -421,6 +411,7 @@ let generate t loc =
                     [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>]
 
                 | `Type (args, qname) as case -> 
+		    let args = map (function Variable (_, a) -> a) args in (* TODO *)
                     iter (add_derived_member case) derived;
                     let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
                     let targs = map H.T.var targs in

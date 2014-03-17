@@ -23,18 +23,17 @@ let _ =
 			)
         }, 
         object
-	  method header     = []
-	  method header_sig = []
+	  inherit generator
 	  method constr env constr =
 	    E.app (((if d.is_polyvar then E.variant else E.id) constr.constr)::
                    map 
 	             (function 
-		       | arg, Arbitrary ctyp ->
-			   (match env.trait "map" ctyp with
-			   | None   -> E.id arg
-			   | Some e -> E.app [e; E.unit; E.id arg]
-			   )
-		       | arg, _ -> E.app [E.gt_fx (E.lid arg); E.unit]
+		      | arg, (Variable _ | Self _) -> E.app [E.gt_fx (E.lid arg); E.unit]
+		      | arg, typ ->
+		         (match env.trait "map" typ with
+		          | None   -> E.id arg
+			  | Some e -> E.app [e; E.unit; E.id arg]
+			 )
 		     ) 
 	             constr.args
 		  )

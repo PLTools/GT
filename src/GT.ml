@@ -206,6 +206,9 @@ class ['a, 'syn] foldr_list_t =
 
 type 'a eq_list_tags = [`tlist of 'a list | `aa of 'a]
 
+let wrap_list x = `aa x
+let rewrap_list f = function `aa x -> f x | _ -> invalid_arg "type error (should not happen)"
+
 class ['a] eq_list_t =
   object
     inherit ['a, bool, 'a eq_list_tags, bool] @list
