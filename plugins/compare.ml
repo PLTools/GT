@@ -12,12 +12,8 @@ let _ =
     (fun loc d -> 
        let module H = Helper (struct let loc = loc end) in       
        H.(
-        let tags_type_name = "eq_" ^ d.name ^ "_tags" in
-        let tags_ctype     = T.app (T.id tags_type_name :: map T.var d.type_args) in
-        let arg_tag  a     = "a" ^ a in
-        let type_tag a     = "t" ^ a in
-	let tags           = (type_tag d.name) :: (map arg_tag d.type_args) in
-        let gen            = name_generator (d.name::d.type_args@tags) in 
+        let tags_type_name = tags_t d.name in
+        let tags_ctype     = T.app (T.id tags_type_name :: (T.app (T.id d.name::map T.var d.type_args)) :: map T.var d.type_args) in
 	{
           inh_t       = tags_ctype; 
           syn_t       = T.acc [T.id "GT"; T.id "comparison"];
@@ -44,8 +40,8 @@ let _ =
 			       | None   -> E.acc [E.id "GT"; E.uid "EQ"]
 			       | Some e -> 
 				   let rec name = function
-				   | _::t -> name t
 				   | [n]  -> E.app [e; E.app [E.variant (type_tag n); E.id (arg b)]; E.id b]
+				   | _::t -> name t
 				   in
 				   name qname
 			       )

@@ -1,4 +1,4 @@
-@type ('a, 'b, 'c) t = A of ['a] | B of ['b] | C of ['c] deriving eq
+@type ('a, 'b, 'c) t = A of 'a | B of 'b | C of 'c deriving eq
 
 let _ =
   let x = A 1 in
