@@ -31,10 +31,6 @@ open MLast
 open Ploc
 open Plugin
 
-let map_last loc f l = 
-  let h, tl = hdtl loc (rev l) in
-  rev (f h :: tl)
-  
 let split3 l = 
   List.fold_right 
     (fun (a, b, c) (x, y, z) -> a::x, b::y, c::z) l ([], [], []) 
@@ -117,7 +113,7 @@ let generate t loc =
            Plugin.type_args  = args;
            Plugin.name       = current;
            Plugin.default    = { 
-             Plugin.inh_t       = H.T.var inh;
+             Plugin.inh_t       =`Mono (H.T.var inh);
              Plugin.syn_t       = H.T.var syn;
              Plugin.proper_args = proper_args;
              Plugin.arg_img     = (fun a -> H.T.var (img a));
@@ -234,7 +230,7 @@ let generate t loc =
                                 Plugin.type_args  = args;
                                 Plugin.name       = t;
                                 Plugin.default    = { 
-                                  Plugin.inh_t       = H.T.var inh;
+                                  Plugin.inh_t       = `Mono (H.T.var inh);
                                   Plugin.syn_t       = H.T.var syn;
                                   Plugin.proper_args = args;
                                   Plugin.arg_img     = (fun a -> H.T.var (assoc a targs));
@@ -243,8 +239,9 @@ let generate t loc =
 			      in
                               let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
                               let typ     = H.T.app (H.T.id t :: map H.T.var args) in
-			      let targs   = map (fun a -> H.T.arrow [prop.Plugin.inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
-			      [<:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [prop.Plugin.inh_t; typ; prop.Plugin.syn_t])$ >>]
+			      let inh_t   = generate_inh_type loc [t] args prop.Plugin.inh_t in
+			      let targs   = map (fun a -> H.T.arrow [inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
+			      [<:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [inh_t; typ; prop.Plugin.syn_t])$ >>]
 			    else []
 			   )
 			 ) 
@@ -291,15 +288,36 @@ let generate t loc =
 			      let rec inner = function
 			       | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
 			       | Instance (_, args, qname) -> 
+				   let args = 	
+				     match prop.inh_t with
+				     | `Mono _ -> map inner args
+				     | `Poly _ -> 
+					 let n = ref 0 in
+					 map 
+					   (fun a ->
+					     let i = !n in
+					     incr n;
+                                             let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
+					     let tag =
+					       match a with
+					       | Variable (_, a) -> arg_tag a
+					       | Instance (_, _, qname) ->
+						   let typ, _ = hdtl loc (rev qname) in
+                                                   type_tag typ 
+					     in
+                                             H.E.app [rewrap; H.E.func [H.P.id "y"; H.P.id "x"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]; H.E.id "x"])]
+					   ) 
+					   args
+				   in				   
 				   (match qname with
-				    | [t] when is_murec t && t <> current -> H.E.method_call (H.E.id context.M.env) (tmethod t)				    
+                                    | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.id context.M.env) (tmethod t)) :: args)
 				    | _  -> 
 				       let tobj = 
 					 match qname with 
 					 | [t] when t = current -> H.E.id "this"
 					 | _ -> H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) 
 				       in
-				       H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ map inner args @ [tobj])
+				       H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ args @ [tobj])
 				   )
 			       | Arbitrary _ -> invalid_arg "Unsupported type"
 			       | Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
@@ -497,7 +515,7 @@ let generate t loc =
 	     in
 	     let iargs = 
 	       let n = ref 0 in
-	       map (fun a -> let b, c = wrap_t current !n, rewrap_t current !n in incr n; a, b, c) orig_args
+	       map (fun a -> let b, c = wrap_t !n current, rewrap_t !n current in incr n; a, b, c) orig_args
 	     in
 	     let tagdefs =
 	       flatten (

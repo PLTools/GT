@@ -12,10 +12,8 @@ let _ =
     (fun loc d -> 
        let module H = Helper (struct let loc = loc end) in       
        H.(
-        let tags_type_name = tags_t d.name in
-        let tags_ctype     = T.app (T.id tags_type_name :: (T.app (T.id d.name::map T.var d.type_args)) :: map T.var d.type_args) in
 	{
-          inh_t       = tags_ctype; 
+          inh_t       = `Poly (T.app (T.id d.name :: map T.var d.type_args), fun x -> T.var x); 
           syn_t       = T.acc [T.id "GT"; T.id "comparison"];
           proper_args = d.type_args; 
           arg_img     = (fun _ -> T.acc [T.id "GT"; T.id "comparison"])
