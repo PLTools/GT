@@ -51,6 +51,10 @@ let hdtl loc = function
 | h::t -> (h, t)
 | _    -> oops loc "empty list (should not happen)"
 
+let map_last loc f l = 
+  let h, tl = hdtl loc (rev l) in
+  rev (f h :: tl)
+
 let option loc = function
 | Some p -> p
 | _      -> oops loc "empty option (should not happen)"
@@ -83,8 +87,8 @@ let trait_t       typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait
 let trait_proto_t typ trait = sprintf "%s_proto_%s" trait typ
 let env_tt        typ trait = trait ^ "_" ^ typ ^ "_env_tt"
 let tags_t        typ       = typ ^ "_tags"
-let rewrap_t      typ n     = "rewrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
-let wrap_t        typ n     = "wrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
+let rewrap_t      n typ     = "rewrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
+let wrap_t        n typ     = "wrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
 let arg_tag       a         = "a" ^ a 
 let type_tag      a         = "t" ^ a 
 
@@ -96,7 +100,7 @@ let _ =
     "<dir> Add <dir> to the list of include directories."
 
 type properties = {
-    inh_t       : ctyp;
+    inh_t       : [`Mono of ctyp | `Poly of ctyp * (string -> ctyp)];
     syn_t       : ctyp;
     proper_args : string list;
     arg_img     : string -> ctyp;
@@ -293,6 +297,15 @@ module Helper (L : sig val loc : loc end) =
       end
   end
 
+let generate_inh_type loc qname args = 
+  let module H = Helper (struct let loc = loc end) in
+  function
+  | `Mono inh -> inh
+  | `Poly (inh, f) ->  
+      let qname = map_last loc tags_t qname in
+      let args = inh :: map f args in
+      H.T.app (H.T.acc (map H.T.id qname) :: args)  
+
 let generate_classes loc trait descr (prop, generator) (this, env, env_t, b_proto_def, b_def, b_proto_decl, b_decl) =
   let class_targs = prop.proper_args in 
   let def a n b = { 
@@ -319,7 +332,7 @@ let generate_inherit base_class loc qname arg descr prop =
     if base_class 
     then
       flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
-      [prop.inh_t; prop.syn_t]
+      [generate_inh_type loc [descr.name] descr.type_args prop.inh_t; prop.syn_t] 
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
   let ce = 

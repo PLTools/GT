@@ -12,7 +12,7 @@ let _ =
         let gen   = name_generator (d.name::d.type_args) in
 	let syn   = gen#generate "syn" in
         {
-          inh_t       = T.var syn; 
+          inh_t       = `Mono (T.var syn); 
           syn_t       = T.var syn;
           proper_args = flatten (map (fun a -> [a; syn]) d.type_args); 
           arg_img     = (fun _ -> T.var syn)

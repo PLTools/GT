@@ -8,7 +8,7 @@ let _ =
        let module H = Helper (struct let loc = loc end) in
        H.(
         {
-          inh_t       = T.id "unit"; 
+          inh_t       = `Mono (T.id "unit"); 
           syn_t       = T.id "string";
           proper_args = d.type_args; 
           arg_img     = (fun _ -> T.id "string")

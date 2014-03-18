@@ -13,7 +13,7 @@ let _ =
 	let imgs  = map (fun a -> gen#generate (targ a)) d.type_args in
         let targs = combine d.type_args imgs in
         {
-          inh_t       = T.id "unit"; 
+          inh_t       = `Mono (T.id "unit"); 
           syn_t       = T.app (T.id d.name::map T.var imgs);
           proper_args = flatten (map (fun (x, y) -> [x; y]) targs); 
           arg_img     = (fun a -> 
