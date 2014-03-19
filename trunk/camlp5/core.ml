@@ -305,7 +305,7 @@ let generate t loc =
 						   let typ, _ = hdtl loc (rev qname) in
                                                    type_tag typ 
 					     in
-                                             H.E.app [rewrap; H.E.func [H.P.id "y"; H.P.id "x"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]; H.E.id "x"])]
+                                             H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
 					   ) 
 					   args
 				   in				   
