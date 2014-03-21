@@ -56,6 +56,7 @@ let ctyp_of_instance loc args qname =
 
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
+  let obj_magic = H.E.acc (map H.E.id ["Obj"; "magic"]) in
   let t, d = split t in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
   let is_murec name  = try ignore (find (fun (_, n) -> name = n) cluster_specs); true with Not_found -> false in
@@ -198,6 +199,7 @@ let generate t loc =
                    self_name   : string;
                    in_cluster  : bool;
 		   this        : string;
+		   self        : string;
 		   env         : string;
                    env_sig     : class_sig_item list;
                  }
@@ -211,6 +213,7 @@ let generate t loc =
 		     let g    = name_generator reserved_names in
 		     let this = g#generate "this" in
 		     let env  = g#generate "env"  in
+		     let self = g#generate "self" in
 		     let cn   = g#generate ("c_" ^ name) in
                      let vals, inits, methods, env_methods = split4 (
 		       map 
@@ -218,41 +221,38 @@ let generate t loc =
 			   let ct      = if name = t then cn else g#generate ("c_" ^ t) in
 			   let proto_t = trait_proto_t t trait in
 			   let mt      = tmethod t             in
-			   <:class_str_item< value mutable $lid:ct$ = $H.E.app [H.E.acc [H.E.id "Obj"; H.E.id "magic"]; H.E.unit]$ >>,
-			   (H.E.assign (H.E.id ct) (H.E.app [H.E.new_e [proto_t]; H.E.id this])),
-			   (if t <> name then [<:class_str_item< method $mt$ = $H.E.method_call (H.E.id ct) mt$ >>] else []),
-			   (if t <> name 
-			    then 
-			      let args          = map g#generate args in
-			      let targs         = map (fun a -> a, g#generate (targ a)) args in
-                              let p_descriptor  = {
-                                Plugin.is_polyvar = false;
-                                Plugin.type_args  = args;
-                                Plugin.name       = t;
-                                Plugin.default    = { 
-                                  Plugin.inh_t       = `Mono (H.T.var inh);
-                                  Plugin.syn_t       = H.T.var syn;
-                                  Plugin.proper_args = args;
-                                  Plugin.arg_img     = (fun a -> H.T.var (assoc a targs));
-                                }
-                              } 
-			      in
-                              let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
-                              let typ     = H.T.app (H.T.id t :: map H.T.var args) in
-			      let inh_t   = generate_inh_type loc [t] args prop.Plugin.inh_t in
-			      let targs   = map (fun a -> H.T.arrow [inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
-			      [<:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [inh_t; typ; prop.Plugin.syn_t])$ >>]
-			    else []
-			   )
-			 ) 
-			 cluster_specs
+			   <:class_str_item< value mutable $lid:ct$ = $H.E.app [obj_magic; H.E.unit]$ >>,
+			   (H.E.assign (H.E.id ct) (H.E.app [H.E.new_e [proto_t]; H.E.id self])),
+			   <:class_str_item< method $mt$ = $H.E.method_call (H.E.id ct) mt$ >>,
+			   let args          = map g#generate args in
+			   let targs         = map (fun a -> a, g#generate (targ a)) args in
+                           let p_descriptor  = {
+                             Plugin.is_polyvar = false;
+                             Plugin.type_args  = args;
+                             Plugin.name       = t;
+                             Plugin.default    = { 
+                               Plugin.inh_t       = `Mono (H.T.var inh);
+                               Plugin.syn_t       = H.T.var syn;
+                               Plugin.proper_args = args;
+                               Plugin.arg_img     = (fun a -> H.T.var (assoc a targs));
+                             }
+                           } 
+			   in
+                           let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
+                           let typ     = H.T.app (H.T.id t :: map H.T.var args) in
+			   let inh_t   = generate_inh_type loc [t] args prop.Plugin.inh_t in
+			   let targs   = map (fun a -> H.T.arrow [inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
+			   <:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [inh_t; typ; prop.Plugin.syn_t])$ >>			   
+			 )
+			 (filter (fun (_, n) -> n <> name) cluster_specs)
 		      )
 		     in
-		     let items = vals @ [<:class_str_item< initializer $H.E.seq inits$ >>] @ (flatten methods) in
+		     let items = vals @ [<:class_str_item< initializer $H.E.seq (H.E.app [H.E.lid ":="; H.E.id self; H.E.id this] ::inits)$ >>] @ methods in
 		     {gen         = g; 
 		      this        = this;
+		      self        = self;
 		      env         = env;
-                      env_sig     = flatten env_methods;
+                      env_sig     = env_methods;
 		      proto_items = []; 
 		      items       = items;
                       in_cluster  = murec;
@@ -310,7 +310,7 @@ let generate t loc =
 					   args
 				   in				   
 				   (match qname with
-                                    | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.id context.M.env) (tmethod t)) :: args)
+                                    | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.app [H.E.lid "!"; H.E.id context.M.env]) (tmethod t)) :: args)
 				    | _  -> 
 				       let tobj = 
 					 match qname with 
@@ -331,12 +331,15 @@ let generate t loc =
                        let body = H.E.func (map H.P.id ([env.Plugin.inh; env.Plugin.subj] @ args)) (generator#constr env constr) in
                        <:class_str_item< method $lid:name$ = $body$ >>
                      in
+(*
 		     let bridge_def = 
 		       let name = cmethod cname in
 		       let body = H.E.method_call (H.E.id context.M.self_name) name in
 		       <:class_str_item< method $lid:name$ = $body$ >>
 		     in
-                     {context with M.proto_items = m_def :: context.M.proto_items; M.items = context.M.items @ [bridge_def]}
+*)
+                     {context with M.proto_items = m_def :: context.M.proto_items}
+
 
                   | `Type (args, qname) -> 
 		     let args = map (function Variable (_, a) -> a) args in (* TODO *)
@@ -355,10 +358,10 @@ let generate t loc =
                      }
                      in
 		     let prop               = fst (p loc descr) in
-                     let i_def      , _     = Plugin.generate_inherit false loc qname       None descr prop in
+(*                     let i_def      , _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.self, H.T.id "unit")) descr prop in  *)
                      let i_def_proto, _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.env, H.T.id "unit")) descr prop in
 		     let _          , i_env = Plugin.generate_inherit false loc env_tt      None descr {prop with Plugin.proper_args = []} in
-                     {context with M.items = i_def :: context.M.items; 
+                     {context with (*M.items = i_def :: context.M.items; *)
 		                   M.proto_items = i_def_proto :: context.M.proto_items;
                                    M.env_sig     = i_env :: context.M.env_sig
 		     }
@@ -367,12 +370,16 @@ let generate t loc =
              ),
              (fun (trait, p) -> 
 	       let context       = M.get trait in 
-               let i_def, _      = Plugin.generate_inherit true loc [class_t  current] None p_descriptor (fst p) in
-               let _    , i_decl = Plugin.generate_inherit true loc [class_tt current] None p_descriptor (fst p) in
+               let i_def, _      = Plugin.generate_inherit true  loc [class_t  current] None p_descriptor (fst p) in
+               let _    , i_decl = Plugin.generate_inherit true  loc [class_tt current] None p_descriptor (fst p) in
+	       let p_def, _      = Plugin.generate_inherit false loc [trait_proto_t current trait] (Some (H.E.id context.M.self, H.T.id "unit")) p_descriptor (fst p) in
                let cproto        = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
-               let ce            = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.items$ end >> in
+               let ce            = 
+		 let ce = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::p_def::context.M.items$ end >> in
+		 <:class_expr< let $flag:false$ $list:[H.P.id context.M.self, H.E.app [obj_magic; H.E.app [H.E.id "ref"; H.E.unit]]]$ in $ce$ >>
+	       in
                let env_t         = <:class_type< object $list:context.M.env_sig$ end >> in
-               let cproto_t      = <:class_type< [ $H.T.id (env_tt current trait)$ ] -> object $list:[i_decl]$ end >> in
+               let cproto_t      = <:class_type< [ $H.T.app [H.T.id "ref"; H.T.id (env_tt current trait)]$ ] -> object $list:[i_decl]$ end >> in
 	       let ct            = 
                  let ct = <:class_type< $id:env_tt current trait$ >> in
 		 let env_inh = <:class_sig_item< inherit $ct$ >> in
