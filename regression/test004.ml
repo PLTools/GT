@@ -5,7 +5,7 @@ class show_a' =
   object(this)
     inherit @show[a] as super
     method c_C i x y = "new " ^ super#c_C i x y
-    method c_A _ _ x = "new A " ^ GT.transform(b) (new +show[b] this) () x
+    method c_A _ _ x = "new A " ^ GT.transform(b) (new +show[b] (ref this)) () x
   end
 
 let _ =
