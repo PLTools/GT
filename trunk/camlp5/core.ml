@@ -196,6 +196,7 @@ let generate t loc =
 		   gen         : < generate : string -> string; copy : 'a > as 'a;
                    proto_items : class_str_item list;
 		   items       : class_str_item list;
+                   defaults    : class_str_item list;
                    self_name   : string;
                    in_cluster  : bool;
 		   this        : string;
@@ -247,7 +248,11 @@ let generate t loc =
 			 (filter (fun (_, n) -> n <> name) cluster_specs)
 		      )
 		     in
-		     let items = vals @ [<:class_str_item< initializer $H.E.seq (H.E.app [H.E.lid ":="; H.E.id self; H.E.id this] ::inits)$ >>] @ methods in
+		     let items = 
+		       let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
+		       let this    = H.E.coerce (H.E.id this) (H.T.app (H.T.id (trait_t name trait)::map H.T.var prop.Plugin.proper_args)) in
+		       vals @ [<:class_str_item< initializer $H.E.seq (H.E.app [H.E.lid ":="; H.E.id self; this]::inits)$ >>] @ methods 
+		     in
 		     {gen         = g; 
 		      this        = this;
 		      self        = self;
@@ -255,6 +260,7 @@ let generate t loc =
                       env_sig     = env_methods;
 		      proto_items = []; 
 		      items       = items;
+                      defaults    = [];
                       in_cluster  = murec;
                       self_name   = cn;
 		     }
@@ -358,10 +364,12 @@ let generate t loc =
                      }
                      in
 		     let prop               = fst (p loc descr) in
-(*                     let i_def      , _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.self, H.T.id "unit")) descr prop in  *)
+                     let i_def      , _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.self, H.T.id "unit")) descr prop in  
+                     let i_impl     , _     = Plugin.generate_inherit false loc qname None descr prop in  
                      let i_def_proto, _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.env, H.T.id "unit")) descr prop in
 		     let _          , i_env = Plugin.generate_inherit false loc env_tt      None descr {prop with Plugin.proper_args = []} in
-                     {context with (*M.items = i_def :: context.M.items; *)
+                     {context with M.defaults = i_impl :: context.M.defaults;
+                                   M.items = i_def :: context.M.items;  
 		                   M.proto_items = i_def_proto :: context.M.proto_items;
                                    M.env_sig     = i_env :: context.M.env_sig
 		     }
@@ -375,7 +383,7 @@ let generate t loc =
 	       let p_def, _      = Plugin.generate_inherit false loc [trait_proto_t current trait] (Some (H.E.id context.M.self, H.T.id "unit")) p_descriptor (fst p) in
                let cproto        = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
                let ce            = 
-		 let ce = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::p_def::context.M.items$ end >> in
+		 let ce = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::p_def::context.M.defaults@context.M.items$ end >> in
 		 <:class_expr< let $flag:false$ $list:[H.P.id context.M.self, H.E.app [obj_magic; H.E.app [H.E.id "ref"; H.E.unit]]]$ in $ce$ >>
 	       in
                let env_t         = <:class_type< object $list:context.M.env_sig$ end >> in

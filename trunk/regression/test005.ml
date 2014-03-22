@@ -8,6 +8,7 @@ class show_c' =
     inherit @show[c] as super
     method c_E i x y = "new " ^ super#c_E i x y
     method c_B i x y = "new " ^ super#c_B i x y
+    method c_D i x y = "new " ^ super#c_D i x y
   end
 
 let _ =
