@@ -87,10 +87,11 @@ let trait_t       typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait
 let trait_proto_t typ trait = sprintf "%s_proto_%s" trait typ
 let env_tt        typ trait = trait ^ "_" ^ typ ^ "_env_tt"
 let tags_t        typ       = typ ^ "_tags"
+let tags_open_t   typ       = tags_t typ ^ "_open"
 let rewrap_t      n typ     = "rewrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
 let wrap_t        n typ     = "wrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
-let arg_tag       a         = "a" ^ a 
-let type_tag      a         = "t" ^ a 
+let arg_tag       n typ     = "a" ^ typ ^ "_" ^ string_of_int n
+let type_tag                = "t"
 
 let load_path = ref []
 

@@ -7,9 +7,9 @@ let _ =
   let compare x y = 
     match 
       GT.transform(t) 
-	(function (`aa x) -> fun y -> GT.compare_primitive x y | _ -> fun _ -> invalid_arg "type error (should not happen)") 
-        (function (`ab x) -> fun y -> GT.compare_primitive x y | _ -> fun _ -> invalid_arg "type error (should not happen)") 
-        (function (`ac x) -> fun y -> GT.compare_primitive x y | _ -> fun _ -> invalid_arg "type error (should not happen)") new @compare[t] (`tt x) y 
+	(function (`at_0 x) -> fun y -> GT.compare_primitive x y | _ -> fun _ -> invalid_arg "type error (should not happen)") 
+        (function (`at_1 x) -> fun y -> GT.compare_primitive x y | _ -> fun _ -> invalid_arg "type error (should not happen)") 
+        (function (`at_2 x) -> fun y -> GT.compare_primitive x y | _ -> fun _ -> invalid_arg "type error (should not happen)") new @compare[t] (`t x) y 
     with
     | GT.EQ -> "EQ"
     | GT.LT -> "LT"

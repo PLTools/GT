@@ -1,15 +1,5 @@
-@type ('a, 'b) a = A of 'a | B of 'b deriving show, map
-and   ('a, 'b) t = X of ('a, 'b) a * ('a, 'b) t GT.list | 
-                   Y of ('b, 'a) a * ('a, 'b) t GT.list  deriving show, map
-(*
-let _ =
-  let x : (int, string) t = X (A 1, [Y (A "2", []); X (A 2, []); Y (A "3", [])]) in
-  ()
-*)
-(*  let y = GT.transform(t) (fun _ x -> x) (fun _ x -> x) new @map[t] () x in*)
-(*
-  Printf.printf "%s\n" (GT.transform(t) (fun _ x -> string_of_int x) (fun _ x -> x) new @show[t] () x) 
-*)
-(*;
-  Printf.printf "%s\n" (GT.transform(t) (fun _ x -> x) (fun _ x -> string_of_int x) new @show[t] () y)
-*)
+@type a = [`A of GT.int | `B of GT.string] deriving show, eq, compare
+@type b = [`C of GT.int | `D of GT.string] deriving show, eq, compare
+@type c = [a | b] deriving show, eq, compare
+
+ 

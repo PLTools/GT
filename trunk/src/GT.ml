@@ -44,12 +44,12 @@ class ['syn] foldr_int_t =
     inherit ['syn] @foldl[int]
   end
 
-type eq_int_tags = [`tint of int]
+type eq_int_tags = [`t of int]
 
 class eq_int_t =
   object
     inherit [eq_int_tags, bool] @int
-    method value inh x = match inh with `tint y -> x = y 
+    method value inh x = match inh with `t y -> x = y 
   end
 
 type comparison = LT | EQ | GT
@@ -85,7 +85,7 @@ let compare_vari x y =
 class compare_int_t =
   object
     inherit [eq_int_tags, comparison] @int
-    method value inh x = match inh with `tint y -> compare_primitive y x
+    method value inh x = match inh with `t y -> compare_primitive y x
   end
 
 let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
@@ -124,18 +124,18 @@ class ['syn] foldr_string_t =
     inherit ['syn] @foldl[string]
   end
 
-type eq_string_tags = [`tstring of string]
+type eq_string_tags = [`t of string]
 
 class eq_string_t =
   object
     inherit [eq_string_tags, bool] @string
-    method value inh x = match inh with `tstring y -> x = y 
+    method value inh x = match inh with `t y -> x = y 
   end
 
 class compare_string_t =
   object
     inherit [eq_string_tags, comparison] @string
-    method value inh s = match inh with `tstring d -> compare_primitive d s 
+    method value inh s = match inh with `t d -> compare_primitive d s 
   end
 
 let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
@@ -204,21 +204,21 @@ class ['a, 'syn] foldr_list_t =
     method c_Cons s _ x xs = x.fx (xs.fx s)
   end
 
-type 'a eq_list_tags = [`tlist of 'a list | `aa of 'a]
+type 'a eq_list_tags = [`t of 'a list | `alist_0 of 'a]
 
-let wrap_list x = `aa x
-let rewrap_list f = function `aa x -> f x | _ -> invalid_arg "type error (should not happen)"
+let wrap_list x = `alist_0 x
+let rewrap_list f = function `alist_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
 
 class ['a] eq_list_t =
   object
     inherit ['a, bool, 'a eq_list_tags, bool] @list
     method c_Nil inh subj = 
       match inh with 
-      | `tlist [] -> true 
+      | `t [] -> true 
       | _ -> false
     method c_Cons inh subj x xs = 
       match inh with 
-      | `tlist (y::ys) -> x.fx (`aa y) && xs.fx (`tlist ys) 
+      | `t (y::ys) -> x.fx (`alist_0 y) && xs.fx (`t ys) 
       | _ -> false
   end
 
@@ -227,15 +227,15 @@ class ['a] compare_list_t =
     inherit ['a, comparison, 'a eq_list_tags, comparison] @list
     method c_Nil inh subj =
       match inh with
-      | `tlist [] -> EQ
-      | `tlist _  -> GT
+      | `t [] -> EQ
+      | `t _  -> GT
       | _ -> invalid_arg "type error (should not happen)"
     method c_Cons inh subj x xs =
       match inh with
-      | `tlist [] -> LT
-      | `tlist (y::ys) -> 
-	  (match x.fx (`aa y) with
-	  | EQ -> xs.fx (`tlist ys)
+      | `t [] -> LT
+      | `t (y::ys) -> 
+	  (match x.fx (`alist_0 y) with
+	  | EQ -> xs.fx (`t ys)
 	  | c  -> c
 	  )
       | _ -> invalid_arg "type error (should not happen)"
