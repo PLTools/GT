@@ -1,5 +1,5 @@
 (**************************************************************************
- *  Copyright (C) 2012-2013
+ *  Copyright (C) 2012-2014
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
  *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
  *
@@ -56,6 +56,10 @@ let ctyp_of_instance loc args qname =
 
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
+  let make_arg_tag name args = 	     
+    let args = mapi (fun i a -> a, i) args in
+    fun a -> arg_tag (assoc a args) name
+  in
   let rec replace_t a n typ =
     let replace_t = replace_t a n in 
     let replace_pv lpv = 
@@ -153,6 +157,7 @@ let generate t loc =
            Plugin.is_polyvar = polyvar;
            Plugin.type_args  = args;
            Plugin.name       = current;
+	   Plugin.arg_tag    = make_arg_tag current args;
            Plugin.default    = { 
              Plugin.inh_t       =`Mono (H.T.var inh);
              Plugin.syn_t       = H.T.var syn;
@@ -271,6 +276,7 @@ let generate t loc =
                              Plugin.is_polyvar = false;
                              Plugin.type_args  = args;
                              Plugin.name       = t;
+			     Plugin.arg_tag    = make_arg_tag t args;
                              Plugin.default    = { 
                                Plugin.inh_t       = `Mono (H.T.var inh);
                                Plugin.syn_t       = H.T.var syn;
@@ -317,7 +323,7 @@ let generate t loc =
                 let context =
                   match case with
                   | `Con (cname, cargs) ->
-                     let args = fst (fold_right (fun _ (acc, i) -> (g#generate (sprintf "p%d" i))::acc, i+1) cargs ([], 0)) in
+                     let args = mapi (fun i a -> g#generate (sprintf "p%d" i)) cargs in
                      let constr = {
                        Plugin.constr = cname;
                        Plugin.args   = combine args cargs;
@@ -335,16 +341,12 @@ let generate t loc =
 			      let rec inner = function
 			       | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
 			       | Instance (_, args, qname) -> 
-				   let name, _ = hdtl loc (rev qname) in
 				   let args = 	
 				     match prop.inh_t with
 				     | `Mono _ -> map inner args
 				     | `Poly _ -> 
-					 let n = ref 0 in
-					 map 
-					   (fun a ->
-					     let i = !n in
-					     incr n;
+					 mapi 
+					   (fun i a ->
                                              let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
 					     let tag = 
 					       match a with
@@ -393,6 +395,7 @@ let generate t loc =
                        Plugin.is_polyvar = true;
                        Plugin.type_args  = args;
                        Plugin.name       = name;
+		       Plugin.arg_tag    = make_arg_tag name args;
                        Plugin.default    = prop;
                      }
                      in
@@ -434,9 +437,8 @@ let generate t loc =
                (function 
                 | `Con (cname, cargs) as case -> 
                     iter (add_derived_member case) derived;
-                    let args, _ = fold_right (fun arg (acc, n) -> (sprintf "p%d" n) :: acc, n+1) cargs ([], 1) in
-                    let args    = rev args in
-                    let patt    = H.P.app ((if polyvar then H.P.variant else H.P.id) cname :: map H.P.id args) in
+                    let args = rev (mapi (fun i a -> sprintf "p%d" i) cargs) in
+                    let patt = H.P.app ((if polyvar then H.P.variant else H.P.id) cname :: map H.P.id args) in
                     let met_name = cmethod cname in
                     let met_sig  = 
                       let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
@@ -576,26 +578,22 @@ let generate t loc =
                tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (tt::orig_args));
                tdPrv = VaVal false;
                tdDef = (
-	         let n = ref 0 in
 	         H.T.eq_variant (
                    (H.T.pv_constr type_tag [H.T.var tt])::
 	           base_types @
-                   (map (fun a -> let i = !n in incr n; H.T.pv_constr (arg_tag i current) [H.T.var a]) orig_args)
+                   (mapi (fun i a -> H.T.pv_constr (arg_tag i current) [H.T.var a]) orig_args)
                  )
                );
                tdCon = VaVal []
              }     
 	     in
 	     let iargs = 
-	       let n = ref 0 in
-	       map (fun a -> let b, c = wrap_t !n current, rewrap_t !n current in incr n; a, b, c) orig_args
+	       mapi (fun i a -> a, wrap_t i current, rewrap_t i current) orig_args
 	     in
 	     let tagdefs =
 	       let n = ref 0 in
 	       flatten (
-	         map (fun (arg, warg, rewarg) -> 
-		        let i = !n in
-			incr n;
+	         mapi (fun i (arg, warg, rewarg) -> 
                         [<:str_item< value $list:[H.P.id warg, 
                                                   H.E.func [H.P.id "x"] 
                                                            (H.E.app [H.E.variant (arg_tag i current); H.E.id "x"])
