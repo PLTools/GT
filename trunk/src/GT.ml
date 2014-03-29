@@ -44,11 +44,11 @@ class ['syn] foldr_int_t =
     inherit ['syn] @foldl[int]
   end
 
-type eq_int_tags = [`t of int]
+type int_tags = [`t of int]
 
 class eq_int_t =
   object
-    inherit [eq_int_tags, bool] @int
+    inherit [int_tags, bool] @int
     method value inh x = match inh with `t y -> x = y 
   end
 
@@ -84,7 +84,7 @@ let compare_vari x y =
 
 class compare_int_t =
   object
-    inherit [eq_int_tags, comparison] @int
+    inherit [int_tags, comparison] @int
     method value inh x = match inh with `t y -> compare_primitive y x
   end
 
@@ -124,17 +124,17 @@ class ['syn] foldr_string_t =
     inherit ['syn] @foldl[string]
   end
 
-type eq_string_tags = [`t of string]
+type string_tags = [`t of string]
 
 class eq_string_t =
   object
-    inherit [eq_string_tags, bool] @string
+    inherit [string_tags, bool] @string
     method value inh x = match inh with `t y -> x = y 
   end
 
 class compare_string_t =
   object
-    inherit [eq_string_tags, comparison] @string
+    inherit [string_tags, comparison] @string
     method value inh s = match inh with `t d -> compare_primitive d s 
   end
 
@@ -204,14 +204,14 @@ class ['a, 'syn] foldr_list_t =
     method c_Cons s _ x xs = x.fx (xs.fx s)
   end
 
-type 'a eq_list_tags = [`t of 'a list | `alist_0 of 'a]
+type 'a list_tags = [`t of 'a list | `alist_0 of 'a]
 
 let wrap_list x = `alist_0 x
 let rewrap_list f = function `alist_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
 
 class ['a] eq_list_t =
   object
-    inherit ['a, bool, 'a eq_list_tags, bool] @list
+    inherit ['a, bool, 'a list_tags, bool] @list
     method c_Nil inh subj = 
       match inh with 
       | `t [] -> true 
@@ -224,7 +224,7 @@ class ['a] eq_list_t =
 
 class ['a] compare_list_t =
   object
-    inherit ['a, comparison, 'a eq_list_tags, comparison] @list
+    inherit ['a, comparison, 'a list_tags, comparison] @list
     method c_Nil inh subj =
       match inh with
       | `t [] -> EQ
@@ -238,5 +238,95 @@ class ['a] compare_list_t =
 	  | EQ -> xs.fx (`t ys)
 	  | c  -> c
 	  )
+      | _ -> invalid_arg "type error (should not happen)"
+  end
+
+type 'a poption = 'a option
+type 'a option = 'a poption
+
+class type ['a, 'pa, 'inh, 'syn] option_tt =
+  object
+    method c_None : 'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method c_Some : 'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
+                            ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method t_option : ('inh -> 'a -> 'pa) -> 'inh -> 'a option -> 'syn
+  end
+
+let option : (('inh -> 'a -> 'pa) -> ('a, 'pa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn) t =
+  let rec option_gcata fa trans inh subj =
+    let rec self = option_gcata fa trans
+    and tpo = object method a = fa end in
+    match subj with
+      None   -> trans#c_None inh (make self subj tpo)
+    | Some p -> trans#c_Some inh (make self subj tpo) (make fa p tpo)
+  in
+  {gcata = option_gcata}
+
+class virtual ['a, 'pa, 'inh, 'syn] option_t =
+  object (this)
+    method virtual c_None :
+      'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method virtual c_Some :
+      'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
+        ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+    method t_option fa = transform option fa this
+  end
+
+class ['a] show_option_t =
+  object
+    inherit ['a, string, unit, string] @option
+    method c_None  _ _  = "None"
+    method c_Some _ _ x = "Some (" ^ x.fx () ^ ")"
+  end
+      
+class ['a, 'pa] map_option_t =
+  object
+    inherit ['a, 'pa, unit, 'pa option] @option
+    method c_None _ _ = None
+    method c_Some _ _ x = Some (x.fx ())
+  end
+
+class ['a, 'syn] foldl_option_t =
+  object
+    inherit ['a, 'syn, 'syn, 'syn] @option
+    method c_None s _ = s
+    method c_Some s _ x = x.fx s
+  end
+
+class ['a, 'syn] foldr_option_t =
+  object
+    inherit ['a, 'syn] @foldl[option]
+  end
+
+type 'a option_tags = [`t of 'a option | `aoption_0 of 'a]
+
+let wrap_option x = `aoption_0 x
+let rewrap_option f = function `aoption_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
+
+class ['a] eq_option_t =
+  object
+    inherit ['a, bool, 'a option_tags, bool] @option
+    method c_None inh subj = 
+      match inh with 
+      | `t None -> true 
+      | _ -> false
+    method c_Some inh subj x = 
+      match inh with 
+      | `t (Some y) -> x.fx (`aoption_0 y)
+      | _ -> false
+  end
+
+class ['a] compare_option_t =
+  object
+    inherit ['a, comparison, 'a option_tags, comparison] @option
+    method c_None inh subj =
+      match inh with
+      | `t None -> EQ
+      | `t _  -> GT
+      | _ -> invalid_arg "type error (should not happen)"
+    method c_Some inh subj x =
+      match inh with
+      | `t None -> LT
+      | `t (Some y) -> x.fx (`aoption_0 y)
       | _ -> invalid_arg "type error (should not happen)"
   end

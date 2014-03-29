@@ -332,13 +332,13 @@ let generate t loc =
 			    if s = trait
 			    then
 			      let outer = current in
-			      let rec inner outer = function
+			      let rec inner = function
 			       | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
 			       | Instance (_, args, qname) -> 
 				   let name, _ = hdtl loc (rev qname) in
 				   let args = 	
 				     match prop.inh_t with
-				     | `Mono _ -> map (inner outer) args
+				     | `Mono _ -> map inner args
 				     | `Poly _ -> 
 					 let n = ref 0 in
 					 map 
@@ -351,7 +351,7 @@ let generate t loc =
 					       | Variable (_, _) -> arg_tag i outer
 					       | Instance (_, _, _) -> type_tag
 					     in
-                                             H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner name a; H.E.app [H.E.variant tag; H.E.id "y"]])]
+                                             H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
 					   ) 
 					   args
 				   in				   
@@ -367,7 +367,7 @@ let generate t loc =
 				   )
 			       | Arbitrary _ -> invalid_arg "Unsupported type"
 			       | Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
-			      in (try Some (inner outer t) with Invalid_argument "Unsupported type" -> None)
+			      in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
 			    else None
 			 ); 
                      } 
