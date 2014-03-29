@@ -56,6 +56,46 @@ let ctyp_of_instance loc args qname =
 
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
+  let rec replace_t a n typ =
+    let replace_t = replace_t a n in 
+    let replace_pv lpv = 
+      map 
+	(function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
+          let args = map replace_t args in
+          <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
+	) 
+	lpv 
+    in
+    match typ with
+    | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
+    | <:ctyp< $t1$ $t2$ >> -> 
+	(match t1 with
+	| <:ctyp< $lid:s$ >> as typ when s = n ->
+            let rec inner args t =
+              match args, t with
+              | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else typ
+              | arg::args, <:ctyp< $t1$ $t2$ >> ->
+                  (match t1 with 
+                   | <:ctyp< ' $b$ >> when arg = b -> inner args t2
+                   | _ -> typ
+                  )
+              | _ -> typ
+            in
+            inner a t2
+	| _ -> <:ctyp< $replace_t t1$ $replace_t t2$ >>
+	)
+    | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $replace_t t1$ -> $replace_t t2$ >>
+    | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $replace_t t$ >>
+    | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $replace_t t1$ == private $replace_t t2$ >>
+    | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $replace_t t1$ == $replace_t t2$ >>
+    | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $replace_t t$ >>
+    | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map replace_t lt$ ) >> 
+    | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:replace_pv lpv$ ] >>
+    | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:replace_pv lpv$ ] >>
+    | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ > >>
+    | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
+    | typ -> typ
+  in
   let obj_magic = H.E.acc (map H.E.id ["Obj"; "magic"]) in
   let t, d = split t in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
@@ -288,15 +328,17 @@ let generate t loc =
                        Plugin.subj     = g#generate "subj";
                        Plugin.new_name = (fun s -> g#generate s); 
                        Plugin.trait    = 
-		         (fun s t -> 
+		         (fun s t -> 			     
 			    if s = trait
 			    then
-			      let rec inner = function
+			      let outer = current in
+			      let rec inner outer = function
 			       | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
 			       | Instance (_, args, qname) -> 
+				   let name, _ = hdtl loc (rev qname) in
 				   let args = 	
 				     match prop.inh_t with
-				     | `Mono _ -> map inner args
+				     | `Mono _ -> map (inner outer) args
 				     | `Poly _ -> 
 					 let n = ref 0 in
 					 map 
@@ -304,14 +346,12 @@ let generate t loc =
 					     let i = !n in
 					     incr n;
                                              let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
-					     let tag =
+					     let tag = 
 					       match a with
-					       | Variable (_, a) -> arg_tag a
-					       | Instance (_, _, qname) ->
-						   let typ, _ = hdtl loc (rev qname) in
-                                                   type_tag typ 
+					       | Variable (_, _) -> arg_tag i outer
+					       | Instance (_, _, _) -> type_tag
 					     in
-                                             H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
+                                             H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner name a; H.E.app [H.E.variant tag; H.E.id "y"]])]
 					   ) 
 					   args
 				   in				   
@@ -327,7 +367,7 @@ let generate t loc =
 				   )
 			       | Arbitrary _ -> invalid_arg "Unsupported type"
 			       | Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
-			      in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
+			      in (try Some (inner outer t) with Invalid_argument "Unsupported type" -> None)
 			    else None
 			 ); 
                      } 
@@ -337,13 +377,6 @@ let generate t loc =
                        let body = H.E.func (map H.P.id ([env.Plugin.inh; env.Plugin.subj] @ args)) (generator#constr env constr) in
                        <:class_str_item< method $lid:name$ = $body$ >>
                      in
-(*
-		     let bridge_def = 
-		       let name = cmethod cname in
-		       let body = H.E.method_call (H.E.id context.M.self_name) name in
-		       <:class_str_item< method $lid:name$ = $body$ >>
-		     in
-*)
                      {context with M.proto_items = m_def :: context.M.proto_items}
 
 
@@ -441,7 +474,8 @@ let generate t loc =
                     (patt, VaVal None, expr),
                     [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
                     [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>],
-                    [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>]
+                    [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>],
+		    []
 
                 | `Type (args, qname) as case -> 
 		    let args = map (function Variable (_, a) -> a) args in (* TODO *)
@@ -469,7 +503,8 @@ let generate t loc =
                     (H.P.alias (H.P.type_p qname) (H.P.id subj), VaVal None, expr),
                     [<:class_str_item< inherit $ce$ >>],
                     [<:class_sig_item< inherit $ct class_t$  >>],
-                    [<:class_sig_item< inherit $ct class_tt$ >>]
+                    [<:class_sig_item< inherit $ct class_tt$ >>],
+		    [args, qname]
                ) 
                (match descr with `Vari cons | `Poly cons -> cons)
            in
@@ -485,7 +520,7 @@ let generate t loc =
              | [] -> expr
              | _  -> H.E.letrec local_defs expr
            in
-           let cases, methods, methods_sig, methods_sig_t = split4 match_cases in
+           let cases, methods, methods_sig, methods_sig_t, base_types = split5 match_cases in
 	   let type_methods, type_methods_sig = split (get_type_methods ()) in
            let methods          = flatten methods       in
            let methods_sig      = flatten methods_sig   in
@@ -516,35 +551,61 @@ let generate t loc =
            let tags =
 	     let g  = name_generator orig_args in
              let tt = g#generate "t" in
+	     let td_open = 
+	       if polyvar 
+	       then 
+		 let self = g#generate "self" in [{
+		   tdNam = VaVal (loc, VaVal (tags_open_t current));
+		   tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::tt::orig_args));
+		   tdPrv = VaVal false;
+		   tdDef = H.T.var self;
+                   tdCon = VaVal [H.T.var self, H.T.more_variant [H.T.pv_type (H.T.app (H.T.id (tags_t current)::map H.T.var (tt::orig_args)))]]
+		 }]
+	       else []
+	     in
+	     let base_types = 
+	       map 
+		 (fun (args, qname) -> 
+		   let qname = H.T.acc (map H.T.id (map_last loc tags_t qname)) in
+                   H.T.pv_type (H.T.app (qname::map H.T.var (tt::args)))
+		 ) 
+		 (flatten base_types) 
+	     in
 	     let td = {
                tdNam = VaVal (loc, VaVal (tags_t current));
                tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (tt::orig_args));
                tdPrv = VaVal false;
-               tdDef = 
+               tdDef = (
+	         let n = ref 0 in
 	         H.T.eq_variant (
-                   (H.T.pv_constr (type_tag current) [H.T.var tt])::
-                   (map (fun a -> H.T.pv_constr (arg_tag a) [H.T.var a]) orig_args)
-                 ); 
+                   (H.T.pv_constr type_tag [H.T.var tt])::
+	           base_types @
+                   (map (fun a -> let i = !n in incr n; H.T.pv_constr (arg_tag i current) [H.T.var a]) orig_args)
+                 )
+               );
                tdCon = VaVal []
-              }     
+             }     
 	     in
 	     let iargs = 
 	       let n = ref 0 in
 	       map (fun a -> let b, c = wrap_t !n current, rewrap_t !n current in incr n; a, b, c) orig_args
 	     in
 	     let tagdefs =
+	       let n = ref 0 in
 	       flatten (
 	         map (fun (arg, warg, rewarg) -> 
+		        let i = !n in
+			incr n;
                         [<:str_item< value $list:[H.P.id warg, 
                                                   H.E.func [H.P.id "x"] 
-                                                           (H.E.app [H.E.variant (arg_tag arg); H.E.id "x"])
+                                                           (H.E.app [H.E.variant (arg_tag i current); H.E.id "x"])
                                                  ]$ 
                          >>;
                          <:str_item< value $list:[H.P.id rewarg,
                                                   H.E.func 
                                                     [H.P.id "f"]
                                                     (H.E.abstr [
-                                                      H.P.app [H.P.variant (arg_tag arg); H.P.id "x"], 
+                                                      H.P.app [H.P.variant (arg_tag i current); H.P.id "x"], 
                                                       VaVal None,  
                                                       H.E.app [H.E.id "f"; H.E.id "x"];
 
@@ -575,7 +636,7 @@ let generate t loc =
 	  	     ) iargs
 	       ) 
 	     in
-	     td, tagdefs, tagdecls
+	     td::td_open, tagdefs, tagdecls
 	   in
 	   tags,
 	   (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
@@ -590,18 +651,18 @@ let generate t loc =
   in
   let tags, tuples, defs, decls, classes, derived_classes = split6 defs in
   let tag_types, tag_defs, tag_decls                      = split3 tags in
-  let tag_defs, tag_decls                                 = flatten tag_defs, flatten tag_decls in
+  let tag_types, tag_defs, tag_decls                      = flatten tag_types, flatten tag_defs, flatten tag_decls in
   let pnames, tnames                                      = split tuples in
   let class_defs, class_decls                             = split classes in
   let derived_class_defs, derived_class_decls             = 
     let class_defs, protos, defs, class_decls = split4 derived_classes in
     class_defs@(flatten protos)@(flatten defs), flatten class_decls
   in
-  let cata_def      = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
-  let type_def      = <:str_item< type $list:t$ >> in
-  let type_decl     = <:sig_item< type $list:t$ >> in
-  let tag_type_def  = <:str_item< type $list:tag_types$ >> in
-  let tag_type_decl = <:sig_item< type $list:tag_types$ >> in
-  <:str_item< declare $list:type_def::tag_type_def::tag_defs@class_defs@[cata_def]@derived_class_defs$ end >>,
-  <:sig_item< declare $list:type_decl::tag_type_decl::tag_decls@class_decls@decls@derived_class_decls$ end >> 
+  let cata_def       = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
+  let type_def       = <:str_item< type $list:t$ >> in
+  let type_decl      = <:sig_item< type $list:t$ >> in
+  let tag_type_defs  = map (fun t -> <:str_item< type $list:[t]$ >>) tag_types in
+  let tag_type_decls = map (fun t -> <:sig_item< type $list:[t]$ >>) tag_types in
+  <:str_item< declare $list:type_def::tag_type_defs@tag_defs@class_defs@[cata_def]@derived_class_defs$ end >>,
+  <:sig_item< declare $list:type_decl::tag_type_decls@tag_decls@class_decls@decls@derived_class_decls$ end >> 
     

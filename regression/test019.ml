@@ -7,7 +7,7 @@ let _ =
   let z'  = C [4] in
   let z'' = C [] in
   let compare x y = 
-    match GT.transform(t) new @compare[t] (`tt x) y with
+    match GT.transform(t) new @compare[t] (`t x) y with
     | GT.GT -> "GT"
     | GT.LT -> "LT"
     | GT.EQ -> "EQ"

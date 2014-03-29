@@ -1,3 +1,3 @@
-@type ('a, 'b) a = A of 'a | B of 'b deriving show, map
-and   ('a, 'b) t = X of ('a, 'b) a * ('a, 'b) t GT.list | 
-                   Y of ('b, 'a) a * ('a, 'b) t GT.list deriving show, map
+@type a = [`A of GT.int | `B of GT.string] deriving show, eq, compare
+@type b = [`C of GT.int | `D of GT.string] deriving show, eq, compare
+@type c = [a | b] deriving show, eq, compare
