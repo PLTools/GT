@@ -111,6 +111,7 @@ type type_descriptor = {
     is_polyvar : bool;
     type_args  : string list;
     name       : string;
+    arg_tag    : string -> string;
     default    : properties;
   }
 

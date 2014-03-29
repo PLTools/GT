@@ -21,13 +21,6 @@ let _ =
         object
 	  inherit generator
 	  method constr env constr =
-	    let arg_num a =
-	      let n = ref 0 in
-	      try
-	        ignore (map (fun arg -> let i = !n in incr n; if a = arg then Pervasives.raise (Found i) else 0) d.type_args);
-		Pervasives.raise Not_found
-	      with Found i -> i
-	    in
 	    let gen    = name_generator (map fst constr.args) in
 	    let other  = gen#generate "other" in
 	    let args   = map (fun a -> a, gen#generate a) (map fst constr.args) in
@@ -50,7 +43,7 @@ let _ =
 				   in
 				   name qname
 			       )
-			   | Variable  (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (arg_tag (arg_num a) d.name); E.id (arg b)]]
+			   | Variable  (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (d.arg_tag a); E.id (arg b)]]
 			   | Self      _      -> E.app [E.gt_fx (E.id b); E.app [E.variant type_tag; E.id (arg b)]]
 			   | Arbitrary _      -> E.acc [E.id "GT"; E.uid "EQ"]
 			   )
