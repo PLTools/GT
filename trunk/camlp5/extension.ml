@@ -171,7 +171,7 @@ EXTEND
   | t=instance -> 
       match t with 
       | Instance (t, a, q) -> `Type t, `Type (a, q) 
-      | _ -> invalid_arg "should not happen"
+      | _ -> oops loc "variable is not allowed here"
   ]];
 
   con_args: [[
