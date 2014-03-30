@@ -60,6 +60,7 @@ let generate t loc =
     let args = mapi (fun i a -> a, i) args in
     fun a -> arg_tag (assoc a args) name
   in
+(*
   let rec replace_t a n typ =
     let replace_t = replace_t a n in 
     let replace_pv lpv = 
@@ -100,6 +101,7 @@ let generate t loc =
     | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
     | typ -> typ
   in
+*)
   let obj_magic = H.E.acc (map H.E.id ["Obj"; "magic"]) in
   let t, d = split t in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
@@ -287,7 +289,7 @@ let generate t loc =
 			   in
                            let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
                            let typ     = H.T.app (H.T.id t :: map H.T.var args) in
-			   let inh_t   = generate_inh_type loc [t] args prop.Plugin.inh_t in
+			   let inh_t   = get_inh_type prop.Plugin.inh_t in
 			   let targs   = map (fun a -> H.T.arrow [inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
 			   <:class_sig_item< method $tmethod t$ : $H.T.arrow (targs @ [inh_t; typ; prop.Plugin.syn_t])$ >>			   
 			 )
@@ -337,7 +339,6 @@ let generate t loc =
 		         (fun s t -> 			     
 			    if s = trait
 			    then
-			      let outer = current in
 			      let rec inner = function
 			       | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
 			       | Instance (_, args, qname) -> 
@@ -350,7 +351,7 @@ let generate t loc =
                                              let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
 					     let tag = 
 					       match a with
-					       | Variable (_, _) -> arg_tag i outer
+					       | Variable (_, _)    -> arg_tag i current
 					       | Instance (_, _, _) -> type_tag
 					     in
                                              H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
@@ -591,7 +592,6 @@ let generate t loc =
 	       mapi (fun i a -> a, wrap_t i current, rewrap_t i current) orig_args
 	     in
 	     let tagdefs =
-	       let n = ref 0 in
 	       flatten (
 	         mapi (fun i (arg, warg, rewarg) -> 
                         [<:str_item< value $list:[H.P.id warg, 
@@ -647,6 +647,22 @@ let generate t loc =
       ) 
       d
   in
+  let open_type td =   
+    match td.tdDef with
+    | <:ctyp< [ = $list:lcons$ ] >> ->
+	let get_val x = get_val loc x in
+        let name      = type_open_t (get_val (snd (get_val td.tdNam))) in
+	let args      = map (fun (VaVal (Some name), _) -> name) (get_val td.tdPrm) in
+	let gen       = name_generator args in
+        let self      = gen#generate "self" in
+	[{td with tdNam = VaVal (loc, VaVal name);
+	          tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::args));
+	          tdDef = H.T.var self;
+                  tdCon = VaVal [H.T.var self, <:ctyp< [> $list:lcons$ ]>>]
+	 }
+        ]
+    | _ -> []
+  in
   let tags, tuples, defs, decls, classes, derived_classes = split6 defs in
   let tag_types, tag_defs, tag_decls                      = split3 tags in
   let tag_types, tag_defs, tag_decls                      = flatten tag_types, flatten tag_defs, flatten tag_decls in
@@ -657,8 +673,9 @@ let generate t loc =
     class_defs@(flatten protos)@(flatten defs), flatten class_decls
   in
   let cata_def       = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
-  let type_def       = <:str_item< type $list:t$ >> in
-  let type_decl      = <:sig_item< type $list:t$ >> in
+  let open_t         = flatten (map open_type t) in
+  let type_def       = <:str_item< type $list:t@open_t$ >> in
+  let type_decl      = <:sig_item< type $list:t@open_t$ >> in
   let tag_type_defs  = map (fun t -> <:str_item< type $list:[t]$ >>) tag_types in
   let tag_type_decls = map (fun t -> <:sig_item< type $list:[t]$ >>) tag_types in
   <:str_item< declare $list:type_def::tag_type_defs@tag_defs@class_defs@[cata_def]@derived_class_defs$ end >>,

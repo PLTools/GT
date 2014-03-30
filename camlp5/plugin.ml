@@ -87,7 +87,8 @@ let trait_t       typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait
 let trait_proto_t typ trait = sprintf "%s_proto_%s" trait typ
 let env_tt        typ trait = trait ^ "_" ^ typ ^ "_env_tt"
 let tags_t        typ       = typ ^ "_tags"
-let tags_open_t   typ       = tags_t typ ^ "_open"
+let type_open_t   typ       = typ ^ "_open"
+let tags_open_t   typ       = type_open_t (tags_t typ)
 let rewrap_t      n typ     = "rewrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
 let wrap_t        n typ     = "wrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
 let arg_tag       n typ     = "a" ^ typ ^ "_" ^ string_of_int n
@@ -125,7 +126,7 @@ type env = {
     subj     : string;
     new_name : string -> string;
     trait    : string -> typ -> expr option;
-}
+  }
 
 class virtual generator =
   object
@@ -299,14 +300,7 @@ module Helper (L : sig val loc : loc end) =
       end
   end
 
-let generate_inh_type loc qname args = 
-  let module H = Helper (struct let loc = loc end) in
-  function
-  | `Mono inh -> inh
-  | `Poly (inh, f) ->  
-      let qname = map_last loc tags_t qname in
-      let args = inh :: map f args in
-      H.T.app (H.T.acc (map H.T.id qname) :: args)  
+let get_inh_type = function `Mono inh | `Poly (inh, _) -> inh
 
 let generate_classes loc trait descr (prop, generator) (this, env, env_t, b_proto_def, b_def, b_proto_decl, b_decl) =
   let class_targs = prop.proper_args in 
@@ -334,7 +328,7 @@ let generate_inherit base_class loc qname arg descr prop =
     if base_class 
     then
       flatten (map (fun a -> [<:ctyp< ' $a$ >>; prop.arg_img a]) descr.type_args) @
-      [generate_inh_type loc [descr.name] descr.type_args prop.inh_t; prop.syn_t] 
+      [get_inh_type prop.inh_t; prop.syn_t] 
     else map (fun a -> <:ctyp< ' $a$ >>) prop.proper_args
   in
   let ce = 
@@ -364,9 +358,38 @@ module M = Map.Make (String)
 let m : t M.t ref = ref M.empty
 
 let register name t =
+  let generalize t = 
+    fun loc descr ->
+      let module H = Helper (struct let loc = loc end) in
+      let (prop, gen) as return = t loc descr in
+      if descr.is_polyvar 
+      then 
+	match prop.inh_t with
+	| `Mono _ -> return
+	| `Poly (inh, f) ->
+	    let ng = name_generator prop.proper_args in
+	    let t = ng#generate "t" in
+	    let inh_t =
+	      let tags_name = tags_open_t descr.name in
+	      let type_name = type_open_t descr.name in
+	      let args = (H.T.var t) :: inh :: map f descr.type_args in
+	      H.T.app (H.T.id tags_name :: args)
+	    in
+	    {prop with proper_args = t :: prop.proper_args; inh_t = `Poly (inh_t, f)}, gen
+      else 
+	match prop.inh_t with
+	| `Mono _ -> return
+	| `Poly (inh, f) ->
+	    let inh_t =
+	      let name = tags_t descr.name in
+	      let args = inh :: map f descr.type_args in
+	      H.T.app (H.T.id name :: args)
+	    in
+	    {prop with inh_t = `Poly (inh_t, f)}, gen
+  in
   if not (M.mem name !m) 
-  then m := M.add name t !m
-
+  then m := M.add name (generalize t) !m
+ 
 let get name =
   if not (M.mem name !m) then None else Some (M.find name !m)
 

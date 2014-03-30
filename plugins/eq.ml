@@ -13,10 +13,22 @@ let _ =
     (fun loc d -> 
        let module H = Helper (struct let loc = loc end) in       
        H.(
+        let proper_args, inh_t =
+	  if d.is_polyvar 
+	  then
+            let ng   = name_generator d.type_args in
+            let self = ng#generate "self" in
+	    let args = self :: d.type_args in
+	    args,
+	    `Poly (T.app (T.id (type_open_t d.name) :: map T.var args), fun x -> T.var x)
+	  else
+	    d.type_args,
+	    `Poly (T.app (T.id d.name :: map T.var d.type_args), fun x -> T.var x)
+	in        
         {
-          inh_t       = `Poly (T.app (T.id d.name :: map T.var d.type_args) , fun x -> T.var x); 
+          inh_t       = inh_t;
           syn_t       = T.id "bool";
-          proper_args = d.type_args; 
+          proper_args = proper_args;
           arg_img     = (fun _ -> T.id "bool")
         }, 
         object
