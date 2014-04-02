@@ -1,4 +1,4 @@
-@type 'a t = A of 'a GT.option GT.list deriving show, eq
+@type 'a t = A of 'a GT.option GT.list with show, eq
 
 let _ =
   let x = A [Some 1; None; Some 2; None]   in

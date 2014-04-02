@@ -1,4 +1,4 @@
-@type 'a tree = Node of 'a * 'a tree GT.list deriving show, foldl, foldr
+@type 'a tree = Node of 'a * 'a tree GT.list with show, foldl, foldr
 
 let _ =
   let x  = Node (1, [Node (2, [Node (5, [])]); Node (3, []); Node (4, [Node (6, [])])]) in

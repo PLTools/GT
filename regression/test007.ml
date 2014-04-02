@@ -1,4 +1,4 @@
-@type ('a, 'b) t = A of 'a GT.list * 'b GT.list deriving show, map
+@type ('a, 'b) t = A of 'a GT.list * 'b GT.list with show, map
 
 let _ =
   let x = A ([1; 2; 3], ["4"; "5"; "6"]) in

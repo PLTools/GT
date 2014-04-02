@@ -1,4 +1,4 @@
-@type ('a, 'b, 'c) t = A of 'a | B of 'b | C of 'c deriving eq, compare
+@type ('a, 'b, 'c) t = A of 'a | B of 'b | C of 'c with eq, compare
 
 let _ =
   let x = A 1 in

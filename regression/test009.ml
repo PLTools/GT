@@ -1,6 +1,6 @@
-@type ('a, 'b) a = A of 'a | B of 'b deriving show, map
+@type ('a, 'b) a = A of 'a | B of 'b with show, map
 @type ('a, 'b) t = X of ('a, 'b) a * ('a, 'b) t GT.list | 
-                   Y of ('b, 'a) a * ('a, 'b) t GT.list  deriving show, map
+                   Y of ('b, 'a) a * ('a, 'b) t GT.list with show, map
 
 let _ =
   let x = X (A 1, [Y (A "2", []); X (A 2, []); Y (A "3", [])]) in

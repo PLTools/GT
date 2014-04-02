@@ -1,4 +1,4 @@
-@type a = [`A of b | `C of GT.int] deriving show
-and   b = [`B of a | `D of GT.string] deriving show
+@type a = [`A of b | `C of GT.int] with show
+and   b = [`B of a | `D of GT.string] with show
 
-@type c = [`E of GT.int GT.list | b] deriving show
+@type c = [`E of GT.int GT.list | b] with show
