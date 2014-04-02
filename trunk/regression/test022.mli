@@ -1,1 +1,1 @@
-@type 'a t = A of 'a GT.option GT.list deriving show, eq
+@type 'a t = A of 'a GT.option GT.list with show, eq

@@ -1,6 +1,6 @@
-@type a = A of b | C of GT.int GT.list deriving show
-and   b = B of c | D of GT.string deriving show
-and   c = E of a deriving show
+@type a = A of b | C of GT.int GT.list with show
+and   b = B of c | D of GT.string with show
+and   c = E of a with show
 
 class show_a' =
   object(this)

@@ -1,4 +1,4 @@
-@type t = A of GT.int | B of GT.string | C of GT.int GT.list deriving eq, compare
+@type t = A of GT.int | B of GT.string | C of GT.int GT.list with eq, compare
 
 let _ =
   let x   = A 1 in

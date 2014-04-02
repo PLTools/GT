@@ -1,6 +1,6 @@
-@type 'a a = [`A of 'a | `B of GT.string] deriving show, eq, compare
-@type b = [`C of GT.int | `D of GT.string] deriving show, eq, compare
-@type 'a c = ['a a | b] deriving show, eq, compare
+@type 'a a = [`A of 'a | `B of GT.string] with show, eq, compare
+@type b = [`C of GT.int | `D of GT.string] with show, eq, compare
+@type 'a c = ['a a | b] with show, eq, compare
 
 let _ =
   let x = `A 3 in

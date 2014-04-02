@@ -1,4 +1,4 @@
-@type 'a tree = Leaf | Node of 'a * 'a tree GT.list deriving show, map
+@type 'a tree = Leaf | Node of 'a * 'a tree GT.list with show, map
 
 let _ =
   let x = Node (1, [Node (2, [Leaf]); Node (3, [Leaf]); Node (4, [Node (5, []); Leaf])]) in

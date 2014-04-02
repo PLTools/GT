@@ -33,7 +33,7 @@ open Plugin
 open Core
 
 EXTEND
-  GLOBAL: sig_item str_item ctyp class_expr expr; 
+  GLOBAL: sig_item str_item ctyp class_expr expr type_decl; 
 
   class_expr: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
@@ -74,7 +74,8 @@ EXTEND
   ]];
 
   t_decl: [[
-    a=fargs; n=LIDENT; "="; t=rhs ->
+    "["; t=type_decl; "]" -> t, [] 
+  | a=fargs; n=LIDENT; "="; t=rhs ->
       let a                                        = fst a in
       let (is_private, ((def, cons), t)), deriving = t     in
       let t =
@@ -116,12 +117,12 @@ EXTEND
          tdCon = VaVal cons
         }         
       in
-      typ, (descriptor, deriving)
+      typ, [descriptor, deriving]
   ]];
 
   rhs: [[b=rhs_base; d=OPT deriving -> b, match d with None -> [] | Some d -> d]];
 
-  deriving: [["deriving"; s=LIST1 LIDENT SEP "," -> s]];
+  deriving: [["with"; s=LIST1 LIDENT SEP "," -> s]];
 
   rhs_base: [[ vari | poly ]];
   

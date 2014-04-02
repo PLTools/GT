@@ -60,50 +60,9 @@ let generate t loc =
     let args = mapi (fun i a -> a, i) args in
     fun a -> arg_tag (assoc a args) name
   in
-(*
-  let rec replace_t a n typ =
-    let replace_t = replace_t a n in 
-    let replace_pv lpv = 
-      map 
-	(function <:poly_variant< `$name$ of $flag:f$ $list:args$ >> -> 
-          let args = map replace_t args in
-          <:poly_variant< `$name$ of $flag:f$ $list:args$ >>
-	) 
-	lpv 
-    in
-    match typ with
-    | <:ctyp< $t1$ as $t2$ >> -> <:ctyp< $replace_t t1$ as $replace_t t2$ >>           
-    | <:ctyp< $t1$ $t2$ >> -> 
-	(match t1 with
-	| <:ctyp< $lid:s$ >> as typ when s = n ->
-            let rec inner args t =
-              match args, t with
-              | [arg], <:ctyp< ' $b$ >> -> if arg = b then <:ctyp< ' $hd a$ >> else typ
-              | arg::args, <:ctyp< $t1$ $t2$ >> ->
-                  (match t1 with 
-                   | <:ctyp< ' $b$ >> when arg = b -> inner args t2
-                   | _ -> typ
-                  )
-              | _ -> typ
-            in
-            inner a t2
-	| _ -> <:ctyp< $replace_t t1$ $replace_t t2$ >>
-	)
-    | <:ctyp< $t1$ -> $t2$ >> -> <:ctyp< $replace_t t1$ -> $replace_t t2$ >>
-    | <:ctyp< ~$s$: $t$ >> -> <:ctyp< ~$s$: $replace_t t$ >>
-    | <:ctyp< $t1$ == private $t2$ >> -> <:ctyp< $replace_t t1$ == private $replace_t t2$ >>
-    | <:ctyp< $t1$ == $t2$ >> -> <:ctyp< $replace_t t1$ == $replace_t t2$ >>
-    | <:ctyp< ?$s$: $t$ >> -> <:ctyp< ?$s$: $replace_t t$ >>
-    | <:ctyp< ( $list:lt$ ) >> -> <:ctyp< ( $list:map replace_t lt$ ) >> 
-    | <:ctyp< [ > $list:lpv$ ] >> -> <:ctyp< [ > $list:replace_pv lpv$ ] >>
-    | <:ctyp< [ < $list:lpv$ ] >> -> <:ctyp< [ < $list:replace_pv lpv$ ] >>
-    | <:ctyp< < $list:lst$ > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ > >>
-    | <:ctyp< < $list:lst$ .. > >> -> <:ctyp< < $list:map (fun (s, t) -> s, replace_t t) lst$ .. > >>  
-    | typ -> typ
-  in
-*)
   let obj_magic = H.E.acc (map H.E.id ["Obj"; "magic"]) in
-  let t, d = split t in
+  let t, d = split t   in
+  let d    = flatten d in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
   let is_murec name  = try ignore (find (fun (_, n) -> name = n) cluster_specs); true with Not_found -> false in
   let reserved_names = 
