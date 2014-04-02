@@ -76,10 +76,10 @@ EXTEND
   t_decl: [[
     "["; t=type_decl; "]" -> t, [] 
   | a=fargs; n=LIDENT; "="; t=rhs ->
-      let a                                        = fst a in
-      let (is_private, ((def, cons), t)), deriving = t     in
+      let (is_private, (def, t)), deriving = t in
       let t =
 	match t with
+	| `Abbrev _ | `Tuple _  | `Type _ | `Struct _ -> invalid_arg ""
 	| `Vari y | `Poly y -> 
 	    let y =
 	      map (function 
@@ -109,12 +109,12 @@ EXTEND
 	    match t with `Vari _ -> `Vari y | _ -> `Poly y
       in
       let descriptor, typ =
-        (a, n, t), 
+        (map fst a, n, t), 
         {tdNam = VaVal (loc, VaVal n);
-         tdPrm = VaVal (map (fun name -> VaVal (Some name), None) a);
+         tdPrm = VaVal (map (fun (name, variance) -> VaVal (Some name), variance) a);
          tdPrv = VaVal is_private;
          tdDef = def; 
-         tdCon = VaVal cons
+         tdCon = VaVal []
         }         
       in
       typ, [descriptor, deriving]
@@ -124,12 +124,35 @@ EXTEND
 
   deriving: [["with"; s=LIST1 LIDENT SEP "," -> s]];
 
-  rhs_base: [[ vari | poly ]];
+  rhs_base: [[ vari | poly | other ]];
+
+  other: [[
+    t=tuple -> false, (fst t, snd t)
+  | "{"; lds=label_declarations; "}" -> let d, t = split lds in false, (<:ctyp< { $list:t$ } >>, `Struct d)
+  | i=instance -> false, (ctyp_of i, `Abbrev i)
+  ]];
+
+  tuple: [[
+    t=c_typ -> ctyp_of t, `Type t
+  | t=LIST1 SELF SEP "*" -> let f, s = split t in <:ctyp< ( $list:f$) >> , `Tuple s
+  | "("; t=SELF; ")" -> t
+  ]];
+
+  label_declarations: [[
+    ld=label_declaration; ";"; ldl = SELF -> ld::ldl
+  | ld=label_declaration; ";" -> [ld]
+  | ld=label_declaration -> [ld] 
+  ]];
   
+  label_declaration: [[ 
+    i=LIDENT; ":"; t=c_typ -> (i, t), (loc, i, false, ctyp_of t)
+  | "mutable"; i=LIDENT; ":"; t=c_typ -> (i, t), (loc, i, true, ctyp_of t) 
+  ]];
+
   vari: [[
     p=OPT "private"; OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
       let x, y = split vari_cons in
-      (p <> None), ((<:ctyp< [ $list:x$ ] >>, []), `Vari y)
+      (p <> None), (<:ctyp< [ $list:x$ ] >>, `Vari y)
   ]];
 
   vari_con: [[
@@ -147,7 +170,7 @@ EXTEND
             lcons
       in
       false, 
-      ((<:ctyp< [ = $list:lcons$ ] >>, []), `Poly y)
+      (<:ctyp< [ = $list:lcons$ ] >>, `Poly y)
   ]];
 
   poly_body: [[
@@ -204,11 +227,13 @@ EXTEND
   ]];
 
   fargs: [[
-    "("; a=LIST1 targ SEP ","; ")" -> split a  
-  | a=targ                         -> [fst a], [snd a]
-  |                                -> [], [] 
+    "("; a=LIST1 targ SEP ","; ")" -> a
+  | a=targ                         -> [a]
+  |                                -> [] 
   ]];
 
-  targ: [[ "'"; a=LIDENT -> a, <:ctyp< ' $a$ >> ]];
+  targ: [[ v=variance; "'"; a=LIDENT -> a, v ]];
+
+  variance: [[ -> None | "+" -> Some true | "-" -> Some false ]];
   
 END;

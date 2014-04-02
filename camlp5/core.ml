@@ -144,6 +144,7 @@ let generate t loc =
          let metargs = (map farg args) @ [trans] in
          let args = metargs @ [acc; subj] in
          match descr with
+	 | `Abbrev _ | `Tuple _ | `Type _ | `Struct _ -> invalid_arg ""
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs, get_type_methods =
              let method_decls = ref [current, (H.E.id current, (orig_args, H.T.app (H.T.id current :: map H.T.var orig_args)))] in
