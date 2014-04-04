@@ -79,7 +79,7 @@ EXTEND
       let (is_private, (def, t)), deriving = t in
       let t =
 	match t with
-	| `Abbrev _ | `Tuple _  | `Type _ | `Struct _ -> invalid_arg ""
+	| `Tuple _  | `Type _ | `Struct _ -> invalid_arg ""
 	| `Vari y | `Poly y -> 
 	    let y =
 	      map (function 
@@ -127,9 +127,9 @@ EXTEND
   rhs_base: [[ vari | poly | other ]];
 
   other: [[
-    t=tuple -> false, (fst t, snd t)
-  | "{"; lds=label_declarations; "}" -> let d, t = split lds in false, (<:ctyp< { $list:t$ } >>, `Struct d)
-  | i=instance -> false, (ctyp_of i, `Abbrev i)
+    "{"; lds=label_declarations; "}" -> let d, t = split lds in false, (<:ctyp< { $list:t$ } >>, `Struct d)
+  | i=instance -> false, (ctyp_of i, `Vari [`Type i])
+  | t=tuple -> false, (fst t, snd t)
   ]];
 
   tuple: [[
@@ -194,7 +194,7 @@ EXTEND
     "`"; c=UIDENT; a=con_args -> `Con  (loc, c, get_val loc (fst a), None), `Con (c, snd a) 
   | t=instance -> 
       match t with 
-      | Instance (t, a, q) -> `Type t, `Type (a, q) 
+      | Instance (typ, a, q) -> `Type typ, `Type t 
       | _ -> oops loc "variable is not allowed here"
   ]];
 
