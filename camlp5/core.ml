@@ -64,6 +64,12 @@ let generate t loc =
   let t, d = split t   in
   let d    = flatten d in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
+  let get_gcata = function
+    | [name] when exists (fun (_, n) -> n = name) cluster_specs -> H.E.id (cata name)
+    | qname -> 
+	let typename = H.E.acc (map H.E.id qname) in
+	H.E.acc [typename; H.E.id "GT"; H.E.id "gcata"]
+  in
   let is_murec name  = try ignore (find (fun (_, n) -> name = n) cluster_specs); true with Not_found -> false in
   let reserved_names = 
     fold_left 
@@ -73,7 +79,7 @@ let generate t loc =
              fold_left 
                (fun acc t ->
                   match t with
-                  | `Type (_, [n]) -> n::acc
+                  | `Type (Instance (_, _, [n])) -> n::acc
                   | _ -> acc
                ) 
                acc 
@@ -144,7 +150,7 @@ let generate t loc =
          let metargs = (map farg args) @ [trans] in
          let args = metargs @ [acc; subj] in
          match descr with
-	 | `Abbrev _ | `Tuple _ | `Type _ | `Struct _ -> invalid_arg ""
+	 | `Tuple _ | `Type _ | `Struct _ -> invalid_arg ""
          | (`Poly _ | `Vari _) as descr -> 
            let get_type_handler, get_local_defs, get_type_methods =
              let method_decls = ref [current, (H.E.id current, (orig_args, H.T.app (H.T.id current :: map H.T.var orig_args)))] in
@@ -343,7 +349,7 @@ let generate t loc =
                      {context with M.proto_items = m_def :: context.M.proto_items}
 
 
-                  | `Type (args, qname) -> 
+                  | `Type (Instance (_, args, qname)) -> 
 		     let args = map (function Variable (_, a) -> a) args in (* TODO *)
                      let qname, qname_proto, env_tt, name = 
                        let n, t = hdtl loc (rev qname) in
@@ -353,7 +359,7 @@ let generate t loc =
 		       n
                      in
                      let descr = {
-                       Plugin.is_polyvar = true;
+                       Plugin.is_polyvar = polyvar;
                        Plugin.type_args  = args;
                        Plugin.name       = name;
 		       Plugin.arg_tag    = make_arg_tag name args;
@@ -440,7 +446,7 @@ let generate t loc =
                     [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>],
 		    []
 
-                | `Type (args, qname) as case -> 
+                | `Type (Instance (_, args, qname)) as case -> 
 		    let args = map (function Variable (_, a) -> a) args in (* TODO *)
                     iter (add_derived_member case) derived;
                     let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
@@ -457,9 +463,8 @@ let generate t loc =
                       <:class_type< $ct$ [ $list:targs$ ] >>
                     in
                     let expr =
-                      let typename = H.E.acc (map H.E.id qname) in
                       H.E.app (
-		        H.E.acc [typename; H.E.id "GT"; H.E.id "gcata"] ::
+                        (get_gcata qname) ::
                         (map (fun a -> H.E.id (farg a)) args @ [H.E.id trans; H.E.id acc; H.E.id subj])
 		      )
                     in
@@ -484,10 +489,12 @@ let generate t loc =
              | _  -> H.E.letrec local_defs expr
            in
            let cases, methods, methods_sig, methods_sig_t, base_types = split5 match_cases in
-	   let type_methods, type_methods_sig = split (get_type_methods ()) in
-           let methods          = flatten methods       in
-           let methods_sig      = flatten methods_sig   in
-	   let methods_sig_t    = flatten methods_sig_t in
+	   let type_methods, type_methods_sig                         = split (get_type_methods ()) in
+	   let base_types       = flatten base_types                   in
+	   let is_abbrev        = not polyvar && length base_types = 1 in
+           let methods          = flatten methods                      in
+           let methods_sig      = flatten methods_sig                  in
+	   let methods_sig_t    = flatten methods_sig_t                in
            let proto_class_type = <:class_type< object $list:methods_sig_t@type_methods_sig$ end >> in
            let class_expr = 
 	     let this = generator#generate "this" in
@@ -515,16 +522,14 @@ let generate t loc =
 	     let g  = name_generator orig_args in
              let tt = g#generate "t" in
 	     let td_open = 
-	       if polyvar 
-	       then 
-		 let self = g#generate "self" in [{
-		   tdNam = VaVal (loc, VaVal (tags_open_t current));
-		   tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::tt::orig_args));
-		   tdPrv = VaVal false;
-		   tdDef = H.T.var self;
-                   tdCon = VaVal [H.T.var self, H.T.more_variant [H.T.pv_type (H.T.app (H.T.id (tags_t current)::map H.T.var (tt::orig_args)))]]
-		 }]
-	       else []
+	       let self = g#generate "self" in 
+	       [{
+		tdNam = VaVal (loc, VaVal (tags_open_t current));
+		tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::tt::orig_args));
+		tdPrv = VaVal false;
+		tdDef = H.T.var self;
+                tdCon = VaVal [H.T.var self, H.T.more_variant [H.T.pv_type (H.T.app (H.T.id (tags_t current)::map H.T.var (tt::orig_args)))]]
+	       }]
 	     in
 	     let base_types = 
 	       map 
@@ -532,19 +537,18 @@ let generate t loc =
 		   let qname = H.T.acc (map H.T.id (map_last loc tags_t qname)) in
                    H.T.pv_type (H.T.app (qname::map H.T.var (tt::args)))
 		 ) 
-		 (flatten base_types) 
+		 base_types
 	     in
 	     let td = {
-               tdNam = VaVal (loc, VaVal (tags_t current));
-               tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (tt::orig_args));
-               tdPrv = VaVal false;
-               tdDef = (
-	         H.T.eq_variant (
-                   (H.T.pv_constr type_tag [H.T.var tt])::
-	           base_types @
-                   (mapi (fun i a -> H.T.pv_constr (arg_tag i current) [H.T.var a]) orig_args)
-                 )
-               );
+   	       tdNam = VaVal (loc, VaVal (tags_t current));
+	       tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (tt::orig_args));
+	       tdPrv = VaVal false;
+	       tdDef = 
+	           H.T.eq_variant (
+                     (H.T.pv_constr type_tag [H.T.var tt])::
+	             base_types @
+                     (mapi (fun i a -> H.T.pv_constr (arg_tag i current) [H.T.var a]) orig_args)
+                   );
                tdCon = VaVal []
              }     
 	     in
@@ -596,9 +600,14 @@ let generate t loc =
 	     in
 	     td::td_open, tagdefs, tagdecls
 	   in
+	   let body = 
+	     if is_abbrev 
+	     then let (_, _, expr), _ = hdtl loc cases in expr
+	     else local_defs_and_then (H.E.match_e subj cases)
+	   in
 	   tags,
 	   (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
-           (H.P.id (cata name), (H.E.func (map H.P.id args) (local_defs_and_then (H.E.match_e subj cases)))),
+           (H.P.id (cata name), (H.E.func (map H.P.id args) body)),
            <:sig_item< value $name$ : $catype$ >>,
            (proto_class_def, proto_class_decl),
            (let env, protos, defs, edecls, pdecls, decls = split6 (map get_derived_classes derived) in

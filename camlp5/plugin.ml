@@ -362,33 +362,22 @@ let register name t =
     fun loc descr ->
       let module H = Helper (struct let loc = loc end) in
       let (prop, gen) as return = t loc descr in
-      if descr.is_polyvar 
-      then 
-	match prop.inh_t with
-	| `Mono _ -> return
-	| `Poly (inh, f) ->
-	    let ng = name_generator prop.proper_args in
-	    let t = ng#generate "t" in
-	    let inh_t =
-	      let tags_name = tags_open_t descr.name in
-	      let type_name = type_open_t descr.name in
-	      let args = (H.T.var t) :: inh :: map f descr.type_args in
-	      H.T.app (H.T.id tags_name :: args)
-	    in
-	    {prop with proper_args = t :: prop.proper_args; inh_t = `Poly (inh_t, f)}, gen
-      else 
-	match prop.inh_t with
-	| `Mono _ -> return
-	| `Poly (inh, f) ->
-	    let inh_t =
-	      let name = tags_t descr.name in
-	      let args = inh :: map f descr.type_args in
-	      H.T.app (H.T.id name :: args)
-	    in
-	    {prop with inh_t = `Poly (inh_t, f)}, gen
+      match prop.inh_t with
+      | `Mono _ -> return
+      | `Poly (inh, f) ->
+	  let ng = name_generator prop.proper_args in
+	  let t = ng#generate "t" in
+	  let inh_t =
+	    let tags_name = tags_open_t descr.name in
+	    let type_name = if descr.is_polyvar then type_open_t descr.name else descr.name in
+	    let args = (H.T.var t) :: inh :: map f descr.type_args in
+	    H.T.app (H.T.id tags_name :: args)
+	  in
+	  {prop with proper_args = t :: prop.proper_args; inh_t = `Poly (inh_t, f)}, gen
   in
   if not (M.mem name !m) 
   then m := M.add name (generalize t) !m
+  
  
 let get name =
   if not (M.mem name !m) then None else Some (M.find name !m)
