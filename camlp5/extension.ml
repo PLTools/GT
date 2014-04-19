@@ -77,36 +77,38 @@ EXTEND
     "["; t=type_decl; "]" -> t, [] 
   | a=fargs; n=LIDENT; "="; t=rhs ->
       let (is_private, (def, t)), deriving = t in
+      let replace = function
+        | Instance (t, args, qname) as orig when qname = [n] ->
+	    (try
+	       let args = 
+                 map (function 
+		      | Variable (_, a) -> a
+		      | _ -> invalid_arg "Not a variable"
+		     ) 
+		     args 
+	       in
+	       Self (t, args, qname)
+	     with Invalid_argument "Not a variable" -> orig
+	    )				      
+	| x -> x
+      in
       let t =
 	match t with
-	| `Tuple _  | `Type _ | `Struct _ -> invalid_arg ""
+	| `Tuple t -> 
+	    let rec replace_tuple t = 
+              function `Type t -> `Type (replace t) | `Tuple t -> `Tuple (map replace_tuple t)
+	    in
+	    `Tuple (replace_tuple t)
+	| `Struct d -> `Struct (map (fun (i, t) -> i, replace t) d)
 	| `Vari y | `Poly y -> 
 	    let y =
 	      map (function 
 	           | `Type _ as t  -> t
-	           | `Con (name, args) -> 
-		       `Con (name, 
-			     map (function
-                                  | Instance (t, args, qname) as orig when qname = [n] ->
-				      (try
-				 	 let args = map (function 
-					                 | Variable (_, a) -> a
-					 		 | _ -> invalid_arg "Not a variable"
-						        ) 
-					                args 
-					 in
-					 Self (t, args, qname)
-				       with Invalid_argument "Not a variable" -> orig
-				      )
-				      
-		                  | x -> x
-				 ) 
-			         args
-			    )
+	           | `Con (name, args) -> `Con (name, map replace args)
 		  ) 
 	          y
 	    in
-	    match t with `Vari _ -> `Vari y | _ -> `Poly y
+	    (match t with `Vari _ -> `Vari y | _ -> `Poly y)
       in
       let descriptor, typ =
         (map fst a, n, t), 
@@ -129,12 +131,12 @@ EXTEND
   other: [[
     "{"; lds=label_declarations; "}" -> let d, t = split lds in false, (<:ctyp< { $list:t$ } >>, `Struct d)
   | i=instance -> false, (ctyp_of i, `Vari [`Type i])
-  | t=tuple -> false, (fst t, snd t)
+  | t=tuple -> false, (fst t, `Tuple (snd t))
   ]];
 
   tuple: [[
     t=c_typ -> ctyp_of t, `Type t
-  | t=LIST1 SELF SEP "*" -> let f, s = split t in <:ctyp< ( $list:f$) >> , `Tuple s
+  | t=LIST1 SELF SEP "*" -> let f, s = split t in <:ctyp< ( $list:f$ ) >>, `Tuple s
   | "("; t=SELF; ")" -> t
   ]];
 

@@ -149,9 +149,10 @@ let generate t loc =
          in
          let metargs = (map farg args) @ [trans] in
          let args = metargs @ [acc; subj] in
-         match descr with
-	 | `Tuple _ | `Type _ | `Struct _ -> invalid_arg ""
+        (* match descr with
+	 | `Tuple _ | `Struct _ -> invalid_arg "boom!"
          | (`Poly _ | `Vari _) as descr -> 
+        *)
            let get_type_handler, get_local_defs, get_type_methods =
              let method_decls = ref [current, (H.E.id current, (orig_args, H.T.app (H.T.id current :: map H.T.var orig_args)))] in
              let method_defs  = ref [] in
@@ -474,7 +475,7 @@ let generate t loc =
                     [<:class_sig_item< inherit $ct class_tt$ >>],
 		    [args, qname]
                ) 
-               (match descr with `Vari cons | `Poly cons -> cons)
+               (match descr with `Vari cons | `Poly cons -> cons | _ -> invalid_arg "boom!")
            in
            let subj = H.E.id subj in
            let local_defs_and_then expr =
