@@ -7,7 +7,7 @@ module Expr =
     [ 
       | `Var   of string 
       | `Const of int 
-      | `Binop of [int -> int -> int] * string * 'self * 'self 
+      | `Binop of (int -> int -> int) * string * 'self * 'self 
     ] 
 
     class ['a] toString =
@@ -27,29 +27,13 @@ module Expr =
       end
 
   end
-(*
-module Stmt =
-  struct
 
-    generic ('self, 'a) t = 
-    [>
-      | `Skip 
-      | `Assign of [string] * 'a Expr.t
-      | `Read   of [string]
-      | `Write  of 'a Expr.t
-      | `If     of 'a Expr.t * ('self, 'a) t * ('self, 'a) t
-      | `While  of 'a Expr.t * ('self, 'a) t  
-      | `Seq    of ('self, 'a) t * ('self, 'a) t 
-    ] as 'self
-
-  end
-*)
 let _ =
   let rec toString s e = transform(Expr.t) toString (new Expr.toString) () e in
   let rec eval s i e = transform(Expr.t) (eval s) (new Expr.eval s) i e in
   let e = `Binop ((+), "+", `Const 1, `Var "a") in
 
-  let s = toString () e (*transform(Expr.t) (new Expr.toString) () e*) in
-  let v = eval (fun "a" -> 2) () e (*transform(Expr.t) (new Expr.eval (fun "a" -> 2)) () e*) in
+  let s = toString () e in
+  let v = eval (fun "a" -> 2) () e in
   Printf.printf "%s\n" s;
   Printf.printf "%d\n" v

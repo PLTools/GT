@@ -32,8 +32,103 @@ open Ploc
 open Plugin
 open Core
 
+let tdecl_to_descr loc t =
+  let name = get_val loc (snd (get_val loc t.tdNam)) in
+  let args = 
+    map (fun (x, _) -> 
+           match get_val loc x with 
+	   | Some y -> y
+	   | None   -> oops loc "wildcard type parameters not supported"
+        ) 
+        (get_val loc t.tdPrm) 
+  in
+  let convert = 
+    let convert_concrete typ = 
+      let rec inner = function
+      | <:ctyp< ' $a$ >> as typ -> Variable (typ, a)
+      | <:ctyp< $t$ $a$ >> as typ -> 
+          (match inner t, inner a with
+           | _, Arbitrary _ -> Arbitrary typ
+	   | Instance (_, targs, tname), a -> Instance (typ, targs@[a], tname)
+	   | _ -> Arbitrary typ
+          )
+      | <:ctyp< $q$ . $t$ >> as typ -> 
+	  (match inner q, inner t with
+	   | Instance (_, [], q), Instance (_, [], t) -> Instance (typ, [], q@t)
+	   | _ -> Arbitrary typ
+	  )
+      | (<:ctyp< $uid:n$ >> | <:ctyp< $lid:n$ >>) as typ -> Instance (typ, [], [n])
+      | t -> Arbitrary t      
+      in
+      let replace = function
+      | Instance (t, args', qname) as orig when qname = [name] ->
+	 (try
+	   let args' = 
+             map (function 
+	          | Variable (_, a) -> a
+		  | _ -> invalid_arg "Not a variable"
+		 ) 
+	         args' 
+	   in
+	   if args' = args then Self (t, args, qname) else orig
+	  with Invalid_argument "Not a variable" -> orig
+	 )				      
+      | x -> x
+      in
+      replace (inner typ)
+    in
+    function
+    | <:ctyp< [ $list:const$ ] >> | <:ctyp< $_$ == $priv:_$ [ $list:const$ ] >> -> 
+	let const = map (fun (loc, name, args, d) -> 
+	                   match d with 
+			   | None -> `Con (get_val loc name, map convert_concrete (get_val loc args))
+			   | _    -> oops loc "unsupported constructor declaration"
+			) 
+	            const 
+	in
+	`Vari const
+    | <:ctyp< { $list:fields$ } >> | <:ctyp< $_$ == $priv:_$ { $list:fields$ } >> ->
+	let fields = map (fun (_, name, mut, typ) -> name, mut, convert_concrete typ) fields in
+	`Struct fields
+
+    | <:ctyp< ( $list:typs$ ) >> -> invalid_arg "boom..."	
+
+    | <:ctyp< [ = $list:variants$ ] >> -> 
+	let wow ()   = oops loc "unsupported polymorphic variant type constructor declaration" in
+	let variants = 
+	  map (function
+	       | <:poly_variant< $typ$ >> -> 
+		  (match convert_concrete typ with 
+		   | Arbitrary _ -> wow ()
+		   | typ -> `Type typ
+		  )
+	       | <:poly_variant< ` $c$ >> -> `Con (c, [])
+	       | <:poly_variant< ` $c$ of $list:typs$ >> -> 
+		   let typs = 
+		     flatten (
+		       map (function 
+			    | <:ctyp< ( $list:typs$ ) >> -> map convert_concrete typs 
+			    | typ -> [convert_concrete typ]
+			   ) 
+		           typs
+		     ) 
+		   in
+		   `Con (c, typs)
+	       | _ -> wow ()
+	      ) 
+	    variants 
+	in
+        `Poly variants
+    | typ -> 
+	(match convert_concrete typ with
+	 | Arbitrary _ -> oops loc "unsupported type"
+	 | typ         -> `Vari [`Type typ]
+	)
+  in
+  (args, name, convert t.tdDef)
+
 EXTEND
-  GLOBAL: sig_item str_item ctyp class_expr expr type_decl; 
+  GLOBAL: sig_item str_item class_expr expr ctyp type_decl; 
 
   class_expr: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
@@ -63,6 +158,11 @@ EXTEND
   | ci=qname -> ci 
   ]];
 
+  qname: [[
+    n=LIDENT              -> [n]
+  | m=UIDENT; "."; q=SELF -> m :: q
+  ]];
+
   trait: [[ "["; id=LIDENT; "]" -> id ]];
 
   str_item: LEVEL "top" [[
@@ -74,168 +174,9 @@ EXTEND
   ]];
 
   t_decl: [[
-    "["; t=type_decl; "]" -> t, [] 
-  | a=fargs; n=LIDENT; "="; t=rhs ->
-      let (is_private, (def, t)), deriving = t in
-      let replace = function
-        | Instance (t, args, qname) as orig when qname = [n] ->
-	    (try
-	       let args = 
-                 map (function 
-		      | Variable (_, a) -> a
-		      | _ -> invalid_arg "Not a variable"
-		     ) 
-		     args 
-	       in
-	       Self (t, args, qname)
-	     with Invalid_argument "Not a variable" -> orig
-	    )				      
-	| x -> x
-      in
-      let t =
-	match t with
-	| `Tuple t -> 
-	    let rec replace_tuple t = 
-              function `Type t -> `Type (replace t) | `Tuple t -> `Tuple (map replace_tuple t)
-	    in
-	    `Tuple (replace_tuple t)
-	| `Struct d -> `Struct (map (fun (i, t) -> i, replace t) d)
-	| `Vari y | `Poly y -> 
-	    let y =
-	      map (function 
-	           | `Type _ as t  -> t
-	           | `Con (name, args) -> `Con (name, map replace args)
-		  ) 
-	          y
-	    in
-	    (match t with `Vari _ -> `Vari y | _ -> `Poly y)
-      in
-      let descriptor, typ =
-        (map fst a, n, t), 
-        {tdNam = VaVal (loc, VaVal n);
-         tdPrm = VaVal (map (fun (name, variance) -> VaVal (Some name), variance) a);
-         tdPrv = VaVal is_private;
-         tdDef = def; 
-         tdCon = VaVal []
-        }         
-      in
-      typ, [descriptor, deriving]
+    t=type_decl; d=OPT deriving -> t, [tdecl_to_descr loc t, match d with None -> [] | Some d -> d]
   ]];
-
-  rhs: [[b=rhs_base; d=OPT deriving -> b, match d with None -> [] | Some d -> d]];
 
   deriving: [["with"; s=LIST1 LIDENT SEP "," -> s]];
 
-  rhs_base: [[ vari | poly | other ]];
-
-  other: [[
-    "{"; lds=label_declarations; "}" -> let d, t = split lds in false, (<:ctyp< { $list:t$ } >>, `Struct d)
-  | i=instance -> false, (ctyp_of i, `Vari [`Type i])
-  | t=tuple -> false, (fst t, `Tuple (snd t))
-  ]];
-
-  tuple: [[
-    t=c_typ -> ctyp_of t, `Type t
-  | t=LIST1 SELF SEP "*" -> let f, s = split t in <:ctyp< ( $list:f$ ) >>, `Tuple s
-  | "("; t=SELF; ")" -> t
-  ]];
-
-  label_declarations: [[
-    ld=label_declaration; ";"; ldl = SELF -> ld::ldl
-  | ld=label_declaration; ";" -> [ld]
-  | ld=label_declaration -> [ld] 
-  ]];
-  
-  label_declaration: [[ 
-    i=LIDENT; ":"; t=c_typ -> (i, t), (loc, i, false, ctyp_of t)
-  | "mutable"; i=LIDENT; ":"; t=c_typ -> (i, t), (loc, i, true, ctyp_of t) 
-  ]];
-
-  vari: [[
-    p=OPT "private"; OPT "|"; vari_cons=LIST1 vari_con SEP "|" -> 
-      let x, y = split vari_cons in
-      (p <> None), (<:ctyp< [ $list:x$ ] >>, `Vari y)
-  ]];
-
-  vari_con: [[
-    c=UIDENT; a=con_args -> (loc, VaVal c, fst a, None), `Con (c, snd a) 
-  ]];
-
-  poly: [[  
-    "["; body=poly_body; "]" ->
-      let lcons, y = body in
-      let lcons =
-        map (function 
-             | `Con con -> con 
-             | `Type t  -> <:poly_variant< $t$ >>
-            ) 
-            lcons
-      in
-      false, 
-      (<:ctyp< [ = $list:lcons$ ] >>, `Poly y)
-  ]];
-
-  poly_body: [[
-    OPT "|"; poly_cons=LIST1 poly_con SEP "|" ->
-      let x, y = split poly_cons in
-      let lcons = map (function 
-                       | `Con (loc, name, args, _) ->
-                          if length args = 0 
-                          then `Con <:poly_variant< `$name$ >>         
-                          else                          
-                            let args = if length args = 1 then args else [<:ctyp< ($list:args$) >>] in
-                            `Con <:poly_variant< `$name$ of $flag:false$ $list:args$ >> 
-                       | `Type t -> `Type t
-                      ) 
-                      x
-      in
-      lcons, y
-  ]];
-
-  poly_con: [[
-    "`"; c=UIDENT; a=con_args -> `Con  (loc, c, get_val loc (fst a), None), `Con (c, snd a) 
-  | t=instance -> 
-      match t with 
-      | Instance (typ, a, q) -> `Type typ, `Type t 
-      | _ -> oops loc "variable is not allowed here"
-  ]];
-
-  con_args: [[
-    "of"; a=LIST1 c_typ SEP "*" -> VaVal (map ctyp_of a), a 
-  |                             -> VaVal [], [] 
-  ]];
-
-  c_typ: [[
-    t=instance       -> t
-  | "["; t=ctyp; "]" -> Arbitrary t
-  ]];
-
-  instance: [
-     "apply" LEFTA
-     [ a=SELF; q=qname ->       
-       Instance (ctyp_of_instance loc [ctyp_of a] (ctyp_of_qname loc q), [a], q)
-     ] |
-     "simple"   
-     [   "'"; a=LIDENT -> Variable (<:ctyp< ' $a$ >>, a)
-       | "("; args=LIST1 instance SEP ","; ")"; q=qname -> 
-          Instance (ctyp_of_instance loc (map ctyp_of args) (ctyp_of_qname loc q), args, q)
-       | q=qname -> Instance (ctyp_of_qname loc q, [], q)
-     ]
-  ];
-
-  qname: [[
-    n=LIDENT              -> [n]
-  | m=UIDENT; "."; q=SELF -> m :: q
-  ]];
-
-  fargs: [[
-    "("; a=LIST1 targ SEP ","; ")" -> a
-  | a=targ                         -> [a]
-  |                                -> [] 
-  ]];
-
-  targ: [[ v=variance; "'"; a=LIDENT -> a, v ]];
-
-  variance: [[ -> None | "+" -> Some true | "-" -> Some false ]];
-  
 END;
