@@ -80,6 +80,7 @@ let targ          name      = "p" ^ name
 let farg          name      = "f" ^ name
 let tname         name      = "t" ^ name
 let cmethod       c         = "c_" ^ c
+let vmethod                 = "value"
 let tmethod       t         = "t_" ^ t
 let class_t       name      = name ^ "_t"
 let class_tt      name      = name ^ "_tt"
