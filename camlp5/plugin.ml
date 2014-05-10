@@ -31,13 +31,19 @@ open Dynlink
 open List 
 open Printf
 
-type typ = 
+type typ  = 
   Arbitrary of ctyp  
 | Variable  of ctyp * string
 | Self      of ctyp * string list * string list
+| Tuple     of ctyp * typ list
 | Instance  of ctyp * typ list * string list
 
-let ctyp_of = function Arbitrary t | Variable (t, _) | Self (t, _, _) | Instance (t, _, _) -> t 
+let ctyp_of = function 
+| Arbitrary t 
+| Variable (t, _) 
+| Self     (t, _, _) 
+| Instance (t, _, _) 
+| Tuple    (t, _) -> t 
 
 exception Generic_extension of string
 
