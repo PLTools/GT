@@ -398,126 +398,111 @@ let generate t loc =
 	   )
          in
          let match_cases =
+	   let case_branch patt met_name names types =
+	     let met_sig  = 
+               let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
+               let rec make_typ = function
+               | Arbitrary t | Instance (t, _, _) -> t
+               | Variable (t, name) -> make_a (H.T.var inh) t (H.T.var (img name))
+               | Self     (t, _, _) -> make_a (H.T.var inh) t (H.T.var syn)
+	       | Tuple    (t, typs) -> H.T.tuple (map make_typ typs)
+               in
+               let typs = [H.T.var inh; 
+                           make_a (H.T.var inh) (H.T.app (H.T.id name :: map H.T.var orig_args)) (H.T.var syn)
+                          ] @ 
+                          (map make_typ types) 
+               in
+	       H.T.arrow (typs @ [H.T.var syn])
+             in
+             let expr =
+               let met = H.E.method_call (H.E.id trans) met_name in
+               let garg f x =
+                 H.E.app [H.E.acc [H.E.id "GT"; H.E.id "make"]; f; x; H.E.id tpo_name]
+               in
+               H.E.app (
+                 [met; H.E.id acc; garg (H.E.id self_name) (H.E.id subj)] @
+                 (map (fun (typ, x) -> 
+		         let rec augmented = function
+			 | Arbitrary _ | Instance _ -> false
+			 | Self      _ | Variable _ -> true
+			 | Tuple (_, typs) -> exists augmented typs
+			 in             
+			 let rec augment id = function
+                         | Arbitrary _ | Instance _ ->  H.E.id id
+                         | Variable (_, name)       -> garg (H.E.id (farg name)) (H.E.id id)
+                         | Self     (typ, args, t)  -> 
+			     let name = get_type_handler (typ, args, t) in 
+			     garg name (H.E.id id)
+			 | Tuple    (_, typs) as typ ->
+			     if augmented typ 
+			     then
+			       let generator  = generator#copy in
+                               let components = mapi (fun i _ -> generator#generate (sprintf "e%d" i)) typs in
+			       H.E.let_nrec 
+                                 [H.P.tuple (map H.P.id components), H.E.id id] 
+                                 (H.E.tuple (map (fun (name, typ) -> augment name typ) (combine components typs)))
+			     else H.E.id id
+			 in
+			 augment x typ
+                      ) 
+                      (combine types names)
+                 )
+	       )
+             in
+             (patt, VaVal None, expr),
+             [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
+             [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>],
+             [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>],
+	     []	       
+	   in
            map 
              (function 
-	       | `Tuple _ -> invalid_arg "Boom!"
+              | `Tuple elems as case -> 
+                  iter (add_derived_member case) derived;
+                  let args = mapi (fun i a -> sprintf "p%d" i) elems in
+                  let patt = H.P.tuple (map H.P.id args) in
+                  case_branch patt vmethod args elems
 
-	       | `Struct fields as case ->
-		   iter (add_derived_member case) derived;
-		   let names, _, cargs = split3 fields in
-		   let args = map (fun a -> generator#generate a) names in
-                   let patt = H.P.record (map (fun (n, a) -> H.P.id n, H.P.id a) (combine names args)) in
-                   let met_name = vmethod in
-                   let met_sig  = 
-                     let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
-                     let make_typ = function
-                     | Arbitrary t | Instance (t, _, _) -> t
-                     | Variable (t, name) -> make_a (H.T.var inh) t (H.T.var (img name))
-                     | Self     (t, _, _) -> make_a (H.T.var inh) t (H.T.var syn)
-                     in
-                     let typs = [H.T.var inh; 
-                                 make_a (H.T.var inh) (H.T.app (H.T.id name :: map H.T.var orig_args)) (H.T.var syn)
-                                ] @ 
-                                (map make_typ cargs) 
-                     in
-		     H.T.arrow (typs @ [H.T.var syn])
-                   in
-                   let expr =
-                     let met = H.E.method_call (H.E.id trans) met_name in
-                     let garg f x =
-                       H.E.app [H.E.acc [H.E.id "GT"; H.E.id "make"]; f; x; H.E.id tpo_name]
-                     in
-                     H.E.app (
-                       [met; H.E.id acc; garg (H.E.id self_name) (H.E.id subj)] @
-                       (map (fun (typ, x) -> 
-                               match typ with
-                               | Arbitrary _ | Instance _ ->  H.E.id x
-                               | Variable (_, name) -> garg (H.E.id (farg name)) (H.E.id x)
-                               | Self     (typ, args, t) -> 
-				   let name = get_type_handler (typ, args, t) in 
-                                   garg name (H.E.id x)
-                            ) 
-                            (combine cargs args)
-                       )
-		    )
-                   in
-                   (patt, VaVal None, expr),
-                   [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
-                   [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>],
-                   [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>],
-		   []
+	      | `Struct fields as case ->
+		  iter (add_derived_member case) derived;
+		  let names, _, types = split3 fields in		  
+                  let args = map (fun a -> generator#generate a) names in
+                  let patt = H.P.record (map (fun (n, a) -> H.P.id n, H.P.id a) (combine names args)) in
+		  case_branch patt vmethod args types
 
-               | `Con (cname, cargs) as case -> 
-                   iter (add_derived_member case) derived;
-                   let args = rev (mapi (fun i a -> sprintf "p%d" i) cargs) in
-                   let patt = H.P.app ((if polyvar then H.P.variant else H.P.id) cname :: map H.P.id args) in
-                   let met_name = cmethod cname in
-                   let met_sig  = 
-                     let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
-                     let make_typ = function
-                     | Arbitrary t | Instance (t, _, _) -> t
-                     | Variable (t, name) -> make_a (H.T.var inh) t (H.T.var (img name))
-                     | Self     (t, _, _) -> make_a (H.T.var inh) t (H.T.var syn)
-                     in
-                     let typs = [H.T.var inh; 
-                                 make_a (H.T.var inh) (H.T.app (H.T.id name :: map H.T.var orig_args)) (H.T.var syn)
-                                ] @ 
-                                (map make_typ cargs) 
-                     in
-		     H.T.arrow (typs @ [H.T.var syn])
-                   in
-                   let expr =
-                     let met = H.E.method_call (H.E.id trans) met_name in
-                     let garg f x =
-                       H.E.app [H.E.acc [H.E.id "GT"; H.E.id "make"]; f; x; H.E.id tpo_name]
-                     in
-                     H.E.app (
-                       [met; H.E.id acc; garg (H.E.id self_name) (H.E.id subj)] @
-                       (map (fun (typ, x) -> 
-                               match typ with
-                               | Arbitrary _ | Instance _ ->  H.E.id x
-                               | Variable (_, name) -> garg (H.E.id (farg name)) (H.E.id x)
-                               | Self     (typ, args, t) -> 
-				   let name = get_type_handler (typ, args, t) in 
-                                   garg name (H.E.id x)
-                            ) 
-                            (combine cargs args)
-                       )
-		    )
-                   in
-                   (patt, VaVal None, expr),
-                   [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
-                   [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>],
-                   [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>],
-		   []
+              | `Con (cname, cargs) as case -> 
+                  iter (add_derived_member case) derived;
+                  let args = mapi (fun i a -> sprintf "p%d" i) cargs in
+                  let patt = H.P.app ((if polyvar then H.P.variant else H.P.id) cname :: map H.P.id args) in
+                  case_branch patt (cmethod cname) args cargs
 
-               | `Type (Instance (_, args, qname)) as case -> 
-		   let args = map (function Variable (_, a) -> a) args in (* TODO *)
-                   iter (add_derived_member case) derived;
-                   let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
-                   let targs = map H.T.var targs in
-                   let ce    = <:class_expr< [ $list:targs$ ] $list:map_last loc class_t qname$ >> in
-                   let ct f  =
-                     let h, t = hdtl loc (map_last loc f qname) in
-                     let ct   = 
-                       fold_left 
-                         (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 
-                         <:class_type< $id:h$ >>  
-                         t
-                     in
-                     <:class_type< $ct$ [ $list:targs$ ] >>
-                   in
-                   let expr =
-                     H.E.app (
-                       (get_gcata qname) ::
-                       (map (fun a -> H.E.id (farg a)) args @ [H.E.id trans; H.E.id acc; H.E.id subj])
-		     )
-                   in
-                   (H.P.alias (H.P.type_p qname) (H.P.id subj), VaVal None, expr),
-                   [<:class_str_item< inherit $ce$ >>],
-                   [<:class_sig_item< inherit $ct class_t$  >>],
-                   [<:class_sig_item< inherit $ct class_tt$ >>],
-		   [args, qname]
+              | `Type (Instance (_, args, qname)) as case -> 
+		  let args = map (function Variable (_, a) -> a) args in (* TODO *)
+                  iter (add_derived_member case) derived;
+                  let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
+                  let targs = map H.T.var targs in
+                  let ce    = <:class_expr< [ $list:targs$ ] $list:map_last loc class_t qname$ >> in
+                  let ct f  =
+                    let h, t = hdtl loc (map_last loc f qname) in
+                    let ct   = 
+                      fold_left 
+                        (fun t id -> let id = <:class_type< $id:id$ >> in <:class_type< $t$ . $id$ >>) 
+                        <:class_type< $id:h$ >>  
+                      t
+                    in
+                    <:class_type< $ct$ [ $list:targs$ ] >>
+                  in
+                  let expr =
+                    H.E.app (
+                      (get_gcata qname) ::
+                      (map (fun a -> H.E.id (farg a)) args @ [H.E.id trans; H.E.id acc; H.E.id subj])
+		   )
+                  in
+                  (H.P.alias (H.P.type_p qname) (H.P.id subj), VaVal None, expr),
+                  [<:class_str_item< inherit $ce$ >>],
+                  [<:class_sig_item< inherit $ct class_t$  >>],
+                  [<:class_sig_item< inherit $ct class_tt$ >>],
+		  [args, qname]
              ) 
              (match descr with `Vari cons | `Poly cons -> cons | (`Tuple _ | `Struct _) as x -> [x])
          in

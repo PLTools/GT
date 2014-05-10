@@ -45,6 +45,7 @@ let tdecl_to_descr loc t =
   let convert = 
     let convert_concrete typ = 
       let rec inner = function
+      | <:ctyp< ( $list:typs$ ) >> as typ -> Tuple (typ, map inner typs)
       | <:ctyp< ' $a$ >> as typ -> Variable (typ, a)
       | <:ctyp< $t$ $a$ >> as typ -> 
           (match inner t, inner a with
@@ -60,7 +61,8 @@ let tdecl_to_descr loc t =
       | (<:ctyp< $uid:n$ >> | <:ctyp< $lid:n$ >>) as typ -> Instance (typ, [], [n])
       | t -> Arbitrary t      
       in
-      let replace = function
+      let rec replace = function
+      | Tuple (t, typs) -> Tuple (t, map replace typs)
       | Instance (t, args', qname) as orig when qname = [name] ->
 	 (try
 	   let args' = 
@@ -87,11 +89,12 @@ let tdecl_to_descr loc t =
 	            const 
 	in
 	`Vari const
+
     | <:ctyp< { $list:fields$ } >> | <:ctyp< $_$ == $priv:_$ { $list:fields$ } >> ->
 	let fields = map (fun (_, name, mut, typ) -> name, mut, convert_concrete typ) fields in
 	`Struct fields
 
-    | <:ctyp< ( $list:typs$ ) >> -> invalid_arg "boom..."	
+    | <:ctyp< ( $list:typs$ ) >> -> `Tuple (map convert_concrete typs)
 
     | <:ctyp< [ = $list:variants$ ] >> -> 
 	let wow ()   = oops loc "unsupported polymorphic variant type constructor declaration" in
@@ -119,6 +122,7 @@ let tdecl_to_descr loc t =
 	    variants 
 	in
         `Poly variants
+
     | typ -> 
 	(match convert_concrete typ with
 	 | Arbitrary _ -> oops loc "unsupported type"
@@ -174,7 +178,8 @@ EXTEND
   ]];
 
   t_decl: [[
-    t=type_decl; d=OPT deriving -> t, [tdecl_to_descr loc t, match d with None -> [] | Some d -> d]
+    "["; t=type_decl; "]" -> t, []
+  | t=type_decl; d=OPT deriving -> t, [tdecl_to_descr loc t, match d with None -> [] | Some d -> d]
   ]];
 
   deriving: [["with"; s=LIST1 LIDENT SEP "," -> s]];
