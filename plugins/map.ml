@@ -24,8 +24,10 @@ let _ =
         }, 
         object
 	  inherit generator
-	  method constr env constr =
-	    E.app (((if d.is_polyvar then E.variant else E.id) constr.constr)::
+	  method record env fields = invalid_arg "not supported"
+	  method tuple env elems = invalid_arg "not supported"
+	  method constructor env name args =
+	    E.app (((if d.is_polyvar then E.variant else E.id) name)::
                    map 
 	             (function 
 		      | arg, (Variable _ | Self _) -> E.app [E.gt_fx (E.lid arg); E.unit]
@@ -35,7 +37,7 @@ let _ =
 			  | Some e -> E.app [e; E.unit; E.id arg]
 			 )
 		     ) 
-	             constr.args
+	             args
 		  )
         end
        )

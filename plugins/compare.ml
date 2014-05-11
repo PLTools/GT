@@ -32,10 +32,12 @@ let _ =
         }, 
         object
 	  inherit generator
-	  method constr env constr =
-	    let gen    = name_generator (map fst constr.args) in
+	  method record env fields = invalid_arg "not supported"
+	  method tuple env elems = invalid_arg "not supported"
+	  method constructor env name cargs =
+	    let gen    = name_generator (map fst cargs) in
 	    let other  = gen#generate "other" in
-	    let args   = map (fun a -> a, gen#generate a) (map fst constr.args) in
+	    let args   = map (fun a -> a, gen#generate a) (map fst cargs) in
 	    let arg  a = assoc a args in
 	    let branch = 
 	      fold_left
@@ -45,28 +47,28 @@ let _ =
 			 E.func 
 			   [P.wildcard]
 			   (match typ with
-			   | Instance (_, _, qname) ->
+			    | Instance (_, _, qname) ->
 			       (match env.trait "compare" typ with
-			       | None   -> E.acc [E.id "GT"; E.uid "EQ"]
-			       | Some e -> 
+			        | None   -> E.acc [E.id "GT"; E.uid "EQ"]
+			        | Some e -> 
 				   let rec name = function
 				   | [n]  -> E.app [e; E.app [E.variant type_tag; E.id (arg b)]; E.id b]
 				   | _::t -> name t
 				   in
 				   name qname
 			       )
-			   | Variable  (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (d.arg_tag a); E.id (arg b)]]
-			   | Self      _      -> E.app [E.gt_fx (E.id b); E.app [E.variant type_tag; E.id (arg b)]]
-			   | Arbitrary _      -> E.acc [E.id "GT"; E.uid "EQ"]
+			    | Variable  (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (d.arg_tag a); E.id (arg b)]]
+			    | Self      _      -> E.app [E.gt_fx (E.id b); E.app [E.variant type_tag; E.id (arg b)]]
+			    | Arbitrary _      -> E.acc [E.id "GT"; E.uid "EQ"]
 			   )
 		       ]
 		)
 		(E.acc [E.id "GT"; E.uid "EQ"])
-		constr.args
+		cargs
 	    in
 	    E.match_e (E.id env.inh) 
               [P.app [P.variant type_tag;
-                      P.app (((if d.is_polyvar then P.variant else P.uid) constr.constr)::(map (fun (_, a) -> P.id a) args))
+                      P.app (((if d.is_polyvar then P.variant else P.uid) name)::(map (fun (_, a) -> P.id a) args))
                      ], VaVal None, branch; 
 
                P.app [P.variant type_tag; P.id other], 

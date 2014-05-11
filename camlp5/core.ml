@@ -286,69 +286,74 @@ let generate t loc =
              let p       = option loc (Plugin.get trait) in
              let context = M.get trait                   in
 	     let g       = context.M.gen#copy            in
+	     let branch met_name met_args gen =
+               let rec env = {
+                 Plugin.inh      = g#generate "inh";
+                 Plugin.subj     = g#generate "subj";
+                 Plugin.new_name = (fun s -> g#generate s); 
+                 Plugin.trait    = 
+		   (fun s t -> 			     
+		      if s = trait
+		      then
+			let rec inner = function
+			| Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
+			| Instance (_, args, qname) -> 
+			    let args = 	
+			      match prop.inh_t with
+			      | `Mono _ -> map inner args
+			      | `Poly _ -> 
+				  mapi 
+				    (fun i a ->
+                                       let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
+				       let tag = 
+					 match a with
+					 | Variable (_, _)    -> arg_tag i current
+					 | Instance (_, _, _) -> type_tag
+					 | _                  -> oops loc "unexpected type (internal error)"
+				       in
+                                       H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
+				    ) 
+				    args
+			    in				   
+			    (match qname with
+                             | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.app [H.E.lid "!"; H.E.id context.M.env]) (tmethod t)) :: args)
+			     | _  -> 
+				 let tobj = 
+				   match qname with 
+				   | [t] when t = current -> H.E.id "this"
+				   | _ -> H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) 
+				 in
+				 H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ args @ [tobj])
+			    )
+			| Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
+			| _ -> invalid_arg "Unsupported type"			    
+			in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
+		      else None
+		   )
+               } 
+               in
+               let m_def = 
+                 let body = H.E.func (map H.P.id ([env.Plugin.inh; env.Plugin.subj] @ met_args)) (gen env) in
+                 <:class_str_item< method $lid:met_name$ = $body$ >>
+               in
+               {context with M.proto_items = m_def :: context.M.proto_items}
+	     in
              let context =
                match case with
-	       | `Struct _ | `Tuple _ -> invalid_arg "boom-boom!"
-               | `Con (cname, cargs) ->
-                   let args = mapi (fun i a -> g#generate (sprintf "p%d" i)) cargs in
-                   let constr = {
-                     Plugin.constr = cname;
-                     Plugin.args   = combine args cargs;
-                   }
-                   in
-                   let rec env = {
-                     Plugin.inh      = g#generate "inh";
-                     Plugin.subj     = g#generate "subj";
-                     Plugin.new_name = (fun s -> g#generate s); 
-                     Plugin.trait    = 
-		       (fun s t -> 			     
-			  if s = trait
-			  then
-			    let rec inner = function
-			    | Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
-			    | Instance (_, args, qname) -> 
-				let args = 	
-				  match prop.inh_t with
-				  | `Mono _ -> map inner args
-				  | `Poly _ -> 
-				      mapi 
-					(fun i a ->
-                                           let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
-					   let tag = 
-					     match a with
-					     | Variable (_, _)    -> arg_tag i current
-					     | Instance (_, _, _) -> type_tag
-					   in
-                                           H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
-					) 
-					args
-				in				   
-				(match qname with
-                                 | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.app [H.E.lid "!"; H.E.id context.M.env]) (tmethod t)) :: args)
-				 | _  -> 
-				    let tobj = 
-				      match qname with 
-				      | [t] when t = current -> H.E.id "this"
-				      | _ -> H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) 
-				    in
-				    H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ args @ [tobj])
-				)
-			    | Arbitrary _ -> invalid_arg "Unsupported type"
-			    | Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
-			    in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
-			  else None
-		       )
-                   } 
-                   in
-                   let m_def = 
-                     let name = cmethod cname in
-                     let body = H.E.func (map H.P.id ([env.Plugin.inh; env.Plugin.subj] @ args)) (generator#constr env constr) in
-                     <:class_str_item< method $lid:name$ = $body$ >>
-                   in
-                   {context with M.proto_items = m_def :: context.M.proto_items}
+	       | `Struct fields -> 
+		   let fields = map (fun (n, m, t) -> g#generate n, m, t) fields in
+		   branch vmethod (map (fun (n, _, _) -> n) fields) (fun env -> generator#record env fields)
+
+	       | `Tuple elems ->
+		   let elems = mapi (fun i t -> g#generate (sprintf "p%d" i), t) elems in
+		   branch vmethod (map fst elems) (fun env -> generator#tuple env elems)
+
+               | `Con (cname, cargs) -> 
+		   let args = mapi (fun i a -> g#generate (sprintf "p%d" i), a) cargs in
+		   branch (cmethod cname) (map fst args) (fun env -> generator#constructor env cname args)
 
                | `Type (Instance (_, args, qname)) -> 
-		   let args = map (function Variable (_, a) -> a) args in (* TODO *)
+		   let args = map (function Variable (_, a) -> a | _ -> oops loc "unsupported case (non-variable in instance)") args in (* TODO *)
                    let qname, qname_proto, env_tt, name = 
                      let n, t = hdtl loc (rev qname) in
                      rev ((trait_t n trait) :: t), 
@@ -373,7 +378,8 @@ let generate t loc =
                     M.items = i_def :: context.M.items;  
 		    M.proto_items = i_def_proto :: context.M.proto_items;
                     M.env_sig     = i_env :: context.M.env_sig
-		  }
+		   }
+	       | _ -> oops loc "unsupported case (internal error)"
              in
 	     M.put trait context
            ),
@@ -477,7 +483,7 @@ let generate t loc =
                   case_branch patt (cmethod cname) args cargs
 
               | `Type (Instance (_, args, qname)) as case -> 
-		  let args = map (function Variable (_, a) -> a) args in (* TODO *)
+		  let args = map (function Variable (_, a) -> a | _ -> oops loc "unsupported case (non-variable in instance)") args in (* TODO *)
                   iter (add_derived_member case) derived;
                   let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
                   let targs = map H.T.var targs in
@@ -503,6 +509,7 @@ let generate t loc =
                   [<:class_sig_item< inherit $ct class_t$  >>],
                   [<:class_sig_item< inherit $ct class_tt$ >>],
 		  [args, qname]
+	      | _ -> oops loc "unsupported case (internal error)"
              ) 
              (match descr with `Vari cons | `Poly cons -> cons | (`Tuple _ | `Struct _) as x -> [x])
          in
@@ -651,7 +658,7 @@ let generate t loc =
     | <:ctyp< [ = $list:lcons$ ] >> ->
 	let get_val x = get_val loc x in
         let name      = type_open_t (get_val (snd (get_val td.tdNam))) in
-	let args      = map (fun (VaVal (Some name), _) -> name) (get_val td.tdPrm) in
+	let args      = map (function (VaVal (Some name), _) -> name | _ -> oops loc "unsupported case (internal error)") (get_val td.tdPrm) in
 	let gen       = name_generator args in
         let self      = gen#generate "self" in
 	[{td with tdNam = VaVal (loc, VaVal name);

@@ -19,7 +19,9 @@ let _ =
         }, 
         object
 	  inherit generator
-	  method constr env constr =
+	  method record env fields = invalid_arg "not supported"
+	  method tuple env elems = invalid_arg "not supported"
+	  method constructor env name args =
 	    fold_left 
               (fun inh (arg, typ) ->
 		let arg = E.id arg in
@@ -31,7 +33,7 @@ let _ =
 		    | Some e -> E.app [e; inh; arg]
 	      )
               (E.id env.inh)
-	      constr.args
+	      args
 	end
        )
     )
