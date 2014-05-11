@@ -122,11 +122,6 @@ type type_descriptor = {
     arg_tag    : string -> string;
     default    : properties;
   }
-
-type constructor = {
-    constr : string;
-    args   : (string * typ) list;
-  }
       
 type env = {
     inh      : string;
@@ -139,7 +134,9 @@ class virtual generator =
   object
     method header     = ([] : str_item list)
     method header_sig = ([] : sig_item list)
-    method virtual constr : env -> constructor -> expr 
+    method virtual constructor : env -> string -> (string * typ) list -> expr 
+    method virtual tuple       : env -> (string * typ) list -> expr
+    method virtual record      : env -> (string * bool * typ) list -> expr
   end
 
 type t = loc -> type_descriptor -> properties * generator 
@@ -376,7 +373,6 @@ let register name t =
 	  let t = ng#generate "t" in
 	  let inh_t =
 	    let tags_name = tags_open_t descr.name in
-	    let type_name = if descr.is_polyvar then type_open_t descr.name else descr.name in
 	    let args = (H.T.var t) :: inh :: map f descr.type_args in
 	    H.T.app (H.T.id tags_name :: args)
 	  in

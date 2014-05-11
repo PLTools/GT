@@ -15,7 +15,9 @@ let _ =
         }, 
         object
 	  inherit generator
-	  method constr env constr =
+	  method record env fields = invalid_arg "not supported"
+	  method tuple env elems = invalid_arg "not supported"
+	  method constructor env name args =
             let concat x y = E.app [E.lid "^"; x; y] in
             concat 
               (snd 
@@ -33,8 +35,8 @@ let _ =
 			  | None   -> acc
 			  )
                     )         
-                    (true, E.str ((if d.is_polyvar then "`" else "") ^ constr.constr ^ " ("))
-                    constr.args 
+                    (true, E.str ((if d.is_polyvar then "`" else "") ^ name ^ " ("))
+                    args 
 		 )
               )
               (E.str ")")

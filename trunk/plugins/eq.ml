@@ -33,9 +33,11 @@ let _ =
         }, 
         object
 	  inherit generator
-	  method constr env constr =
-	    let gen    = name_generator (map fst constr.args) in
-	    let args   = map (fun a -> a, gen#generate a) (map fst constr.args) in
+	  method record env fields = invalid_arg "not supported"
+	  method tuple env elems = invalid_arg "not supported"
+	  method constructor env name cargs =
+	    let gen    = name_generator (map fst cargs) in
+	    let args   = map (fun a -> a, gen#generate a) (map fst cargs) in
 	    let arg  a = assoc a args in
 	    let branch = 
 	      fold_left
@@ -59,11 +61,11 @@ let _ =
 		       ]
 		)
 		(E.uid "true")
-		constr.args
+		cargs
 	    in
 	    E.match_e (E.id env.inh) 
               [P.app [P.variant type_tag;
-                      P.app (((if d.is_polyvar then P.variant else P.uid) constr.constr)::(map (fun (_, a) -> P.id a) args))
+                      P.app (((if d.is_polyvar then P.variant else P.uid) name)::(map (fun (_, a) -> P.id a) args))
                      ], VaVal None, branch; 
                P.wildcard, VaVal None, E.uid "false"
               ]
