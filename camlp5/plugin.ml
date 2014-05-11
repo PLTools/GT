@@ -136,7 +136,7 @@ class virtual generator =
     method header_sig = ([] : sig_item list)
     method virtual constructor : env -> string -> (string * typ) list -> expr 
     method virtual tuple       : env -> (string * typ) list -> expr
-    method virtual record      : env -> (string * bool * typ) list -> expr
+    method virtual record      : env -> (string * (string * bool * typ)) list -> expr
   end
 
 type t = loc -> type_descriptor -> properties * generator 
