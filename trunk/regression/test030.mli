@@ -1,1 +1,1 @@
-@type ('a, 'b) t = A of ('a * 'b) 
+@type ('a, 'b) t = A of ('a * 'b) with show
