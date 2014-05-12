@@ -1,6 +1,6 @@
 open GT
 
-@type ('a, 'b) t = (int * string * 'a * 'b) with show
+@type ('a, 'b) t = (int * string * 'a * 'b) with show, map
 
 class ['a, 'b] print =
   object 
@@ -15,11 +15,11 @@ class ['a, 'b] print =
 let _ =
   Printf.printf "%s\n"
     (transform(t)
-       (fun _ a -> a)
+       (fun _ a -> string_of_int a)
        (fun _ -> function `B -> "`B")
        (new @show[t])
        ()
-       (1, "2", "a", `B)
+       (transform(t) (fun _ a -> int_of_string a) (fun _ x -> x) (new @map[t]) () (1, "2", "3", `B))
     );
   transform(t) 
     (fun _ a -> Printf.printf "%s\n" a) 

@@ -1,1 +1,1 @@
-@type ('a, 'b) t = int * (string * ('a * 'b)) with show
+@type ('a, 'b) t = int * (string * ('a * 'b)) with show, map
