@@ -92,7 +92,7 @@ let generate t loc =
   let g     = name_generator reserved_names in
   let trans = g#generate "trans" in
   let farg  = 
-    let module M = Map.Make (String) in
+    let module M = Plugin.M (*Map.Make (String) *) in
     let m = ref M.empty in
     (fun a -> 
        let p = farg a in
@@ -217,7 +217,7 @@ let generate t loc =
                  env_sig     : class_sig_item list;
                }
 
-	       module M = Map.Make (String) 
+	       module M = Plugin.M (*Map.Make (String) *)
 
 	       let m = ref M.empty
 	       let get trait = 
@@ -551,8 +551,8 @@ let generate t loc =
            ciExp = c;
          } 
          in           
-         let proto_class_def  = <:str_item< class type $list:[class_info false (class_tt name) proto_class_type]$ >> in
-         let proto_class_decl = <:sig_item< class type $list:[class_info false (class_tt name) proto_class_type]$ >> in 
+         let proto_class_def  = <:str_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in
+         let proto_class_decl = <:sig_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in 
          let class_def  = <:str_item< class $list:[class_info true (class_t name) class_expr]$ >> in
          let class_decl = <:sig_item< class $list:[class_info true (class_t name) class_type]$ >> in 
          let tags =
