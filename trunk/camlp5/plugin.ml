@@ -357,7 +357,16 @@ let generate_inherit base_class loc qname arg descr prop =
   <:class_str_item< inherit $ce$ >>,
   <:class_sig_item< inherit $ct$ >>
 
-module M = Map.Make (String)
+module M = 
+  struct
+    type 'a t = (string * 'a) list
+
+    let empty        = []
+    let add name x l = (name, x) :: l
+    let find         = assoc
+    let mem name   l = try (ignore (find name l)); true with Not_found -> false
+
+  end
     
 let m : t M.t ref = ref M.empty
 
@@ -380,8 +389,7 @@ let register name t =
   in
   if not (M.mem name !m) 
   then m := M.add name (generalize t) !m
-  
- 
+
 let get name =
   if not (M.mem name !m) then None else Some (M.find name !m)
 

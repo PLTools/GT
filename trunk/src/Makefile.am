@@ -1,4 +1,3 @@
-
 # type in sources here
 SOURCES = GT.ml
 MLI = 
@@ -11,7 +10,7 @@ include $(top_srcdir)/m4/Makefile.am.vars
 CMO := $(SORTED:.ml=.cmo)
 
 # OCaml parser call with flags
-AM_P5FLAGS := -pp "$(CAMLP5O) ../camlp5/pa_gt.cmo $(PARSER_INCLUDES)"
+AM_P5FLAGS := -pp ./pp.sh
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)

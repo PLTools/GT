@@ -7,51 +7,6 @@ let transform t = t.gcata
 let make  f x p = {x=x; fx=(fun a -> f a x); f=f; t=p}
 let apply f a x = f a x
 
-class virtual ['a, 'inh, 'syn] primitive =
-  object
-    method virtual value : 'inh -> 'a -> 'syn
-  end
-
-type pint = int
-type int = pint
-
-class virtual ['inh, 'syn] int_t = 
-  object (this)
-    inherit [int, 'inh, 'syn] primitive
-    method t_int = this#value
-  end
-
-class show_int_t =
-  object
-    inherit [unit, string] @int
-    method value _ x = string_of_int x
-  end
-
-class map_int_t =
-  object
-    inherit [unit, int] @int
-    method value _ x = x
-  end
-
-class ['syn] foldl_int_t =
-  object
-    inherit ['syn, 'syn] @int
-    method value s _ = s
-  end
-
-class ['syn] foldr_int_t = 
-  object
-    inherit ['syn] @foldl[int]
-  end
-
-type int_tags = [`t of int]
-
-class eq_int_t =
-  object
-    inherit [int_tags, bool] @int
-    method value inh x = match inh with `t y -> x = y 
-  end
-
 type comparison = LT | EQ | GT
 
 let chain_compare x f = 
@@ -82,68 +37,31 @@ let compare_vari x y =
   | EQ -> compare_primitive (vari_tag x) (vari_tag y)
   | c  -> x
 
-class compare_int_t =
-  object
-    inherit [int_tags, comparison] @int
-    method value inh x = match inh with `t y -> compare_primitive y x
-  end
+let string_of_string  s = s
+let string_of_unit    _ = "()"
+let string_of_char    c = String.make 1 c
+let string_of_int32     = Int32.to_string
+let string_of_int64     = Int64.to_string
+let string_of_nativeint = Nativeint.to_string
 
-let int : (('inh, 'syn) #@int -> 'inh -> int -> 'syn) t = 
-  let int_gcata t inh x = t#value inh x in
-  {gcata = int_gcata}
-
-type pstring = string
-type string = pstring
-
-class virtual ['inh, 'syn] string_t = 
-  object (this)
-    inherit [string, 'inh, 'syn] primitive
-    method t_string = this#value
-  end
-
-class show_string_t =
-  object
-    inherit [unit, string] @string
-    method value _ x = x
-  end
-
-class map_string_t =
-  object
-    inherit [unit, string] @string
-    method value _ x = x
-  end
-
-class ['syn] foldl_string_t =
-  object
-    inherit ['syn, 'syn] @string
-    method value s _ = s
-  end
-
-class ['syn] foldr_string_t = 
-  object
-    inherit ['syn] @foldl[string]
-  end
-
-type string_tags = [`t of string]
-
-class eq_string_t =
-  object
-    inherit [string_tags, bool] @string
-    method value inh x = match inh with `t y -> x = y 
-  end
-
-class compare_string_t =
-  object
-    inherit [string_tags, comparison] @string
-    method value inh s = match inh with `t d -> compare_primitive d s 
-  end
-
-let string : (('inh, 'syn) #@string -> 'inh -> string -> 'syn) t = 
-  let string_gcata t inh x = t#value inh x in
-  {gcata = string_gcata}
+GENERIFY(bool)
+GENERIFY(int)
+GENERIFY(string)
+GENERIFY(char)
+GENERIFY(unit)
+GENERIFY(int32)
+GENERIFY(int64)
+GENERIFY(nativeint)
 
 type 'a plist = 'a list
 type 'a list = 'a plist
+
+class type show_list_env_tt = object  end
+class type foldl_list_env_tt = object  end
+class type foldr_list_env_tt = object  end
+class type eq_list_env_tt = object  end
+class type compare_list_env_tt = object  end
+class type map_list_env_tt = object  end
 
 class type ['a, 'pa, 'inh, 'syn] list_tt =
   object
@@ -204,14 +122,14 @@ class ['a, 'syn] foldr_list_t =
     method c_Cons s _ x xs = x.fx (xs.fx s)
   end
 
-type 'a list_tags = [`t of 'a list | `alist_0 of 'a]
+type ('t, 'a) list_tags = [`t of 't | `alist_0 of 'a]
 
 let wrap_list x = `alist_0 x
 let rewrap_list f = function `alist_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
 
 class ['a] eq_list_t =
   object
-    inherit ['a, bool, 'a list_tags, bool] @list
+    inherit ['a, bool, ('a list, 'a) list_tags, bool] @list
     method c_Nil inh subj = 
       match inh with 
       | `t [] -> true 
@@ -224,7 +142,7 @@ class ['a] eq_list_t =
 
 class ['a] compare_list_t =
   object
-    inherit ['a, comparison, 'a list_tags, comparison] @list
+    inherit ['a, comparison, ('a list, 'a) list_tags, comparison] @list
     method c_Nil inh subj =
       match inh with
       | `t [] -> EQ
@@ -243,6 +161,13 @@ class ['a] compare_list_t =
 
 type 'a poption = 'a option
 type 'a option = 'a poption
+
+class type show_option_env_tt = object  end
+class type foldl_option_env_tt = object  end
+class type foldr_option_env_tt = object  end
+class type eq_option_env_tt = object  end
+class type compare_option_env_tt = object  end
+class type map_option_env_tt = object  end
 
 class type ['a, 'pa, 'inh, 'syn] option_tt =
   object
@@ -298,14 +223,14 @@ class ['a, 'syn] foldr_option_t =
     inherit ['a, 'syn] @foldl[option]
   end
 
-type 'a option_tags = [`t of 'a option | `aoption_0 of 'a]
+type ('t, 'a) option_tags = [`t of 't | `aoption_0 of 'a]
 
 let wrap_option x = `aoption_0 x
 let rewrap_option f = function `aoption_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
 
 class ['a] eq_option_t =
   object
-    inherit ['a, bool, 'a option_tags, bool] @option
+    inherit ['a, bool, ('a option, 'a) option_tags, bool] @option
     method c_None inh subj = 
       match inh with 
       | `t None -> true 
@@ -318,7 +243,7 @@ class ['a] eq_option_t =
 
 class ['a] compare_option_t =
   object
-    inherit ['a, comparison, 'a option_tags, comparison] @option
+    inherit ['a, comparison, ('a option, 'a) option_tags, comparison] @option
     method c_None inh subj =
       match inh with
       | `t None -> EQ
