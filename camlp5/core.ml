@@ -342,7 +342,7 @@ let generate t loc =
                match case with
 	       | `Struct fields -> 
 		   let fields = map (fun (n, m, t) -> g#generate n, (n,  m, t)) fields in
-		   branch vmethod (map (fun (_, (n, _, _)) -> n) fields) (fun env -> generator#record env fields)
+                   branch vmethod (map fst fields) (fun env -> generator#record env fields)
 
 	       | `Tuple elems ->
 		   let elems = mapi (fun i t -> g#generate (sprintf "p%d" i), t) elems in
