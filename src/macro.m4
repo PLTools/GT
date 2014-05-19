@@ -83,7 +83,7 @@ type ('self, 't) $1_tags_open = 'self constraint 'self = [> 't $1_tags ]
 class ['t] eq_proto_$1 env =                                           
   object (this)                                                           
     inherit [('t, $1) $1_tags_open, bool] @$1                
-    method t_$1 inh x = match inh with `t y -> x = y                     
+    method t_$1 inh x = match inh with `t y -> x = y | _ -> false
   end                                                                     
                                                                           
 class ['t] eq_$1_t =                                                 
@@ -97,7 +97,7 @@ class ['t] eq_$1_t =
 class ['t] compare_proto_$1 env =                                      
   object (this)                                                           
     inherit [('t, $1) $1_tags_open, comparison] @$1              
-    method t_$1 inh x = match inh with `t y -> compare_primitive y x     
+    method t_$1 inh x = match inh with `t y -> compare_primitive y x | _ -> invalid_arg "type error (should not happen)"
   end                                                                     
                                                                           
 class ['t] compare_$1_t =                                            
