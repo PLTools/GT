@@ -5,10 +5,10 @@ type proto$1 = $1
 type $1 = proto$1
                                                                           
 class type show_$1_env_tt    = object  end                      
-class type foldl_$1_env_tt   = object  end                      
-class type foldr_$1_env_tt   = object  end                      
-class type eq_$1_env_tt      = object  end                      
-class type compare_$1_env_tt = object  end                      
+class type ['syn] foldl_$1_env_tt   = object  end                      
+class type ['syn] foldr_$1_env_tt   = object  end                      
+class type ['t] eq_$1_env_tt      = object  end                      
+class type ['t] compare_$1_env_tt = object  end                      
 class type map_$1_env_tt     = object  end                      
                                                                           
 class type virtual ['inh, 'syn] $1_tt =                           

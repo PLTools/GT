@@ -308,10 +308,10 @@ let get_inh_type = function `Mono inh | `Poly (inh, _) -> inh
 
 let generate_classes loc trait descr (prop, generator) (this, env, env_t, b_proto_def, b_def, b_proto_decl, b_decl) =
   let class_targs = prop.proper_args in 
-  let def a n b = { 
+  let def n b = { 
     ciLoc = loc;
     ciVir = Ploc.VaVal false;
-    ciPrm = (loc, Ploc.VaVal (if a then map (fun a -> Ploc.VaVal (Some a), None) class_targs else []));
+    ciPrm = (loc, Ploc.VaVal (map (fun a -> Ploc.VaVal (Some a), None) class_targs));
     ciNam = Ploc.VaVal n;
     ciExp = b
   } 
@@ -320,12 +320,12 @@ let generate_classes loc trait descr (prop, generator) (this, env, env_t, b_prot
     let p = <:patt< $lid:env$ >> in
     <:class_expr< fun $p$ -> $b_proto_def$ >>
   in
-  generator#header @ [<:str_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>],
-  <:str_item< class $list:[def true (trait_proto_t descr.name trait) ce]$ >>,
-  <:str_item< class $list:[def true (trait_t descr.name trait) b_def]$ >>, 
-  generator#header_sig @ [<:sig_item< class type $list:[def false (env_tt descr.name trait) env_t]$ >>],
-  <:sig_item< class $list:[def true (trait_proto_t descr.name trait) b_proto_decl]$ >>,
-  <:sig_item< class $list:[def true (trait_t descr.name trait) b_decl]$ >>
+  generator#header @ [<:str_item< class type $list:[def (env_tt descr.name trait) env_t]$ >>],
+  <:str_item< class $list:[def (trait_proto_t descr.name trait) ce]$ >>,
+  <:str_item< class $list:[def (trait_t descr.name trait) b_def]$ >>, 
+  generator#header_sig @ [<:sig_item< class type $list:[def (env_tt descr.name trait) env_t]$ >>],
+  <:sig_item< class $list:[def (trait_proto_t descr.name trait) b_proto_decl]$ >>,
+  <:sig_item< class $list:[def (trait_t descr.name trait) b_decl]$ >>
 
 let generate_inherit base_class loc qname arg descr prop =
   let args =
