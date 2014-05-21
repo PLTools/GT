@@ -17,23 +17,30 @@ let _ =
           proper_args = d.type_args @ [syn];
           arg_img     = (fun _ -> T.var syn)
         }, 
+	let rec body env args =
+	  fold_right
+            (fun (arg, typ) inh ->
+	      let arg = E.id arg in
+	      match typ with
+	      | Variable _ | Self _ -> E.app [E.gt_fx arg; inh]
+	      | Tuple (_, elems) -> 
+		  let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in					
+		  E.let_nrec 
+		    [P.tuple (map P.id args), arg]
+		    (body env (combine args elems))
+	      | _ ->
+		  match env.trait "foldr" typ with
+		  | None   -> inh
+		  | Some e -> E.app [e; inh; arg]
+	    )
+	    args
+            (E.id env.inh)
+	in
         object
 	  inherit generator
-	  method record env fields = invalid_arg "not supported"
-	  method tuple env elems = invalid_arg "not supported"
-	  method constructor env name args =
-	    fold_right
-              (fun (arg, typ) inh ->
-		let arg = E.id arg in
-		match typ with
-		| Variable _ | Self _ -> E.app [E.gt_fx arg; inh]
-		| _ ->
-		    match env.trait "foldr" typ with
-		    | None   -> inh
-		    | Some e -> E.app [e; inh; arg]
-	      )
-	      args
-              (E.id env.inh)
+	  method record      env fields    = body env (map (fun (n, (_, _, t)) -> n, t) fields)
+	  method tuple       env elems     = body env elems
+	  method constructor env name args = body env args
 	end
        )
     )
