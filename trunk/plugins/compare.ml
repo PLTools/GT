@@ -26,60 +26,78 @@ let _ =
 	in        
         {
           inh_t       = inh_t;
-          syn_t       = T.acc [T.id "GT"; T.id "comparison"];
+          syn_t       = <:ctyp< GT.comparison >>;
           proper_args = proper_args;
-          arg_img     = (fun _ -> T.acc [T.id "GT"; T.id "comparison"])
+          arg_img     = (fun _ -> <:ctyp< GT.comparison >>;)
         }, 
+	let rec many env arg args =
+	  fold_left
+	    (fun acc (b, typ) ->
+	       let body = 
+		 match typ with
+		 | Instance (_, _, qname) ->
+		     (match env.trait "compare" typ with
+		      | None   -> <:expr< GT.EQ >>
+		      | Some e -> 
+			  let rec name = function
+			    | [n]  -> <:expr< $e$ (` $type_tag$ $E.id (arg b)$) $E.id b$ >> 
+			    | _::t -> name t
+			  in
+			  name qname
+		     )
+                 | Variable  (_, a) -> <:expr< $E.id b$.GT.fx (` $d.arg_tag a$ $E.id (arg b)$) >> 
+		 | Self      _      -> <:expr< $E.id b$.GT.fx (` $type_tag$ $E.id (arg b)$) >>
+		 | Arbitrary _      -> <:expr< GT.EQ >>
+		 | Tuple (_, elems) ->
+		     let args_a = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in
+		     let args_b = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in			   
+		     let elems  = combine args_a elems in
+		     let args   = combine args_a args_b in
+		     let arg' a = assoc a args in
+                     <:expr<
+                        let $P.tuple (map P.id args_a)$ = $E.lid b$       in
+                        let $P.tuple (map P.id args_b)$ = $E.lid (arg b)$ in
+                        $many env arg' elems$
+                     >>
+	       in			
+	       <:expr< GT.chain_compare $acc$ (fun _ -> $body$) >>
+	    )
+	    <:expr< GT.EQ >>
+	    args
+	in
         object
 	  inherit generator
-	  method record env fields = invalid_arg "not supported"
-	  method tuple env elems = invalid_arg "not supported"
-	  method constructor env name cargs =
-	    let gen    = name_generator (map fst cargs) in
-	    let other  = gen#generate "other" in
-	    let args   = map (fun a -> a, gen#generate a) (map fst cargs) in
+	  method record env fields = 
+	    let args   = map (fun a -> a, env.new_name a) (map fst fields) in
 	    let arg  a = assoc a args in
-	    let branch = 
-	      fold_left
-		(fun acc (b, typ) ->
-		  E.app [E.acc [E.id "GT"; E.lid "chain_compare"];
-			 acc;
-			 E.func 
-			   [P.wildcard]
-			   (match typ with
-			    | Instance (_, _, qname) ->
-			       (match env.trait "compare" typ with
-			        | None   -> E.acc [E.id "GT"; E.uid "EQ"]
-			        | Some e -> 
-				   let rec name = function
-				   | [n]  -> E.app [e; E.app [E.variant type_tag; E.id (arg b)]; E.id b]
-				   | _::t -> name t
-				   in
-				   name qname
-			       )
-			    | Variable  (_, a) -> E.app [E.gt_fx (E.id b); E.app [E.variant (d.arg_tag a); E.id (arg b)]]
-			    | Self      _      -> E.app [E.gt_fx (E.id b); E.app [E.variant type_tag; E.id (arg b)]]
-			    | Arbitrary _      -> E.acc [E.id "GT"; E.uid "EQ"]
-			   )
-		       ]
-		)
-		(E.acc [E.id "GT"; E.uid "EQ"])
-		cargs
-	    in
-	    E.match_e (E.id env.inh) 
-              [P.app [P.variant type_tag;
-                      P.app (((if d.is_polyvar then P.variant else P.uid) name)::(map (fun (_, a) -> P.id a) args))
-                     ], VaVal None, branch; 
+	    let branch = many env arg (map (fun (a, (_, _, t)) -> a, t) fields) in
+            <:expr< match $E.id env.inh$ with 
+                    | ` $type_tag$ $P.record (map (fun (a, (f, _, _)) -> P.id f, P.id (arg a)) fields)$ -> $branch$ 
+                    | _ -> invalid_arg "type error (should not happen)"
+                    end
+            >>
 
-               P.app [P.variant type_tag; P.id other], 
-	       VaVal None, 
-	       E.app [E.acc [E.id "GT"; E.id (if d.is_polyvar then "compare_poly" else "compare_vari")]; 
-		      E.id other; 
-		      E.gt_x (E.id env.subj)
-		     ];
+	  method tuple env elems  = 
+	    let args   = map (fun a -> a, env.new_name a) (map fst elems) in
+	    let arg  a = assoc a args in
+	    let branch = many env arg elems in
+            <:expr< match $E.id env.inh$ with
+                    | ` $type_tag$ $P.tuple (map (fun (_, a) -> P.id a) args)$ -> $branch$
+                    | _ -> invalid_arg "type error (should not happen)"
+                    end
+            >>
 
-               P.wildcard, VaVal None, E.app [E.id "invalid_arg"; E.str "type error (should not happen)"]
-              ]
+	  method constructor env name cargs =
+	    let other  = env.new_name "other" in
+	    let args   = map (fun a -> a, env.new_name a) (map fst cargs) in
+	    let arg  a = assoc a args in
+	    let branch = many env arg cargs in
+            <:expr< match $E.id env.inh$ with
+                    | ` $type_tag$ $P.app (((if d.is_polyvar then P.variant else P.uid) name)::(map (fun (_, a) -> P.id a) args))$ -> $branch$
+                    | ` $type_tag$ $P.id other$ -> GT.$E.id (if d.is_polyvar then "compare_poly" else "compare_vari")$ $E.id other$ $E.id env.subj$.GT.x
+                    | _ -> invalid_arg "type error (should not happen)"
+                    end
+            >>
 	end
        )
     )

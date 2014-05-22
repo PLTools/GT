@@ -126,7 +126,7 @@ let tdecl_to_descr loc t =
     | typ -> 
 	(match convert_concrete typ with
 	 | Arbitrary _ -> oops loc "unsupported type"
-	 | typ         -> `Vari [`Type typ]
+	 | typ         -> `Vari [match typ with Variable (t, _) -> `Tuple [Tuple (<:ctyp< ($list:[t]$) >>, [typ])] | _ -> `Type typ]
 	)
   in
   (args, name, convert t.tdDef)

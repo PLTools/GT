@@ -1,6 +1,6 @@
 open GT
 
-@type ('a, 'b) t = int * (string * ('a * 'b)) with show, map
+@type ('a, 'b) t = int * (string * ('a * 'b)) with show, map, eq, compare, foldl, foldr
 
 class ['a, 'b] print =
   object 
@@ -13,17 +13,26 @@ class ['a, 'b] print =
   end
 
 let _ =
+  let cs    = function EQ -> "EQ" | GT -> "GT" | LT -> "LT" in  
+  let c x y = if x = y then EQ else if x < y then LT else GT in
+  let x = (1, ("2", ("a", `B))) in
+  let y = (1, ("2", ("3", `B))) in
+  Printf.printf "x == x: %b\n" (transform(t) (rewrap_t (=)) (rewrap_t1 (=)) (new @eq[t]) (`t x) x);
+  Printf.printf "x == y: %b\n" (transform(t) (rewrap_t (=)) (rewrap_t1 (=)) (new @eq[t]) (`t x) y);
+  Printf.printf "compare (x, x) = %s\n" (cs (transform(t) (rewrap_t c) (rewrap_t1 c) (new @compare[t]) (`t x) x));
+  Printf.printf "compare (x, y) = %s\n" (cs (transform(t) (rewrap_t c) (rewrap_t1 c) (new @compare[t]) (`t x) y));
+  Printf.printf "compare (y, x) = %s\n" (cs (transform(t) (rewrap_t c) (rewrap_t1 c) (new @compare[t]) (`t y) x));
   Printf.printf "%s\n"
     (transform(t)
        (fun _ a -> string_of_int a)
        (fun _ -> function `B -> "`B")
        (new @show[t])
        ()
-       (transform(t) (fun _ a -> int_of_string a) (fun _ x -> x) (new @map[t]) () (1, ("2", ("3", `B))))
+       (transform(t) (fun _ a -> int_of_string a) (fun _ x -> x) (new @map[t]) () y)
     );
   transform(t) 
     (fun _ a -> Printf.printf "%s\n" a) 
     (fun _ -> function `B -> Printf.printf "`B\n") 
     (new print) 
     () 
-    (1, ("2", ("a", `B)))
+    x
