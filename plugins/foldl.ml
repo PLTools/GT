@@ -22,16 +22,17 @@ let _ =
             (fun inh (arg, typ) ->
 	      let arg = E.id arg in
 	      match typ with
-	      | Variable _ | Self _ -> E.app [E.gt_fx arg; inh]
+	      | Variable _ | Self _ -> <:expr< $arg$.GT.fx $inh$ >>
 	      | Tuple (_, elems) -> 
-		  let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in					
-		  E.let_nrec 
-		    [P.tuple (map P.id args), arg]
-		    (body env (combine args elems))
+		  let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in		
+		  <:expr<
+                     let $P.tuple (map P.id args)$ = $arg$ in
+                     $body env (combine args elems)$
+                  >>
 	      | _ ->
 		  match env.trait "foldl" typ with
 		  | None   -> inh
-		  | Some e -> E.app [e; inh; arg]
+		  | Some e -> <:expr< $e$ $inh$ $arg$ >> 
 	    )
             (E.id env.inh)
 	    args
