@@ -3,10 +3,11 @@ test008 test009 test010 test011 test012 test013 test014 test015 test016\
 test017 test018 test019 test020 test021 test022 test023 test024 test025\
 test026 test027 test028 test029 test030 test031 test032 
 
-# Do not work yet: 
-#   test033
-#   test025 (excluded for now)
-#   test034 with no pr_o.cmo (camlp5 bug?)
+# Problematic tests: 
+#   test033 --- mutual recursion and extensibility
+#   test025 --- does not work with pr_o.cmo (camlp5 parser is wider than ocaml's original; 
+#               the reverted text is not parsed while the tree is ok)
+#   test034 with no pr_o.cmo causes ocamlc to stack overflow (bug in the compiler?)
 
 
 TESTS_ENVIRONMENT = $(srcdir)/test.sh
