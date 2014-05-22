@@ -1,6 +1,6 @@
 open GT
 
-@type ('a, 'b) t = A of ('a * 'b) with show, map
+@type ('a, 'b) t = A of ('a * 'b) with show, map, foldl, foldr, eq, compare
 
 class ['a,'b] print =
   object
@@ -9,6 +9,15 @@ class ['a,'b] print =
   end
 
 let _ =
+  let cs    = function EQ -> "EQ" | GT -> "GT" | LT -> "LT" in  
+  let c x y = if x = y then EQ else if x < y then LT else GT in
+  let x = A (1, "2") in
+  let y = A (1, "3") in
+  Printf.printf "x == x: %b\n" (transform(t) (rewrap_t (=)) (rewrap_t1 (=)) (new @eq[t]) (`t x) x);
+  Printf.printf "x == y: %b\n" (transform(t) (rewrap_t (=)) (rewrap_t1 (=)) (new @eq[t]) (`t x) y);
+  Printf.printf "compare (x, x) = %s\n" (cs (transform(t) (rewrap_t c) (rewrap_t1 c) (new @compare[t]) (`t x) x));
+  Printf.printf "compare (x, y) = %s\n" (cs (transform(t) (rewrap_t c) (rewrap_t1 c) (new @compare[t]) (`t x) y));
+  Printf.printf "compare (y, x) = %s\n" (cs (transform(t) (rewrap_t c) (rewrap_t1 c) (new @compare[t]) (`t y) x));
   Printf.printf "%s\n" 
     (transform(t) 
        (fun _ s -> s) 

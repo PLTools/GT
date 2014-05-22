@@ -380,7 +380,7 @@ let generate t loc =
 		    M.proto_items = i_def_proto :: context.M.proto_items;
                     M.env_sig     = i_env :: context.M.env_sig
 		   }
-	       | _ -> oops loc "unsupported case (internal error)"
+	       | _ -> oops loc "unsupported case (infernal error)"
              in
 	     M.put trait context
            ),
@@ -515,6 +515,7 @@ let generate t loc =
                   [<:class_sig_item< inherit $ct class_t$  >>],
                   [<:class_sig_item< inherit $ct class_tt$ >>],
 		  [args, qname]
+
 	      | _ -> oops loc "unsupported case (internal error)"
              ) 
              (match descr with `Vari cons | `Poly cons -> cons | (`Tuple _ | `Struct _) as x -> [x])
