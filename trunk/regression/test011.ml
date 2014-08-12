@@ -18,7 +18,7 @@ end
 @type 'a lambda = [var | `Abs of GT.string * 'a | `App of 'a * 'a] with show
 
 class ['a, 'v] lambda_eval = object
-  inherit ['a, 'v, (string * 'v) list, 'v] @lambda
+  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v] @lambda
   inherit ['v] var_eval 
   method c_Abs s v name l1 = 
     let s' = gensym () in
@@ -35,7 +35,7 @@ let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e;;
 @type 'a var_expr = [var | `Num of GT.int | `Add of 'a * 'a | `Mult of 'a * 'a] with show
 
 class ['a, 'v] var_expr_eval = object
-  inherit ['a, 'v, (string * 'v) list, 'v] @var_expr
+  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v] @var_expr
   inherit ['v] var_eval
   method c_Num  s v i   = `Num i
   method c_Add  s v x y = 
@@ -53,7 +53,7 @@ let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e;;
 @type 'a expr = ['a lambda | 'a var_expr] with show
 
 class ['a, 'v] expr_eval = object
-  inherit ['a, 'v, (string * 'v) list, 'v] @expr
+  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v] @expr
   inherit ['a, 'v] lambda_eval
   inherit ['a, 'v] var_expr_eval
 end 

@@ -14,7 +14,7 @@ open GT
 
 class toString =
   object
-    inherit [int, string, unit, string] @t
+    inherit [int, unit, string, unit, string] @t
     method c_R  () _     = "R"
     method c_W  () _     = "W"
     method c_L  () _ x   = "L " ^ x
@@ -29,7 +29,7 @@ class toString =
 
 class resolve =
   object
-    inherit [string, int, unit, int t] @t
+    inherit [string, unit, int, unit, int t] @t
     method c_R  _ _     = R
     method c_W  _ _     = W
     method c_L  _ _ x   = L x
@@ -53,7 +53,7 @@ type env  = int list * (string -> int) * int list * int list * int
 
 class interpret =
   object
-    inherit [int, int, env, env option] @t    
+    inherit [int, env, int, env, env option] @t    
     method c_R  (      s, m, x::i, o, p) _     = Some (x::s, m, i, o, p+1)
     method c_W  (   x::s, m,    i, o, p) _     = Some (s, m, i, x::o, p+1)
     method c_L  (      s, m,    i, o, p) _ x   = Some ((m x)::s, m, i, o, p+1)

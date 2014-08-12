@@ -56,11 +56,7 @@ let ctyp_of_instance loc args qname =
 
 let generate t loc =
   let module H = Plugin.Helper (struct let loc = loc end) in
-  let make_arg_tag name args = 	     
-    let args = mapi (fun i a -> a, i) args in
-    fun a -> arg_tag (assoc a args) name
-  in
-  let obj_magic = H.E.acc (map H.E.id ["Obj"; "magic"]) in
+  let obj_magic = <:expr< Obj.magic >> in
   let t, d = split t   in
   let d    = flatten d in
   let cluster_specs  = map (fun ((args, n, d), _) -> args, n) d in
@@ -103,9 +99,9 @@ let generate t loc =
            n
     ) 
   in
-  let subj         = g#generate "subj"                     in
-  let acc          = g#generate "inh"                      in
-  let generic_cata = H.P.acc [H.P.id "GT"; H.P.id "gcata"] in
+  let subj         = g#generate "subj"   in
+  let acc          = g#generate "inh"    in
+  let generic_cata = <:patt< GT.gcata >> in
   let defs =
     map 
       (fun ((args, name, descr), deriving) ->     
@@ -114,22 +110,28 @@ let generate t loc =
          let polyvar       = match descr with `Poly _ -> true | _ -> false            in
          let orig_args     = args                                                     in
          let generator     = name_generator args                                      in
-         let targs         = map (fun arg -> arg, generator#generate (targ arg)) args in
-         let img name      = try assoc name targs with Not_found -> 
-                               oops loc "type variable image not found (should not happen)" in
-         let inh           = generator#generate "inh"                                 in
-         let syn           = generator#generate "syn"                                 in
-         let proper_args   = flatten (map (fun (x, y) -> [x; y]) targs) @ [inh; syn]  in
+         let targs         = map 
+                               (fun arg -> arg, (generator#generate (iarg arg), generator#generate (sarg arg))) 
+                               args 
+         in
+         let img name      = try assoc name targs 
+                             with Not_found -> oops loc "type variable image not found (should not happen)" 
+         in
+         let iname name    = fst (img name) in
+         let sname name    = snd (img name) in
+         let inh           = generator#generate "inh"                                         in
+         let syn           = generator#generate "syn"                                         in
+         let proper_args   = flatten (map (fun (x, (y, z)) -> [x; y; z]) targs) @ [inh; syn]  in
          let p_descriptor  = {
            Plugin.is_polyvar = polyvar;
            Plugin.type_args  = args;
            Plugin.name       = current;
-	   Plugin.arg_tag    = make_arg_tag current args;
            Plugin.default    = { 
-             Plugin.inh_t       =`Mono (H.T.var inh);
+             Plugin.inh_t       = H.T.var inh;
              Plugin.syn_t       = H.T.var syn;
              Plugin.proper_args = proper_args;
-             Plugin.arg_img     = (fun a -> H.T.var (img a));
+             Plugin.sname       = (fun a -> H.T.var (sname a));
+             Plugin.iname       = (fun a -> H.T.var (iname a))
            }
          } 
          in
@@ -139,7 +141,7 @@ let generate t loc =
          let tpo      =
 	   H.E.obj None (map (fun a -> <:class_str_item< method $lid:a$ = $H.E.id (farg a)$ >>) args )
          in
-         let tpf = map (fun a -> H.T.arrow (map H.T.var [inh; a; img a])) args in
+         let tpf = map (fun a -> H.T.arrow (map H.T.var [iname a; a; sname a])) args in
          let tpt = H.T.obj (combine args tpf) false in
          let catype =
            let typ = H.T.app (H.T.id name :: map H.T.var args) in
@@ -190,7 +192,7 @@ let generate t loc =
            (fun () -> !method_defs),
            (fun () -> (map 
 			 (fun (name, (_, (args, t))) -> 
-			   let targs   = map (fun a -> H.T.arrow [H.T.var inh; H.T.var a; H.T.var (img a)]) args in
+			   let targs   = map (fun a -> H.T.arrow [H.T.var (iname a); H.T.var a; H.T.var (sname a)]) args in
 			   let msig    = H.T.arrow (targs @ [H.T.var inh; t; H.T.var syn]) in
 			   <:class_str_item< method virtual $lid:tmethod name$ : $msig$ >>,
 			   <:class_sig_item< method $lid:tmethod name$ : $msig$ >>
@@ -235,24 +237,24 @@ let generate t loc =
 			 let proto_t = trait_proto_t t trait in
 			 let mt      = tmethod t             in
 			 let args          = map g#generate args in
-			 let targs         = map (fun a -> a, g#generate (targ a)) args in
+			 let targs         = map (fun a -> a, (g#generate (iarg a), g#generate (sarg a))) args in
                          let p_descriptor  = {
                            Plugin.is_polyvar = false;
                            Plugin.type_args  = args;
                            Plugin.name       = t;
-			   Plugin.arg_tag    = make_arg_tag t args;
                            Plugin.default    = { 
-                             Plugin.inh_t       = `Mono (H.T.var inh);
+                             Plugin.inh_t       = H.T.var inh;
                              Plugin.syn_t       = H.T.var syn;
                              Plugin.proper_args = args;
-                             Plugin.arg_img     = (fun a -> H.T.var (assoc a targs));
+                             Plugin.sname       = (fun a -> H.T.var (snd (assoc a targs)));
+                             Plugin.iname       = (fun a -> H.T.var (fst (assoc a targs)))
                            }
                          } 
 			 in
                          let prop, _ = (option loc (Plugin.get trait)) loc p_descriptor in
                          let typ     = H.T.app (H.T.id t :: map H.T.var args) in
-			 let inh_t   = get_inh_type prop.Plugin.inh_t in
-			 let targs   = map (fun a -> H.T.arrow [inh_t; H.T.var a; prop.Plugin.arg_img a]) p_descriptor.Plugin.type_args in
+			 let inh_t   = prop.Plugin.inh_t in
+			 let targs   = map (fun a -> H.T.arrow [prop.Plugin.iname a; H.T.var a; prop.Plugin.sname a]) p_descriptor.Plugin.type_args in
 			 let mtype   = H.T.arrow (targs @ [inh_t; typ; prop.Plugin.syn_t]) in
 			 <:class_str_item< value mutable $lid:ct$ = $H.E.app [obj_magic; H.E.unit]$ >>,
 			 (H.E.assign (H.E.id ct) (H.E.app [H.E.new_e [proto_t]; H.E.id self])),
@@ -299,23 +301,7 @@ let generate t loc =
 			let rec inner = function
 			| Variable (_, a) -> H.E.gt_tp (H.E.id env.Plugin.subj) a
 			| Instance (_, args, qname) -> 
-			    let args = 	
-			      match prop.inh_t with
-			      | `Mono _ -> map inner args
-			      | `Poly _ -> 
-				  mapi 
-				    (fun i a ->
-                                       let rewrap = H.E.acc (map H.E.id (map_last loc (rewrap_t i) qname)) in
-				       let tag = 
-					 match a with
-					 | Variable (_, _)    -> arg_tag i current
-					 | Instance (_, _, _) -> type_tag
-					 | _                  -> oops loc "unexpected type (internal error)"
-				       in
-                                       H.E.app [rewrap; H.E.func [H.P.id "y"] (H.E.app [inner a; H.E.app [H.E.variant tag; H.E.id "y"]])]
-				    ) 
-				    args
-			    in				   
+			    let args = map inner args in
 			    (match qname with
                              | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.app [H.E.lid "!"; H.E.id context.M.env]) (tmethod t)) :: args)
 			     | _  -> 
@@ -366,7 +352,6 @@ let generate t loc =
                      Plugin.is_polyvar = polyvar;
                      Plugin.type_args  = args;
                      Plugin.name       = name;
-		     Plugin.arg_tag    = make_arg_tag name args;
                      Plugin.default    = prop;
                    }
                    in
@@ -415,7 +400,7 @@ let generate t loc =
                let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
                let rec make_typ = function
                | Arbitrary t | Instance (t, _, _) -> t
-               | Variable (t, name) -> make_a (H.T.var inh) t (H.T.var (img name))
+               | Variable (t, name) -> make_a (H.T.var (iname name)) t (H.T.var (sname name))
                | Self     (t, _, _) -> make_a (H.T.var inh) t (H.T.var syn)
 	       | Tuple    (t, typs) -> H.T.tuple (map make_typ typs)
                in
@@ -491,7 +476,7 @@ let generate t loc =
               | `Type (Instance (_, args, qname)) as case -> 
 		  let args = map (function Variable (_, a) -> a | _ -> oops loc "unsupported case (non-variable in instance)") args in (* TODO *)
                   iter (add_derived_member case) derived;
-                  let targs = flatten (map (fun a -> [a; img a]) args) @ [inh; syn] in
+                  let targs = flatten (map (fun a -> [a; iname a; sname a]) args) @ [inh; syn] in
                   let targs = map H.T.var targs in
                   let ce    = <:class_expr< [ $list:targs$ ] $list:map_last loc class_t qname$ >> in
                   let ct f  =
@@ -561,95 +546,12 @@ let generate t loc =
          let proto_class_def  = <:str_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in
          let proto_class_decl = <:sig_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in 
          let class_def  = <:str_item< class $list:[class_info true (class_t name) class_expr]$ >> in
-         let class_decl = <:sig_item< class $list:[class_info true (class_t name) class_type]$ >> in 
-         let tags =
-	   let g  = name_generator orig_args in
-           let tt = g#generate "t" in
-	   let td_open = 
-	     let self = g#generate "self" in 
-	     [{
-	       tdNam = VaVal (loc, VaVal (tags_open_t current));
-	       tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::tt::orig_args));
-	       tdPrv = VaVal false;
-	       tdDef = H.T.var self;
-               tdCon = VaVal [H.T.var self, H.T.more_variant [H.T.pv_type (H.T.app (H.T.id (tags_t current)::map H.T.var (tt::orig_args)))]]
-	     }]
-	   in
-	   let base_types = 
-	     map 
-	       (fun (args, qname) -> 
-		 let qname = H.T.acc (map H.T.id (map_last loc tags_t qname)) in
-                 H.T.pv_type (H.T.app (qname::map H.T.var (tt::args)))
-	       ) 
-	       base_types
-	   in
-	   let td = {
-   	     tdNam = VaVal (loc, VaVal (tags_t current));
-	     tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (tt::orig_args));
-	     tdPrv = VaVal false;
-	     tdDef = 
-	       H.T.eq_variant (
-                 (H.T.pv_constr type_tag [H.T.var tt])::
-	         base_types @
-                 (mapi (fun i a -> H.T.pv_constr (arg_tag i current) [H.T.var a]) orig_args)
-               );
-               tdCon = VaVal []
-           }     
-	   in
-	   let iargs = 
-	     mapi (fun i a -> a, wrap_t i current, rewrap_t i current) orig_args
-	   in
-	   let tagdefs =
-	     flatten (
-	       mapi (fun i (arg, warg, rewarg) -> 
-                       [<:str_item< value $list:[H.P.id warg, 
-                                                 H.E.func [H.P.id "x"] 
-                                                   (H.E.app [H.E.variant (arg_tag i current); H.E.id "x"])
-                                                ]$ 
-                        >>;
-                        <:str_item< value $list:[H.P.id rewarg,
-                                                 H.E.func 
-                                                   [H.P.id "f"]
-                                                   (H.E.abstr [
-                                                     H.P.app [H.P.variant (arg_tag i current); H.P.id "x"], 
-                                                     VaVal None,  
-                                                     H.E.app [H.E.id "f"; H.E.id "x"];
-
-			 	  	             H.P.wildcard, 
-					             VaVal None, 
-					             H.E.app [H.E.id "invalid_arg"; 
-                                                              H.E.str "type error (must not happen)"
-                                                             ]
-                                                    ])
-                                                ]$
-                        >>
-                       ]
-		    ) iargs
-	     )
-	   in
-	   let a = H.T.var (g#generate "a") in 
-	   let tags_ctype = H.T.app (H.T.id (tags_t current)::map H.T.var (tt::orig_args)) in
-           let tagdecls =
-	     flatten (
-	       map (fun (arg, warg, rewarg) ->		    
-	              [<:sig_item< value $warg$ : $H.T.arrow [H.T.var arg; tags_ctype]$ >>;
-	               <:sig_item< value $rewarg$: $H.T.arrow [
-		                                      H.T.arrow [H.T.var arg; a];
-                                                      tags_ctype;		                                    
-                                                      a
-                                                   ]$ >>
-                      ]
-	  	   ) iargs
-	     ) 
-	   in
-	   td::td_open, tagdefs, tagdecls
-	 in
+         let class_decl = <:sig_item< class $list:[class_info true (class_t name) class_type]$ >> in
 	 let body = 
 	   if is_abbrev 
 	   then let (_, _, expr), _ = hdtl loc cases in expr
 	   else local_defs_and_then (H.E.match_e subj cases)
-	 in
-	 tags,
+	 in	
 	 (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
          (H.P.id (cata name), (H.E.func (map H.P.id args) body)),
          <:sig_item< value $name$ : $catype$ >>,
@@ -676,9 +578,7 @@ let generate t loc =
         ]
     | _ -> []
   in
-  let tags, tuples, defs, decls, classes, derived_classes = split6 defs in
-  let tag_types, tag_defs, tag_decls                      = split3 tags in
-  let tag_types, tag_defs, tag_decls                      = flatten tag_types, flatten tag_defs, flatten tag_decls in
+  let tuples, defs, decls, classes, derived_classes       = split5 defs in
   let pnames, tnames                                      = split tuples in
   let class_defs, class_decls                             = split classes in
   let derived_class_defs, derived_class_decls             = 
@@ -689,8 +589,6 @@ let generate t loc =
   let open_t         = flatten (map open_type t) in
   let type_def       = <:str_item< type $list:t@open_t$ >> in
   let type_decl      = <:sig_item< type $list:t@open_t$ >> in
-  let tag_type_defs  = map (fun t -> <:str_item< type $list:[t]$ >>) tag_types in
-  let tag_type_decls = map (fun t -> <:sig_item< type $list:[t]$ >>) tag_types in
-  <:str_item< declare $list:type_def::tag_type_defs@tag_defs@class_defs@[cata_def]@derived_class_defs$ end >>,
-  <:sig_item< declare $list:type_decl::tag_type_decls@tag_decls@class_decls@decls@derived_class_decls$ end >> 
+  <:str_item< declare $list:type_def::class_defs@[cata_def]@derived_class_defs$ end >>,
+  <:sig_item< declare $list:type_decl::class_decls@decls@derived_class_decls$ end >> 
     

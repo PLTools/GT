@@ -7,10 +7,10 @@ let _ =
   let compare x y = 
     match 
       GT.transform(t) 
-        (rewrap_t  (fun x y -> GT.compare_primitive x y))
-        (rewrap_t1 (fun x y -> GT.compare_primitive x y))
-        (rewrap_t2 (fun x y -> GT.compare_primitive x y))
-	new @compare[t] (`t x) y 
+        GT.compare_primitive
+        GT.compare_primitive
+        GT.compare_primitive
+	new @compare[t] x y 
     with
     | GT.EQ -> "EQ"
     | GT.LT -> "LT"

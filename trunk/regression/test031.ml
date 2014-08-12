@@ -4,7 +4,7 @@ open GT
 
 class ['a, 'b] print =
   object 
-    inherit ['a, unit, 'b, unit, unit, unit] @t
+    inherit ['a, unit, unit, 'b, unit, unit, unit, unit] @t
     method value _ _ x y a b = 
       Printf.printf "%d\n" x;
       Printf.printf "%s\n" y; 

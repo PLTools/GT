@@ -10,13 +10,14 @@ let _ =
        let module H = Helper (struct let loc = loc end) in       
        H.(
         let gen   = name_generator (d.name::d.type_args) in
-	let imgs  = map (fun a -> gen#generate (targ a)) d.type_args in
+	let imgs  = map (fun a -> gen#generate (sarg a)) d.type_args in
         let targs = combine d.type_args imgs in
         {
-          inh_t       = `Mono (T.id "unit"); 
+          inh_t       = T.id "unit"; 
           syn_t       = T.app (T.id d.name::map T.var imgs);
-          proper_args = flatten (map (fun (x, y) -> [x; y]) targs); 
-          arg_img     = (fun a -> 
+          proper_args = flatten (map (fun (x, y) -> [x; y]) targs);
+          iname       = (fun _ -> T.id "unit"); 
+          sname       = (fun a -> 
 	                   try T.var (assoc a targs) 
 	                   with Not_found -> 
 			     raise (Generic_extension (sprintf "arg_img not found (%s)" a))

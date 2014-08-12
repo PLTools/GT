@@ -7,8 +7,8 @@ type $1 = proto$1
 class type show_$1_env_tt    = object  end                      
 class type ['syn] foldl_$1_env_tt   = object  end                      
 class type ['syn] foldr_$1_env_tt   = object  end                      
-class type ['t] eq_$1_env_tt      = object  end                      
-class type ['t] compare_$1_env_tt = object  end                      
+class type eq_$1_env_tt      = object  end                      
+class type compare_$1_env_tt = object  end                      
 class type map_$1_env_tt     = object  end                      
                                                                           
 class type virtual ['inh, 'syn] $1_tt =                           
@@ -76,36 +76,33 @@ class ['syn] foldr_$1_t =
     inherit ['syn] foldr_proto_$1 self                            
     initializer (:=) self (this :> 'syn foldr_$1_t)             
   end                                                                     
-                                                                          
-type 't $1_tags = [`t of 't]                                      
-type ('self, 't) $1_tags_open = 'self constraint 'self = [> 't $1_tags ]
                                                              
-class ['t] eq_proto_$1 env =                                           
+class eq_proto_$1 env =                                           
   object (this)                                                           
-    inherit [('t, $1) $1_tags_open, bool] @$1                
-    method t_$1 inh x = match inh with `t y -> x = y | _ -> false
+    inherit [$1, bool] @$1                
+    method t_$1 inh x = x = inh
   end                                                                     
                                                                           
-class ['t] eq_$1_t =                                                 
+class eq_$1_t =                                                 
   let self = Obj.magic (ref ()) in                                        
   object (this)                                                           
-    inherit [('t, $1) $1_tags_open, bool] @$1                
-    inherit ['t] eq_proto_$1 self                                      
-    initializer (:=) self (this :> 't eq_$1_t)                     
+    inherit [$1, bool] @$1                
+    inherit eq_proto_$1 self                                      
+    initializer (:=) self (this :> eq_$1_t)                     
   end                                                                     
                                                                           
-class ['t] compare_proto_$1 env =                                      
+class compare_proto_$1 env =                                      
   object (this)                                                           
-    inherit [('t, $1) $1_tags_open, comparison] @$1              
-    method t_$1 inh x = match inh with `t y -> compare_primitive y x | _ -> invalid_arg "type error (should not happen)"
+    inherit [$1, comparison] @$1              
+    method t_$1 inh x = compare_primitive inh x 
   end                                                                     
                                                                           
-class ['t] compare_$1_t =                                            
+class compare_$1_t =                                            
   let self = Obj.magic (ref ()) in                                        
   object (this)                                                           
-    inherit [('t, $1) $1_tags_open, comparison] @$1              
-    inherit ['t] compare_proto_$1 self                                
-    initializer (:=) self (this :> 't compare_$1_t)                
+    inherit [$1, comparison] @$1              
+    inherit compare_proto_$1 self                                
+    initializer (:=) self (this :> compare_$1_t)                
   end                                                                             
                                                                                   
 let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn) t =  

@@ -12,10 +12,11 @@ let _ =
         let gen   = name_generator (d.name::d.type_args) in
 	let syn   = gen#generate "syn" in
         {
-          inh_t       = `Mono (T.var syn); 
+          inh_t       = T.var syn; 
           syn_t       = T.var syn;
           proper_args = d.type_args @ [syn];
-          arg_img     = (fun _ -> T.var syn)
+          sname       = (fun _ -> T.var syn);
+          iname       = (fun _ -> T.var syn)
         }, 
 	let rec body env args =
 	  fold_left

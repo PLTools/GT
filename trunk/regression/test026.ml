@@ -10,7 +10,7 @@ let _ =
   Printf.printf "%s\n" (GT.transform(a) string int (new @show[a]) () y);
   Printf.printf "%s\n" (GT.transform(b) string int (new @show[b]) () x);
   Printf.printf "%s\n" (GT.transform(b) int string (new @show[b]) () y);
-  Printf.printf "%b\n" (GT.transform(a) (rewrap_a (fun x y -> x = y)) (rewrap_a1 (fun x y -> x = y)) (new @eq[a]) (`t x) x);
-  Printf.printf "%b\n" (GT.transform(b) (rewrap_a1 (fun x y -> x = y)) (rewrap_a (fun x y -> x = y)) (new @eq[b]) (`t x) x);
+  Printf.printf "%b\n" (GT.transform(a) (=) (=) (new @eq[a]) x x);
+  Printf.printf "%b\n" (GT.transform(b) (=) (=) (new @eq[b]) x x);
 
 
