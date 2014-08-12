@@ -397,7 +397,7 @@ let generate t loc =
          let match_cases =
 	   let case_branch patt met_name names types =
 	     let met_sig  = 
-               let make_a x y z = H.T.app [H.T.acc [H.T.id "GT"; H.T.id "a"]; x; y; z; tpt] in
+               let make_a x y z = H.T.app [<:ctyp< GT.a >>; x; y; z; tpt] in
                let rec make_typ = function
                | Arbitrary t | Instance (t, _, _) -> t
                | Variable (t, name) -> make_a (H.T.var (iname name)) t (H.T.var (sname name))
@@ -414,7 +414,7 @@ let generate t loc =
              let expr =
                let met = H.E.method_call (H.E.id trans) met_name in
                let garg f x =
-                 H.E.app [H.E.acc [H.E.id "GT"; H.E.id "make"]; f; x; H.E.id tpo_name]
+                 H.E.app [<:expr< GT.make >>; f; x; H.E.id tpo_name]
                in
                H.E.app (
                  [met; H.E.id acc; garg (H.E.id self_name) (H.E.id subj)] @
@@ -524,6 +524,7 @@ let generate t loc =
          let methods          = flatten methods                      in
          let methods_sig      = flatten methods_sig                  in
 	 let methods_sig_t    = flatten methods_sig_t                in
+         (* proto_class_type -> meta_class_type *)
          let proto_class_type = <:class_type< object $list:methods_sig_t@type_methods_sig$ end >> in
          let class_expr = 
 	   let this = generator#generate "this" in
@@ -543,8 +544,13 @@ let generate t loc =
            ciExp = c;
          } 
          in           
-         let proto_class_def  = <:str_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in
-         let proto_class_decl = <:sig_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in 
+         (*
+           let meta_class_def  = ... meta_class_type
+           let meta_class_decl = ... meta_class_type
+
+         *)
+         let type_class_def  = <:str_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in
+         let type_class_decl = <:sig_item< class type $list:[class_info true (class_tt name) proto_class_type]$ >> in 
          let class_def  = <:str_item< class $list:[class_info true (class_t name) class_expr]$ >> in
          let class_decl = <:sig_item< class $list:[class_info true (class_t name) class_type]$ >> in
 	 let body = 
@@ -555,7 +561,7 @@ let generate t loc =
 	 (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
          (H.P.id (cata name), (H.E.func (map H.P.id args) body)),
          <:sig_item< value $name$ : $catype$ >>,
-         (proto_class_def, proto_class_decl),
+         (type_class_def, type_class_decl),
          (let env, protos, defs, edecls, pdecls, decls = split6 (map get_derived_classes derived) in
           class_def, (flatten env)@protos, defs, class_decl::(flatten edecls)@pdecls@decls 
 	 )
