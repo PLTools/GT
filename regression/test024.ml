@@ -9,9 +9,9 @@ let _ =
   Printf.printf "%s\n" (GT.transform(b) (fun _ x -> string_of_int x) (new @show[b]) () y);
   Printf.printf "%s\n" (GT.transform(c) (fun _ x -> string_of_int x) (fun _ x -> string_of_int x) (new @show[c]) () x);
   Printf.printf "%s\n" (GT.transform(c) (fun _ x -> string_of_int x) (fun _ x -> string_of_int x) (new @show[c]) () y);
-  Printf.printf "%b\n" (GT.transform(a) (rewrap_a (fun x y -> x = y)) (new @eq[a]) (`t x) x);
-  Printf.printf "%b\n" (GT.transform(b) (rewrap_b (fun x y -> x = y)) (new @eq[b]) (`t y) y);
-  Printf.printf "%b\n" (GT.transform(c) (rewrap_a (fun x y -> x = y)) (rewrap_b (fun x y -> x = y)) (new @eq[c]) (`t x) x);
-  Printf.printf "%b\n" (GT.transform(c) (rewrap_a (fun x y -> x = y)) (rewrap_b (fun x y -> x = y)) (new @eq[c]) (`t y) y);
-  Printf.printf "%b\n" (GT.transform(c) (rewrap_a (fun x y -> x = y)) (rewrap_b (fun x y -> x = y)) (new @eq[c]) (`t x) y)
+  Printf.printf "%b\n" (GT.transform(a) (=) (new @eq[a]) x x);
+  Printf.printf "%b\n" (GT.transform(b) (=) (new @eq[b]) y y);
+  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @eq[c]) x x);
+  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @eq[c]) y y);
+  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @eq[c]) x y)
 
