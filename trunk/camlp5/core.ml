@@ -68,7 +68,7 @@ let generate t loc =
     | [name] when exists (fun (_, n) -> n = name) cluster_specs -> H.E.id (cata name)
     | qname -> 
 	let typename = H.E.acc (map H.E.id qname) in
-	H.E.acc [typename; H.E.id "GT"; H.E.id "gcata"]
+        <:expr< $typename$.GT.gcata >>
   in
   let is_murec name  = try ignore (find (fun (_, n) -> name = n) cluster_specs); true with Not_found -> false in
   let reserved_names = 
