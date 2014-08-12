@@ -96,7 +96,6 @@ let trait_proto_t typ trait = sprintf "%s_proto_%s" trait typ
 let env_tt        typ trait = trait ^ "_" ^ typ ^ "_env_tt"
 let tags_t        typ       = typ ^ "_tags"
 let type_open_t   typ       = typ ^ "_open"
-let tags_open_t   typ       = type_open_t (tags_t typ)
 let rewrap_t      n typ     = "rewrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
 let wrap_t        n typ     = "wrap_" ^ typ ^ (if n = 0 then "" else string_of_int n)
 

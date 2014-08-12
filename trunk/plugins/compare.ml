@@ -11,11 +11,15 @@ let _ =
   register "compare" 
     (fun loc d -> 
        let module H = Helper (struct let loc = loc end) in       
+       let ng   = name_generator d.type_args in
+       let self = ng#generate "self" in
        H.(                
         {
-          inh_t       = T.app (T.id d.name :: map T.var d.type_args);
+          inh_t       = if d.is_polyvar 
+                        then T.app (T.id (type_open_t d.name) :: map T.var (self :: d.type_args)) 
+                        else T.app (T.id d.name :: map T.var d.type_args);
           syn_t       = <:ctyp< GT.comparison >>;
-          proper_args = d.type_args;
+          proper_args = if d.is_polyvar then self :: d.type_args else d.type_args;
           sname       = (fun _ -> <:ctyp< GT.comparison >>);
           iname       = (fun a -> T.var a)
         }, 
