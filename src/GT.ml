@@ -63,16 +63,16 @@ class type eq_list_env_tt = object  end
 class type compare_list_env_tt = object  end
 class type map_list_env_tt = object  end
 
-class type ['a, 'pa, 'inh, 'syn] list_tt =
+class type ['a, 'ia, 'sa, 'inh, 'syn] list_tt =
   object
-    method c_Nil  : 'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
-    method c_Cons : 'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
-                                    ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a ->
-                                    ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
-    method t_list : ('inh -> 'a -> 'pa) -> 'inh -> 'a list -> 'syn
+    method c_Nil  : 'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
+    method c_Cons : 'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
+                                    ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a ->
+                                    ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
+    method t_list : ('ia -> 'a -> 'sa) -> 'inh -> 'a list -> 'syn
   end
 
-let list : (('inh -> 'a -> 'pa) -> ('a, 'pa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn) t =
+let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn) t =
   let rec list_gcata fa trans inh subj =
     let rec self = list_gcata fa trans
     and tpo = object method a = fa end in
@@ -84,34 +84,34 @@ let list : (('inh -> 'a -> 'pa) -> ('a, 'pa, 'inh, 'syn) #list_tt -> 'inh -> 'a 
   in
   {gcata = list_gcata}
 
-class virtual ['a, 'pa, 'inh, 'syn] list_t =
+class virtual ['a, 'ia, 'sa, 'inh, 'syn] list_t =
   object (this)
     method virtual c_Nil :
-      'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+      'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method virtual c_Cons :
-      'inh -> ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
-        ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a ->
-        ('inh, 'a list, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+      'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
+        ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a ->
+        ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method t_list fa = transform list fa this
   end
 
 class ['a] show_list_t =
   object
-    inherit ['a, string, unit, string] @list
+    inherit ['a, unit, string, unit, string] @list
     method c_Nil  _ _      = ""
     method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> ", " ^ xs.fx ())
   end
       
-class ['a, 'pa] map_list_t =
+class ['a, 'sa] map_list_t =
   object
-    inherit ['a, 'pa, unit, 'pa list] @list
+    inherit ['a, unit, 'sa, unit, 'sa list] @list
     method c_Nil _ _ = []
     method c_Cons _ _ x xs = x.fx () :: xs.fx ()
   end
 
 class ['a, 'syn] foldl_list_t =
   object
-    inherit ['a, 'syn, 'syn, 'syn] @list
+    inherit ['a, 'syn, 'syn, 'syn, 'syn] @list
     method c_Nil s _ = s
     method c_Cons s _ x xs = xs.fx (x.fx s)
   end
@@ -122,41 +122,31 @@ class ['a, 'syn] foldr_list_t =
     method c_Cons s _ x xs = x.fx (xs.fx s)
   end
 
-type ('t, 'a) list_tags = [`t of 't | `alist_0 of 'a]
-
-let wrap_list x = `alist_0 x
-let rewrap_list f = function `alist_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
-
 class ['a] eq_list_t =
   object
-    inherit ['a, bool, ('a list, 'a) list_tags, bool] @list
-    method c_Nil inh subj = 
-      match inh with 
-      | `t [] -> true 
-      | _ -> false
+    inherit ['a, 'a, bool, 'a list, bool] @list
+    method c_Nil inh subj = inh = []
     method c_Cons inh subj x xs = 
       match inh with 
-      | `t (y::ys) -> x.fx (`alist_0 y) && xs.fx (`t ys) 
+      | y::ys -> x.fx y && xs.fx ys 
       | _ -> false
   end
 
 class ['a] compare_list_t =
   object
-    inherit ['a, comparison, ('a list, 'a) list_tags, comparison] @list
+    inherit ['a, 'a, comparison, 'a list, comparison] @list
     method c_Nil inh subj =
       match inh with
-      | `t [] -> EQ
-      | `t _  -> GT
-      | _ -> invalid_arg "type error (should not happen)"
+      | [] -> EQ
+      |  _ -> GT
     method c_Cons inh subj x xs =
       match inh with
-      | `t [] -> LT
-      | `t (y::ys) -> 
-	  (match x.fx (`alist_0 y) with
-	  | EQ -> xs.fx (`t ys)
+      | [] -> LT
+      | (y::ys) -> 
+	  (match x.fx y with
+	  | EQ -> xs.fx ys
 	  | c  -> c
 	  )
-      | _ -> invalid_arg "type error (should not happen)"
   end
 
 type 'a poption = 'a option
@@ -169,15 +159,15 @@ class type eq_option_env_tt = object  end
 class type compare_option_env_tt = object  end
 class type map_option_env_tt = object  end
 
-class type ['a, 'pa, 'inh, 'syn] option_tt =
+class type ['a, 'ia, 'sa, 'inh, 'syn] option_tt =
   object
-    method c_None : 'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
-    method c_Some : 'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
-                            ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a -> 'syn
-    method t_option : ('inh -> 'a -> 'pa) -> 'inh -> 'a option -> 'syn
+    method c_None : 'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
+    method c_Some : 'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
+                            ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a -> 'syn
+    method t_option : ('ia -> 'a -> 'sa) -> 'inh -> 'a option -> 'syn
   end
 
-let option : (('inh -> 'a -> 'pa) -> ('a, 'pa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn) t =
+let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn) t =
   let rec option_gcata fa trans inh subj =
     let rec self = option_gcata fa trans
     and tpo = object method a = fa end in
@@ -187,33 +177,33 @@ let option : (('inh -> 'a -> 'pa) -> ('a, 'pa, 'inh, 'syn) #option_tt -> 'inh ->
   in
   {gcata = option_gcata}
 
-class virtual ['a, 'pa, 'inh, 'syn] option_t =
+class virtual ['a, 'ia, 'sa, 'inh, 'syn] option_t =
   object (this)
     method virtual c_None :
-      'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+      'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method virtual c_Some :
-      'inh -> ('inh, 'a option, 'syn, < a : 'inh -> 'a -> 'pa >) a ->
-        ('inh, 'a, 'pa, < a : 'inh -> 'a -> 'pa >) a -> 'syn
+      'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
+        ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method t_option fa = transform option fa this
   end
 
 class ['a] show_option_t =
   object
-    inherit ['a, string, unit, string] @option
+    inherit ['a, unit, string, unit, string] @option
     method c_None  _ _  = "None"
     method c_Some _ _ x = "Some (" ^ x.fx () ^ ")"
   end
       
-class ['a, 'pa] map_option_t =
+class ['a, 'sa] map_option_t =
   object
-    inherit ['a, 'pa, unit, 'pa option] @option
+    inherit ['a, unit, 'sa, unit, 'sa option] @option
     method c_None _ _ = None
     method c_Some _ _ x = Some (x.fx ())
   end
 
 class ['a, 'syn] foldl_option_t =
   object
-    inherit ['a, 'syn, 'syn, 'syn] @option
+    inherit ['a, 'syn, 'syn, 'syn, 'syn] @option
     method c_None s _ = s
     method c_Some s _ x = x.fx s
   end
@@ -223,35 +213,25 @@ class ['a, 'syn] foldr_option_t =
     inherit ['a, 'syn] @foldl[option]
   end
 
-type ('t, 'a) option_tags = [`t of 't | `aoption_0 of 'a]
-
-let wrap_option x = `aoption_0 x
-let rewrap_option f = function `aoption_0 x -> f x | _ -> invalid_arg "type error (should not happen)"
-
 class ['a] eq_option_t =
   object
-    inherit ['a, bool, ('a option, 'a) option_tags, bool] @option
-    method c_None inh subj = 
-      match inh with 
-      | `t None -> true 
-      | _ -> false
+    inherit ['a, 'a, bool, 'a option, bool] @option
+    method c_None inh subj = inh = None
     method c_Some inh subj x = 
       match inh with 
-      | `t (Some y) -> x.fx (`aoption_0 y)
+      | Some y -> x.fx y
       | _ -> false
   end
 
 class ['a] compare_option_t =
   object
-    inherit ['a, comparison, ('a option, 'a) option_tags, comparison] @option
+    inherit ['a, 'a, comparison, 'a option, comparison] @option
     method c_None inh subj =
       match inh with
-      | `t None -> EQ
-      | `t _  -> GT
-      | _ -> invalid_arg "type error (should not happen)"
+      | None -> EQ
+      | _  -> GT
     method c_Some inh subj x =
       match inh with
-      | `t None -> LT
-      | `t (Some y) -> x.fx (`aoption_0 y)
-      | _ -> invalid_arg "type error (should not happen)"
+      | None -> LT
+      | Some y -> x.fx y
   end

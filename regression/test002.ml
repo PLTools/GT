@@ -12,7 +12,7 @@ module Expr =
 
     class ['a] toString =
       object
-        inherit ['a, string, unit, string] t_t
+        inherit ['a, unit, string, unit, string] t_t
         method c_Var   _ _   s     = s
         method c_Const _ _   n     = string_of_int n
         method c_Binop _ _ _ s x y = "(" ^ (x.fx ()) ^ s ^ (y.fx ()) ^ ")"
@@ -20,7 +20,7 @@ module Expr =
 
     class ['a] eval s =
       object
-        inherit ['a, int, unit, int] t_t
+        inherit ['a, unit, int, unit, int] t_t
         method c_Var   _ _ x       = s x
         method c_Const _ _ n       = n
         method c_Binop _ _ f _ x y = f (x.fx ()) (y.fx ())

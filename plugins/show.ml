@@ -10,10 +10,11 @@ let _ =
        let module H = Helper (struct let loc = loc end) in
        H.(
         {
-          inh_t       = `Mono (T.id "unit"); 
+          inh_t       = T.id "unit"; 
           syn_t       = T.id "string";
           proper_args = d.type_args; 
-          arg_img     = (fun _ -> T.id "string")
+          sname       = (fun _ -> T.id "string");
+          iname       = (fun _ -> T.id "unit")
         }, 
 	let wrap_id l = map (fun (x, y) -> x, y, (fun x -> x)) l in
         let (@@) x y = E.app [E.lid "^"; x; y] in
