@@ -56,7 +56,7 @@ dnl usage:
 dnl library name, modules to open,
 dnl 1st dir <space> 2nd dir <space> etc., library homepage.
 dnl more module checks
-dnl AC_CHECK_OCAML_MODULE(libname, Module1 Module2, ../libdir, http://www.example.com/libname)
+AC_CHECK_OCAML_LIBRARY(typeutil, HTMLView, ../typeutil, http://oops.math.spbu.ru/develop/typeutil)
 AC_SUBST(MODULE_INCLUDES)
 AC_SUBST(EXTRA_CMA)
 

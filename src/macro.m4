@@ -5,6 +5,7 @@ type proto$1 = $1
 type $1 = proto$1
                                                                           
 class type show_$1_env_tt    = object  end                      
+class type html_$1_env_tt    = object  end
 class type ['syn] foldl_$1_env_tt   = object  end                      
 class type ['syn] foldr_$1_env_tt   = object  end                      
 class type eq_$1_env_tt      = object  end                      
@@ -19,6 +20,20 @@ class type virtual ['inh, 'syn] $1_tt =
 class virtual ['inh, 'syn] $1_t =                                 
   object (this)                                                           
     method virtual t_$1 : 'inh -> $1 -> 'syn 
+  end                                                                     
+
+class html_proto_$1 env =                                         
+  object (this)                                                           
+    inherit [unit, HTMLView.viewer] @$1                                      
+    method t_$1 inh x = HTMLView.string (HTMLView.escape (string_of_$1 x))
+  end                                                                     
+                                                                          
+class html_$1_t =                                               
+  let self = Obj.magic (ref ()) in                                        
+  object (this)                                                           
+    inherit [unit, HTMLView.viewer] @$1                                      
+    inherit html_proto_$1 self                                    
+    initializer (:=) self (this :> html_$1_t)                   
   end                                                                     
                                                                           
 class show_proto_$1 env =                                         

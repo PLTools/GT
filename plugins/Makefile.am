@@ -1,5 +1,5 @@
 # type in sources here
-SOURCES = show.ml map.ml foldl.ml foldr.ml eq.ml compare.ml
+SOURCES = show.ml map.ml foldl.ml foldr.ml eq.ml compare.ml html.ml
 
 include $(top_srcdir)/m4/Makefile.am.vars
 

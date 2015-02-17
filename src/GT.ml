@@ -56,6 +56,7 @@ GENERIFY(nativeint)
 type 'a plist = 'a list
 type 'a list = 'a plist
 
+class type html_list_env_tt = object  end
 class type show_list_env_tt = object  end
 class type foldl_list_env_tt = object  end
 class type foldr_list_env_tt = object  end
@@ -93,6 +94,13 @@ class virtual ['a, 'ia, 'sa, 'inh, 'syn] list_t =
         ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a ->
         ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method t_list fa = transform list fa this
+  end
+
+class ['a] html_list_t =
+  object
+    inherit ['a, unit, HTMLView.viewer, unit, HTMLView.viewer] @list
+    method c_Nil  _ _      = View.empty
+    method c_Cons _ _ x xs = View.concat (x.fx ()) (match xs.x with [] -> View.empty | _ -> HTMLView.li (xs.fx ()))
   end
 
 class ['a] show_list_t =
@@ -152,6 +160,7 @@ class ['a] compare_list_t =
 type 'a poption = 'a option
 type 'a option = 'a poption
 
+class type html_option_env_tt = object  end
 class type show_option_env_tt = object  end
 class type foldl_option_env_tt = object  end
 class type foldr_option_env_tt = object  end
@@ -185,6 +194,13 @@ class virtual ['a, 'ia, 'sa, 'inh, 'syn] option_t =
       'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
         ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method t_option fa = transform option fa this
+  end
+
+class ['a] html_option_t =
+  object
+    inherit ['a, unit, HTMLView.viewer, unit, HTMLView.viewer] @option
+    method c_None  _ _  = HTMLView.string "None"
+    method c_Some _ _ x = View.concat (HTMLView.string "Some") (HTMLView.ul (x.fx ()))
   end
 
 class ['a] show_option_t =
