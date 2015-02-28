@@ -9,7 +9,8 @@ CLEAN_EXTRA += pa_gt.cmi
 DEBUG = -g
 
 # overwrite some variables
-PXFLAGS = $(P5FLAGS)
+AM_P5FLAGS := -pp "$(CAMLP5O) $(PARSER_INCLUDES) pr_o.cmo"
+PXFLAGS = $(P5FLAGS) 
 CAMLPXLIB = $(CAMLP5LIB)
 MODULE_INCLUDES += -I $(top_srcdir)/src -I "$(CAMLP5LIB)"
 
