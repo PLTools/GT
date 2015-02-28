@@ -591,10 +591,14 @@ let generate t loc =
     let class_defs, protos, defs, class_decls = split4 derived_classes in
     class_defs@(flatten protos)@(flatten defs), flatten class_decls
   in
-  let cata_def       = <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> in
+  let cata_def = 
+    if length pnames < 2 
+    then <:str_item< value $list:[hd pnames, H.E.letrec defs (hd tnames)]$ >> 
+    else <:str_item< value $list:[H.P.tuple pnames, H.E.letrec defs (H.E.tuple tnames)]$ >> 
+  in
   let open_t         = flatten (map open_type t) in
   let type_def       = <:str_item< type $list:t@open_t$ >> in
   let type_decl      = <:sig_item< type $list:t@open_t$ >> in
-  <:str_item< declare $list:type_def::class_defs@[cata_def]@derived_class_defs$ end >>,
+  <:str_item< declare $list:type_def::class_defs@[]@[cata_def]@derived_class_defs$ end >>,
   <:sig_item< declare $list:type_decl::class_decls@decls@derived_class_decls$ end >> 
     
