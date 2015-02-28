@@ -1,6 +1,6 @@
 TESTS = test000 test001 test002 test003 test004 test005 test006 test007\
 test008 test009 test010 test011 test012 test013 test014 test015 test016\
-test017 test018 test019 test020 test021 test022 test023 test024 test025\
+test017 test018 test019 test020 test021 test022 test023 test024 \
 test026 test027 test028 test029 test030 test031 test032 test036
 
 # Problematic tests: 
@@ -20,7 +20,7 @@ MODULE_INCLUDES += -I $(top_srcdir)/src
 EXTRA_CMA += $(PACKAGE).cma
 
 # OCaml parser call with flags
-AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) ../camlp5/pa_gt.cmo -L ../plugins"
+AM_P5FLAGS = -pp "$(CAMLP5O) $(PARSER_INCLUDES) pr_o.cmo ../camlp5/pa_gt.cmo -L ../plugins"
 
 # overwrite some variables
 PXFLAGS = $(P5FLAGS)
