@@ -132,7 +132,46 @@ let tdecl_to_descr loc t =
   (args, name, convert t.tdDef)
 
 EXTEND
-  GLOBAL: sig_item str_item class_expr expr ctyp type_decl; 
+  GLOBAL: sig_item str_item class_expr class_sig_item expr ctyp type_decl; 
+
+  class_sig_item: [[
+     "inherit"; cs = class_signature -> <:class_sig_item< inherit $cs$ >>
+  ]];
+
+  class_signature:
+    [ [ "["; tl = LIST1 ctyp SEP ","; "]"; id = SELF ->
+          <:class_type< $id$ [ $list:tl$ ] >>
+      | "object"; cst = V (OPT class_self_type);
+        csf = V (LIST0 class_sig_item); "end" ->
+          <:class_type< object $_opt:cst$ $_list:csf$ end >> ]
+    | [ ct1 = SELF; "."; ct2 = SELF -> <:class_type< $ct1$ . $ct2$ >>
+      | ct1 = SELF; "("; ct2 = SELF; ")" -> <:class_type< $ct1$ $ct2$ >> ]
+    | [ i = V LIDENT -> <:class_type< $_id: i$ >>
+      | i = V UIDENT -> <:class_type< $_id: i$ >> ] 
+    | [ ci = class_type_longident -> 
+          match ci with
+          | [x]   -> <:class_type< $id:x$ >>
+          | x::xs -> fold_left (fun ct y -> 
+                              let t = <:class_type< $id:y$ >> in
+                              <:class_type< $ct$ . $t$ >>
+                     ) <:class_type< $id:x$ >> xs
+      ] ]
+  ;
+
+  class_type_longident: [[
+    "@"; ci=qname; t=OPT trait -> 
+      let n, q = hdtl loc (rev ci) in
+      rev ((match t with None -> class_t n | Some t -> trait_t t n)::q)
+
+  | "+"; ci=qname; t=trait -> 
+      let n, q = hdtl loc (rev ci) in
+      rev ((trait_proto_t t n) :: q)
+  ]]
+  ;
+
+  class_self_type:
+    [ [ "("; t = ctyp; ")" -> t ] ]
+  ;
 
   class_expr: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
