@@ -35,10 +35,10 @@ class substitutor gen fvs =
 | Lam of string * lam with show, foldl
 
 (* ``show'' function *)
-let show = transform(lam) (new @show[lam]) ()
+let show = transform(lam) (new @lam[show]) ()
 
 (* Transformation class to collect variables; reuses ``foldl'' *)
-class var = object inherit [S.t] @foldl[lam]
+class var = object inherit [S.t] @lam[foldl]
   method c_Var s _ x = S.add x s
 end
 

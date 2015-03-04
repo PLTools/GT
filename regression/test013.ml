@@ -5,11 +5,11 @@ and   b = [`C of GT.string | `D of a] with show
 
 class show_c' =
   object
-    inherit @show[c]
+    inherit @c[show]
     method c_C _ _ s = "new C " ^ s
   end
 
 let _ =
   let y = `D (`B (`C "5")) in
-  Printf.printf "%s\n" (GT.transform(c) new @show[c] () y);
+  Printf.printf "%s\n" (GT.transform(c) new @c[show] () y);
   Printf.printf "%s\n" (GT.transform(c) new show_c' () y)

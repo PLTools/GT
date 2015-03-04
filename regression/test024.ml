@@ -5,13 +5,13 @@
 let _ =
   let x = `A 3 in
   let y = `C 2 in
-  Printf.printf "%s\n" (GT.transform(a) (fun _ x -> string_of_int x) (new @show[a]) () x);
-  Printf.printf "%s\n" (GT.transform(b) (fun _ x -> string_of_int x) (new @show[b]) () y);
-  Printf.printf "%s\n" (GT.transform(c) (fun _ x -> string_of_int x) (fun _ x -> string_of_int x) (new @show[c]) () x);
-  Printf.printf "%s\n" (GT.transform(c) (fun _ x -> string_of_int x) (fun _ x -> string_of_int x) (new @show[c]) () y);
-  Printf.printf "%b\n" (GT.transform(a) (=) (new @eq[a]) x x);
-  Printf.printf "%b\n" (GT.transform(b) (=) (new @eq[b]) y y);
-  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @eq[c]) x x);
-  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @eq[c]) y y);
-  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @eq[c]) x y)
+  Printf.printf "%s\n" (GT.transform(a) (fun _ x -> string_of_int x) (new @a[show]) () x);
+  Printf.printf "%s\n" (GT.transform(b) (fun _ x -> string_of_int x) (new @b[show]) () y);
+  Printf.printf "%s\n" (GT.transform(c) (fun _ x -> string_of_int x) (fun _ x -> string_of_int x) (new @c[show]) () x);
+  Printf.printf "%s\n" (GT.transform(c) (fun _ x -> string_of_int x) (fun _ x -> string_of_int x) (new @c[show]) () y);
+  Printf.printf "%b\n" (GT.transform(a) (=) (new @a[eq]) x x);
+  Printf.printf "%b\n" (GT.transform(b) (=) (new @b[eq]) y y);
+  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @c[eq]) x x);
+  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @c[eq]) y y);
+  Printf.printf "%b\n" (GT.transform(c) (=) (=) (new @c[eq]) x y)
 

@@ -6,7 +6,7 @@ let etoHTML e =
   HTMLView.toHTML (
     HTMLView.html (
       HTMLView.ul (
-        HTMLView.li (transform(expr) (new @html[expr]) () e)
+        HTMLView.li (transform(expr) (new @expr[html]) () e)
       )
     )
   );;
@@ -17,7 +17,7 @@ let stoHTML e =
   HTMLView.toHTML (
     HTMLView.html (
       HTMLView.ul (
-        HTMLView.li (transform(str) (new @html[str]) () e)
+        HTMLView.li (transform(str) (new @str[html]) () e)
       )
     )
   )
