@@ -10,7 +10,7 @@ let _ =
         GT.compare_primitive
         GT.compare_primitive
         GT.compare_primitive
-	new @compare[t] x y 
+	new @t[compare] x y 
     with
     | GT.EQ -> "EQ"
     | GT.LT -> "LT"

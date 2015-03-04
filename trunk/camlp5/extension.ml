@@ -192,11 +192,11 @@ EXTEND
   class_longident: [[
     "@"; ci=qname; t=OPT trait -> 
       let n, q = hdtl loc (rev ci) in
-      rev ((match t with None -> class_t n | Some t -> trait_t t n)::q)
+      rev ((match t with None -> class_t n | Some t -> trait_t n t)::q)
 
   | "+"; ci=qname; t=trait -> 
       let n, q = hdtl loc (rev ci) in
-      rev ((trait_proto_t t n) :: q)
+      rev ((trait_proto_t n t) :: q)
 
   | ci=qname -> ci 
   ]];

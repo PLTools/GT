@@ -1,3 +1,26 @@
+(**************************************************************************
+ *  Copyright (C) 2012-2015
+ *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
+ *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ *
+ *  See the GNU Lesser General Public License version 2.1 for more details
+ *  (enclosed in the file COPYING).
+ **************************************************************************)
+
 type 'a t = {gcata : 'a}
 type ('a, 'b, 'c, 'd) a = {x : 'b; fx : 'a -> 'c; f : 'a -> 'b -> 'c; t : 'd}
 
@@ -126,7 +149,7 @@ class ['a, 'syn] foldl_list_t =
 
 class ['a, 'syn] foldr_list_t =
   object
-    inherit ['a, 'syn] @foldl[list]
+    inherit ['a, 'syn] @list[foldl]
     method c_Cons s _ x xs = x.fx (xs.fx s)
   end
 
@@ -226,7 +249,7 @@ class ['a, 'syn] foldl_option_t =
 
 class ['a, 'syn] foldr_option_t =
   object
-    inherit ['a, 'syn] @foldl[option]
+    inherit ['a, 'syn] @option[foldl]
   end
 
 class ['a] eq_option_t =
