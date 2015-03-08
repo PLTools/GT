@@ -371,17 +371,18 @@ let generate t loc =
            ),
            (fun (trait, p) -> 
  	      let context       = M.get trait in 
+              let c_def, c_decl = List.split (snd p)#custom in
               let i_def, _      = Plugin.generate_inherit true  loc [class_t  current] None p_descriptor (fst p) in
               let _    , i_decl = Plugin.generate_inherit true  loc [class_tt current] None p_descriptor (fst p) in
 	      let p_def, _      = Plugin.generate_inherit false loc [trait_proto_t current trait] (Some (H.E.id context.M.self, H.T.id "unit")) p_descriptor (fst p) in
-              let cproto        = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items$ end >> in
+              let cproto        = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::context.M.proto_items@c_def$ end >> in
               let ce            = 
-	        let ce = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::p_def::context.M.defaults@context.M.items$ end >> in
+	        let ce = <:class_expr< object ($H.P.id context.M.this$) $list:i_def::p_def::context.M.defaults@context.M.items@c_def$ end >> in
 	        <:class_expr< let $flag:false$ $list:[H.P.id context.M.self, H.E.app [obj_magic; H.E.app [H.E.id "ref"; H.E.unit]]]$ in $ce$ >>
 	      in
               let env_t         = <:class_type< object $list:context.M.env_sig$ end >> in
 	      let class_targs   = map H.T.var (fst p).proper_args in
-              let cproto_t      = <:class_type< [ $H.T.app [H.T.id "ref"; H.T.app (H.T.id (env_tt current trait) :: class_targs)]$ ] -> object $list:[i_decl]$ end >> in
+              let cproto_t      = <:class_type< [ $H.T.app [H.T.id "ref"; H.T.app (H.T.id (env_tt current trait) :: class_targs)]$ ] -> object $list:i_decl::c_decl$ end >> in
 	      let ct            = 
                 let ct = 
 		  match class_targs with 
@@ -389,7 +390,7 @@ let generate t loc =
 		  | _  -> <:class_type< $id:env_tt current trait$ [ $list:class_targs$ ] >> 
 		in
 	        let env_inh = <:class_sig_item< inherit $ct$ >> in
-	        <:class_type< object $list:[i_decl; env_inh]$ end >> 
+	        <:class_type< object $list:i_decl::env_inh::c_decl$ end >> 
 	      in
               Plugin.generate_classes loc trait p_descriptor p (context.M.this, context.M.env, env_t, cproto, ce, cproto_t, ct)
 	   )
