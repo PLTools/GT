@@ -132,6 +132,7 @@ class virtual generator =
   object
     method header     = ([] : str_item list)
     method header_sig = ([] : sig_item list)
+    method custom     = ([] : (class_str_item * class_sig_item) list)
     method virtual constructor : env -> string -> (string * typ) list -> expr 
     method virtual tuple       : env -> (string * typ) list -> expr
     method virtual record      : env -> (string * (string * bool * typ)) list -> expr
@@ -366,26 +367,8 @@ module M =
 let m : t M.t ref = ref M.empty
 
 let register name t =
-  let generalize t = t 
-(*
-    fun loc descr ->
-      let module H = Helper (struct let loc = loc end) in
-      let (prop, gen) as return = t loc descr in
-      match prop.inh_t with
-      | `Mono _ -> return
-      | `Poly (inh, f) ->
-	  let ng = name_generator prop.proper_args in
-	  let t = ng#generate "t" in
-	  let inh_t =
-	    let tags_name = tags_open_t descr.name in
-	    let args = (H.T.var t) :: inh :: map f descr.type_args in
-	    H.T.app (H.T.id tags_name :: args)
-	  in
-	  {prop with proper_args = t :: prop.proper_args; inh_t = `Poly (inh_t, f)}, gen
-*)
-  in
   if not (M.mem name !m) 
-  then m := M.add name (generalize t) !m
+  then m := M.add name t !m
 
 let get name =
   if not (M.mem name !m) then None else Some (M.find name !m)

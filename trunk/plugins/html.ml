@@ -51,6 +51,12 @@ let _ =
 	in
         object
 	  inherit generator
+          method custom = 
+            let atyp = T.arrow [if List.length d.type_args = 0 then T.id d.name else T.app ((T.id d.name)::(map T.id d.type_args)); <:ctyp< string >>] in
+            let expr = <:expr< fun _ -> "" >> in
+            [<:class_str_item< method $lid:"attribute"$ : $atyp$ = $expr$ >>,
+             <:class_sig_item< method $lid:"attribute"$ : $atyp$ >>
+            ]
 	  method record env fields = 
             body env "struct" (map (fun (a, (f, _, t)) -> a, t, 
                                  (fun x -> <:expr< View.concat (HTMLView.string $E.str f$) (HTMLView.li $x$) >>))
