@@ -124,6 +124,7 @@ type type_descriptor = {
 type env = {
     inh      : string;
     subj     : string;
+    this     : string;
     new_name : string -> string;
     trait    : string -> typ -> expr option;
   }

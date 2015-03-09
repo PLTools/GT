@@ -293,6 +293,7 @@ let generate t loc =
                let rec env = {
                  Plugin.inh      = g#generate "inh";
                  Plugin.subj     = g#generate "subj";
+                 Plugin.this     = context.M.this;
                  Plugin.new_name = (fun s -> g#generate s); 
                  Plugin.trait    = 
 		   (fun s t -> 			     
