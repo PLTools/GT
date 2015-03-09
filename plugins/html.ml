@@ -33,9 +33,9 @@ let _ =
                  in
 		 match arg with                     
 		 | arg, Variable _, wrapper -> 
-		     append (wrapper <:expr< $E.lid arg$.GT.fx () >>)
+		     expr @@ (wrapper <:expr< $E.lid arg$.GT.fx () >>)
 		 | arg, Self _, wrapper -> 
-		     append ~a:(<:expr< this#attribute $E.gt_x (E.id arg)$ >>) (wrapper <:expr< $E.lid arg$.GT.fx () >>)
+		     append ~a:(<:expr< $E.id env.this$#attribute $E.gt_x (E.id arg)$ >>) (wrapper <:expr< $E.lid arg$.GT.fx () >>)
 		 | arg, Tuple (_, elems), wrapper ->
 		     let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in			
 		     append (
