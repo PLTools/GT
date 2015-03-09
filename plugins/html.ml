@@ -27,10 +27,15 @@ let _ =
              <:expr< HTMLView.ul>>;
              fold_left 
 	       (fun expr arg ->
-		 let append e = expr @@ E.app [<:expr< HTMLView.li >>; e] in
+		 let append ?(a=E.str "") e = 
+                   let attr = <:expr< ~{$P.id "attrs"$ = $a$} >> in
+                   expr @@ E.app [<:expr< HTMLView.li >>; attr; e] 
+                 in
 		 match arg with                     
-		 | arg, (Variable _ | Self _), wrapper -> 
+		 | arg, Variable _, wrapper -> 
 		     append (wrapper <:expr< $E.lid arg$.GT.fx () >>)
+		 | arg, Self _, wrapper -> 
+		     append ~a:(<:expr< this#attribute $E.gt_x (E.id arg)$ >>) (wrapper <:expr< $E.lid arg$.GT.fx () >>)
 		 | arg, Tuple (_, elems), wrapper ->
 		     let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in			
 		     append (
