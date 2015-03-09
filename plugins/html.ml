@@ -57,7 +57,10 @@ let _ =
         object
 	  inherit generator
           method custom = 
-            let atyp = T.arrow [if List.length d.type_args = 0 then T.id d.name else T.app ((T.id d.name)::(map T.id d.type_args)); <:ctyp< string >>] in
+            let atyp = 
+              if d.is_polyvar 
+              then <:ctyp< ! $list:["a"]$ . $T.arrow [T.var "a"; T.id "string"]$ >>
+              else T.arrow [if List.length d.type_args = 0 then T.id d.name else T.app ((T.id d.name)::(map T.var d.type_args)); <:ctyp< string >>] in
             let expr = <:expr< fun _ -> "" >> in
             [<:class_str_item< method $lid:"attribute"$ : $atyp$ = $expr$ >>,
              <:class_sig_item< method $lid:"attribute"$ : $atyp$ >>

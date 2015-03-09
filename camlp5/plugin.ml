@@ -31,6 +31,13 @@ open Dynlink
 open List 
 open Printf
 
+let mapi f l = 
+  let rec mapi' i = function
+  | [] -> []
+  | x::xs -> (f i x) :: mapi' (i+1) xs
+  in
+  mapi' 0 l
+
 type typ  = 
   Arbitrary of ctyp  
 | Variable  of ctyp * string
