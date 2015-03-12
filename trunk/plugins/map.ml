@@ -11,11 +11,14 @@ let _ =
        H.(
         let gen   = name_generator (d.name::d.type_args) in
 	let imgs  = map (fun a -> gen#generate (sarg a)) d.type_args in
+        let self  = gen#generate "self" in
         let targs = combine d.type_args imgs in
         {
           inh_t       = <:ctyp< unit >>; 
-          syn_t       = T.app (T.id d.name::map T.var imgs);
-          proper_args = flatten (map (fun (x, y) -> [x; y]) targs);
+          syn_t       = if d.is_polyvar
+                        then T.app (T.id (type_open_t d.name)::T.var self::map T.var imgs)
+                        else T.app (T.id d.name::map T.var imgs);
+          proper_args = (flatten (map (fun (x, y) -> [x; y]) targs) @ if d.is_polyvar then [self] else []);
           iname       = (fun _ -> T.id "unit"); 
           sname       = (fun a -> 
 	                   try T.var (assoc a targs) 
