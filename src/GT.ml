@@ -30,6 +30,8 @@ let transform t = t.gcata
 let make  f x p = {x=x; fx=(fun a -> f a x); f=f; t=p}
 let apply f a x = f a x
 
+let lift f _ = f
+
 type comparison = LT | EQ | GT
 
 let chain_compare x f = 
