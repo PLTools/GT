@@ -20,7 +20,7 @@ let _ =
         let (@@) x y = E.app [<:expr< View.concat >>; x; y] in
         let rec body env tag args = 
           E.app [<:expr< HTMLView.b>>; 
-                 E.app [<:expr< HTMLView.string >>; E.str tag]
+                 E.app [<:expr< HTMLView.string >>; tag]
 	  ]              
           @@          
 	  (E.app [
@@ -41,7 +41,7 @@ let _ =
 		     append (
 		       <:expr<
                          let $P.tuple (map P.id args)$ = $E.lid arg$ in
-	                 $wrapper (body env "tuple" (wrap_id (combine args elems)))$
+	                 $wrapper (body env (E.str "tuple") (wrap_id (combine args elems)))$
 		       >>
 		    )
 		 | arg, typ, wrapper -> 
@@ -60,19 +60,30 @@ let _ =
             let atyp = 
               if d.is_polyvar 
               then <:ctyp< ! $list:["a"]$ . $T.arrow [T.var "a"; T.id "string"]$ >>
-              else T.arrow [if List.length d.type_args = 0 then T.id d.name else T.app ((T.id d.name)::(map T.var d.type_args)); <:ctyp< string >>] in
-            let expr = <:expr< fun _ -> "" >> in
-            [<:class_str_item< method $lid:"attribute"$ : $atyp$ = $expr$ >>,
-             <:class_sig_item< method $lid:"attribute"$ : $atyp$ >>
+              else T.arrow [
+                     if List.length d.type_args = 0 
+                     then T.id d.name 
+                     else T.app ((T.id d.name)::(map T.var d.type_args)); <:ctyp< string >>] 
+            in
+            let abod = <:expr< fun _ -> "" >> in
+            let ntyp = <:ctyp< string -> string >> in
+            let nbod = <:expr< fun s -> s>> in
+            [<:class_str_item< method $lid:"attribute"$ : $atyp$ = $abod$ >>,
+             <:class_sig_item< method $lid:"attribute"$ : $atyp$ >>;
+
+             <:class_str_item< method $lid:"cname"$ : $ntyp$ = $nbod$ >>,
+             <:class_sig_item< method $lid:"cname"$ : $ntyp$ >>
             ]
 	  method record env fields = 
-            body env "struct" (map (fun (a, (f, _, t)) -> a, t, 
-                                 (fun x -> <:expr< View.concat (HTMLView.string $E.str f$) (HTMLView.li $x$) >>))
-                                 fields
-                              )
-	  method tuple env elems = body env "tuple" (wrap_id elems)
+            body env (E.str "struct") (map (fun (a, (f, _, t)) -> a, t, 
+                                        (fun x -> <:expr< View.concat (HTMLView.string $E.str f$) (HTMLView.li $x$) >>))
+                                        fields
+                                      )
+	  method tuple env elems = body env (E.str "tuple") (wrap_id elems)
 	  method constructor env name args = 
-	    body env ((if d.is_polyvar then "`" else "") ^ name) (wrap_id args)
+            let name = (if d.is_polyvar then "`" else "") ^ name in
+            let tag  = E.app [<:expr< $E.id env.this$ # $"cname"$ >>; E.str name] in
+	    body env tag (wrap_id args)
 	end
      )
     )
