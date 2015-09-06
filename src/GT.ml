@@ -319,3 +319,12 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
              end
   }
 
+let show    t = t.plugins#show
+let html    t = t.plugins#html
+let map     t = t.plugins#map
+let foldl   t = t.plugins#foldl
+let foldr   t = t.plugins#foldr
+let eq      t = t.plugins#eq
+let compare t = t.plugins#compare
+
+
