@@ -19,6 +19,7 @@ let _ =
                         then T.app (T.id (type_open_t d.name) :: map T.var (self :: d.type_args)) 
                         else T.app (T.id d.name :: map T.var d.type_args);
           syn_t       = <:ctyp< GT.comparison >>;
+          fixed_inh   = None;
           proper_args = if d.is_polyvar then self :: d.type_args else d.type_args;
           sname       = (fun _ -> <:ctyp< GT.comparison >>);
           iname       = (fun a -> T.var a)

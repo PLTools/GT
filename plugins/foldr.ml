@@ -15,6 +15,7 @@ let _ =
           inh_t       = T.var syn; 
           syn_t       = T.var syn;
           proper_args = d.type_args @ [syn];
+          fixed_inh   = None;
           sname       = (fun _ -> T.var syn);
           iname       = (fun _ -> T.var syn)
         }, 

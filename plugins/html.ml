@@ -13,6 +13,7 @@ let _ =
           inh_t       = <:ctyp< unit >>; 
           syn_t       = <:ctyp< HTMLView.viewer >>;
           proper_args = d.type_args; 
+          fixed_inh   = Some <:expr< () >>;
           sname       = (fun _ -> <:ctyp< HTMLView.viewer>>);
           iname       = (fun _ -> <:ctyp< unit >>)
         }, 

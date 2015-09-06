@@ -18,6 +18,7 @@ let _ =
           syn_t       = if d.is_polyvar
                         then T.app (T.id (type_open_t d.name)::T.var self::map T.var imgs)
                         else T.app (T.id d.name::map T.var imgs);
+          fixed_inh   = Some <:expr< () >>;
           proper_args = (flatten (map (fun (x, y) -> [x; y]) targs) @ if d.is_polyvar then [self] else []);
           iname       = (fun _ -> T.id "unit"); 
           sname       = (fun a -> 

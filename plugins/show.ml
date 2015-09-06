@@ -13,6 +13,7 @@ let _ =
           inh_t       = T.id "unit"; 
           syn_t       = T.id "string";
           proper_args = d.type_args; 
+          fixed_inh   = Some <:expr< () >>;
           sname       = (fun _ -> T.id "string");
           iname       = (fun _ -> T.id "unit")
         }, 
