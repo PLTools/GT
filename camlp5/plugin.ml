@@ -119,6 +119,7 @@ type properties = {
     proper_args : string list;
     sname       : string -> ctyp;
     iname       : string -> ctyp;
+    fixed_inh   : expr option;
   }
 
 type type_descriptor = {

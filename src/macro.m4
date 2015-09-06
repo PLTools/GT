@@ -120,7 +120,25 @@ class compare_$1_t =
     initializer (:=) self (this :> compare_$1_t)                
   end                                                                             
                                                                                   
-let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn) t =  
+let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn, 
+          < show    : $1 -> string; 
+            html    : $1 -> HTMLView.er;
+            compare : $1 -> $1 -> comparison;
+            eq      : $1 -> $1 -> bool; 
+            map     : $1 -> $1; 
+            foldl   : 'a -> $1 -> 'a; 
+            foldr   : 'a -> $1 -> 'a >) t =
   let $1_gcata t inh x = t#t_$1 inh x in                            
-  {gcata = $1_gcata}
+  {gcata = $1_gcata; 
+   plugins = 
+      object 
+        method show    = $1_gcata (new @$1[show]) ()
+        method html    = $1_gcata (new @$1[html]) ()
+        method compare = $1_gcata (new @$1[compare])
+        method eq      = $1_gcata (new @$1[eq]) 
+        method map     = $1_gcata (new @$1[map]) ()
+        method foldl   = $1_gcata (new @$1[foldl]) 
+        method foldr   = $1_gcata (new @$1[foldr]) 
+      end
+  }
 ]])

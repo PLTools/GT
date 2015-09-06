@@ -99,9 +99,10 @@ let generate t loc =
            n
     ) 
   in
-  let subj         = g#generate "subj"   in
-  let acc          = g#generate "inh"    in
-  let generic_cata = <:patt< GT.gcata >> in
+  let subj          = g#generate "subj"     in
+  let acc           = g#generate "inh"      in
+  let generic_cata  = <:patt< GT.gcata >>   in
+  let plugins_field = <:patt< GT.plugins >> in
   let defs =
     map 
       (fun ((args, name, descr), deriving) ->     
@@ -130,25 +131,77 @@ let generate t loc =
              Plugin.inh_t       = H.T.var inh;
              Plugin.syn_t       = H.T.var syn;
              Plugin.proper_args = proper_args;
+   	     Plugin.fixed_inh   = None;
              Plugin.sname       = (fun a -> H.T.var (sname a));
              Plugin.iname       = (fun a -> H.T.var (iname a))
            }
          } 
          in
-         let derived  = map (fun name -> name, (option loc (Plugin.get name)) loc p_descriptor) deriving in
-         let tpo_name = generator#generate "tpo" in
+         let derived = map (fun name -> name, (option loc (Plugin.get name)) loc p_descriptor) deriving in
+         let plugin_field_type, plugin_field_expr = 
+           let method_decls, method_defs = split (
+	     map 
+	       (fun (trait, (prop, _)) -> 
+		  let fixed_inh    = prop.Plugin.fixed_inh                  in
+		  let g            = name_generator [current]               in
+		  let arg_names    = map g#generate args                    in
+                  let arg_types    = map H.T.var args                       in
+		  let current_type = H.T.app (H.T.id current :: arg_types)  in
+                  let arg_tr_exprs = 
+		    map 
+		      (fun a -> 
+		        match fixed_inh with 
+			| None   -> H.E.id a
+			| Some _ -> <:expr< GT.lift $H.E.id a$ >>
+		      ) 
+		      arg_names 
+		  in
+		  let arg_tr_types =
+		    map 
+		      (fun a ->
+			match fixed_inh with
+			| None   -> H.T.arrow [prop.Plugin.iname a; H.T.var a; prop.Plugin.sname a]
+			| Some _ -> H.T.arrow [H.T.var a; prop.Plugin.sname a]
+		      )
+		      args
+		  in
+		  let method_type = 
+		    match fixed_inh with
+		    | None   -> H.T.arrow (arg_tr_types @ [prop.Plugin.inh_t; current_type; prop.Plugin.syn_t])
+		    | Some _ -> H.T.arrow (arg_tr_types @ [current_type; prop.Plugin.syn_t])
+		  in
+		  let method_body =
+		    match fixed_inh with
+		    | None -> 
+			H.E.func 
+			  (map H.P.id arg_names)
+			  (H.E.app (<:expr< GT.transform >> :: H.E.id current :: (arg_tr_exprs @ [H.E.new_e [trait_t current trait]])))
+		    | Some inh ->
+			H.E.func 
+			  (map H.P.id arg_names)
+			  (H.E.app (<:expr< GT.transform >> :: H.E.id current :: (arg_tr_exprs @ [H.E.new_e [trait_t current trait]] @ [inh])))
+		  in
+		  (trait, method_type), 
+                  <:class_str_item< method $trait$ = $method_body$ >>
+	       ) 
+	       derived 
+           )
+	   in
+           H.T.obj method_decls false, H.E.obj None method_defs	   
+	 in
+         let tpo_name  = generator#generate "tpo" in
 	 let self_name = generator#generate "self" in
-         let tpo      =
+         let tpo =
 	   H.E.obj None (map (fun a -> <:class_str_item< method $lid:a$ = $H.E.id (farg a)$ >>) args )
          in
          let tpf = map (fun a -> H.T.arrow (map H.T.var [iname a; a; sname a])) args in
          let tpt = H.T.obj (combine args tpf) false in
-         let catype =
+         let catype plugins_type =
            let typ = H.T.app (H.T.id name :: map H.T.var args) in
            let gt  = H.T.acc [H.T.id "GT"; H.T.id "t"] in
            let ft  = H.T.arrow [H.T.var inh; typ; H.T.var syn] in
            let trt = H.T.app (H.T.class_t [class_tt name] :: map H.T.var proper_args) in
-           H.T.app [gt; H.T.arrow (tpf @ [trt; ft])]
+           H.T.app [gt; H.T.arrow (tpf @ [trt; ft]); plugins_type]
          in
          let metargs = (map farg args) @ [trans] in
          let args = metargs @ [acc; subj] in
@@ -246,6 +299,7 @@ let generate t loc =
                              Plugin.inh_t       = H.T.var inh;
                              Plugin.syn_t       = H.T.var syn;
                              Plugin.proper_args = args;
+                             Plugin.fixed_inh   = None;
                              Plugin.sname       = (fun a -> H.T.var (snd (assoc a targs)));
                              Plugin.iname       = (fun a -> H.T.var (fst (assoc a targs)))
                            }
@@ -560,13 +614,16 @@ let generate t loc =
 	   then let (_, _, expr), _ = hdtl loc cases in expr
 	   else local_defs_and_then (H.E.match_e subj cases)
 	 in	
-	 (H.P.constr (H.P.id name) catype, H.E.record [generic_cata, H.E.id (cata name)]),
+	 (H.P.constr (H.P.id name) (catype (H.T.id "unit")), H.E.record [generic_cata, H.E.id (cata name); plugins_field, H.E.unit]),
          (H.P.id (cata name), (H.E.func (map H.P.id args) body)),
-         <:sig_item< value $name$ : $catype$ >>,
+         <:sig_item< value $name$ : $catype plugin_field_type$ >>,
          (type_class_def, type_class_decl),
          (let env, protos, defs, edecls, pdecls, decls = split6 (map get_derived_classes derived) in
           class_def, (flatten env)@protos, defs, class_decl::(flatten edecls)@pdecls@decls 
-	 )
+	 ),
+         <:str_item< value $list:[(H.P.constr (H.P.id name) (catype plugin_field_type),
+                                  (H.E.record [generic_cata, H.E.acc [H.E.id name; <:expr< GT.gcata >>]; plugins_field, plugin_field_expr])
+                                 )]$ >>
       ) 
       d
   in
@@ -586,10 +643,10 @@ let generate t loc =
         ]
     | _ -> []
   in
-  let tuples, defs, decls, classes, derived_classes       = split5 defs in
-  let pnames, tnames                                      = split tuples in
-  let class_defs, class_decls                             = split classes in
-  let derived_class_defs, derived_class_decls             = 
+  let tuples, defs, decls, classes, derived_classes, with_plugins = split6 defs         in
+  let pnames,  tnames                                             = split  tuples       in
+  let class_defs, class_decls                                     = split  classes      in
+  let derived_class_defs, derived_class_decls                     = 
     let class_defs, protos, defs, class_decls = split4 derived_classes in
     class_defs@(flatten protos)@(flatten defs), flatten class_decls
   in
@@ -601,6 +658,6 @@ let generate t loc =
   let open_t         = flatten (map open_type t) in
   let type_def       = <:str_item< type $list:t@open_t$ >> in
   let type_decl      = <:sig_item< type $list:t@open_t$ >> in
-  <:str_item< declare $list:type_def::class_defs@[]@[cata_def]@derived_class_defs$ end >>,
+  <:str_item< declare $list:type_def::class_defs@[]@[cata_def]@derived_class_defs@with_plugins$ end >>,
   <:sig_item< declare $list:type_decl::class_decls@decls@derived_class_decls$ end >> 
     

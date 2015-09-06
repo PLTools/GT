@@ -21,7 +21,7 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
-type 'a t = {gcata : 'a}
+type ('a, 'b) t = {gcata : 'a; plugins : 'b}
 type ('a, 'b, 'c, 'd) a = {x : 'b; fx : 'a -> 'c; f : 'a -> 'b -> 'c; t : 'd}
 
 let (~:) x = x.x
@@ -98,7 +98,7 @@ class type ['a, 'ia, 'sa, 'inh, 'syn] list_tt =
     method t_list : ('ia -> 'a -> 'sa) -> 'inh -> 'a list -> 'syn
   end
 
-let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn) t =
+let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn, unit) t =
   let rec list_gcata fa trans inh subj =
     let rec self = list_gcata fa trans
     and tpo = object method a = fa end in
@@ -108,7 +108,7 @@ let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh ->
         trans#c_Cons inh (make self subj tpo) (make fa p1 tpo)
           (make self p2 tpo)
   in
-  {gcata = list_gcata}
+  {gcata = list_gcata; plugins = ()}
 
 class virtual ['a, 'ia, 'sa, 'inh, 'syn] list_t =
   object (this)
@@ -182,6 +182,27 @@ class ['a] compare_list_t =
 	  )
   end
 
+let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn, 
+            < show    : ('a -> string)      -> 'a list -> string;
+              html    : ('a -> HTMLView.er) -> 'a list -> HTMLView.er;
+              map     : ('a -> 'b) -> 'a list -> 'b list; 
+              foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c; 
+              foldr   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;             
+              eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool; 
+              compare : ('a -> 'a -> comparison) -> 'a list -> 'a list -> comparison; 
+            >) t =
+  {gcata   = list.gcata; 
+   plugins = object
+               method show    fa = transform(list) (lift fa) (new @list[show]) ()
+               method html    fa = transform(list) (lift fa) (new @list[html]) ()
+               method map     fa = transform(list) (lift fa) (new @list[map] ) ()
+               method eq      fa = transform(list) fa (new @list[eq]) 
+               method compare fa = transform(list) fa (new @list[compare])
+               method foldl   fa = transform(list) fa (new @list[foldl])
+               method foldr   fa = transform(list) fa (new @list[foldr])
+             end
+  }
+
 type 'a poption = 'a option
 type 'a option = 'a poption
 
@@ -201,7 +222,7 @@ class type ['a, 'ia, 'sa, 'inh, 'syn] option_tt =
     method t_option : ('ia -> 'a -> 'sa) -> 'inh -> 'a option -> 'syn
   end
 
-let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn) t =
+let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn, unit) t =
   let rec option_gcata fa trans inh subj =
     let rec self = option_gcata fa trans
     and tpo = object method a = fa end in
@@ -209,7 +230,7 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
       None   -> trans#c_None inh (make self subj tpo)
     | Some p -> trans#c_Some inh (make self subj tpo) (make fa p tpo)
   in
-  {gcata = option_gcata}
+  {gcata = option_gcata; plugins = ()}
 
 class virtual ['a, 'ia, 'sa, 'inh, 'syn] option_t =
   object (this)
@@ -276,3 +297,25 @@ class ['a] compare_option_t =
       | None -> LT
       | Some y -> x.fx y
   end
+
+let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn, 
+              < show    : ('a -> string)      -> 'a option -> string;
+                html    : ('a -> HTMLView.er) -> 'a option -> HTMLView.er;
+                map     : ('a -> 'b) -> 'a option -> 'b option; 
+                foldl   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c; 
+                foldr   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;             
+                eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool; 
+                compare : ('a -> 'a -> comparison) -> 'a option -> 'a option -> comparison; 
+              >) t =
+  {gcata   = option.gcata; 
+   plugins = object
+               method show    fa = transform(option) (lift fa) (new @option[show]) ()
+               method html    fa = transform(option) (lift fa) (new @option[html]) ()
+               method map     fa = transform(option) (lift fa) (new @option[map] ) ()
+               method eq      fa = transform(option) fa (new @option[eq]) 
+               method compare fa = transform(option) fa (new @option[compare])
+               method foldl   fa = transform(option) fa (new @option[foldl])
+               method foldr   fa = transform(option) fa (new @option[foldr])
+             end
+  }
+
