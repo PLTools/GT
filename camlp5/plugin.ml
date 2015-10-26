@@ -142,6 +142,7 @@ class virtual generator =
     method header     = ([] : str_item list)
     method header_sig = ([] : sig_item list)
     method custom     = ([] : (class_str_item * class_sig_item) list)
+    method default e  = (e  : expr)
     method virtual constructor : env -> string -> (string * typ) list -> expr 
     method virtual tuple       : env -> (string * typ) list -> expr
     method virtual record      : env -> (string * (string * bool * typ)) list -> expr

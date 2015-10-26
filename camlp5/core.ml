@@ -141,7 +141,7 @@ let generate t loc =
          let plugin_field_type, plugin_field_expr = 
            let method_decls, method_defs = split (
 	     map 
-	       (fun (trait, (prop, _)) -> 
+	       (fun (trait, (prop, generator)) -> 
 		  let fixed_inh    = prop.Plugin.fixed_inh                  in
 		  let g            = name_generator [current]               in
 		  let arg_names    = map g#generate args                    in
@@ -181,6 +181,7 @@ let generate t loc =
 			  (map H.P.id arg_names)
 			  (H.E.app (<:expr< GT.transform >> :: H.E.id current :: (arg_tr_exprs @ [H.E.new_e [trait_t current trait]] @ [inh])))
 		  in
+		  let method_body = generator#default method_body in
 		  (trait, method_type), 
                   <:class_str_item< method $trait$ = $method_body$ >>
 	       ) 
