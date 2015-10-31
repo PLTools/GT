@@ -78,8 +78,8 @@ GENERIFY(int32)
 GENERIFY(int64)
 GENERIFY(nativeint)
 
-type 'a plist = 'a list
-type 'a list = 'a plist
+type 'a plist      = 'a list
+type 'a list       = 'a plist
 
 class type html_list_env_tt = object  end
 class type show_list_env_tt = object  end
@@ -316,6 +316,111 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
                method compare fa = transform(option) fa (new @option[compare])
                method foldl   fa = transform(option) fa (new @option[foldl])
                method foldr   fa = transform(option) fa (new @option[foldr])
+             end
+  }
+
+type ('a, 'b) pair = 'a * 'b
+
+class type html_pair_env_tt = object  end
+class type show_pair_env_tt = object  end
+class type foldl_pair_env_tt = object  end
+class type foldr_pair_env_tt = object  end
+class type eq_pair_env_tt = object  end
+class type compare_pair_env_tt = object  end
+class type map_pair_env_tt = object  end
+
+class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
+  object
+    method c_Pair : 'inh -> ('inh, ('a, 'b) pair, 'syn, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
+                            ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa ; b : 'ib -> 'b -> 'sb >) a ->
+                            ('ib, 'b, 'sb, < a : 'ia -> 'a -> 'sa ; b : 'ib -> 'b -> 'sb >) a -> 'syn
+    method t_pair : ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> 'inh -> ('a, 'b) pair -> 'syn
+  end
+
+let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn) #pair_tt -> 'inh -> ('a, 'b) pair -> 'syn, unit) t =
+  let rec pair_gcata fa fb trans inh subj =
+    let rec self = pair_gcata fa fb trans
+    and tpo = object method a = fa method b = fb end in
+    match subj with
+      (a, b) -> trans#c_Pair inh (make self subj tpo) (make fa a tpo) (make fb b tpo)
+  in
+  {gcata = pair_gcata; plugins = ()}
+
+class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_t =
+  object (this)
+    method virtual c_Pair :
+      'inh -> ('inh, ('a, 'b) pair, 'syn, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
+        ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
+        ('ib, 'b, 'sb, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a -> 'syn
+    method t_pair fa fb = transform pair fa fb this
+  end
+
+class ['a, 'b] html_pair_t =
+  object
+    inherit ['a, unit, HTMLView.viewer, 'b, unit, HTMLView.viewer, unit, HTMLView.viewer] @pair
+    method c_Pair _ _ x y = 
+      List.fold_left View.concat View.empty 
+         [HTMLView.string "("; HTMLView.ul (x.fx ()); HTMLView.string ", "; HTMLView.ul (y.fx ()); HTMLView.string ")"]
+  end
+
+class ['a, 'b] show_pair_t =
+  object
+    inherit ['a, unit, string, 'b, unit, string, unit, string] @pair
+    method c_Pair _ _ x y = "(" ^ x.fx () ^ ", " ^ y.fx () ^ ")"
+  end
+      
+class ['a, 'sa, 'b, 'sb] map_pair_t =
+  object
+    inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair] @pair
+    method c_Pair _ _ x y = (x.fx (), y.fx ())
+  end
+
+class ['a, 'b, 'syn] foldl_pair_t =
+  object
+    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn] @pair
+    method c_Pair s _ x y = x.fx (y.fx s)
+  end
+
+class ['a, 'b, 'syn] foldr_pair_t =
+  object
+    inherit ['a, 'b, 'syn] @pair[foldl]
+    method c_Pair s _ x y = y.fx (x.fx s)
+  end
+
+class ['a, 'b] eq_pair_t =
+  object
+    inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, bool] @pair
+    method c_Pair inh subj x y = 
+      match inh with 
+      (z, t) -> x.fx z && y.fx t
+  end
+
+class ['a, 'b] compare_pair_t =
+  object
+    inherit ['a, 'a, comparison, 'b, 'b, comparison, ('a, 'b) pair, comparison] @pair
+    method c_Pair inh subj x y =
+      match inh with
+       (z, t) -> (match x.fx z with EQ -> y.fx t | c -> c)
+  end
+
+let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn) #pair_tt -> 'inh -> ('a, 'b) pair -> 'syn, 
+              < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
+                html    : ('a -> HTMLView.er) -> ('b -> HTMLView.er) -> ('a, 'b) pair -> HTMLView.er;
+                map     : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair; 
+                foldl   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c; 
+                foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;             
+                eq      : ('a -> 'a -> bool) -> ('b -> 'b -> bool) -> ('a, 'b) pair -> ('a, 'b) pair -> bool; 
+                compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) -> ('a, 'b) pair -> ('a, 'b) pair -> comparison; 
+              >) t =
+  {gcata   = pair.gcata; 
+   plugins = object
+               method show    fa fb = transform(pair) (lift fa) (lift fb) (new @pair[show]) ()
+               method html    fa fb = transform(pair) (lift fa) (lift fb) (new @pair[html]) ()
+               method map     fa fb = transform(pair) (lift fa) (lift fb) (new @pair[map] ) ()
+               method eq      fa fb = transform(pair) fa fb (new @pair[eq]) 
+               method compare fa fb = transform(pair) fa fb (new @pair[compare])
+               method foldl   fa fb = transform(pair) fa fb (new @pair[foldl])
+               method foldr   fa fb = transform(pair) fa fb (new @pair[foldr])
              end
   }
 
