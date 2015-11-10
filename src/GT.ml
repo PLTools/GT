@@ -62,7 +62,7 @@ let compare_vari x y =
   | EQ -> compare_primitive (vari_tag x) (vari_tag y)
   | c  -> x
 
-let string_of_string  s = s
+let string_of_string  s = "\"" ^ String.escaped s ^ "\""
 let string_of_unit    _ = "()"
 let string_of_char    c = String.make 1 c
 let string_of_int32     = Int32.to_string
