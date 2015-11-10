@@ -361,12 +361,17 @@ let generate t loc =
 			    (match qname with
                              | [t] when is_murec t && t <> current -> H.E.app ((H.E.method_call (H.E.app [H.E.lid "!"; H.E.id context.M.env]) (tmethod t)) :: args)
 			     | _  -> 
-				 let tobj = 
-				   match qname with 
-				   | [t] when t = current -> H.E.id "this"
-				   | _ -> H.E.new_e (map_last loc (fun name -> trait_t name trait) qname) 
-				 in
-				 H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ args @ [tobj])
+                 		(match qname with 
+				| [t] when t = current -> H.E.app ([H.E.acc (map H.E.id ["GT"; "transform"]); H.E.acc (map H.E.id qname)] @ args @ [H.E.id "this"]) 
+				| _ -> let s = H.E.acc (map H.E.id (qname@["GT";"plugins"])) in
+                                       let m = H.E.method_call s trait in                                          
+                                       match prop.Plugin.fixed_inh with
+				       | None   -> H.E.app (m::args)
+                                       | Some e -> 
+                                           let args = map (fun a -> <:expr< $a$ $e$ >>) args in 
+                                           let b = H.E.app (m::args) in 
+                                           <:expr< GT.lift$b$ >>
+                                )      
 			    )
 			| Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
 			| _ -> invalid_arg "Unsupported type"			    
@@ -411,7 +416,7 @@ let generate t loc =
                      Plugin.default    = prop;
                    }
                    in
-		   let prop               = fst (p loc descr) in
+                   let prop               = fst (p loc descr) in
                    let i_def      , _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.self, H.T.id "unit")) descr prop in  
                    let i_impl     , _     = Plugin.generate_inherit false loc qname None descr prop in  
                    let i_def_proto, _     = Plugin.generate_inherit false loc qname_proto (Some (H.E.id context.M.env, H.T.id "unit")) descr prop in
