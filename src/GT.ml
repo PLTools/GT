@@ -132,7 +132,7 @@ class ['a] show_list_t =
   object
     inherit ['a, unit, string, unit, string] @list
     method c_Nil  _ _      = ""
-    method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> ", " ^ xs.fx ())
+    method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> "; " ^ xs.fx ())
   end
       
 class ['a, 'sa] map_list_t =
@@ -193,13 +193,13 @@ let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh ->
             >) t =
   {gcata   = list.gcata; 
    plugins = object
-               method show    fa = transform(list) (lift fa) (new @list[show]) ()
-               method html    fa = transform(list) (lift fa) (new @list[html]) ()
-               method map     fa = transform(list) (lift fa) (new @list[map] ) ()
-               method eq      fa = transform(list) fa (new @list[eq]) 
-               method compare fa = transform(list) fa (new @list[compare])
-               method foldl   fa = transform(list) fa (new @list[foldl])
-               method foldr   fa = transform(list) fa (new @list[foldr])
+               method show    fa l = "[" ^ (transform(list) (lift fa) (new @list[show]) () l) ^ "]"
+               method html    fa   = transform(list) (lift fa) (new @list[html]) ()
+               method map     fa   = transform(list) (lift fa) (new @list[map] ) ()
+               method eq      fa   = transform(list) fa (new @list[eq]) 
+               method compare fa   = transform(list) fa (new @list[compare])
+               method foldl   fa   = transform(list) fa (new @list[foldl])
+               method foldr   fa   = transform(list) fa (new @list[foldr])
              end
   }
 

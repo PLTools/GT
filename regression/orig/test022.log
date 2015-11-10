@@ -1,5 +1,5 @@
-x=A (Some (1), None, Some (2), None)
-x=A (Some (1), None, Some (2), Some (4))
+x=A (Some (1); None; Some (2); None)
+x=A (Some (1); None; Some (2); Some (4))
 x=A ()
 x == x = true
 x == y = false
