@@ -1,6 +1,6 @@
 open GT
 
-@type ('a, 'b) t = {x: int; y: string; a: 'a; b: 'b} with show, map, eq, compare, foldl, foldr
+@type ('a, 'b) t = {x: int; y: string; a: 'a; b: 'b} with show, gmap, eq, compare, foldl, foldr
 
 class ['a, 'b] print =
   object 
@@ -28,7 +28,7 @@ let _ =
        (fun _ -> function `B -> "`B") 
        (new @t[show])
        ()
-       (transform(t) (fun _ x -> int_of_string x) (fun _ x -> x) (new @t[map]) () y)
+       (transform(t) (fun _ x -> int_of_string x) (fun _ x -> x) (new @t[gmap]) () y)
     );
   transform(t) 
     (fun _ a -> Printf.printf "%s\n" a) 

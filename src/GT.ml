@@ -87,7 +87,7 @@ class type foldl_list_env_tt = object  end
 class type foldr_list_env_tt = object  end
 class type eq_list_env_tt = object  end
 class type compare_list_env_tt = object  end
-class type map_list_env_tt = object  end
+class type gmap_list_env_tt = object  end
 
 class type ['a, 'ia, 'sa, 'inh, 'syn] list_tt =
   object
@@ -135,7 +135,7 @@ class ['a] show_list_t =
     method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> "; " ^ xs.fx ())
   end
       
-class ['a, 'sa] map_list_t =
+class ['a, 'sa] gmap_list_t =
   object
     inherit ['a, unit, 'sa, unit, 'sa list] @list
     method c_Nil _ _ = []
@@ -185,7 +185,7 @@ class ['a] compare_list_t =
 let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn, 
             < show    : ('a -> string)      -> 'a list -> string;
               html    : ('a -> HTMLView.er) -> 'a list -> HTMLView.er;
-              map     : ('a -> 'b) -> 'a list -> 'b list; 
+              gmap    : ('a -> 'b) -> 'a list -> 'b list; 
               foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c; 
               foldr   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;             
               eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool; 
@@ -195,7 +195,7 @@ let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh ->
    plugins = object
                method show    fa l = "[" ^ (transform(list) (lift fa) (new @list[show]) () l) ^ "]"
                method html    fa   = transform(list) (lift fa) (new @list[html]) ()
-               method map     fa   = transform(list) (lift fa) (new @list[map] ) ()
+               method gmap    fa   = transform(list) (lift fa) (new @list[gmap] ) ()
                method eq      fa   = transform(list) fa (new @list[eq]) 
                method compare fa   = transform(list) fa (new @list[compare])
                method foldl   fa   = transform(list) fa (new @list[foldl])
@@ -212,7 +212,7 @@ class type foldl_option_env_tt = object  end
 class type foldr_option_env_tt = object  end
 class type eq_option_env_tt = object  end
 class type compare_option_env_tt = object  end
-class type map_option_env_tt = object  end
+class type gmap_option_env_tt = object  end
 
 class type ['a, 'ia, 'sa, 'inh, 'syn] option_tt =
   object
@@ -256,7 +256,7 @@ class ['a] show_option_t =
     method c_Some _ _ x = "Some (" ^ x.fx () ^ ")"
   end
       
-class ['a, 'sa] map_option_t =
+class ['a, 'sa] gmap_option_t =
   object
     inherit ['a, unit, 'sa, unit, 'sa option] @option
     method c_None _ _ = None
@@ -301,7 +301,7 @@ class ['a] compare_option_t =
 let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn, 
               < show    : ('a -> string)      -> 'a option -> string;
                 html    : ('a -> HTMLView.er) -> 'a option -> HTMLView.er;
-                map     : ('a -> 'b) -> 'a option -> 'b option; 
+                gmap    : ('a -> 'b) -> 'a option -> 'b option; 
                 foldl   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c; 
                 foldr   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;             
                 eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool; 
@@ -311,7 +311,7 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
    plugins = object
                method show    fa = transform(option) (lift fa) (new @option[show]) ()
                method html    fa = transform(option) (lift fa) (new @option[html]) ()
-               method map     fa = transform(option) (lift fa) (new @option[map] ) ()
+               method gmap    fa = transform(option) (lift fa) (new @option[gmap] ) ()
                method eq      fa = transform(option) fa (new @option[eq]) 
                method compare fa = transform(option) fa (new @option[compare])
                method foldl   fa = transform(option) fa (new @option[foldl])
@@ -327,7 +327,7 @@ class type foldl_pair_env_tt = object  end
 class type foldr_pair_env_tt = object  end
 class type eq_pair_env_tt = object  end
 class type compare_pair_env_tt = object  end
-class type map_pair_env_tt = object  end
+class type gmap_pair_env_tt = object  end
 
 class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
   object
@@ -369,7 +369,7 @@ class ['a, 'b] show_pair_t =
     method c_Pair _ _ x y = "(" ^ x.fx () ^ ", " ^ y.fx () ^ ")"
   end
       
-class ['a, 'sa, 'b, 'sb] map_pair_t =
+class ['a, 'sa, 'b, 'sb] gmap_pair_t =
   object
     inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair] @pair
     method c_Pair _ _ x y = (x.fx (), y.fx ())
@@ -406,7 +406,7 @@ class ['a, 'b] compare_pair_t =
 let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn) #pair_tt -> 'inh -> ('a, 'b) pair -> 'syn, 
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
                 html    : ('a -> HTMLView.er) -> ('b -> HTMLView.er) -> ('a, 'b) pair -> HTMLView.er;
-                map     : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair; 
+                gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair; 
                 foldl   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c; 
                 foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;             
                 eq      : ('a -> 'a -> bool) -> ('b -> 'b -> bool) -> ('a, 'b) pair -> ('a, 'b) pair -> bool; 
@@ -416,7 +416,7 @@ let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 
    plugins = object
                method show    fa fb = transform(pair) (lift fa) (lift fb) (new @pair[show]) ()
                method html    fa fb = transform(pair) (lift fa) (lift fb) (new @pair[html]) ()
-               method map     fa fb = transform(pair) (lift fa) (lift fb) (new @pair[map] ) ()
+               method gmap    fa fb = transform(pair) (lift fa) (lift fb) (new @pair[gmap] ) ()
                method eq      fa fb = transform(pair) fa fb (new @pair[eq]) 
                method compare fa fb = transform(pair) fa fb (new @pair[compare])
                method foldl   fa fb = transform(pair) fa fb (new @pair[foldl])
@@ -426,7 +426,7 @@ let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 
 
 let show    t = t.plugins#show
 let html    t = t.plugins#html
-let map     t = t.plugins#map
+let gmap    t = t.plugins#gmap
 let foldl   t = t.plugins#foldl
 let foldr   t = t.plugins#foldr
 let eq      t = t.plugins#eq

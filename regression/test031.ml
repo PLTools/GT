@@ -1,6 +1,6 @@
 open GT
 
-@type ('a, 'b) t = {x: int; y: string; a: 'a; b: 'b} with show, map
+@type ('a, 'b) t = {x: int; y: string; a: 'a; b: 'b} with show, gmap
 
 class ['a, 'b] print =
   object 
@@ -22,7 +22,7 @@ let _ =
        (transform(t)
 	  (fun _ a -> int_of_string a)
 	  (fun _ `B -> "`B")
-	  (new @t[map])
+	  (new @t[gmap])
 	  ()
 	  {x=1; y="2"; a="3"; b=`B}
        )

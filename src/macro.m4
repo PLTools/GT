@@ -10,7 +10,7 @@ class type ['syn] foldl_$1_env_tt   = object  end
 class type ['syn] foldr_$1_env_tt   = object  end                      
 class type eq_$1_env_tt      = object  end                      
 class type compare_$1_env_tt = object  end                      
-class type map_$1_env_tt     = object  end                      
+class type gmap_$1_env_tt     = object  end                      
                                                                           
 class type virtual ['inh, 'syn] $1_tt =                           
   object                                                                  
@@ -50,18 +50,18 @@ class show_$1_t =
     initializer (:=) self (this :> show_$1_t)                   
   end                                                                     
                                                                           
-class map_proto_$1 env =                                          
+class gmap_proto_$1 env =                                          
   object (this)                                                           
     inherit [unit, $1] @$1                                    
     method t_$1 _ x = x                                                  
   end                                                                     
                                                                           
-class map_$1_t =                                                
+class gmap_$1_t =                                                
   let self = Obj.magic (ref ()) in                                        
   object (this)                                                           
     inherit [unit, $1] @$1                                    
-    inherit map_proto_$1 self                                     
-    initializer (:=) self (this :> map_$1_t)                    
+    inherit gmap_proto_$1 self                                     
+    initializer (:=) self (this :> gmap_$1_t)                    
   end                                                                     
                                                                           
 class ['syn] foldl_proto_$1 env =                                 
@@ -125,7 +125,7 @@ let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn,
             html    : $1 -> HTMLView.er;
             compare : $1 -> $1 -> comparison;
             eq      : $1 -> $1 -> bool; 
-            map     : $1 -> $1; 
+            gmap    : $1 -> $1; 
             foldl   : 'a -> $1 -> 'a; 
             foldr   : 'a -> $1 -> 'a >) t =
   let $1_gcata t inh x = t#t_$1 inh x in                            
@@ -136,7 +136,7 @@ let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn,
         method html    = $1_gcata (new @$1[html]) ()
         method compare = $1_gcata (new @$1[compare])
         method eq      = $1_gcata (new @$1[eq]) 
-        method map     = $1_gcata (new @$1[map]) ()
+        method gmap    = $1_gcata (new @$1[gmap]) ()
         method foldl   = $1_gcata (new @$1[foldl]) 
         method foldr   = $1_gcata (new @$1[foldr]) 
       end

@@ -5,7 +5,7 @@ open List
 open Printf
 
 let _ =
-  register "map" 
+  register "gmap" 
     (fun loc d -> 
        let module H = Helper (struct let loc = loc end) in       
        H.(
@@ -36,7 +36,7 @@ let _ =
                $E.tuple (map (map_arg env) (combine args elems))$
             >>
 	| arg, typ ->
-	    (match env.trait "map" typ with
+	    (match env.trait "gmap" typ with
 	     | None   -> E.id arg
 	     | Some e -> <:expr< $e$ () $E.id arg$ >>
 	    )
