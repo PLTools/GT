@@ -1,4 +1,4 @@
-(**************************************************************************
+1(**************************************************************************
  *  Copyright (C) 2012-2015
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
  *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
@@ -202,6 +202,98 @@ let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh ->
                method foldr   fa   = transform(list) fa (new @list[foldr])
              end
   }
+
+module Lazy =
+  struct
+
+    type ('a, 'b) t' = ('a, 'b) t
+    type 'a t = 'a Lazy.t
+
+    class type html_t_env_tt = object  end
+    class type show_t_env_tt = object  end
+    class type foldl_t_env_tt = object  end
+    class type foldr_t_env_tt = object  end
+    class type eq_t_env_tt = object  end
+    class type compare_t_env_tt = object  end
+    class type gmap_list_env_tt = object  end
+
+    class type ['a, 'ia, 'sa, 'inh, 'syn] t_tt =
+      object
+        method t_t : ('ia -> 'a -> 'sa) -> 'inh -> 'a t -> 'syn
+      end
+
+    let t : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #t_tt -> 'inh -> 'a t -> 'syn, unit) t' =
+      let t_gcata fa trans inh subj = trans#t_t fa inh subj (* fa inh (Lazy.force subj) in*) in
+      {gcata = t_gcata; plugins = ()}
+
+    class virtual ['a, 'ia, 'sa, 'inh, 'syn] t_t =
+      object (this)
+        method virtual t_t : ('ia -> 'a -> 'sa) -> 'inh -> 'a t -> 'syn
+      end
+
+    class ['a] html_t_t =
+      object
+        inherit ['a, unit, HTMLView.viewer, unit, HTMLView.viewer] @t
+        method t_t fa inh subj = fa inh @@ Lazy.force subj
+      end
+
+    class ['a] show_t_t =
+      object
+        inherit ['a, unit, string, unit, string] @t
+        method t_t fa inh subj = fa inh @@ Lazy.force subj
+      end
+
+    class ['a, 'sa] gmap_t_t =
+      object
+        inherit ['a, unit, 'sa, unit, 'sa t] @t
+        method t_t fa inh subj = lazy (fa inh @@ Lazy.force subj)
+      end
+
+    class ['a, 'syn] foldl_t_t =
+      object
+        inherit ['a, 'syn, 'syn, 'syn, 'syn] @t
+        method t_t fa inh subj = fa inh @@ Lazy.force subj
+      end
+
+    class ['a, 'syn] foldr_t_t =
+      object
+        inherit ['a, 'syn] @t[foldl]
+      end
+
+    class ['a] eq_t_t =
+      object
+        inherit ['a, 'a, bool, 'a t, bool] @t
+        method t_t fa inh subj = fa (Lazy.force inh) (Lazy.force subj)
+      end
+
+
+    class ['a] compare_t_t =
+      object
+        inherit ['a, 'a, comparison, 'a t, comparison] @t
+        method t_t fa inh subj = fa (Lazy.force inh) (Lazy.force subj)
+      end
+
+    let t : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #t_tt -> 'inh -> 'a t -> 'syn, 
+             < show    : ('a -> string)      -> 'a t -> string;
+               html    : ('a -> HTMLView.er) -> 'a t -> HTMLView.er;
+               gmap    : ('a -> 'b) -> 'a t -> 'b t; 
+               foldl   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c; 
+               foldr   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;             
+               eq      : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool; 
+               compare : ('a -> 'a -> comparison) -> 'a t -> 'a t -> comparison; 
+             >) t' =
+      {gcata   = t.gcata; 
+       plugins = object
+                   method show    fa l = transform(t) (lift fa) (new @t[show]) () l
+                   method html    fa   = transform(t) (lift fa) (new @t[html]) ()
+                   method gmap    fa   = transform(t) (lift fa) (new @t[gmap] ) ()
+                   method eq      fa   = transform(t) fa (new @t[eq]) 
+                   method compare fa   = transform(t) fa (new @t[compare])
+                   method foldl   fa   = transform(t) fa (new @t[foldl])
+                   method foldr   fa   = transform(t) fa (new @t[foldr])
+                 end
+      }
+  end
 
 type 'a poption = 'a option
 type 'a option = 'a poption
