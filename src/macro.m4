@@ -24,14 +24,14 @@ class virtual ['inh, 'syn] $1_t =
 
 class html_proto_$1 env =                                         
   object (this)                                                           
-    inherit [unit, HTMLView.viewer] @$1                                      
-    method t_$1 inh x = HTMLView.string (string_of_$1 x)
+    inherit [unit, HTML.viewer] @$1                                      
+    method t_$1 inh x = HTML.string (string_of_$1 x)
   end                                                                     
                                                                           
 class html_$1_t =                                               
   let self = Obj.magic (ref ()) in                                        
   object (this)                                                           
-    inherit [unit, HTMLView.viewer] @$1                                      
+    inherit [unit, HTML.viewer] @$1                                      
     inherit html_proto_$1 self                                    
     initializer (:=) self (this :> html_$1_t)                   
   end                                                                     
@@ -122,7 +122,7 @@ class compare_$1_t =
                                                                                   
 let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn, 
           < show    : $1 -> string; 
-            html    : $1 -> HTMLView.er;
+            html    : $1 -> HTML.viewer;
             compare : $1 -> $1 -> comparison;
             eq      : $1 -> $1 -> bool; 
             gmap    : $1 -> $1; 

@@ -3,10 +3,10 @@ open GT
 @type expr = Sub of (expr * expr) | Add of expr * expr | Ident of string | Const of int with show, html, gmap, foldl, foldr, eq, compare
 
 let etoHTML e = 
-  HTMLView.toHTML (
-    HTMLView.html (
-      HTMLView.ul (
-        HTMLView.li (transform(expr) (new @expr[html]) () e)
+  HTML.toHTML (
+    HTML.html (
+      HTML.ul (
+        HTML.li (transform(expr) (new @expr[html]) () e)
       )
     )
   );;
@@ -14,10 +14,10 @@ let etoHTML e =
 @type str = {a : expr; b : expr} with html
 
 let stoHTML e = 
-  HTMLView.toHTML (
-    HTMLView.html (
-      HTMLView.ul (
-        HTMLView.li (transform(str) (new @str[html]) () e)
+  HTML.toHTML (
+    HTML.html (
+      HTML.ul (
+        HTML.li (transform(str) (new @str[html]) () e)
       )
     )
   )

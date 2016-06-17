@@ -11,26 +11,26 @@ let _ =
        H.(
         {
           inh_t       = <:ctyp< unit >>; 
-          syn_t       = <:ctyp< HTMLView.viewer >>;
+          syn_t       = <:ctyp< HTML.viewer >>;
           proper_args = d.type_args; 
           fixed_inh   = Some <:expr< () >>;
-          sname       = (fun _ -> <:ctyp< HTMLView.viewer>>);
+          sname       = (fun _ -> <:ctyp< HTML.viewer>>);
           iname       = (fun _ -> <:ctyp< unit >>)
         }, 
 	let wrap_id l = map (fun (x, y) -> x, y, (fun x -> x)) l in
         let (@@) x y = E.app [<:expr< View.concat >>; x; y] in
         let rec body env tag args = 
-          E.app [<:expr< HTMLView.b>>; 
-                 E.app [<:expr< HTMLView.string >>; tag]
+          E.app [<:expr< HTML.b>>; 
+                 E.app [<:expr< HTML.string >>; tag]
 	  ]              
           @@          
 	  (E.app [
-             <:expr< HTMLView.ul>>;
+             <:expr< HTML.ul>>;
              fold_left 
 	       (fun expr arg ->
 		 let append ?(a=E.str "") e = 
                    let attr = <:expr< ~{$P.id "attrs"$ = $a$} >> in
-                   expr @@ E.app [<:expr< HTMLView.li >>; attr; e] 
+                   expr @@ E.app [<:expr< HTML.li >>; attr; e] 
                  in
 		 match arg with                     
 		 | arg, Variable _, wrapper -> 
@@ -77,7 +77,7 @@ let _ =
             ]
 	  method record env fields = 
             body env (E.str "struct") (map (fun (a, (f, _, t)) -> a, t, 
-                                        (fun x -> <:expr< View.concat (HTMLView.string $E.str f$) (HTMLView.li $x$) >>))
+                                        (fun x -> <:expr< View.concat (HTML.string $E.str f$) (HTML.li $x$) >>))
                                         fields
                                       )
 	  method tuple env elems = body env (E.str "tuple") (wrap_id elems)

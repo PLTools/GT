@@ -1,6 +1,6 @@
 # type in sources here
-SOURCES = GT.ml
-MLI = 
+SOURCES = View.ml HTML.ml GT.ml
+MLI = View.mli HTML.mli
 
 include $(top_srcdir)/m4/Makefile.am.vars
 

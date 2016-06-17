@@ -123,9 +123,9 @@ class virtual ['a, 'ia, 'sa, 'inh, 'syn] list_t =
 
 class ['a] html_list_t =
   object
-    inherit ['a, unit, HTMLView.viewer, unit, HTMLView.viewer] @list
+    inherit ['a, unit, HTML.viewer, unit, HTML.viewer] @list
     method c_Nil  _ _      = View.empty
-    method c_Cons _ _ x xs = View.concat (x.fx ()) (match xs.x with [] -> View.empty | _ -> HTMLView.li (xs.fx ()))
+    method c_Cons _ _ x xs = View.concat (x.fx ()) (match xs.x with [] -> View.empty | _ -> HTML.li (xs.fx ()))
   end
 
 class ['a] show_list_t =
@@ -184,7 +184,7 @@ class ['a] compare_list_t =
 
 let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn, 
             < show    : ('a -> string)      -> 'a list -> string;
-              html    : ('a -> HTMLView.er) -> 'a list -> HTMLView.er;
+              html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
               gmap    : ('a -> 'b) -> 'a list -> 'b list; 
               foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c; 
               foldr   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;             
@@ -233,7 +233,7 @@ module Lazy =
 
     class ['a] html_t_t =
       object
-        inherit ['a, unit, HTMLView.viewer, unit, HTMLView.viewer] @t
+        inherit ['a, unit, HTML.viewer, unit, HTML.viewer] @t
         method t_t fa inh subj = fa inh @@ Lazy.force subj
       end
 
@@ -275,7 +275,7 @@ module Lazy =
 
     let t : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #t_tt -> 'inh -> 'a t -> 'syn, 
              < show    : ('a -> string)      -> 'a t -> string;
-               html    : ('a -> HTMLView.er) -> 'a t -> HTMLView.er;
+               html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
                gmap    : ('a -> 'b) -> 'a t -> 'b t; 
                foldl   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c; 
                foldr   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;             
@@ -336,9 +336,9 @@ class virtual ['a, 'ia, 'sa, 'inh, 'syn] option_t =
 
 class ['a] html_option_t =
   object
-    inherit ['a, unit, HTMLView.viewer, unit, HTMLView.viewer] @option
-    method c_None  _ _  = HTMLView.string "None"
-    method c_Some _ _ x = View.concat (HTMLView.string "Some") (HTMLView.ul (x.fx ()))
+    inherit ['a, unit, HTML.viewer, unit, HTML.viewer] @option
+    method c_None  _ _  = HTML.string "None"
+    method c_Some _ _ x = View.concat (HTML.string "Some") (HTML.ul (x.fx ()))
   end
 
 class ['a] show_option_t =
@@ -392,7 +392,7 @@ class ['a] compare_option_t =
 
 let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn, 
               < show    : ('a -> string)      -> 'a option -> string;
-                html    : ('a -> HTMLView.er) -> 'a option -> HTMLView.er;
+                html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
                 gmap    : ('a -> 'b) -> 'a option -> 'b option; 
                 foldl   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c; 
                 foldr   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;             
@@ -449,10 +449,10 @@ class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_t =
 
 class ['a, 'b] html_pair_t =
   object
-    inherit ['a, unit, HTMLView.viewer, 'b, unit, HTMLView.viewer, unit, HTMLView.viewer] @pair
+    inherit ['a, unit, HTML.viewer, 'b, unit, HTML.viewer, unit, HTML.viewer] @pair
     method c_Pair _ _ x y = 
       List.fold_left View.concat View.empty 
-         [HTMLView.string "("; HTMLView.ul (x.fx ()); HTMLView.string ", "; HTMLView.ul (y.fx ()); HTMLView.string ")"]
+         [HTML.string "("; HTML.ul (x.fx ()); HTML.string ", "; HTML.ul (y.fx ()); HTML.string ")"]
   end
 
 class ['a, 'b] show_pair_t =
@@ -497,7 +497,7 @@ class ['a, 'b] compare_pair_t =
 
 let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn) #pair_tt -> 'inh -> ('a, 'b) pair -> 'syn, 
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
-                html    : ('a -> HTMLView.er) -> ('b -> HTMLView.er) -> ('a, 'b) pair -> HTMLView.er;
+                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) -> ('a, 'b) pair -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair; 
                 foldl   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c; 
                 foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;             
