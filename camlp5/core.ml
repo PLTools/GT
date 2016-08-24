@@ -510,7 +510,7 @@ let generate t loc =
              in
              (patt, VaVal None, expr),
              [<:class_str_item< method virtual $lid:met_name$ : $met_sig$ >>], 
-             [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>],
+             [<:class_sig_item< method virtual $lid:met_name$ : $met_sig$ >>], 
              [<:class_sig_item< method $lid:met_name$ : $met_sig$ >>],
 	     []	       
 	   in
