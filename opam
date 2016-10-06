@@ -1,0 +1,21 @@
+opam-version: "1.2"
+
+name: "GT"
+authors: [ "https://github.com/dboulytchev" "https://github.com/Kakadu" ]
+version: "0.0.1"
+maintainer: "kakadu.hafanana@gmail.com"
+homepage:    "https://github.com/dboulytchev/GT"
+bug-reports: "https://github.com/dboulytchev/GT/issues"
+dev-repo:    "https://github.com/dboulytchev/GT.git"
+
+build: [make "-f" "Makefile.ob"]
+build-test: [make "-f" "Makefile.ob" "test"]
+
+install: [make "-f" "Makefile.ob" "PREFIX=%{prefix}%" "install"]
+remove:  [make "-f" "Makefile.ob" "PREFIX=%{prefix}%" "uninstall"]
+
+depends: [
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "camlp5"
+]
