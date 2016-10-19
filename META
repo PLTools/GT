@@ -1,0 +1,62 @@
+version = "0.1"
+description = "Generic transformers for algebraic types"
+archive(byte) = "GT.cma"
+archive(native) = "GT.cmxa"
+
+package "syntax" (
+  version = "0.1"
+  description = "Syntax extension for generic transformers"
+  requires = "camlp5"
+  archive(syntax, preprocessor) = "pa_gt.cmo"
+  archive(syntax, toploop) = "pa_gt.cmo"
+
+  package "compare" (
+    description = "Plugin 'compare'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "compare.cmo"
+    archive(syntax,toploop) = "compare.cmo"
+  )
+  package "show" (
+    description = "Plugin 'show'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "show.cmo"
+    archive(syntax,toploop) = "show.cmo"
+  )
+  package "html" (
+    description = "Plugin 'html'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "html.cmo"
+    archive(syntax,toploop) = "html.cmo"
+  )
+  package "eq" (
+    description = "Plugin 'eq'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "eq.cmo"
+    archive(syntax,toploop) = "eq.cmo"
+  )
+  package "foldl" (
+    description = "Plugin 'foldl'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "foldl.cmo"
+    archive(syntax,toploop) = "foldl.cmo"
+  )
+  package "foldr" (
+    description = "Plugin 'foldr'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "foldr.cmo"
+    archive(syntax,toploop) = "foldr.cmo"
+  )
+  package "map" (
+    description = "Plugin 'map'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "gmap.cmo"
+    archive(syntax,toploop) = "gmap.cmo"
+  )
+  package "all" (
+    description = "All supported syntaxes"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo pr_dump.cmo pr_o.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo pr_dump.cmo pr_o.cmo"
+  )
+)
+
