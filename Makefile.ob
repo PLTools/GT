@@ -91,6 +91,7 @@ INSTALL_TARGETS=META \
 	$(wildcard _build/camlp5/pa_gt.cmo) \
 	_build/src/GT.cma \
 	_build/src/GT.cmxa \
+	_build/src/GT.a \
 	_build/src/View.cmi \
 	_build/src/HTML.cmi \
 	_build/src/GT.cmi \
