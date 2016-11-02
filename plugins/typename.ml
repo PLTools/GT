@@ -17,11 +17,32 @@ let _ =
           sname       = (fun _ -> T.id "string");
           iname       = (fun _ -> T.id "unit")
         }, 
+        let tname env =
+          match d.type_args with
+	  | [] -> E.str d.name
+	  | _  -> 
+	      let args = 
+	        E.app [
+	          <:expr< String.concat >>;
+	          E.str ", ";              
+	          List.fold_right 
+	            (fun a expr ->
+	               E.app [
+	                  E.id "::";
+		          E.app [E.gt_tp (E.id env.subj) a; <:expr< () >>];
+		          expr
+		      ]
+	           ) 
+	           d.type_args 	
+		   (E.id "[]")
+	        ]
+	      in args
+	in
         object
 	  inherit generator
-	  method record      env fields    = E.str ""
-	  method tuple       env elems     = E.str ""
-	  method constructor env name args = E.str ""
+	  method record      env fields    = tname env
+	  method tuple       env elems     = tname env
+	  method constructor env name args = tname env
 	end
      )
     )

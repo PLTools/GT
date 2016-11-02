@@ -24,7 +24,7 @@ let () = dispatch (function
 
      m4_rules ();
      dep ["use_m4"] ["src/macro.m4"];
-     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"camlp5o pr_o.cmo camlp5/pa_gt.cmo" ]);
+     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"camlp5o camlp5/pa_gt.cmo" ]);
 
      flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
                                             ; A"show.cmo";  A"gmap.cmo"
@@ -32,7 +32,7 @@ let () = dispatch (function
                                             ; A"compare.cmo"; A"eq.cmo"
                                             ]);
 
-     flag ["ocamldep"; "link_pa_gt"]   (S [ A"-pp"; A"camlp5o pr_o.cmo camlp5/pa_gt.cmo" ]);
+     flag ["ocamldep"; "link_pa_gt"]   (S [ A"-pp"; A"camlp5o camlp5/pa_gt.cmo" ]);
      flag ["compile";  "link_pa_gt"]   (S [ A"-I";A"camlp5"; Sh"camlp5/pa_gt.cmo" ]);
 
      flag ["compile"; "short_paths"] & S [A "-short-paths"];
