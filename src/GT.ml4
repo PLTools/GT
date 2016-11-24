@@ -207,7 +207,8 @@ module Lazy =
   struct
 
     type ('a, 'b) t' = ('a, 'b) t
-    type 'a t = 'a Lazy.t
+
+    include Lazy
 
     class type html_t_env_tt = object  end
     class type show_t_env_tt = object  end
