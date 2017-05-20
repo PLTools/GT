@@ -1,0 +1,6 @@
+S .
+S ../src
+B ../_build/regression
+B ../_build/src
+
+FLG -rectypes
