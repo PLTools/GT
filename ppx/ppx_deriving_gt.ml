@@ -361,9 +361,10 @@ let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%t
   [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
 
 module MakeMeta = struct
-  let str_tt_for_algebraic ~params ~typename cases_list =
+  let sig_tt_for_algebraic ~params ~typename cases_list =
     failwith "not implemented"
-  let str_tt_for_algebraic ~params ~typename cases_list =
+
+  let t_params ~params =
     let poly_params = List.filter_map params ~f:(fun (p,_) ->
       match p.ptyp_desc with
       | Ptyp_var name -> Some name
@@ -372,15 +373,15 @@ module MakeMeta = struct
     in
     if List.length params <> List.length poly_params
     then failwith "consytructor declaration has not vars in a params";
-
-    let params =
-      let ps = [ [%type: 'tpoT]; [%type: 'type_itself] ] in
-      let ps = ps @
-        List.map (fun s -> Typ.var @@ "gt_a_for_"^s) poly_params
-      in
-      let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
-      List.map (fun p -> (p, Invariant)) ps
+    let ps = [ [%type: 'tpoT]; [%type: 'type_itself] ] in
+    let ps = ps @
+      List.map (fun s -> Typ.var @@ "gt_a_for_"^s) poly_params
     in
+    let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
+    List.map (fun p -> (p, Invariant)) ps
+
+  let str_tt_for_algebraic ~params ~tt_name cases_list =
+    let params = t_params params in
     let meths = List.map cases_list ~f:(fun ctr ->
       if ctr.pcd_res <> None
       then failwith "GADT not supported";
@@ -398,63 +399,69 @@ module MakeMeta = struct
           List.fold_right xs2 ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
       | Pcstr_record _ -> failwith "not supported"
     ) in
-    let name = sprintf "%s_meta_tt" typename in
     Str.class_type [Ci.mk ~virt:Virtual ~params
-                    (Location.mknoloc name) @@
+                    (Location.mknoloc tt_name) @@
                   Cty.signature (Csig.mk [%type: _] meths) ]
 
-let str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name make_params_app_fa constrs =
-  (* let typename_gcata = typename^"_gcata" in *)
-  let typename_meta_gcata = typename^"_meta_gcata" in
-  (* let tpo = tpo_obj ~root_type in *)
-  let match_body =
-    Exp.match_ (Exp.ident @@ lid "subj") @@
-    ListLabels.map constrs ~f:(fun { pcd_name = { txt = name' }; pcd_args } ->
-      let Pcstr_tuple pcd_args = pcd_args in
-      let argnames = List.mapi (fun n _ -> sprintf "p%d" n) pcd_args in
-      let args_tuple =
-        match argnames with
-        | [] -> None
-        | [single_arg] -> Some (Pat.var @@ mknoloc single_arg)
-        | _ -> Some (Pat.tuple @@ List.map (fun s-> Pat.var @@ mknoloc s) argnames)
-      in
+  let str_t_for_algebraic ~params ~t_name ~meta_tt_name =
+    let params = t_params params in
+    Str.class_ [Ci.mk ~virt:Virtual ~params (Location.mknoloc t_name) @@
+                  Ast_helper.Cl.structure (Cstr.mk [%pat? _]
+                    [ Cf.constraint_ [%type: 'self] @@
+                        Typ.class_ (mknoloc (Lident meta_tt_name)) (List.map ~f:fst params)
+                    ])
+    ]
 
-      let app_args = List.map2 (fun argname arg ->
-        match arg.ptyp_desc with
-        | _ when are_the_same arg root_type -> [%expr GT.make self [%e Exp.ident @@ lid argname] tpo]
-        | Ptyp_var v ->
-            (* [%expr GT.make [%e Exp.ident @@ lid @@ "f"^v] [%e Exp.ident @@ lid argname] tpo] *)
-            Exp.(apply (ident @@ lid @@ "f"^v) [ (Nolabel, ident @@ lid argname)] )
+  let str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name make_params_app_fa constrs =
+    let typename_meta_gcata = typename^"_meta_gcata" in
+    let match_body =
+      Exp.match_ (Exp.ident @@ lid "subj") @@
+      ListLabels.map constrs ~f:(fun { pcd_name = { txt = name' }; pcd_args } ->
+        let Pcstr_tuple pcd_args = pcd_args in
+        let argnames = List.mapi (fun n _ -> sprintf "p%d" n) pcd_args in
+        let args_tuple =
+          match argnames with
+          | [] -> None
+          | [single_arg] -> Some (Pat.var @@ mknoloc single_arg)
+          | _ -> Some (Pat.tuple @@ List.map (fun s-> Pat.var @@ mknoloc s) argnames)
+        in
 
-        | Ptyp_constr ({txt=Ldot (Lident "GT", "int"); _},[]) ->
-            [%expr [%e Exp.ident @@ lid argname]]
-        | Ptyp_constr ({txt=(Lident "int"); _},[]) ->
-            [%expr [%e Exp.ident @@ lid argname]]
-        | Ptyp_constr _ ->
-           [%expr [%e Exp.ident @@ lid argname]]
-           (* [%expr GT.make [%e Exp.ident @@ lid "self"] [%e Exp.ident @@ lid argname] tpo] *)
-        | _ -> raise_errorf "Some cases are not supported when generating application in gcata"
-      ) argnames pcd_args
-      in
+        let app_args = List.map2 (fun argname arg ->
+          match arg.ptyp_desc with
+          | _ when are_the_same arg root_type -> [%expr GT.make self [%e Exp.ident @@ lid argname] tpo]
+          | Ptyp_var v ->
+              (* [%expr GT.make [%e Exp.ident @@ lid @@ "f"^v] [%e Exp.ident @@ lid argname] tpo] *)
+              Exp.(apply (ident @@ lid @@ "f"^v) [ (Nolabel, ident @@ lid argname)] )
 
-      Exp.case (Pat.construct (lid name') args_tuple) @@
-      Exp.(apply (send (ident @@ lid "trans") (mknoloc ("c_"^name')) )
-           @@ List.map (fun x -> (Nolabel,x))
-             ([ [%expr initial_inh]; [%expr (GT.make self subj tpo)] ] @ app_args)
-          )
-    )
-  in
-  [%stri
-    let rec [%p (Pat.var @@ mknoloc gcata_name) ] =
-      [%e make_params_lambda_fa ~root_type
-        [%expr
-        fun tpo trans init_inh subj ->
-          let self = [%e make_params_app_fa (Exp.ident @@ lid typename_meta_gcata)
-                                             [ [%expr tpo]; [%expr trans] ] ]
-          in
-          [%e match_body]
-      ]]
-  ]
+          | Ptyp_constr ({txt=Ldot (Lident "GT", "int"); _},[]) ->
+              [%expr [%e Exp.ident @@ lid argname]]
+          | Ptyp_constr ({txt=(Lident "int"); _},[]) ->
+              [%expr [%e Exp.ident @@ lid argname]]
+          | Ptyp_constr _ ->
+             [%expr [%e Exp.ident @@ lid argname]]
+             (* [%expr GT.make [%e Exp.ident @@ lid "self"] [%e Exp.ident @@ lid argname] tpo] *)
+          | _ -> raise_errorf "Some cases are not supported when generating application in gcata"
+        ) argnames pcd_args
+        in
+
+        Exp.case (Pat.construct (lid name') args_tuple) @@
+        Exp.(apply (send (ident @@ lid "trans") (mknoloc ("c_"^name')) )
+             @@ List.map (fun x -> (Nolabel,x))
+               ([ [%expr initial_inh]; [%expr (GT.make self subj tpo)] ] @ app_args)
+            )
+      )
+    in
+    [%stri
+      let rec [%p (Pat.var @@ mknoloc gcata_name) ] =
+        [%e make_params_lambda_fa ~root_type
+          [%expr
+          fun tpo trans initial_inh subj ->
+            let self = [%e make_params_app_fa (Exp.ident @@ lid typename_meta_gcata)
+                                               [ [%expr tpo]; [%expr trans] ] ]
+            in
+            [%e match_body]
+        ]]
+    ]
 
 end
 
@@ -651,6 +658,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let typename    = root_type.ptype_name.txt in
   let typename_t  = typename ^ "_t"  in
   let typename_tt = typename ^ "_tt" in
+  let typename_meta_t  = typename ^ "_meta_t" in
   let typename_meta_tt = typename ^ "_meta_tt" in
   let typename_meta_gcata = typename ^ "_meta_gcata" in
   let typename_gcata = typename ^ "_gcata" in
@@ -721,28 +729,9 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
         Exp.apply first (first_part @ second_part)
       in
 
-      (* let _make_params_app = make_params_app_namer ~namer:(fun name -> Exp.ident @@ lid name)
-      in *)
-      (* let make_params_app_lift =
-        make_params_app_namer ~use_lift:true
-          ~namer:(fun name -> Exp.ident @@ lid name)
-      in *)
       let make_params_app_fa =
         make_params_app_namer ~namer:(fun name -> Exp.ident @@ lid ("f"^name))
       in
-
-      (* let _make_params_app first last =
-         match root_type.ptype_params with
-         | [] -> Exp.apply first [ (Nolabel, last) ]
-         | params ->
-           let res = Exp.apply first @@
-             List.map (function ({ptyp_desc; _ },_) ->
-               match ptyp_desc with
-               | Ptyp_var name -> (Nolabel, Exp.ident @@ lid name)
-               | _ -> assert false) params
-           in
-           Exp.apply res [(Nolabel, last)]
-      in *)
 
       let gt_repr_typ = gt_repr_typ_wrap ~typename ~root_type [%type: unit] in
       let gt_repr_body =
@@ -823,7 +812,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
           (List.map (fun name ->
                         [%expr fun x -> GT.make [%e Exp.ident @@ lid @@ transformer_name name]
                                                 x parameter_transforms_obj]) poly_param_names
-          ) @ [ [%expr parameter_transforms_obj]; [%expr transformer]; [%expr initial_inh]; [%expr subject] ]
+          ) @ [ [%expr parameter_transforms_obj]; [%expr transformer]; [%expr initial_inh]; [%expr subj] ]
         in
         let meta_gcata_args = List.map (fun x -> (Nolabel,x)) meta_gcata_args in
         let arg_pats = [ [%pat? transformer]; [%pat? initial_inh]; [%pat? subj] ] in
@@ -832,20 +821,43 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
           Pat.(var @@ mknoloc typename_gcata) @@
             Exp.fun_list ~args:arg_pats
             [%expr
-              let tpo = [%e tpo_obj ~root_type] in
+              let parameter_transforms_obj = [%e tpo_obj ~root_type] in
               [%e Exp.(apply (ident @@ lid typename_meta_gcata)) meta_gcata_args ]
             ]
           ]
       in
       let (tt_methods, t_methods, _) = generate_some_methods root_type constrs ~typename in
-      let ans =
-        [ MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~typename constrs
-        ; make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods
-        ; MakeMeta.str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name:typename_meta_gcata make_params_app_fa constrs
-        ; gcata
-        ; Str.class_ [Ci.mk ~virt:Virtual ~params:(default_params root_type) (mknoloc typename_t) @@
-                      Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") t_methods)
+      let class_t =
+        let poly_names = map_type_param_names (fun x -> x) root_type.ptype_params in
+        let t_class_params =
+          let xs = List.map poly_names ~f:(fun n ->
+            Typ.([var n; var @@ "i"^n; var @@ "s"^n; var @@ "gt_a_for_"^n])
+            )
+          in
+          let xs = List.flatten xs @ [ [%type: 'tpoT]; [%type: 'inh]; [%type: 'syn]] in
+          List.map xs ~f:(fun x -> (x,Invariant))
+        in
+        let params =
+          match MakeMeta.t_params ~params:root_type.ptype_params with
+          | []
+          | [_] -> assert false
+          | a::b::xs -> a :: (using_type ~typename root_type, Invariant) :: xs
+        in
+        let params = List.map ~f:fst params in
+        Str.class_ [Ci.mk ~virt:Virtual ~params:t_class_params (mknoloc typename_t) @@
+                      Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this")
+                        [Cf.inherit_ Fresh (Cl.constr (lid typename_meta_t) params) None]
+                        )
                      ]
+      in
+      let ans =
+        [ MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~tt_name:typename_meta_tt constrs
+        ; make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods
+        ; MakeMeta.str_meta_gcata_for_algebraic ~root_type ~typename
+            ~gcata_name:typename_meta_gcata make_params_app_fa constrs
+        ; gcata
+        ; MakeMeta.str_t_for_algebraic ~params:root_type.ptype_params ~t_name:typename_meta_t ~meta_tt_name:typename_meta_tt
+        ; class_t
         ]
       in
       let ans = ans @ show_decls @ gmap_decls in
