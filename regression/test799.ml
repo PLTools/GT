@@ -1,7 +1,9 @@
 open Printf
 
 (* FIRST PART *)
-type ('a,'b) t = OK of 'a | Error of 'b [@@deriving gt {show}]
+type ('a,'b) t = OK of 'a | Error of 'b
+[@@deriving gt {show}]
+(* type ('a) t = OK of 'a | Error of string [@@deriving gt {show}] *)
 
 let () =
   let show fa fb (e: (_,_) t) =

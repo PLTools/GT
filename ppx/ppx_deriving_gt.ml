@@ -22,7 +22,7 @@ module List = struct
       xs ([],[],[])
   let filter_map ~f xs =
     List.fold_right (fun x acc -> match f x with Some v -> v::acc | None -> acc) xs []
-
+  let last_exn xs = List.hd @@ List.rev xs
 end
 
 let deriver = "gt"
@@ -352,6 +352,9 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
   (tts, ts, ts_sigs)
 
 let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
+  (* TODO: maybe add extra string argument to concat it with type variables to get
+              ('a_inh, 'a, 'a_syn, 'heck) GT.a
+  *)
   [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
 
 module MakeMeta = struct
@@ -386,8 +389,9 @@ module MakeMeta = struct
           | _ -> assert false
         )
         in
+        let methname = {ctr.pcd_name with txt = "c_" ^ ctr.pcd_name.txt} in
         let xs2 = [%type: 'inh] :: (make_gt_a_typ ()) :: xs2 in
-        Ctf.method_ ctr.pcd_name Public Virtual @@
+        Ctf.method_ methname Public Virtual @@
           List.fold_right xs2 ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
       | Pcstr_record _ -> failwith "not supported"
     ) in
@@ -397,10 +401,32 @@ module MakeMeta = struct
                   Cty.signature (Csig.mk [%type: _] meths) ]
 end
 
-let make_tt_class_type ~params typename_tt tt_methods =
-  Str.class_type [Ci.mk ~virt:Virtual ~params
+let make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods =
+  (* TODO: fix derty hack: there we suppose that last element of tt_methods
+    is a transformer for a whole type
+  *)
+
+  let inheritF =
+    let params = [ [%type: 'inh]; [%type: 'syn] ] in
+    let itself = Typ.constr (lid typename) (List.map ~f:fst root_type.ptype_params) in
+    let tpoT = Typ.alias (params_obj root_type) "tpoT" in
+    let gtas = List.map root_type.ptype_params ~f:(fun (t,_) ->
+      match t.ptyp_desc with
+      | Ptyp_var name ->
+          let inh = Typ.var (sprintf "i%s" name) in
+          let syn = Typ.var (sprintf "s%s" name) in
+          make_gt_a_typ ~inh ~itself:t ~syn ()
+      | _ -> assert false
+    ) in
+    Ctf.inherit_ @@ Cty.constr (lid typename_meta_tt)
+      ([tpoT; itself] @ gtas @ params)
+
+  in
+  let methods = [ inheritF; List.last_exn tt_methods] in
+
+  Str.class_type [Ci.mk ~virt:Virtual ~params:(default_params root_type)
                     (Location.mknoloc typename_tt) @@
-                  Cty.signature (Csig.mk [%type: _] tt_methods) ]
+                  Cty.signature (Csig.mk [%type: _] methods) ]
 
 let make_params_longarrow ~root_type typ =
   List.fold_right ~f:(fun ({ptyp_desc},_) acc ->
@@ -557,12 +583,13 @@ let plugin_decls (module P: Plugin) root_type =
 let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let { gt_show; gt_gmap } = parse_options options in
   let _quoter = Ppx_deriving.create_quoter () in
-  let path = Ppx_deriving.path_of_type_decl ~path root_type in
+  (* let path = Ppx_deriving.path_of_type_decl ~path root_type in *)
 
   let typename    = root_type.ptype_name.txt in
   let typename_t  = typename ^ "_t"  in
   let typename_tt = typename ^ "_tt" in
-  let _t_typename  = "t_" ^ typename  in
+  let typename_meta_tt = typename ^ "_meta_tt" in
+  (* let _t_typename  = "t_" ^ typename  in *)
 
   let show_typename_t = "show_" ^ typename_t in
   let gmap_typename_t = "gmap_" ^ typename_t in
@@ -716,7 +743,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
       let (tt_methods, t_methods, _) = generate_some_methods root_type constrs ~typename in
       let ans =
         [ MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~typename constrs
-        ; make_tt_class_type ~params:(default_params root_type) typename_tt tt_methods
+        ; make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods
         ; Str.value Nonrecursive [Vb.mk
             (Pat.(constraint_ (var @@ mknoloc typename) gt_repr_typ))
             gt_repr_body
