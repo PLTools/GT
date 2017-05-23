@@ -188,6 +188,9 @@ module Exp = struct
       ~f:(fun e acc -> construct (lid "::") (Some (make_pair e acc)) )
       ~init:(Exp.construct (lid "[]") None)
 
+  let fun_list ~args e =
+    List.fold_right args ~init:e
+      ~f:(fun arg acc -> Exp.fun_ Nolabel None arg acc)
 end
 
 let default_params root_type =
@@ -399,6 +402,60 @@ module MakeMeta = struct
     Str.class_type [Ci.mk ~virt:Virtual ~params
                     (Location.mknoloc name) @@
                   Cty.signature (Csig.mk [%type: _] meths) ]
+
+let str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name make_params_app_fa constrs =
+  (* let typename_gcata = typename^"_gcata" in *)
+  let typename_meta_gcata = typename^"_meta_gcata" in
+  (* let tpo = tpo_obj ~root_type in *)
+  let match_body =
+    Exp.match_ (Exp.ident @@ lid "subj") @@
+    ListLabels.map constrs ~f:(fun { pcd_name = { txt = name' }; pcd_args } ->
+      let Pcstr_tuple pcd_args = pcd_args in
+      let argnames = List.mapi (fun n _ -> sprintf "p%d" n) pcd_args in
+      let args_tuple =
+        match argnames with
+        | [] -> None
+        | [single_arg] -> Some (Pat.var @@ mknoloc single_arg)
+        | _ -> Some (Pat.tuple @@ List.map (fun s-> Pat.var @@ mknoloc s) argnames)
+      in
+
+      let app_args = List.map2 (fun argname arg ->
+        match arg.ptyp_desc with
+        | _ when are_the_same arg root_type -> [%expr GT.make self [%e Exp.ident @@ lid argname] tpo]
+        | Ptyp_var v ->
+            (* [%expr GT.make [%e Exp.ident @@ lid @@ "f"^v] [%e Exp.ident @@ lid argname] tpo] *)
+            Exp.(apply (ident @@ lid @@ "f"^v) [ (Nolabel, ident @@ lid argname)] )
+
+        | Ptyp_constr ({txt=Ldot (Lident "GT", "int"); _},[]) ->
+            [%expr [%e Exp.ident @@ lid argname]]
+        | Ptyp_constr ({txt=(Lident "int"); _},[]) ->
+            [%expr [%e Exp.ident @@ lid argname]]
+        | Ptyp_constr _ ->
+           [%expr [%e Exp.ident @@ lid argname]]
+           (* [%expr GT.make [%e Exp.ident @@ lid "self"] [%e Exp.ident @@ lid argname] tpo] *)
+        | _ -> raise_errorf "Some cases are not supported when generating application in gcata"
+      ) argnames pcd_args
+      in
+
+      Exp.case (Pat.construct (lid name') args_tuple) @@
+      Exp.(apply (send (ident @@ lid "trans") (mknoloc ("c_"^name')) )
+           @@ List.map (fun x -> (Nolabel,x))
+             ([ [%expr initial_inh]; [%expr (GT.make self subj tpo)] ] @ app_args)
+          )
+    )
+  in
+  [%stri
+    let rec [%p (Pat.var @@ mknoloc gcata_name) ] =
+      [%e make_params_lambda_fa ~root_type
+        [%expr
+        fun tpo trans init_inh subj ->
+          let self = [%e make_params_app_fa (Exp.ident @@ lid typename_meta_gcata)
+                                             [ [%expr tpo]; [%expr trans] ] ]
+          in
+          [%e match_body]
+      ]]
+  ]
+
 end
 
 let make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods =
@@ -580,6 +637,12 @@ let plugin_decls (module P: Plugin) root_type =
   in
   type_decl_handler root_type
 
+let map_type_param_names f ps =
+  List.map ps ~f:(fun (t,_) ->
+    match t.ptyp_desc with
+    | Ptyp_var name -> f name
+    | _ -> failwith "bad argument of map_type_param_names")
+
 let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let { gt_show; gt_gmap } = parse_options options in
   let _quoter = Ppx_deriving.create_quoter () in
@@ -589,6 +652,8 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let typename_t  = typename ^ "_t"  in
   let typename_tt = typename ^ "_tt" in
   let typename_meta_tt = typename ^ "_meta_tt" in
+  let typename_meta_gcata = typename ^ "_meta_gcata" in
+  let typename_gcata = typename ^ "_gcata" in
   (* let _t_typename  = "t_" ^ typename  in *)
 
   let show_typename_t = "show_" ^ typename_t in
@@ -740,14 +805,44 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
         ]
       in
 
+      let tpo_obj ~root_type =
+        let tpo_meths =
+          let f ({ptyp_desc; _},_) =
+            match ptyp_desc with
+            | Ptyp_var v -> Cf.method_ (mknoloc v) Public (Cfk_concrete (Fresh, Exp.ident @@ lid ("f"^v)))
+            | _ -> raise_errorf "Some cases are not supported when creating tpo methods"
+          in
+          List.map f root_type.ptype_params
+        in
+        Exp.object_ (Cstr.mk (Pat.any ()) tpo_meths)
+      in
+      let gcata =
+        let transformer_name = ((^)"f") in
+        let poly_param_names = map_type_param_names (fun x -> x) root_type.ptype_params in
+        let meta_gcata_args =
+          (List.map (fun name ->
+                        [%expr fun x -> GT.make [%e Exp.ident @@ lid @@ transformer_name name]
+                                                x parameter_transforms_obj]) poly_param_names
+          ) @ [ [%expr parameter_transforms_obj]; [%expr transformer]; [%expr initial_inh]; [%expr subject] ]
+        in
+        let meta_gcata_args = List.map (fun x -> (Nolabel,x)) meta_gcata_args in
+        let arg_pats = [ [%pat? transformer]; [%pat? initial_inh]; [%pat? subj] ] in
+        let arg_pats = List.map poly_param_names ~f:(fun name -> Pat.var @@ mknoloc @@ transformer_name name) @ arg_pats in
+        Str.value Nonrecursive [Vb.mk
+          Pat.(var @@ mknoloc typename_gcata) @@
+            Exp.fun_list ~args:arg_pats
+            [%expr
+              let tpo = [%e tpo_obj ~root_type] in
+              [%e Exp.(apply (ident @@ lid typename_meta_gcata)) meta_gcata_args ]
+            ]
+          ]
+      in
       let (tt_methods, t_methods, _) = generate_some_methods root_type constrs ~typename in
       let ans =
         [ MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~typename constrs
         ; make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods
-        ; Str.value Nonrecursive [Vb.mk
-            (Pat.(constraint_ (var @@ mknoloc typename) gt_repr_typ))
-            gt_repr_body
-          ]
+        ; MakeMeta.str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name:typename_meta_gcata make_params_app_fa constrs
+        ; gcata
         ; Str.class_ [Ci.mk ~virt:Virtual ~params:(default_params root_type) (mknoloc typename_t) @@
                       Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") t_methods)
                      ]
