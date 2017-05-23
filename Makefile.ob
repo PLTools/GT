@@ -54,8 +54,8 @@ NATIVE_TEST_EXECUTABLES += regression/test$(1).native
 
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
-test$(1).native: plugins regression/test$(1).native
-test$(1).byte:   plugins regression/test$(1).byte
+test$(1).native: plugins ppx regression/test$(1).native
+test$(1).byte:   plugins ppx regression/test$(1).byte
 
 regression/test$(1).byte: regression/test$(1).ml $(wildcard regression/$(1).mli)
 	$(OB) -Is src $$@

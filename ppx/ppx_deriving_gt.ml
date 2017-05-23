@@ -16,10 +16,13 @@ open Ast_helper
 open Ppx_deriving
 
 module List = struct
-  include List
+  include ListLabels
   let split3 xs =
     List.fold_right (fun (a,b,c) (ac,bc,cc) -> (a::ac,b::bc,c::cc))
       xs ([],[],[])
+  let filter_map ~f xs =
+    List.fold_right (fun x acc -> match f x with Some v -> v::acc | None -> acc) xs []
+
 end
 
 let deriver = "gt"
@@ -27,55 +30,16 @@ let raise_errorf = Ppx_deriving.raise_errorf
 
 type supported_derivers = { gt_show: bool; gt_eq: bool; gt_gmap: bool }
 
-let filter_map f xs =
-  List.fold_right (fun x acc -> match f x with Some v -> v::acc | None -> acc) xs []
 
 let parse_options options =
-  List.fold_left (fun acc (name,expr) ->
+  List.fold_left ~f:(fun acc (name,expr) ->
     match name with
     | "show" -> {acc with gt_show = true}
     | "gmap" -> {acc with gt_gmap = true}
     | _ -> raise_errorf ~loc:expr.pexp_loc "%s does not support option %s" deriver name)
-    { gt_show=false; gt_eq=false; gt_gmap=false }
+    ~init:{ gt_show=false; gt_eq=false; gt_gmap=false }
     options
 
-(* let attr_nobuiltin attrs =
-  Ppx_deriving.(attrs |> attr ~deriver "nobuiltin" |> Arg.get_flag ~deriver)
-
-let attr_printer attrs =
-  Ppx_deriving.(attrs |> attr ~deriver "printer" |> Arg.(get_attr ~deriver expr))
-
-let attr_polyprinter attrs =
-  Ppx_deriving.(attrs |> attr ~deriver "polyprinter" |> Arg.(get_attr ~deriver expr))
-
-let attr_opaque attrs =
-  Ppx_deriving.(attrs |> attr ~deriver "opaque" |> Arg.get_flag ~deriver) *)
-
-
-(*
-(* Probably need to invent api for GT plugins like *)
-val register_gt_plugin : (module type GT_PLUGIN_IMPL) -> unit
-
-module type GT_PLUGIN_IMPL = sig
-  (* "show", "gmap", etc. *)
-  val name: string
-
-  (* To generate some code to be placed to ml file *)
-  val for_str: type_declaration -> structure_item list
-  (* ... to mli file *)
-  val for_sig: type_declaration -> signature_item list
-
-  (* To get something like
-     method show a = GT.transform logic (GT.lift a) (new show_logic_t) () *)
-  val plugin_cf: type_declaration -> class_field list
-
-  (* To get something like
-      show : ('a -> string) -> 'a logic -> string               *)
-  val plugin_cf: type_declaration -> class_type_field list
-
-  (* maybe something else *)
-end
-*)
 let argn = Printf.sprintf "a%d"
 (*
 let pp_type_of_decl ~options ~path type_decl =
@@ -220,8 +184,9 @@ module Exp = struct
 
   let make_pair a b = tuple [a;b]
   let make_list xs =
-    List.fold_right (fun e acc -> construct (lid "::") (Some (make_pair e acc)) ) xs
-                                            (Exp.construct (lid "[]") None)
+    List.fold_right xs
+      ~f:(fun e acc -> construct (lid "::") (Some (make_pair e acc)) )
+      ~init:(Exp.construct (lid "[]") None)
 
 end
 
@@ -230,7 +195,7 @@ let default_params root_type =
            [ 'a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn ]
    *)
   let ps = root_type.ptype_params |>
-             List.map (fun (t,_) ->
+             List.map ~f:(fun (t,_) ->
                        match t.ptyp_desc with
                        | Ptyp_var n -> Typ.([var n; var @@ "i"^n; var @@ "s"^n])
                        | _ -> raise_errorf "default_params: can't construct"
@@ -242,7 +207,7 @@ let default_params root_type =
 
 let using_type ~typename root_type =
   (* generation type specification by type declaration *)
-  Typ.constr (lid typename) (List.map fst @@ root_type.ptype_params)
+  Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)
 
 let arr_of_param t =
   (* does from 'a the 'ia -> 'a -> 'sa *)
@@ -279,11 +244,11 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
   )
 
 let make_params_lambda_generic ~root_type namer expr  =
-  List.fold_right (fun ({ptyp_desc},_) acc ->
+  List.fold_right ~f:(fun ({ptyp_desc},_) acc ->
     match ptyp_desc with
     | Ptyp_var name -> [%expr fun [%p pvar @@ namer name] -> [%e acc ] ]
     | _ -> assert false
-  ) root_type.ptype_params expr
+  ) root_type.ptype_params ~init:expr
 
 let make_params_lambda_a  = make_params_lambda_generic (fun name -> name)
 let make_params_lambda_fa = make_params_lambda_generic ((^)"f")
@@ -321,7 +286,7 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
               'syn,
               [%t params_obj root_type]) GT.a ]
     in
-    let args2 = pcd_args |> List.map (fun ({ ptyp_desc; _ } as typ) ->
+    let args2 = pcd_args |> List.map ~f:(fun ({ ptyp_desc; _ } as typ) ->
       match ptyp_desc with
       | _ when are_the_same typ root_type -> arg_for_myself
       | Ptyp_var a  ->
@@ -330,13 +295,13 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
                    [%t Typ.var @@ "s"^a],
                    [%t params_obj root_type]) GT.a ]
       | Ptyp_constr _ -> typ
-      | Ptyp_constr ({txt=Lident "int"; _},[]) ->              [%type: int]
+      (* | Ptyp_constr ({txt=Lident "int"; _},[]) ->              [%type: int]
       | Ptyp_constr ({txt=Ldot (Lident "GT", "int"); _},[]) -> [%type: GT.int]
       | Ptyp_constr _ ->
           [%type: ([%t Typ.var @@ "inh"],
                    [%t typ],
                    [%t Typ.var @@ "syn"],
-                   [%t params_obj root_type ]) GT.a ]
+                   [%t params_obj root_type ]) GT.a ] *)
       | _ -> raise_errorf "Some cases are not supported when we look at constructor's params"
     )
     in
@@ -348,7 +313,7 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
       args2
     in
 
-    let ts = List.fold_right (Typ.arrow Nolabel) args2 (Typ.var "syn") in
+    let ts = List.fold_right ~f:(Typ.arrow Nolabel) args2 ~init:(Typ.var "syn") in
     ( Ctf.method_ (mknoloc constr_name) Public Concrete ts,
       (* Cf.method_  (mknoloc constr_name) Public (Cfk_virtual ts)  *)
       Cf.method_  (mknoloc constr_name) Public (Cfk_virtual ts),
@@ -362,7 +327,7 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
     let init =
       [%type: 'inh -> [%t using_type ~typename root_type] -> 'syn ]
     in
-    List.fold_right (fun (_,_,x) acc -> Typ.arrow Nolabel x acc) ts init
+    List.fold_right ~f:(fun (_,_,x) acc -> Typ.arrow Nolabel x acc) ts ~init
   in
   let tts = tts @
             [ Ctf.method_ (mknoloc ("t_" ^ typename))  Public Concrete
@@ -386,19 +351,64 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
   in
   (tts, ts, ts_sigs)
 
+let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
+  [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
+
+module MakeMeta = struct
+  let str_tt_for_algebraic ~params ~typename cases_list =
+    failwith "not implemented"
+  let str_tt_for_algebraic ~params ~typename cases_list =
+    let poly_params = List.filter_map params ~f:(fun (p,_) ->
+      match p.ptyp_desc with
+      | Ptyp_var name -> Some name
+      | _ -> None
+      )
+    in
+    if List.length params <> List.length poly_params
+    then failwith "consytructor declaration has not vars in a params";
+
+    let params =
+      let ps = [ [%type: 'tpoT]; [%type: 'type_itself] ] in
+      let ps = ps @
+        List.map (fun s -> Typ.var @@ "gt_a_for_"^s) poly_params
+      in
+      let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
+      List.map (fun p -> (p, Invariant)) ps
+    in
+    let meths = List.map cases_list ~f:(fun ctr ->
+      if ctr.pcd_res <> None
+      then failwith "GADT not supported";
+      match ctr.pcd_args with
+      | Pcstr_tuple xs ->
+        let xs2 = List.map xs ~f:(fun arg -> match arg.ptyp_desc with
+          | Ptyp_var name -> Typ.var (sprintf "gt_a_for_%s" name)
+          | _ -> assert false
+        )
+        in
+        let xs2 = [%type: 'inh] :: (make_gt_a_typ ()) :: xs2 in
+        Ctf.method_ ctr.pcd_name Public Virtual @@
+          List.fold_right xs2 ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
+      | Pcstr_record _ -> failwith "not supported"
+    ) in
+    let name = sprintf "%s_meta_tt" typename in
+    Str.class_type [Ci.mk ~virt:Virtual ~params
+                    (Location.mknoloc name) @@
+                  Cty.signature (Csig.mk [%type: _] meths) ]
+end
+
 let make_tt_class_type ~params typename_tt tt_methods =
   Str.class_type [Ci.mk ~virt:Virtual ~params
                     (Location.mknoloc typename_tt) @@
                   Cty.signature (Csig.mk [%type: _] tt_methods) ]
 
 let make_params_longarrow ~root_type typ =
-  List.fold_right (fun ({ptyp_desc},_) acc ->
+  List.fold_right ~f:(fun ({ptyp_desc},_) acc ->
     match ptyp_desc with
     | Ptyp_var n ->
        Typ.(arrow Nolabel
                   [%type: [%t var@@ "i"^n] -> [%t var n] -> [%t var @@ "s"^n]]
                   acc)
-    | _ -> assert false) root_type.ptype_params typ
+    | _ -> assert false) root_type.ptype_params ~init:typ
 
 let subclass_obj ~root_type typename_tt =
   (* makes ('a,'ia,'sa,...,'inh,'syn)#typename_tt  *)
@@ -480,17 +490,18 @@ let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
       in
       let gcata_part =
         let args2 = List.map (fun (t,_) -> let (_,_,x) = arr_of_param t in x) type_params in
-        List.fold_right (Typ.arrow Nolabel) args2
-          [%type: [%t subclass_obj ~root_type typename_tt  ] ->
-            'inh -> [%t using_type ~typename root_type ] -> 'syn ]
+        List.fold_right args2
+          ~f:(Typ.arrow Nolabel)
+          ~init:[%type: [%t subclass_obj ~root_type typename_tt ] ->
+                    'inh -> [%t using_type ~typename root_type ] -> 'syn ]
       in
       let plugins_part =
         let for_show =
           if not gt_show then [] else
           let xs = List.map (fun (typ,_) -> [%type: [%t typ] -> string]) type_params in
           [ (mknoloc "show", [],
-            List.fold_right (fun x acc -> [%type: [%t x] -> [%t acc]]) xs
-              [%type: [%t using_type ~typename root_type ] -> string ])
+            List.fold_right ~f:(fun x acc -> [%type: [%t x] -> [%t acc]]) xs
+              ~init:[%type: [%t using_type ~typename root_type ] -> string ])
           ]
         in
         let for_gmap = [] in
@@ -501,21 +512,21 @@ let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
     ans @ [derivers_bunch]
   | _ -> raise_errorf "Some cases are not supported"
 
-  module type Plugin =
-    sig
-      val name : string
+module type Plugin =
+  sig
+    val name : string
 
-      (* Extended parameters that must be appended to class parameters *)
-      val extra_params : type_declaration -> (core_type * variance) list
+    (* Extended parameters that must be appended to class parameters *)
+    val extra_params : type_declaration -> (core_type * variance) list
 
-      val inh  : string -> core_type
-      val synh : string -> core_type
+    val inh  : string -> core_type
+    val synh : string -> core_type
 
-      val synh_root : type_declaration -> core_type list -> core_type
+    val synh_root : type_declaration -> core_type list -> core_type
 
-      val core : core_type -> class_expr
-      val constructor : type_declaration -> constructor_declaration -> class_field
-    end
+    val core : core_type -> class_expr
+    val constructor : type_declaration -> constructor_declaration -> class_field
+  end
 
 let plugin_decls (module P: Plugin) root_type =
   let type_decl_handler root_type =
@@ -617,17 +628,17 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
         Exp.apply first (first_part @ second_part)
       in
 
-      let _make_params_app = make_params_app_namer ~namer:(fun name -> Exp.ident @@ lid name)
-      in
-      let make_params_app_lift =
+      (* let _make_params_app = make_params_app_namer ~namer:(fun name -> Exp.ident @@ lid name)
+      in *)
+      (* let make_params_app_lift =
         make_params_app_namer ~use_lift:true
           ~namer:(fun name -> Exp.ident @@ lid name)
-      in
+      in *)
       let make_params_app_fa =
         make_params_app_namer ~namer:(fun name -> Exp.ident @@ lid ("f"^name))
       in
 
-      let _make_params_app first last =
+      (* let _make_params_app first last =
          match root_type.ptype_params with
          | [] -> Exp.apply first [ (Nolabel, last) ]
          | params ->
@@ -638,7 +649,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
                | _ -> assert false) params
            in
            Exp.apply res [(Nolabel, last)]
-      in
+      in *)
 
       let gt_repr_typ = gt_repr_typ_wrap ~typename ~root_type [%type: unit] in
       let gt_repr_body =
@@ -703,7 +714,8 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
 
       let (tt_methods, t_methods, _) = generate_some_methods root_type constrs ~typename in
       let ans =
-        [ make_tt_class_type ~params:(default_params root_type) typename_tt tt_methods
+        [ MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~typename constrs
+        ; make_tt_class_type ~params:(default_params root_type) typename_tt tt_methods
         ; Str.value Nonrecursive [Vb.mk
             (Pat.(constraint_ (var @@ mknoloc typename) gt_repr_typ))
             gt_repr_body
