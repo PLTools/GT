@@ -382,6 +382,7 @@ module MakeMeta = struct
       | Pcstr_tuple xs ->
         let xs2 = List.map xs ~f:(fun arg -> match arg.ptyp_desc with
           | Ptyp_var name -> Typ.var (sprintf "gt_a_for_%s" name)
+          | Ptyp_constr _ -> arg
           | _ -> assert false
         )
         in
