@@ -14,22 +14,12 @@ open Asttypes
 open Parsetree
 open Ast_helper
 open Ppx_deriving
-
-module List = struct
-  include ListLabels
-  let split3 xs =
-    List.fold_right (fun (a,b,c) (ac,bc,cc) -> (a::ac,b::bc,c::cc))
-      xs ([],[],[])
-  let filter_map ~f xs =
-    List.fold_right (fun x acc -> match f x with Some v -> v::acc | None -> acc) xs []
-  let last_exn xs = List.hd @@ List.rev xs
-end
+open GtHelpers
 
 let deriver = "gt"
 let raise_errorf = Ppx_deriving.raise_errorf
 
 type supported_derivers = { gt_show: bool; gt_eq: bool; gt_gmap: bool }
-
 
 let parse_options options =
   List.fold_left ~f:(fun acc (name,expr) ->
@@ -176,22 +166,6 @@ let rec expr_of_typ quoter typ =
       raise_errorf ~loc:ptyp_loc "%s cannot be derived for %s"
                    deriver (Ppx_deriving.string_of_core_type typ)
  *)
-
-(* open Parsetree *)
-
-module Exp = struct
-  include Exp
-
-  let make_pair a b = tuple [a;b]
-  let make_list xs =
-    List.fold_right xs
-      ~f:(fun e acc -> construct (lid "::") (Some (make_pair e acc)) )
-      ~init:(Exp.construct (lid "[]") None)
-
-  let fun_list ~args e =
-    List.fold_right args ~init:e
-      ~f:(fun arg acc -> Exp.fun_ Nolabel None arg acc)
-end
 
 let default_params root_type =
   (* converts 'a, 'b to
@@ -406,7 +380,7 @@ module MakeMeta = struct
   let str_t_for_algebraic ~params ~t_name ~meta_tt_name =
     let params = t_params params in
     Str.class_ [Ci.mk ~virt:Virtual ~params (Location.mknoloc t_name) @@
-                  Ast_helper.Cl.structure (Cstr.mk [%pat? _]
+                  Ast_helper.Cl.structure (Cstr.mk [%pat? (self: 'self)]
                     [ Cf.constraint_ [%type: 'self] @@
                         Typ.class_ (mknoloc (Lident meta_tt_name)) (List.map ~f:fst params)
                     ])
@@ -515,22 +489,23 @@ let gt_repr_typ_wrap ~typename ~root_type arg =
               [%type: [%t subclass] -> [%t tail]]],
            [%t arg]) GT.t ]
 
-let inherit_field_gen ~name ~root_type ~inh ~synh ~synh_root wrap =
-  let synhs, types = List.split @@ List.map
-    (fun ({ptyp_desc; _},_) -> match ptyp_desc with
-    | Ptyp_var name -> (synh name, Typ.[var name; inh name; synh name ])
-    | _ -> assert false
-    ) root_type.ptype_params
+let inherit_field_gen ~name ~root_type ~inh ~synh ~holder ~synh_root wrap =
+  let synhs, types = List.split @@
+    map_type_param_names root_type.ptype_params
+      ~f:(fun name -> (synh name, [Typ.var name; inh name; synh name; holder name ]) )
   in
   let types = List.concat types in
-  wrap Typ.(types @ [ [%type: unit]; synh_root root_type synhs ])
+  wrap Typ.(types @ [ [%type: 'tpoT]; [%type: unit]; synh_root root_type synhs ])
 
-let inherit_cf ~name ~root_type ~inh ~synh ~synh_root =
-  inherit_field_gen ~name ~root_type ~inh ~synh ~synh_root
-    (fun t -> Cf.inherit_ Fresh (Cl.constr (lid name) t) None)
-
-(* let inherit_ctf ~name ~root_type =
-  inherit_field_gen ~name ~root_type (fun t -> Ctf.inherit_ @@ Cty.constr (lid name) t) *)
+let inherit_cf ?args ~name ~root_type ~inh ~synh ~holder ~synh_root () =
+  inherit_field_gen ~name ~root_type ~inh ~synh ~holder ~synh_root
+    (fun t ->
+      let class_expr = Cl.constr (lid name) t in
+      let class_expr = match args with
+        | None -> class_expr
+        | Some xs -> Cl.apply class_expr xs
+      in
+      Cf.inherit_ Fresh class_expr None)
 
 let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let { gt_show; gt_gmap } = parse_options options in
@@ -623,7 +598,8 @@ let plugin_decls (module P: Plugin) root_type =
   let type_decl_handler root_type =
     let typename    = root_type.ptype_name.txt in
     let typename_t  = typename ^ "_t"  in
-    let plugin_name = P.name ^ "_" ^ typename ^ "_t" in
+    let plugin_name = P.name ^ "_" ^ typename in
+    let plugin_meta_t = P.name ^ "_meta_" ^ typename in
     match root_type.ptype_kind with
     | Ptype_abstract -> (match root_type.ptype_manifest with
       | Some manifest ->
@@ -631,24 +607,67 @@ let plugin_decls (module P: Plugin) root_type =
         (* P.core manifest *)
       | None -> failwith "Not implemented")
     | Ptype_variant constrs ->
-      let body =
-        (inherit_cf ~name:typename_t ~root_type ~inh:P.inh ~synh:P.synh ~synh_root:P.synh_root) ::
-        List.map (fun constr -> P.constructor root_type constr) (List.rev constrs)
+      let holder s = Typ.var @@ sprintf "%s_holder" s in
+      let type_param_names = map_type_param_names root_type.ptype_params ~f:(fun x -> x) in
+
+      let plugin_meta_class =
+        let params = List.map type_param_names ~f:(fun name ->
+            [ Typ.var name; holder name ]
+          ) |> List.concat
+        in
+        let params = params @ [Typ.var "tpoT"] in
+        let params = List.map params ~f:(fun t -> (t,Invariant)) in
+        let params = params @ (P.extra_params root_type)  in
+
+        let inherit_f = inherit_cf ~name:typename_t ~root_type ~inh:P.inh ~synh:P.synh ~synh_root:P.synh_root ~holder ()
+        in
+        let body =
+          (* (inherit_cf ~name:typename_t ~root_type ~inh:P.inh ~synh:P.synh ~synh_root:P.synh_root ~holder) :: *)
+          List.map (fun constr -> P.constructor root_type constr) (List.rev constrs)
+        in
+        let class_expr = Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") (inherit_f::body) ) in
+        let class_expr =
+          let for_args = map_type_param_names root_type.ptype_params ~f:(fun s -> Pat.var @@ mknoloc @@ "for_"^s) in
+          Cl.fun_list for_args class_expr
+        in
+
+        Str.class_ [Ci.mk ~virt:Concrete ~params
+                        (mknoloc plugin_meta_t)
+                        class_expr
+                     ]
       in
-      [ Str.class_ [Ci.mk ~virt:Concrete ~params:(root_type.ptype_params @ (P.extra_params root_type))
+      let plugin_class =
+        let inherit_f =
+          let params =
+            List.map type_param_names ~f:(fun name ->
+              let p = Typ.var name in
+              [ p; make_gt_a_typ ~inh:[%type: unit] ~itself:p ~syn:(P.synh "")  ()])
+            |> List.concat
+          in
+          let params = params @
+            [ Typ.alias (params_obj root_type) "tpoT" ]
+          in
+          let class_expr = Cl.constr (lid plugin_meta_t) params in
+          let args = List.map root_type.ptype_params ~f:(fun _ -> Nolabel, [%expr fun pa -> pa.GT.fx ()]) in
+          let class_expr = match args with
+          | [] -> class_expr
+          | xs -> Cl.apply class_expr xs
+          in
+          Cf.inherit_ Fresh class_expr None
+          (* inherit_cf ~name:plugin_meta_t ~root_type ~inh:P.inh ~synh:P.synh ~synh_root:P.synh_root ~holder
+          ~args () *)
+        in
+        Str.class_ [Ci.mk ~virt:Concrete ~params:(root_type.ptype_params @ (P.extra_params root_type))
                        (mknoloc plugin_name)
-                       (Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") body))
+                       (Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") [inherit_f]))
                    ]
+      in
+      [ plugin_meta_class
+      ; plugin_class
       ]
     | _ -> failwith "Some shit happend"
   in
   type_decl_handler root_type
-
-let map_type_param_names f ps =
-  List.map ps ~f:(fun (t,_) ->
-    match t.ptyp_desc with
-    | Ptyp_var name -> f name
-    | _ -> failwith "bad argument of map_type_param_names")
 
 let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let { gt_show; gt_gmap } = parse_options options in

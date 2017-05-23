@@ -12,8 +12,7 @@ open Parsetree
 open Ast_helper
 open Location
 open Ppx_deriving
-
-module Exp = Show.Exp
+open GtHelpers
 
 let are_the_same (typ: core_type) (tdecl: type_declaration) =
   (* Pprintast.core_type Format.std_formatter (Obj.magic typ);
@@ -97,7 +96,7 @@ let expr_of_arg reprname typ root_type =
 let name = "gmap"
 
 let extra_params root_type =
-  root_type.ptype_params |> List.map (fun (typ,v) ->
+  List.map root_type.ptype_params  ~f:(fun (typ,v) ->
     match typ.ptyp_desc with
     | Ptyp_var name -> (Typ.var @@ "s" ^ name), v
     | _ -> assert false
@@ -141,6 +140,9 @@ let constructor root_type constr =
              (String.concat ", " [%e Exp.make_list xs ] ^ ")")
          ] *)
     in
-    let e = List.fold_right (fun name acc -> Exp.fun_ Nolabel None (Pat.var @@ mknoloc name) acc) ("inh"::"subj"::arg_names) body in
+    let e =
+      let pats = ("inh"::"subj"::arg_names) in
+      List.fold_right pats ~f:(fun name acc -> Exp.fun_ Nolabel None (Pat.var @@ mknoloc name) acc) ~init:body
+    in
     Cf.method_ (mknoloc @@ "c_" ^ name.txt) Public (Cfk_concrete (Fresh, e))
   | _ -> failwith "Non-tuple constructor arguments are not supported"

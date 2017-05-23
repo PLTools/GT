@@ -1,4 +1,5 @@
 true: debug, rectypes
+#, strict_sequence
 
 <camlp5/*.ml>: syntax(camlp5o), package(camlp5), for-pack(Pa_gt)
 
