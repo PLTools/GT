@@ -122,6 +122,13 @@ let core = function
     Format.pp_flush_formatter fmt;
     raise_errorf "%s\n%s" "not implemented?4 " (Buffer.contents b)
 
+
+let meta_for_alias  ~root_type ~manifest : structure_item =
+  assert false
+
+let for_alias  ~root_type ~manifest : structure_item =
+  assert false
+  
 let constructor root_type constr =
   let name = constr.pcd_name in
   match constr.pcd_args with

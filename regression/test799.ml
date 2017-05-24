@@ -3,7 +3,7 @@ open Printf
 (* FIRST PART *)
 type ('a,'b) t = OK of 'a | Error of 'b
 [@@deriving gt {show}]
-(* type ('a) t = OK of 'a | Error of string [@@deriving gt {show}] *)
+
 
 let () =
   let show fa fb (e: (_,_) t) =
@@ -12,10 +12,12 @@ let () =
   printf "%s\n%!" (show string_of_int (fun x -> x) (Error "error1"));
   ()
 
-(*
+
+
 (* SECOND PART *)
 type 'a     t2 = ('a, string) t [@@deriving gt {show}]
 
+(*
 let () =
   let show fa (e: _ t2) =
     t2.GT.gcata (GT.lift fa) (new show_t2) () e in

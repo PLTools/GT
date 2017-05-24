@@ -115,9 +115,55 @@ let core = function
     Format.pp_flush_formatter fmt;
     raise_errorf "%s\n%s" "not implemented?4 " (Buffer.contents b)
 
+let meta_for_alias ~name ~root_type ~manifest : structure_item =
+  (* params of meta class depend only on type parameters of a type being processed *)
+  let params =
+    let p = map_type_param_names root_type.ptype_params ~f:(fun name -> [ Typ.var name; Typ.var @@ name^"_holder"]) in
+    (Typ.var "tpoT") :: (List.concat p)
+  in
+  let eval_params ps =
+    let rec helper ~acc:(topTr, specTr, appTr, types, inhTypes) = function
+    | [] -> (topTr, specTr, appTr, types, inhTypes)
+    | {ptyp_desc=Ptyp_var name; _} :: tl ->
+        let new_params = [Typ.var name; Typ.var @@ name^"_holder"] in
+        let transformer_pat = Pat.var @@ mknoloc @@ "for_"^name in
+        helper tl ~acc: ( transformer_pat :: topTr
+                        , specTr
+                        , transformer_pat :: appTr
+                        , new_params::types
+                        , new_params::inhTypes)
+    | [%type: string] :: tl ->
+        let transformer_pat = Pat.var @@ mknoloc @@ "for_"^name in
+        helper tl ~acc: ( topTr
+                        , (fun e -> Exp.let_ Nonrecursive [Vb.mk transformer_pat [%expr 1]] (specTr e))
+                        , appTr
+                        , types
+                        , inhTypes)
+    | _ -> assert false
+    in
+    let topTr, specTr, appTr, types, inhTypes =
+      helper ~acc:([],(fun x -> x),[],[],[]) (List.rev ps) in
+    let types = List.concat types in
+    (topTr, specTr, appTr, types, inhTypes)
+  in
+  match manifest.ptyp_desc with
+  | Ptyp_constr ({txt=ident;_}, params) ->
+    let topTr, specTr, appTr, types, inhTypes = eval_params params in
+    let clas =
+      Cl.fun_list appTr @@
+        Cl.structure (Cstr.mk (Pat.any ()) [ Cf.inherit_ Fresh (Cl.constr (lid "GT.show_int_t") []) None ])
+    in
+    Str.class_ [Ci.mk ~virt:Concrete ~params:(List.map types ~f:(fun x -> x,Invariant)) (mknoloc name) clas ]
+  | _ -> failwith "not implemented"
+
+
+
+let for_alias ~name ~root_type ~manifest : structure_item =
+  meta_for_alias ~name ~root_type ~manifest
+
 let constructor root_type constr =
   let name = constr.pcd_name in
-  let param_names = map_type_param_names ~f:(fun x -> x) root_type.ptype_params in
+  (* let param_names = map_type_param_names ~f:(fun x -> x) root_type.ptype_params in *)
   match constr.pcd_args with
   | Pcstr_tuple arg_types ->
     let arg_names = List.mapi (fun n _ -> sprintf "p%d" n) arg_types in
