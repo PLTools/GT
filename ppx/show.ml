@@ -115,51 +115,113 @@ let core = function
     Format.pp_flush_formatter fmt;
     raise_errorf "%s\n%s" "not implemented?4 " (Buffer.contents b)
 
+let is_ground_enough = function
+  | [%type: string] -> true
+  | [%type: char] -> true
+  | _ -> false
+
+let process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) t =
+  let wrap orig ident =
+    let transformer_pat = Pat.var @@ mknoloc @@ sprintf "for_%d" n in
+    let for_expr = [%expr let open GT in lift
+                      [%e Exp.field ident (lid "plugins")  ] #show () ] in
+    ( topTr
+    , (fun e -> Cl.let_ Nonrecursive [Vb.mk transformer_pat for_expr] (specTr e))
+    , (Exp.ident @@ lid @@ sprintf "for_%d" n) :: appTr
+    , types
+    , orig::orig::inhTypes)
+  in
+  match t with
+  | [%type: string] -> wrap t (Exp.ident @@ lid "string")
+  | [%type: char]   -> wrap t (Exp.ident @@ lid "char")
+  | _ -> failwith "not ground enough"
+
 let meta_for_alias ~name ~root_type ~manifest : structure_item =
   (* params of meta class depend only on type parameters of a type being processed *)
-  let params =
-    let p = map_type_param_names root_type.ptype_params ~f:(fun name -> [ Typ.var name; Typ.var @@ name^"_holder"]) in
-    (Typ.var "tpoT") :: (List.concat p)
-  in
+
   let eval_params ps =
-    let rec helper ~acc:(topTr, specTr, appTr, types, inhTypes) = function
+    let rec helper ~n ~acc:(topTr, specTr, appTr, types, inhTypes) = function
     | [] -> (topTr, specTr, appTr, types, inhTypes)
     | {ptyp_desc=Ptyp_var name; _} :: tl ->
         let new_params = [Typ.var name; Typ.var @@ name^"_holder"] in
-        let transformer_pat = Pat.var @@ mknoloc @@ "for_"^name in
-        helper tl ~acc: ( transformer_pat :: topTr
+        let transformer_pat = Pat.var @@ mknoloc @@ sprintf "for_%d_%s" n name in
+        let transformer_expr = Exp.ident @@ lid @@ sprintf "for_%d_%s" n name in
+        helper ~n:(n-1) tl
+                  ~acc: ( (fun e -> Cl.fun_ Nolabel None transformer_pat (topTr e))
                         , specTr
-                        , transformer_pat :: appTr
+                        , transformer_expr :: appTr
                         , new_params::types
-                        , new_params::inhTypes)
-    | [%type: string] :: tl ->
-        let transformer_pat = Pat.var @@ mknoloc @@ "for_"^name in
-        helper tl ~acc: ( topTr
-                        , (fun e -> Exp.let_ Nonrecursive [Vb.mk transformer_pat [%expr 1]] (specTr e))
-                        , appTr
+                        , new_params@inhTypes)
+    | orig :: tl when is_ground_enough orig ->
+        helper ~n:(n-1) tl ~acc:(process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) orig)
+    (* | ([%type: string] as orig) :: tl ->
+        let transformer_pat = Pat.var @@ mknoloc @@ sprintf "for_%d" n in
+        let for_expr = [%expr GT.lift (GT.string.GT.plugins)#show () ] in
+        helper ~n:(n-1) tl
+                  ~acc: ( topTr
+                        , (fun e -> Cl.let_ Nonrecursive [Vb.mk transformer_pat for_expr] (specTr e))
+                        , (Exp.ident @@ lid @@ sprintf "for_%d" n) :: appTr
                         , types
-                        , inhTypes)
+                        , orig::orig::inhTypes) *)
     | _ -> assert false
     in
     let topTr, specTr, appTr, types, inhTypes =
-      helper ~acc:([],(fun x -> x),[],[],[]) (List.rev ps) in
-    let types = List.concat types in
+      helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[],[],[]) (List.rev ps) in
+    let types = [%type: 'tpoT] :: (List.concat types) in
+    let inhTypes = [ [%type: 'tpoT] ] @ inhTypes in
+    let appTr = nolabelize appTr in
     (topTr, specTr, appTr, types, inhTypes)
   in
   match manifest.ptyp_desc with
   | Ptyp_constr ({txt=ident;_}, params) ->
     let topTr, specTr, appTr, types, inhTypes = eval_params params in
-    let clas =
-      Cl.fun_list appTr @@
-        Cl.structure (Cstr.mk (Pat.any ()) [ Cf.inherit_ Fresh (Cl.constr (lid "GT.show_int_t") []) None ])
+    (* let clas =
+      Cl.structure (Cstr.mk (Pat.any ()) )
     in
-    Str.class_ [Ci.mk ~virt:Concrete ~params:(List.map types ~f:(fun x -> x,Invariant)) (mknoloc name) clas ]
+    let clas = specTr clas in *)
+    let parent_meta = affect_longident ident ~f:(sprintf "show_meta_%s") in
+    Str.single_class ~params:(List.map types ~f:(fun x -> x,Invariant)) ~name
+      ~wrap:(fun x -> topTr @@ specTr x)
+      [
+        Cf.inherit_ Fresh (Cl.apply (Cl.constr (mknoloc parent_meta) inhTypes) appTr) None
+      ]
   | _ -> failwith "not implemented"
 
-
-
 let for_alias ~name ~root_type ~manifest : structure_item =
-  meta_for_alias ~name ~root_type ~manifest
+  match manifest.ptyp_desc with
+  | Ptyp_constr ({txt=ident;_}, params) ->
+      let appTr = map_type_param_names root_type.ptype_params ~f:(fun _ -> [%expr (fun z -> z.GT.fx ())])
+        |> nolabelize
+      in
+      let inh_params =
+        map_type_param_names root_type.ptype_params
+          ~f:(fun name ->
+                let itself = Typ.var name in
+                [ itself
+                ; make_gt_a_typ ~inh:[%type: unit] ~itself ~syn:[%type: string] ()
+                ])
+        |> List.concat
+        |> (fun xs -> (Typ.alias (params_obj root_type) "tpoT") :: xs  )
+      in
+      let typname = root_type.ptype_name.txt in
+      Str.single_class ~params:root_type.ptype_params ~name ~pat:[%pat? self] ~virt:Concrete
+        [
+          Cf.inherit_ Fresh (Cl.apply (Cl.constr (lid @@ sprintf "show_meta_%s" typname) inh_params) appTr) None
+        ; let e =
+            let patts,exprs =
+              map_type_param_names root_type.ptype_params
+                ~f:(fun name ->
+                    let name = sprintf "transform_%s" name in
+                    (Pat.var @@ mknoloc name , Exp.ident @@ lid name))
+              |> List.split
+            in
+            let exprs = nolabelize @@ ( exprs @ [[%expr self]]) in
+            Exp.fun_list ~args:patts @@
+              Exp.apply (Exp.ident @@ lid @@  sprintf "%s_gcata" typname) exprs
+          in
+          Cf.method_ (mknoloc @@ sprintf "t_%s" typname) Public (Cfk_concrete (Fresh, e) )
+        ]
+  | _ -> assert false
 
 let constructor root_type constr =
   let name = constr.pcd_name in

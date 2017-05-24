@@ -18,6 +18,7 @@ module Exp = struct
                     ~init:(Exp.construct (lid "[]") None)
 
   let fun_list ~args e =
+    if args = [] then e else
     List.fold_right args ~init:e
       ~f:(fun arg acc -> Exp.fun_ Nolabel None arg acc)
 end
@@ -27,8 +28,12 @@ module Cl = struct
   include Cl
 
   let fun_list args e =
+    if args = [] then e else
     List.fold_right args ~init:e
       ~f:(fun arg acc -> Cl.fun_ Asttypes.Nolabel None arg acc)
+
+  let apply e args =
+    if args = [] then e else Cl.apply e args
 end
 
 module Typ = struct
@@ -36,10 +41,51 @@ module Typ = struct
   include Typ
   let ground s = constr (lid s) []
 end
-open Parsetree
 
+module Str = struct
+  open Ast_helper
+  include Str
+
+  let single_class ?(virt=Asttypes.Virtual) ?(pat=[%pat? _]) ?(wrap= (fun x -> x)) ~name ~params body =
+    Str.class_ [Ci.mk ~virt ~params (Location.mknoloc name) @@
+                wrap (Ast_helper.Cl.structure (Cstr.mk pat body))
+  ]
+
+end
+open Parsetree
 let map_type_param_names ~f ps =
   List.map ps ~f:(fun (t,_) ->
     match t.ptyp_desc with
     | Ptyp_var name -> f name
    | _ -> failwith "bad argument of map_type_param_names")
+
+open Longident
+let affect_longident ~f = function
+  | Longident.Lident x -> Longident.Lident (f x)
+  | (Ldot _) as l -> l
+  | (Longident.Lapply (_,_)) as l -> l
+
+let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
+
+let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
+  (* TODO: maybe add extra string argument to concat it with type variables to get
+              ('a_inh, 'a, 'a_syn, 'heck) GT.a
+  *)
+  [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
+
+let arr_of_param ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) t =
+  (* does from 'a the 'ia -> 'a -> 'sa *)
+  match t.ptyp_desc with
+  | Ptyp_var n ->
+      (Location.mknoloc n, [],
+        [%type: [%t inh n] -> [%t Typ.var n] -> [%t syn n]] )
+  | _ ->
+      Ppx_deriving.raise_errorf "arr_of_param: not all type params are supported"
+
+
+let params_obj ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
+  (* converts 'a, 'b to
+     < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
+   *)
+  let f (t,_) = arr_of_param ~inh ~syn t in
+  Typ.object_ (List.map f root_type.ptype_params) Closed

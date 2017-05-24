@@ -186,23 +186,6 @@ let using_type ~typename root_type =
   (* generation type specification by type declaration *)
   Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)
 
-let arr_of_param ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) t =
-  (* does from 'a the 'ia -> 'a -> 'sa *)
-  match t.ptyp_desc with
-  | Ptyp_var n ->
-      (mknoloc n, [],
-        [%type: [%t inh n] -> [%t Typ.var n] -> [%t syn n]] )
-  | _ ->
-      raise_errorf "arr_of_param: not all type params are supported" deriver
-
-
-let params_obj ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
-  (* converts 'a, 'b to
-     < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
-   *)
-  let f (t,_) = arr_of_param ~inh ~syn t in
-  Typ.object_ (List.map f root_type.ptype_params) Closed
-
 (* Used when we need to check that type we working on references himself in
   it's body *)
 let are_the_same (typ: core_type) (tdecl: type_declaration) =
@@ -327,12 +310,6 @@ let generate_some_methods ~typename ?(t_virtual=false) root_type constrs =
   in
   (tts, ts, ts_sigs)
 
-let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
-  (* TODO: maybe add extra string argument to concat it with type variables to get
-              ('a_inh, 'a, 'a_syn, 'heck) GT.a
-  *)
-  [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
-
 module MakeMeta = struct
   let sig_tt_for_algebraic ~params ~typename cases_list =
     failwith "not implemented"
@@ -387,31 +364,24 @@ module MakeMeta = struct
   (* declared metaclass for a type *)
   let str_class_for_algebraic ~params ~t_name ~parent_name =
     let params = t_params params in
-    Str.class_ [Ci.mk ~virt:Virtual ~params (Location.mknoloc t_name) @@
-                  Ast_helper.Cl.structure (Cstr.mk [%pat? (self: 'self)]
+    Str.single_class ~params  ~name:t_name ~pat:[%pat? (self: 'self)]
                     [ Cf.constraint_ [%type: 'self] @@
                         Typ.class_ (mknoloc (Lident parent_name)) (List.map ~f:fst params)
-                    ])
-    ]
+                    ]
 
   (* let str_t_for_alias ~params ~t_name ~meta_tt_name = *)
-
-
-  let affect_longident ~f = function
-  | Longident.Lident x -> Longident.Lident (f x)
-  | (Ldot _) as l -> l
-  | (Longident.Lapply (_,_)) as l -> l
 
   let str_meta_gcata_for_alias ~root_type ~name ~manifest =
     match manifest.ptyp_desc with
     | Ptyp_constr ({txt=parent_name;_}, args) ->
-        let left,right = List.fold_right args ~init:([],[]) ~f:(fun typ (accl,accr) ->
+        let left,right = List.fold_right args ~init:([ [%pat? fix_eta] ],[ [%expr fix_eta ] ]) ~f:(fun typ (accl,accr) ->
           match typ with
           | { ptyp_desc=Ptyp_var name } ->
               let pat = Pat.var @@ mknoloc @@ sprintf "on_%s_arg" name in
               let arg = Exp.ident @@ lid @@ sprintf "on_%s_arg" name in
               (pat::accl, arg::accr)
           | [%type: int ]
+          | [%type: char ]
           | [%type: string ] -> (accl, [%expr (fun x -> x) ]:: accr)
           | _  -> failwith "not implented"
           )
@@ -444,6 +414,7 @@ module MakeMeta = struct
         let ps = List.map args ~f:(function
           | {ptyp_desc=Ptyp_var name;} -> Typ.var @@ sprintf "gt_a_for_%s" name
           | [%type: string] as t -> t
+          | [%type: char] as t -> t
           | _ -> assert false
           ) in
         let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
@@ -451,13 +422,12 @@ module MakeMeta = struct
         ps
       in
       let parent_name = affect_longident ident ~f:(fun s -> s^"_meta_t") in
-      Str.class_ [Ci.mk ~virt:Virtual ~params (Location.mknoloc name) @@
-                    Ast_helper.Cl.structure (Cstr.mk [%pat? _]
+      Str.single_class ~params ~name
                       [ Cf.inherit_ Fresh (Cl.constr (mknoloc parent_name) inh_types) None
                       (* ; Cf.constraint_ [%type: 'self] @@
                           Typ.class_ (mknoloc parent_name) (List.map ~f:fst params) *)
-                      ])
-      ]
+                      ]
+
     | _ -> assert false
 
   let str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name make_params_app_fa constrs =
@@ -556,21 +526,21 @@ let subclass_obj ~root_type typename_tt =
 
 let any_typ = [%type: _]
 
-let gt_repr_typ_wrap ~typename ~root_type arg =
+(* let gt_repr_typ_wrap ~typename ~root_type arg =
   let typename_tt = typename ^ "_tt" in
   let tail = [%type: 'inh -> [%t using_type ~typename root_type ] -> 'syn ] in
   let subclass = subclass_obj typename_tt ~root_type in
   [%type: ([%t make_params_longarrow ~root_type
               [%type: [%t subclass] -> [%t tail]]],
            [%t arg]) GT.t ]
-
+*)
 let inherit_field_gen ~name ~root_type ~inh ~synh ~holder ~synh_root wrap =
   let synhs, types = List.split @@
     map_type_param_names root_type.ptype_params
       ~f:(fun name -> (synh name, [Typ.var name; inh name; synh name; holder name ]) )
   in
   let types = List.concat types in
-  wrap Typ.(types @ [ [%type: 'tpoT]; [%type: unit]; synh_root root_type synhs ])
+  wrap Typ.([%type: 'tpoT] :: types @ [ [%type: unit]; synh_root root_type synhs ])
 
 let inherit_cf ?args ~name ~root_type ~inh ~synh ~holder ~synh_root () =
   inherit_field_gen ~name ~root_type ~inh ~synh ~holder ~synh_root
@@ -684,9 +654,9 @@ let plugin_decls (module P: Plugin) root_type =
   | Ptype_abstract -> (match root_type.ptype_manifest with
     | None -> failwith "we can't generate anything for really abstract types"
     | Some manifest ->
-        let meta_plugin = P.meta_for_alias ~name:plugin_meta_t ~root_type ~manifest in
-        let plugin = P.for_alias ~name:plugin_name ~root_type ~manifest in
-        [meta_plugin; plugin]
+        [ P.meta_for_alias ~name:plugin_meta_t ~root_type ~manifest
+        ; P.for_alias ~name:plugin_name ~root_type ~manifest
+        ]
         (* [Str.class_ [Ci.mk ~virt:Concrete ~params:[] (mknoloc plugin_name) (P.core manifest) ]] *)
       (* P.core manifest *)
     )
@@ -699,7 +669,7 @@ let plugin_decls (module P: Plugin) root_type =
           [ Typ.var name; holder name ]
         ) |> List.concat
       in
-      let params = params @ [Typ.var "tpoT"] in
+      let params = [Typ.var "tpoT"] @ params in
       let params = List.map params ~f:(fun t -> (t,Invariant)) in
       let params = params @ (P.extra_params root_type)  in
 
@@ -728,8 +698,9 @@ let plugin_decls (module P: Plugin) root_type =
             [ p; make_gt_a_typ ~inh:[%type: unit] ~itself:p ~syn:(P.synh "")  ()])
           |> List.concat
         in
-        let params = params @
-          [ Typ.alias (params_obj ~inh:(fun _ -> Typ.ground "unit") ~syn:(fun _ -> Typ.ground "string") root_type) "tpoT" ]
+        let params =
+          (Typ.alias (params_obj ~inh:(fun _ -> Typ.ground "unit") ~syn:(fun _ -> Typ.ground "string") root_type) "tpoT" )
+          :: params
         in
         let class_expr = Cl.constr (lid plugin_meta_t) params in
         let args = List.map root_type.ptype_params ~f:(fun _ -> Nolabel, [%expr fun pa -> pa.GT.fx ()]) in
@@ -877,7 +848,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
         make_params_app_namer ~namer:(fun name -> Exp.ident @@ lid ("f"^name))
       in
 
-      let gt_repr_typ = gt_repr_typ_wrap ~typename ~root_type [%type: unit] in
+      (* let gt_repr_typ = gt_repr_typ_wrap ~typename ~root_type [%type: unit] in *)
       let gt_repr_body =
         let typename_gcata = typename^"_gcata" in
         let tpo_meths =
@@ -946,7 +917,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
             Typ.([var n; var @@ "i"^n; var @@ "s"^n; var @@ "gt_a_for_"^n])
             )
           in
-          let xs = List.flatten xs @ [ [%type: 'tpoT]; [%type: 'inh]; [%type: 'syn]] in
+          let xs = [%type: 'tpoT] :: (List.flatten xs) @ [ [%type: 'inh]; [%type: 'syn]] in
           List.map xs ~f:(fun x -> (x,Invariant))
         in
         let params =
