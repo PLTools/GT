@@ -186,22 +186,21 @@ let using_type ~typename root_type =
   (* generation type specification by type declaration *)
   Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)
 
-let arr_of_param t =
+let arr_of_param ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) t =
   (* does from 'a the 'ia -> 'a -> 'sa *)
-  let open Typ in
   match t.ptyp_desc with
   | Ptyp_var n ->
       (mknoloc n, [],
-        [%type: [%t var @@ "i"^n] -> [%t var n] -> [%t var @@ "s"^n]] )
+        [%type: [%t inh n] -> [%t Typ.var n] -> [%t syn n]] )
   | _ ->
       raise_errorf "arr_of_param: not all type params are supported" deriver
 
 
-let params_obj root_type =
+let params_obj ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
   (* converts 'a, 'b to
      < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
    *)
-  let f (t,_) = arr_of_param t in
+  let f (t,_) = arr_of_param ~inh ~syn t in
   Typ.object_ (List.map f root_type.ptype_params) Closed
 
 (* Used when we need to check that type we working on references himself in
@@ -645,7 +644,7 @@ let plugin_decls (module P: Plugin) root_type =
             |> List.concat
           in
           let params = params @
-            [ Typ.alias (params_obj root_type) "tpoT" ]
+            [ Typ.alias (params_obj ~inh:(fun _ -> Typ.ground "unit") ~syn:(fun _ -> Typ.ground "string") root_type) "tpoT" ]
           in
           let class_expr = Cl.constr (lid plugin_meta_t) params in
           let args = List.map root_type.ptype_params ~f:(fun _ -> Nolabel, [%expr fun pa -> pa.GT.fx ()]) in
@@ -659,7 +658,7 @@ let plugin_decls (module P: Plugin) root_type =
         in
         Str.class_ [Ci.mk ~virt:Concrete ~params:(root_type.ptype_params @ (P.extra_params root_type))
                        (mknoloc plugin_name)
-                       (Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") [inherit_f]))
+                       (Cl.structure (Cstr.mk (Pat.any ()) [inherit_f]))
                    ]
       in
       [ plugin_meta_class
@@ -683,20 +682,20 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let typename_gcata = typename ^ "_gcata" in
   (* let _t_typename  = "t_" ^ typename  in *)
 
-  let show_typename_t = "show_" ^ typename_t in
-  let gmap_typename_t = "gmap_" ^ typename_t in
+  let show_typename_t = "show_" ^ typename in
+  let gmap_typename_t = "gmap_" ^ typename in
 
   let derivers_bunch =
     let wrap_meth mname cname =
-      let typname = root_type.ptype_name.txt in
+      (* let typname = root_type.ptype_name.txt in *)
       let body =
-        wrap_with_fa ~use_lift:true [%expr GT.transform [%e Exp.ident @@ lid typname]] ~root_type
+        wrap_with_fa ~use_lift:true [%expr [%e Exp.ident @@ lid typename_gcata]] ~root_type
           [ Exp.new_ @@ lid cname; [%expr () ] ]
       in
       Cf.method_ (Location.mknoloc mname) Public (Cfk_concrete (Fresh, body))
     in
     [%stri let [%p Pat.var @@ mknoloc typename] =
-      { GT.gcata = [%e Exp.(field (ident @@ lid typename) (lid "GT.gcata")) ]
+      { GT.gcata = [%e Exp.(ident @@ lid typename_gcata) ]
       ; GT.plugins = [%e Exp.object_ @@ Cstr.mk (Pat.any()) @@
         (if gt_show then [wrap_meth "show" show_typename_t] else []) @
         (if gt_gmap then [wrap_meth "gmap" gmap_typename_t] else []) @

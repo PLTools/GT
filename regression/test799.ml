@@ -2,12 +2,12 @@ open Printf
 
 (* FIRST PART *)
 type ('a,'b) t = OK of 'a | Error of 'b
-[@@deriving gt {show}] 
+[@@deriving gt {show}]
 (* type ('a) t = OK of 'a | Error of string [@@deriving gt {show}] *)
 
 let () =
   let show fa fb (e: (_,_) t) =
-    t.GT.gcata (GT.lift fa) (GT.lift fb) (new show_t_t) () e in
+    t.GT.gcata (GT.lift fa) (GT.lift fb) (new show_t) () e in
   printf "%s\n%!" (show string_of_int (fun x -> x) (OK 1));
   printf "%s\n%!" (show string_of_int (fun x -> x) (Error "error1"));
   ()

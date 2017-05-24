@@ -19,7 +19,7 @@ module Exp = struct
 
   let fun_list ~args e =
     List.fold_right args ~init:e
-      ~f:(fun arg acc -> Exp.fun_ Nolabel None arg acc)                    
+      ~f:(fun arg acc -> Exp.fun_ Nolabel None arg acc)
 end
 
 module Cl = struct
@@ -31,7 +31,11 @@ module Cl = struct
       ~f:(fun arg acc -> Cl.fun_ Asttypes.Nolabel None arg acc)
 end
 
-
+module Typ = struct
+  open Ast_helper
+  include Typ
+  let ground s = constr (lid s) []
+end
 open Parsetree
 
 let map_type_param_names ~f ps =
