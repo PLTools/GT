@@ -180,7 +180,7 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
     in
     let clas = specTr clas in *)
     let parent_meta = affect_longident ident ~f:(sprintf "show_meta_%s") in
-    Str.single_class ~params:(List.map types ~f:(fun x -> x,Invariant)) ~name
+    Str.single_class ~params:(invariantize types) ~name
       ~wrap:(fun x -> topTr @@ specTr x)
       [
         Cf.inherit_ Fresh (Cl.apply (Cl.constr (mknoloc parent_meta) inhTypes) appTr) None

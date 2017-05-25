@@ -66,6 +66,7 @@ let affect_longident ~f = function
   | (Longident.Lapply (_,_)) as l -> l
 
 let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
+let invariantize types = List.map types ~f:(fun x -> x,Asttypes.Invariant)
 
 let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
   (* TODO: maybe add extra string argument to concat it with type variables to get
