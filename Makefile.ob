@@ -99,6 +99,10 @@ INSTALL_TARGETS=META \
 	_build/src/View.cmi \
 	_build/src/HTML.cmi \
 	_build/src/GT.cmi \
+	_build/ppx/ppx_deriving_gt.cma \
+	_build/ppx/ppx_deriving_gt.cmxa \
+	_build/ppx/ppx_deriving_gt.cmxs \
+	_build/ppx/ppx_deriving_gt.cmi \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .cmo,$(PLUGINS))) ) \
 
 BUNDLEDIR=_build/bundle/$(PKGNAME)

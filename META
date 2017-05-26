@@ -1,8 +1,18 @@
-1version = "0.1"
+version = "0.1"
 description = "Generic transformers for algebraic types"
 archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
 
+package "ppx" (
+  version = "0.1"
+  description = "PPX syntax extensionon top of ppx_deriving"
+  requires(-ppx_driver) = "ppx_deriving"
+  ppxopt(-ppx_driver,-custom_ppx) = "ppx_deriving,-deriving-plugin,./ppx_deriving_gt.cma"
+  requires(ppx_driver) = "ppx_deriving.api"
+  archive(ppx_driver, byte) = "ppx_deriving_gt.cma"
+  archive(ppx_driver, native) = "ppx_deriving_gt.cmxa"
+  exists_if = "ppx_deriving_gt.cma"
+)
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
@@ -59,4 +69,3 @@ package "syntax" (
     archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo"
   )
 )
-
