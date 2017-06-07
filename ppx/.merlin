@@ -7,4 +7,4 @@ FLG -open Ast_convenience_405
 FLG -open Ppx_tools_405
 FLG -short-paths
 PKG compiler-libs.common ocaml-migrate-parsetree ppx_tools_versioned ppx_tools_versioned.metaquot_405
-PKG ppx_deriving GT
+PKG ppx_deriving
