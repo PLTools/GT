@@ -17,5 +17,7 @@ remove:  [make "-f" "Makefile.ob" "PREFIX=%{prefix}%" "uninstall"]
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
+  "ppx_deriving"
+  "ppx_tools_versioned"
   "camlp5"
 ]
