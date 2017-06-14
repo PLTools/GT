@@ -93,6 +93,7 @@ test: tests
 ######################## Installation related stuff ##########################
 INSTALL_TARGETS=META \
 	$(wildcard _build/camlp5/pa_gt.cmo) \
+	_build/src/GT.cmx \
 	_build/src/GT.cma \
 	_build/src/GT.cmxa \
 	_build/src/GT.a \
