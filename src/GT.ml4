@@ -413,6 +413,7 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
   }
 
 type ('a, 'b) pair = 'a * 'b
+type ('a, 'b, 'c) triple = 'a * 'b * 'c
 
 class type html_pair_env_tt = object  end
 class type show_pair_env_tt = object  end
@@ -422,12 +423,30 @@ class type eq_pair_env_tt = object  end
 class type compare_pair_env_tt = object  end
 class type gmap_pair_env_tt = object  end
 
+class type show_triple_env_tt = object  end
+class type gmap_triple_env_tt = object  end
+
 class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
   object
     method c_Pair : 'inh -> ('inh, ('a, 'b) pair, 'syn, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
                             ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa ; b : 'ib -> 'b -> 'sb >) a ->
                             ('ib, 'b, 'sb, < a : 'ia -> 'a -> 'sa ; b : 'ib -> 'b -> 'sb >) a -> 'syn
     method t_pair : ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> 'inh -> ('a, 'b) pair -> 'syn
+  end
+
+class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn] triple_tt =
+  object
+    method c_Triple : 'inh ->
+      ( 'inh
+      , ('a, 'b, 'c) triple
+      , 'syn
+      , < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb; c : 'ic -> 'c -> 'sc > as 'tpo
+      ) a ->
+      ('ia, 'a, 'sa, 'tpo) a ->
+      ('ib, 'b, 'sb, 'tpo) a ->
+      ('ic, 'c, 'sc, 'tpo) a ->
+      'syn
+    method t_triple : ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('ic -> 'c -> 'sc) -> 'inh -> ('a, 'b, 'c) triple -> 'syn
   end
 
 let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn) #pair_tt -> 'inh -> ('a, 'b) pair -> 'syn, unit) t =
@@ -439,6 +458,17 @@ let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 
   in
   {gcata = pair_gcata; plugins = ()}
 
+let triple : (  ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('ic -> 'c -> 'sc) ->
+              ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn) #triple_tt ->
+              'inh -> ('a, 'b, 'c) triple -> 'syn, unit) t =
+  let rec triple_gcata fa fb fc trans inh subj =
+    let rec self = triple_gcata fa fb fc trans
+    and tpo = object method a = fa method b = fb method c = fc end in
+    match subj with
+      (a, b, c) -> trans#c_Triple inh (make self subj tpo) (make fa a tpo) (make fb b tpo) (make fc c tpo)
+  in
+  {gcata = triple_gcata; plugins = ()}
+
 class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_t =
   object (this)
     method virtual c_Pair :
@@ -446,6 +476,17 @@ class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_t =
         ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
         ('ib, 'b, 'sb, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a -> 'syn
     method t_pair fa fb = transform pair fa fb this
+  end
+
+class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn] triple_t =
+  object (this)
+    method virtual c_Triple :
+      'inh -> ('inh, ('a, 'b, 'c) triple, 'syn, 'tpo) a ->
+        ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb; c : 'ic -> 'c -> 'sc > as 'tpo) a ->
+        ('ib, 'b, 'sb, 'tpo) a ->
+        ('ic, 'c, 'sc, 'tpo) a ->
+        'syn
+    method t_triple fa fb fc = transform triple fa fb fc this
   end
 
 class ['a, 'b] html_pair_t =
@@ -461,11 +502,28 @@ class ['a, 'b] show_pair_t =
     inherit ['a, unit, string, 'b, unit, string, unit, string] @pair
     method c_Pair _ _ x y = "(" ^ x.fx () ^ ", " ^ y.fx () ^ ")"
   end
+class ['a, 'b, 'c] show_triple_t =
+  object
+    inherit [ 'a, unit, string
+            , 'b, unit, string
+            , 'c, unit, string
+            , unit, string] @triple
+    method c_Triple _ _ x y z = Printf.sprintf "(%s, %s, %s)" (x.fx ()) (y.fx ()) (z.fx ())
+  end
 
 class ['a, 'sa, 'b, 'sb] gmap_pair_t =
   object
     inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair] @pair
     method c_Pair _ _ x y = (x.fx (), y.fx ())
+  end
+
+class ['a, 'sa, 'b, 'sb, 'c, 'sc] gmap_triple_t =
+  object
+    inherit [ 'a, unit, 'sa
+            , 'b, unit, 'sb
+            , 'c, unit, 'sc
+            , unit, ('sa, 'sb, 'sc) triple] @triple
+    method c_Triple _ _ x y z = (x.fx (), y.fx (), z.fx ())
   end
 
 class ['a, 'b, 'syn] foldl_pair_t =
@@ -514,6 +572,19 @@ let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 
                method compare fa fb = transform(pair) fa fb (new @pair[compare])
                method foldl   fa fb = transform(pair) fa fb (new @pair[foldl])
                method foldr   fa fb = transform(pair) fa fb (new @pair[foldr])
+             end
+  }
+
+let triple : (  ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('ic -> 'c -> 'sc) ->
+              ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn) #triple_tt ->
+              'inh -> ('a, 'b, 'c) triple -> 'syn
+            , < show    : ('a -> string) -> ('b -> string) ->  ('c -> string) -> ('a, 'b, 'c) triple  -> string;
+                gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) -> ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
+              >) t =
+  {gcata   = triple.gcata;
+   plugins = object
+              method show    fa fb fc = transform(triple) (lift fa) (lift fb) (lift fc) (new @triple[show]) ()
+              method gmap    fa fb fc = transform(triple) (lift fa) (lift fb) (lift fc) (new @triple[gmap]) ()
              end
   }
 
