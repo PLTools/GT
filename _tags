@@ -1,4 +1,4 @@
-true: debug, rectypes
+true: debug, rectypes, bin_annot
 #, strict_sequence
 
 <camlp5/*.ml>: syntax(camlp5o), package(camlp5), for-pack(Pa_gt)

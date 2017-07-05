@@ -95,36 +95,35 @@ let () =
 type ('a, 'b) glist = Nil | Cons of 'a * 'b
  (* [@@deriving gt {show}] *)
 
-
 class type virtual
- ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_tt =
- object
-   method  virtual c_Nil :
-     'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
-   method  virtual c_Cons :
-     'inh ->
-       ('inh,'type_itself,'syn,'tpoT) GT.a ->
-         'gt_a_for_a -> 'gt_a_for_b -> 'syn
- end
+   ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_tt =
+   object
+     method  virtual c_Nil :
+       'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
+     method  virtual c_Cons :
+       'inh ->
+         ('inh,'type_itself,'syn,'tpoT) GT.a ->
+           'gt_a_for_a -> 'gt_a_for_b -> 'syn
+   end
 class type virtual ['a,'ia,'sa,'b,'ib,'sb,'inh,'syn] glist_tt =
- object
-   inherit
-     [ < a: 'ia -> 'a -> 'sa  ;b: 'ib -> 'b -> 'sb   >  as 'tpoT
-     , ('a, 'b) glist
-     , ('ia,'a,'sa,'tpoT) GT.a
-     , ('ib,'b,'sb,'tpoT) GT.a ,'inh ,'syn ]
-     glist_meta_tt
-   method  t_glist :
-     ('ia -> 'a -> 'sa) ->
-       ('ib -> 'b -> 'sb) -> 'inh -> ('a,'b) glist -> 'syn
- end
+  object
+    inherit
+      [ < a: 'ia -> 'a -> 'sa; b: 'ib -> 'b -> 'sb >  as 'tpoT
+      , ('a, 'b) glist
+      , ('ia,'a,'sa,'tpoT) GT.a
+      , ('ib,'b,'sb,'tpoT) GT.a
+      , 'inh,'syn ] glist_meta_tt
+     method  t_glist :
+       ('ia -> 'a -> 'sa) ->
+         ('ib -> 'b -> 'sb) -> 'inh -> ('a,'b) glist -> 'syn
+  end
 
 let rec glist_meta_gcata fa fb tpo trans initial_inh subj =
-  let self = glist_meta_gcata fa fb tpo trans  in
-  match subj with
-  | Nil  -> trans#c_Nil initial_inh (GT.make self subj tpo)
-  | Cons (p0,p1) ->
-     trans#c_Cons initial_inh (GT.make self subj tpo) (fa p0) (fb p1)
+   let self = glist_meta_gcata fa fb tpo trans in
+   match subj with
+   | Nil  -> trans#c_Nil initial_inh (GT.make self subj tpo)
+   | Cons (p0,p1) ->
+       trans#c_Cons initial_inh (GT.make self subj tpo) (fa p0) (fb p1)
 
 let glist_gcata fa fb transformer initial_inh subj =
   let parameter_transforms_obj = object method a = fa method b = fb end  in
@@ -132,50 +131,73 @@ let glist_gcata fa fb transformer initial_inh subj =
     (fun x  -> GT.make fb x parameter_transforms_obj)
     parameter_transforms_obj transformer initial_inh subj
 
+class virtual ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t =
+  object (self : 'self)
+    constraint 'self =
+      ('tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn) #glist_meta_tt
+end
+class virtual ['tpoT ,'a,'ia,'sa,'gt_a_for_a ,'b,'ib,'sb,'gt_a_for_b ,'inh,'syn] glist_t =
+  object
+    inherit ['tpoT, ('a,'b)glist ,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t
+end
+
+class ['tpoT,'a,'a_holder,'b,'b_holder] show_meta_glist for_a for_b =
+  object (this)
+    inherit
+      ['tpoT
+      ,'a,unit,string,'a_holder
+      ,'b,unit,string,'b_holder
+      ,unit,string ] glist_t
+     method c_Cons inh subj (p0 : 'a_holder) (p1 : 'b_holder) =
+       "Cons (" ^ ((String.concat ", " [for_a p0; for_b p1]) ^ ")")
+     method c_Nil inh subj = "Nil ()"
+   end
+
+class ['a,'b] show_glist = object
+  inherit
+    [ < a: unit -> 'a -> string; b: unit -> 'b -> string   >  as 'tpoT
+    , 'a,(unit,'a,string,'tpoT) GT.a
+    , 'b,(unit,'b,string,'tpoT) GT.a ]
+      show_meta_glist (fun pa  -> pa.GT.fx ()) (fun pb -> pb.GT.fx ())
+end
+
+
+(* *************************************************************** *)
 type 'a list = ('a, 'a list) glist
 
 let list_meta_gcata fa = glist_meta_gcata fa (fun x -> x)
-let list_gcata fa transformer initial_inh subj =
+let list_gcata fa transformer initial_inh (subj: 'a list) =
   let parameter_transforms_obj = object method a = fa end  in
   list_meta_gcata fa parameter_transforms_obj transformer initial_inh subj
 
 class virtual
- ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t =
- object (self : 'self)
-   constraint 'self =
-     ('tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn)#glist_meta_tt
+  ['tpoT,'type_itself
+  ,'gt_a_for_a
+  ,'inh,'syn] list_meta_t = object
+   (* (self : 'self) *)
+    inherit ['tpoT,'type_itself,'gt_a_for_a,'type_itself,'inh,'syn] glist_meta_t
  end
 
 class virtual
- ['tpoT,'a,'ia,'sa,'gt_a_for_a,'b,'ib,'sb,'gt_a_for_b,'inh,'syn] glist_t =
- object (this)
-   inherit  ['tpoT,('a,'b) glist,'gt_a_for_a,'gt_a_for_b,'inh,'syn]
-     glist_meta_t
+  ['tpoT,'a,'ia,'sa,'gt_a_for_a,'inh,'syn] list_t =
+  object (this)
+    inherit  ['tpoT, 'a list, 'gt_a_for_a, 'inh, 'syn]
+      list_meta_t
 end
 
-class ['tpoT,'a,'a_holder,'b,'b_holder] show_meta_glist for_a  for_b =
- object (this)
-   inherit
-     ['tpoT,'a,unit,string,'a_holder,'b,unit,string,'b_holder,unit,string]
-     glist_t
-   method c_Cons inh subj (p0 : 'a_holder) (p1 : 'b_holder) =
-     "Cons (" ^ ((String.concat ", " [for_a p0; for_b p1]) ^ ")")
-   method c_Nil inh subj = "Nil ()"
- end
-class ['a,'b] show_glist =
- object
-   inherit
-     [ < a: unit -> 'a -> string  ;b: unit -> 'b -> string   >  as 'tpoT,
-     'a,(unit,'a,string,'tpoT) GT.a,'b,(unit,'b,string,'tpoT) GT.a]
-     show_meta_glist (fun pa  -> pa.GT.fx ()) (fun pa  -> pa.GT.fx ())
- end
 
-let rec for_b for_a n = list_gcata for_a (new show_meta_glist for_a (for_b for_a) ) () n
+let rec for_b : _ -> 'a list -> _ = fun for_a n ->
+  (* list_gcata for_a (new show_meta_glist for_a (for_b for_a) ) () n *)
+  (* let foo : ('a, 'b, 'c, 'd, 'e) show_meta_glist = (new show_meta_glist for_a (fun _ -> assert false) ) in *)
+  list_gcata for_a (new show_meta_glist for_a (fun _ -> assert false) ) () n
+
 
 class ['tpoT,'a,'a_holder] show_meta_list for_a =
   (* let rec for_b n = list_gcata (new show_meta_glist for_a for_b) () n in *)
   object
-     inherit [ 'tpoT, 'a, 'a_holder, 'a list, 'a list ] show_meta_glist for_a (for_b for_a)
+     inherit [ 'tpoT, 'a, 'a_holder, 'a list, 'a list ] show_meta_glist for_a
+       (fun _ -> assert false)
+      (* (for_b for_a) *)
 end
 
 class ['a] show_list = object(this)
