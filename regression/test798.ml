@@ -21,6 +21,7 @@ class virtual a : object method virtual foo : int end
 type ('a, 'b) glist = Nil | Cons of 'a * 'b
 (* [@@deriving gt {show}] *)
 
+(* gcata goes in the beginnigbecause it doesn't depend on anything *)
 let rec glist_meta_gcata fa fb (tpo: 'tpoT) trans (initial_inh: 'inh) subj : 'syn =
   let self = glist_meta_gcata fa fb tpo trans in
    match subj with
@@ -36,39 +37,39 @@ let glist_gcata fa fb transformer initial_inh subj =
     parameter_transforms_obj transformer initial_inh subj
 
 class type virtual
-   ['tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_tt =
+   ['inh,'syn,'tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b] glist_meta_tt =
    object
      method  virtual c_Nil  : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
      method  virtual c_Cons : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a ->
            'gt_a_for_a -> 'gt_a_for_b -> 'syn
    end
-class type virtual ['a,'ia,'sa,'b,'ib,'sb,'inh,'syn] glist_tt =
+class type virtual ['inh,'syn, 'a,'ia,'sa,'b,'ib,'sb] glist_tt =
   object
     inherit
-      [ < a: 'ia -> 'a -> 'sa; b: 'ib -> 'b -> 'sb >  as 'tpoT
+      [ 'inh, 'syn
+      , < a: 'ia -> 'a -> 'sa; b: 'ib -> 'b -> 'sb >  as 'tpoT
       , ('a, 'b) glist, 'gt_a_for_self
       , ('ia,'a,'sa,'tpoT) GT.a
       , ('ib,'b,'sb,'tpoT) GT.a
-      , 'inh,'syn ] glist_meta_tt
+      ] glist_meta_tt
       method  t_glist :
         ('ia -> 'a -> 'sa) ->
         ('ib -> 'b -> 'sb) -> 'inh -> ('a,'b) glist -> 'syn
   end
 
-class virtual ['tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t =
+class virtual ['inh,'syn,'tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b] glist_meta_t =
   object (self : 'self)
     constraint 'self =
-      ('tpoT,'type_itself,'gt_a_for_self
-      ,'gt_a_for_a,'gt_a_for_b,'inh,'syn) #glist_meta_tt
+      ('inh,'syn, 'tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b) #glist_meta_tt
 end
-class virtual ['tpoT
+class virtual [ 'inh,'syn, 'tpoT
   ,'a,'ia,'sa,'gt_a_for_a
   ,'b,'ib,'sb,'gt_a_for_b
-  ,'inh,'syn] glist_t =
+  ] glist_t =
   object
-    inherit ['tpoT, ('a,'b)glist
-            ,('a,'b)glist        (* ???? *)
-            ,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t
+    inherit ['inh,'syn, 'tpoT
+            , ('a,'b) glist, ('a,'b) glist        (* ???? *)
+            ,'gt_a_for_a,'gt_a_for_b] glist_meta_t
 end
 
 class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
@@ -77,12 +78,12 @@ class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
   =
   object (this)
     inherit
-      ['tpoT
-      ,'a,unit,string,'a_holder
-      ,'b,unit,string,'b_holder
-      ,unit,string ] glist_t
+      [ unit,string, 'tpoT
+      , 'a,unit,string,'a_holder
+      , 'b,unit,string,'b_holder
+      ] glist_t
      method c_Cons inh subj (p0 : 'a_holder) (p1 : 'b_holder) =
-       "Cons (" ^ ((String.concat ", " [for_a p0; for_b p1]) ^ ")")
+       sprintf "Cons (%s,%s)" (for_a p0) (for_b p1)
      method c_Nil inh subj = "Nil ()"
    end
 
@@ -128,11 +129,12 @@ let list_gcata fa transformer initial_inh subj =
 (* ????? *)
 
 class virtual
-  ['tpoT,'type_itself,'gt_a_for_self
+  ['inh,'syn, 'tpoT
+  ,'type_itself,'gt_a_for_self
   ,'gt_a_for_a
-  ,'inh,'syn] list_meta_t = object (* (self : 'self) *)
-    inherit ['tpoT,'type_itself,'gt_a_for_self, 'gt_a_for_a,'gt_a_for_self,'inh,'syn] glist_meta_t
- end
+  ] list_meta_t = object
+    inherit [ 'inh,'syn, 'tpoT,'type_itself,'gt_a_for_self, 'gt_a_for_a,'gt_a_for_self] glist_meta_t
+end
 
 (* class virtual
   ['tpoT,'a,'ia,'sa,'gt_a_for_a,'inh,'syn] list_t =
@@ -197,14 +199,12 @@ let intlist_gcata transformer initial_inh subj =
   let parameter_transforms_obj = object end  in
   intlist_meta_gcata parameter_transforms_obj transformer initial_inh subj
 
-class virtual
-  ['tpoT,'type_itself, 'gt_a_for_self
-  ,'inh,'syn] intlist_meta_t = object
-    inherit ['tpoT,'type_itself,'gt_a_for_self, int, 'inh,'syn] list_meta_t
+class virtual [ 'inh,'syn, 'tpoT,'type_itself, 'gt_a_for_self ] intlist_meta_t = object
+  inherit ['tpoT,'type_itself,'gt_a_for_self, int, 'inh,'syn] list_meta_t
 end
 
-class virtual ['tpoT,'gt_a_for_self,'inh,'syn] intlist_t = object
-  inherit  ['tpoT, intlist, 'gt_a_for_self, 'inh, 'syn] intlist_meta_t
+class virtual [ 'inh,'syn, 'tpoT,'gt_a_for_self] intlist_t = object
+  inherit [ 'inh,'syn, 'tpoT, intlist, 'gt_a_for_self] intlist_meta_t
 end
 
 class virtual ['tpoT,'self_holder] show_meta_intlist for_me =
