@@ -6,6 +6,9 @@ module List = struct
   let filter_map ~f xs =
     List.fold_right (fun x acc -> match f x with Some v -> v::acc | None -> acc) xs []
   let last_exn xs = List.hd @@ List.rev xs
+
+  let pp ~f xs =
+    Printf.sprintf "[ %s ]" (String.concat "; " @@ List.map f xs)
 end
 
 module Exp = struct
@@ -89,4 +92,22 @@ let params_obj ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s)
      < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
    *)
   let f (t,_) = arr_of_param ~inh ~syn t in
-  Typ.object_ (List.map f root_type.ptype_params) Closed
+  Typ.object_ (List.map f root_type.ptype_params) Asttypes.Closed
+
+let migrate =
+  let open Migrate_parsetree in
+  Versions.migrate (module OCaml_405) (module OCaml_current)
+
+let string_of_expression e =
+  Format.set_margin 1000;
+  let open Migrate_parsetree in
+  let ans = Format.asprintf "%a" Pprintast.expression (migrate.Versions.copy_expression e) in
+  Format.set_margin 80;
+  ans
+
+let string_of_core_type e =
+  Format.set_margin 1000;
+  let open Migrate_parsetree in
+  let ans = Format.asprintf "%a" Pprintast.core_type (migrate.Versions.copy_core_type e) in
+  Format.set_margin 80;
+ans

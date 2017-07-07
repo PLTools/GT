@@ -152,6 +152,16 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
                         , transformer_expr :: appTr
                         , new_params::types
                         , new_params@inhTypes)
+
+    | orig :: tl  when are_the_same orig root_type ->
+        (* let transformer_pat  = Pat.var @@ mknoloc @@ sprintf "for_%d_%s" n name in *)
+        let transformer_expr = Exp.ident @@ lid @@ sprintf "for_%d_%s" n name in
+        helper  ~n:(n-1) tl
+                ~acc: ( topTr
+                      , specTr
+                      , transformer_expr :: appTr
+                      , types
+                      , inhTypes)
     | orig :: tl when is_ground_enough orig ->
         helper ~n:(n-1) tl ~acc:(process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) orig)
     (* | ([%type: string] as orig) :: tl ->
@@ -163,9 +173,10 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
                         , (Exp.ident @@ lid @@ sprintf "for_%d" n) :: appTr
                         , types
                         , orig::orig::inhTypes) *)
-    | _ -> assert false
+    | typ :: _ -> failwith (sprintf "Don't know what to do about the type '%s'" (string_of_core_type typ))
     in
     let topTr, specTr, appTr, types, inhTypes =
+      (* we reverse inout to make a result in th eright order *)
       helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[],[],[]) (List.rev ps) in
     let types = [%type: 'tpoT] :: (List.concat types) in
     let inhTypes = [ [%type: 'tpoT] ] @ inhTypes in

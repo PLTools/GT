@@ -322,12 +322,11 @@ module MakeMeta = struct
       )
     in
     if List.length params <> List.length poly_params
-    then failwith "consytructor declaration has not vars in a params";
-    let ps = [ [%type: 'tpoT]; [%type: 'type_itself] ] in
+    then failwith "constructor declaration has not vars in a params";
+    let ps = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT]; [%type: 'type_itself]; [%type: 'gt_a_for_self] ] in
     let ps = ps @
       List.map (fun s -> Typ.var @@ "gt_a_for_"^s) poly_params
     in
-    let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
     List.map (fun p -> (p, Invariant)) ps
 
   let str_tt_for_alias ~params ~tt_name ~manifest =
@@ -361,7 +360,7 @@ module MakeMeta = struct
                     (Location.mknoloc tt_name) @@
                   Cty.signature (Csig.mk [%type: _] meths) ]
 
-  (* declared metaclass for a type *)
+  (* declared metaclass for an algebraic type *)
   let str_class_for_algebraic ~params ~t_name ~parent_name =
     let params = t_params params in
     Str.single_class ~params  ~name:t_name ~pat:[%pat? (self: 'self)]
@@ -383,7 +382,8 @@ module MakeMeta = struct
           | [%type: int ]
           | [%type: char ]
           | [%type: string ] -> (accl, [%expr (fun x -> x) ]:: accr)
-          | _  -> failwith "not implented"
+          | t when are_the_same t root_type ->  (accl, [%expr (fun x -> x) ]:: accr)
+          | _  -> failwith "not implemented"
           )
         in
         let right = List.map right ~f:(fun x -> (Nolabel,x)) in
@@ -411,14 +411,15 @@ module MakeMeta = struct
     match manifest.ptyp_desc with
     | Ptyp_constr ({txt=ident;_}, args) ->
       let inh_types =
-        let ps = List.map args ~f:(function
-          | {ptyp_desc=Ptyp_var name;} -> Typ.var @@ sprintf "gt_a_for_%s" name
-          | [%type: string] as t -> t
-          | [%type: char] as t -> t
-          | _ -> assert false
+        let ps = List.filter_map args ~f:(function
+          | {ptyp_desc=Ptyp_var name;} -> Some (Typ.var @@ sprintf "gt_a_for_%s" name)
+          | [%type: string] as t -> Some t
+          | [%type: char] as t -> Some t
+          | t when Show.are_the_same t root_type ->
+              None
+          | typ -> failwith (sprintf "Don't know what to do about the type '%s'" (string_of_core_type typ))
           ) in
-        let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
-        let ps = [ [%type: 'tpoT]; [%type: 'type_itself] ] @ ps in
+        let ps = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT]; [%type: 'type_itself] ; [%type: 'gt_a_for_self] ] @ ps in
         ps
       in
       let parent_name = affect_longident ident ~f:(fun s -> s^"_meta_t") in
@@ -428,7 +429,7 @@ module MakeMeta = struct
                           Typ.class_ (mknoloc parent_name) (List.map ~f:fst params) *)
                       ]
 
-    | _ -> assert false
+    | _ -> failwith (sprintf "str_meta_clas_for_alias fails for type with name '%s'" name)
 
   let str_meta_gcata_for_algebraic ~root_type ~typename ~gcata_name make_params_app_fa constrs =
     let typename_meta_gcata = typename^"_meta_gcata" in
@@ -804,10 +805,10 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
       match root_type.ptype_manifest with
       | None -> failwith "can't be supported"
       | Some manifest ->
-          [ MakeMeta.str_tt_for_alias ~params:root_type.ptype_params ~tt_name:typename_meta_tt ~manifest
-          ; MakeMeta.str_meta_gcata_for_alias ~root_type ~name:typename_meta_gcata ~manifest
+          [ MakeMeta.str_meta_gcata_for_alias ~root_type ~name:typename_meta_gcata ~manifest
           (* gcata for type alias is declared the same as for normal algebraic type *)
           ; make_gcata ~root_type ~name:typename_gcata ~metaname:typename_meta_gcata
+          ; MakeMeta.str_tt_for_alias ~params:root_type.ptype_params ~tt_name:typename_meta_tt ~manifest
           ; MakeMeta.str_meta_clas_for_alias ~root_type ~name:typename_meta_t ~manifest
           (* t class is omitted mecause it seems that we don't need it *)
           (* ; MakeMeta.str_t_for_alias ~params:root_type.ptype_params ~t_name:typename_t ~meta_tt_name:typename_meta_ *)
@@ -917,10 +918,11 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
             Typ.([var n; var @@ "i"^n; var @@ "s"^n; var @@ "gt_a_for_"^n])
             )
           in
-          let xs = [%type: 'tpoT] :: (List.flatten xs) @ [ [%type: 'inh]; [%type: 'syn]] in
+          let xs = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT] ] @ (List.flatten xs) in
           List.map xs ~f:(fun x -> (x,Invariant))
         in
         let params =
+          (* TODO: hack here. *)
           match MakeMeta.t_params ~params:root_type.ptype_params with
           | []
           | [_] -> assert false
@@ -934,11 +936,11 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
                      ]
       in
       let ans =
-        [ MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~tt_name:typename_meta_tt constrs
-        ; make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods
-        ; MakeMeta.str_meta_gcata_for_algebraic ~root_type ~typename
+        [ MakeMeta.str_meta_gcata_for_algebraic ~root_type ~typename
             ~gcata_name:typename_meta_gcata make_params_app_fa constrs
         ; make_gcata ~root_type ~name:typename_gcata ~metaname:typename_meta_gcata
+        ; MakeMeta.str_tt_for_algebraic ~params:root_type.ptype_params ~tt_name:typename_meta_tt constrs
+        (* ; make_tt_class_type ~root_type ~typename ~typename_meta_tt ~typename_tt tt_methods *)
         ; MakeMeta.str_class_for_algebraic ~params:root_type.ptype_params ~t_name:typename_meta_t ~parent_name:typename_meta_tt
         ; class_t
         ]
