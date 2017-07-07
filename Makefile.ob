@@ -45,7 +45,7 @@ clean: clean_tests
 
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #$(shell seq -s \  -w 1 024) $(shell seq -s \  -w 26 028)
-REGRES_CASES := 799 798#705
+REGRES_CASES := 799 798 798gen #705
 $(warning $(REGRES_CASES) )
 
 define TESTRULES
@@ -67,6 +67,12 @@ run_tests: test_$(1)
 test_$(1):
 	@cd regression  && $(TESTS_ENVIRONMENT) ../test$(1).native; \
 	if [ $$$$? -ne 0 ] ; then echo "$(1) FAILED"; else echo "$(1) PASSED"; fi
+
+promote_all: promote_$(1)
+promote_test$(1): promote_$(1)
+promote_$(1):
+	./test$(1).native > regression/orig/test$(1).log
+	
 endef
 $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
 

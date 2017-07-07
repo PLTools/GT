@@ -1,3 +1,9 @@
+(* There you can find manual implementation of the code to be derived from
+      type ('a,'b) glist = Nil | Cons of 'a * 'b
+  and
+      type 'a list = ('a, 'a list) glist
+*)
+
 open Printf
 
 (*
