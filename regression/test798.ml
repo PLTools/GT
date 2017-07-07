@@ -19,27 +19,7 @@ class virtual a : object method virtual foo : int end
 *)
 
 type ('a, 'b) glist = Nil | Cons of 'a * 'b
- (* [@@deriving gt {show}] *)
-
-class type virtual
-   ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_tt =
-   object
-     method  virtual c_Nil  : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
-     method  virtual c_Cons : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a ->
-           'gt_a_for_a -> 'gt_a_for_b -> 'syn
-   end
-class type virtual ['a,'ia,'sa,'b,'ib,'sb,'inh,'syn] glist_tt =
-  object
-    inherit
-      [ < a: 'ia -> 'a -> 'sa; b: 'ib -> 'b -> 'sb >  as 'tpoT
-      , ('a, 'b) glist
-      , ('ia,'a,'sa,'tpoT) GT.a
-      , ('ib,'b,'sb,'tpoT) GT.a
-      , 'inh,'syn ] glist_meta_tt
-      method  t_glist :
-        ('ia -> 'a -> 'sa) ->
-        ('ib -> 'b -> 'sb) -> 'inh -> ('a,'b) glist -> 'syn
-  end
+(* [@@deriving gt {show}] *)
 
 let rec glist_meta_gcata fa fb (tpo: 'tpoT) trans (initial_inh: 'inh) subj : 'syn =
   let self = glist_meta_gcata fa fb tpo trans in
@@ -55,17 +35,40 @@ let glist_gcata fa fb transformer initial_inh subj =
     (fun x  -> GT.make fb x parameter_transforms_obj)
     parameter_transforms_obj transformer initial_inh subj
 
-class virtual ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t =
+class type virtual
+   ['tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_tt =
+   object
+     method  virtual c_Nil  : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
+     method  virtual c_Cons : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a ->
+           'gt_a_for_a -> 'gt_a_for_b -> 'syn
+   end
+class type virtual ['a,'ia,'sa,'b,'ib,'sb,'inh,'syn] glist_tt =
+  object
+    inherit
+      [ < a: 'ia -> 'a -> 'sa; b: 'ib -> 'b -> 'sb >  as 'tpoT
+      , ('a, 'b) glist, 'gt_a_for_self
+      , ('ia,'a,'sa,'tpoT) GT.a
+      , ('ib,'b,'sb,'tpoT) GT.a
+      , 'inh,'syn ] glist_meta_tt
+      method  t_glist :
+        ('ia -> 'a -> 'sa) ->
+        ('ib -> 'b -> 'sb) -> 'inh -> ('a,'b) glist -> 'syn
+  end
+
+class virtual ['tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t =
   object (self : 'self)
     constraint 'self =
-      ('tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn) #glist_meta_tt
+      ('tpoT,'type_itself,'gt_a_for_self
+      ,'gt_a_for_a,'gt_a_for_b,'inh,'syn) #glist_meta_tt
 end
 class virtual ['tpoT
   ,'a,'ia,'sa,'gt_a_for_a
   ,'b,'ib,'sb,'gt_a_for_b
   ,'inh,'syn] glist_t =
   object
-    inherit ['tpoT, ('a,'b)glist ,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t
+    inherit ['tpoT, ('a,'b)glist
+            ,('a,'b)glist        (* ???? *)
+            ,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t
 end
 
 class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
@@ -124,13 +127,12 @@ let list_gcata fa transformer initial_inh subj =
     parameter_transforms_obj transformer initial_inh subj
 (* ????? *)
 
-(* class virtual
-  ['tpoT,'type_itself
+class virtual
+  ['tpoT,'type_itself,'gt_a_for_self
   ,'gt_a_for_a
-  ,'inh,'syn] list_meta_t = object
-   (* (self : 'self) *)
-    inherit ['tpoT,'type_itself,'gt_a_for_a,'type_itself,'inh,'syn] glist_meta_t
- end *)
+  ,'inh,'syn] list_meta_t = object (* (self : 'self) *)
+    inherit ['tpoT,'type_itself,'gt_a_for_self, 'gt_a_for_a,'gt_a_for_self,'inh,'syn] glist_meta_t
+ end
 
 (* class virtual
   ['tpoT,'a,'ia,'sa,'gt_a_for_a,'inh,'syn] list_t =
@@ -157,7 +159,7 @@ class ['a, 'self_holder] show_list for_me = object(this)
           , 'a
           , (unit, 'a, string, 'tpoT) GT.a
           , 'self_holder
-          ] show_meta_list (fun pa -> pa.GT.fx ()) (for_me)
+          ] show_meta_list (fun pa -> pa.GT.fx ()) for_me
 
   (* method t_list transform_a x = list_gcata transform_a this x *)
 end
@@ -179,4 +181,48 @@ let () =
   printf "%s\n%!" (show string_of_int (Nil));
   printf "%s\n%!" (show (fun x -> x) (Cons ("FUCK", Nil)));
   printf "%s\n%!" (show string_of_int (Cons (1, Cons (1, Nil))));
-()
+  ()
+
+(* *************************************************************** *)
+(* We continue shrinking the type but it seems that 'self_holder is still needed.
+ * Or not? Maybe when type is monomorphic we don't need that self_holder and can
+ * avoid it? It will make generated code a litlle bit shorter but improvement seems not
+ * to be visible for the end-users.
+ *)
+type intlist = int list
+
+let intlist_meta_gcata x = list_meta_gcata (fun x -> x) x
+
+let intlist_gcata transformer initial_inh subj =
+  let parameter_transforms_obj = object end  in
+  intlist_meta_gcata parameter_transforms_obj transformer initial_inh subj
+
+class virtual
+  ['tpoT,'type_itself, 'gt_a_for_self
+  ,'inh,'syn] intlist_meta_t = object
+    inherit ['tpoT,'type_itself,'gt_a_for_self, int, 'inh,'syn] list_meta_t
+end
+
+class virtual ['tpoT,'gt_a_for_self,'inh,'syn] intlist_t = object
+  inherit  ['tpoT, intlist, 'gt_a_for_self, 'inh, 'syn] intlist_meta_t
+end
+
+class virtual ['tpoT,'self_holder] show_meta_intlist for_me =
+  let for_a = GT.lift (GT.int.GT.plugins)#show () in
+  object (this)
+    inherit ['tpoT, int, int, 'self_holder] show_meta_list for_a for_me
+end
+
+class ['a, 'self_holder] show_intlist for_me = object(this)
+  inherit [ <  > as 'tpoT
+          , intlist   (* maybe 'self_holder here *)
+          ] show_meta_intlist for_me
+end
+
+
+let () =
+  let rec show xs = intlist_gcata (new show_intlist show) () xs in
+  printf "%s\n%!" (show  Nil);
+  printf "%s\n%!" (show  (Cons (6, Nil)));
+  printf "%s\n%!" (show  (Cons (7, Cons (8, Nil))));
+  ()
