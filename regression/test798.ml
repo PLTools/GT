@@ -22,7 +22,7 @@ type ('a, 'b) glist = Nil | Cons of 'a * 'b
  (* [@@deriving gt {show}] *)
 
 class type virtual
-   ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'gt_a_for_self,'inh,'syn] glist_meta_tt =
+   ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_tt =
    object
      method  virtual c_Nil  : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
      method  virtual c_Cons : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a ->
@@ -35,7 +35,6 @@ class type virtual ['a,'ia,'sa,'b,'ib,'sb,'inh,'syn] glist_tt =
       , ('a, 'b) glist
       , ('ia,'a,'sa,'tpoT) GT.a
       , ('ib,'b,'sb,'tpoT) GT.a
-      , ('inh,('a, 'b) glist,'syn,'tpoT) GT.a
       , 'inh,'syn ] glist_meta_tt
       method  t_glist :
         ('ia -> 'a -> 'sa) ->
@@ -56,17 +55,17 @@ let glist_gcata fa fb transformer initial_inh subj =
     (fun x  -> GT.make fb x parameter_transforms_obj)
     parameter_transforms_obj transformer initial_inh subj
 
-class virtual ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'gt_a_for_self,'inh,'syn] glist_meta_t =
+class virtual ['tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t =
   object (self : 'self)
     constraint 'self =
-      ('tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'gt_a_for_self,'inh,'syn) #glist_meta_tt
+      ('tpoT,'type_itself,'gt_a_for_a,'gt_a_for_b,'inh,'syn) #glist_meta_tt
 end
 class virtual ['tpoT
   ,'a,'ia,'sa,'gt_a_for_a
   ,'b,'ib,'sb,'gt_a_for_b
-  ,'gt_a_for_self,'inh,'syn] glist_t =
+  ,'inh,'syn] glist_t =
   object
-    inherit ['tpoT, ('a,'b)glist ,'gt_a_for_a,'gt_a_for_b,'gt_a_for_self,'inh,'syn] glist_meta_t
+    inherit ['tpoT, ('a,'b)glist ,'gt_a_for_a,'gt_a_for_b,'inh,'syn] glist_meta_t
 end
 
 class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
@@ -78,7 +77,6 @@ class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
       ['tpoT
       ,'a,unit,string,'a_holder
       ,'b,unit,string,'b_holder
-      ,(unit,('a_holder,'b_holder) glist,string,'tpoT) GT.a
       ,unit,string ] glist_t
      method c_Cons inh subj (p0 : 'a_holder) (p1 : 'b_holder) =
        "Cons (" ^ ((String.concat ", " [for_a p0; for_b p1]) ^ ")")
