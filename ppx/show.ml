@@ -155,13 +155,14 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
 
     | orig :: tl  when are_the_same orig root_type ->
         (* let transformer_pat  = Pat.var @@ mknoloc @@ sprintf "for_%d_%s" n name in *)
-        let transformer_expr = Exp.ident @@ lid @@ sprintf "for_%d_%s" n name in
+        let transformer_expr = Exp.ident @@ lid @@ sprintf "for_me" in
+        let new_inh = [ using_type ~typename:root_type.ptype_name.txt root_type; [%type: 'self_holder] ] in
         helper  ~n:(n-1) tl
                 ~acc: ( topTr
                       , specTr
                       , transformer_expr :: appTr
                       , types
-                      , inhTypes)
+                      , new_inh@inhTypes)
     | orig :: tl when is_ground_enough orig ->
         helper ~n:(n-1) tl ~acc:(process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) orig)
     (* | ([%type: string] as orig) :: tl ->
@@ -178,8 +179,20 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
     let topTr, specTr, appTr, types, inhTypes =
       (* we reverse inout to make a result in th eright order *)
       helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[],[],[]) (List.rev ps) in
+
+    (* now we add for_me *)
+    let topTr = fun expr -> topTr (Cl.fun_ Nolabel None (Pat.var @@ mknoloc @@ sprintf "for_me" ) expr)
+    in
     let types = [%type: 'tpoT] :: (List.concat types) in
-    let inhTypes = [ [%type: 'tpoT] ] @ inhTypes in
+    let types = types @ [ [%type: 'self_holder] ] in
+
+    let inhTypes =
+      let last_inh_self_holder =
+        Typ.constr (lid root_type.ptype_name.txt) @@
+          map_type_param_names root_type.ptype_params ~f:(fun name -> Typ.var @@ name^"_holder" )
+      in
+      [ [%type: 'tpoT] ] @ inhTypes @ [ last_inh_self_holder ]
+    in
     let appTr = nolabelize appTr in
     (topTr, specTr, appTr, types, inhTypes)
   in
@@ -198,12 +211,17 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
       ]
   | _ -> failwith "not implemented"
 
+(* make normal class like show_list *)
 let for_alias ~name ~root_type ~manifest : structure_item =
   match manifest.ptyp_desc with
   | Ptyp_constr ({txt=ident;_}, params) ->
-      let appTr = map_type_param_names root_type.ptype_params ~f:(fun _ -> [%expr (fun z -> z.GT.fx ())])
-        |> nolabelize
+      let appTr = map_type_param_names root_type.ptype_params
+        ~f:(fun name ->
+              let name = "p" ^ name in
+              [%expr fun [%p Pat.var@@ mknoloc name  ] -> [%e Exp.ident @@ lid name].GT.fx ()])
       in
+      let appTr = nolabelize @@ (appTr @ [ Exp.ident @@ lid "for_me"] ) in
+      let for_me_patt = Pat.var @@ mknoloc "for_me" in
       let inh_params =
         map_type_param_names root_type.ptype_params
           ~f:(fun name ->
@@ -212,13 +230,18 @@ let for_alias ~name ~root_type ~manifest : structure_item =
                 ; make_gt_a_typ ~inh:[%type: unit] ~itself ~syn:[%type: string] ()
                 ])
         |> List.concat
-        |> (fun xs -> (Typ.alias (params_obj root_type) "tpoT") :: xs  )
+        |> (fun xs -> (Typ.alias (params_obj ~inh ~syn:synh root_type) "tpoT") :: xs @ [ [%type: 'self_holder] ]   )
       in
       let typname = root_type.ptype_name.txt in
-      Str.single_class ~params:root_type.ptype_params ~name ~pat:[%pat? self] ~virt:Concrete
+      let class_params = root_type.ptype_params @
+        [ ([%type: 'self_holder], Invariant) ]
+      in
+      Str.single_class ~params:class_params ~name ~pat:[%pat? self] ~virt:Concrete
+        ~wrap:(Cl.fun_ Nolabel None for_me_patt)
         [
-          Cf.inherit_ Fresh (Cl.apply (Cl.constr (lid @@ sprintf "show_meta_%s" typname) inh_params) appTr) None
-        ; let e =
+          Cf.inherit_ Fresh
+              (Cl.apply (Cl.constr (lid @@ sprintf "show_meta_%s" typname) inh_params) appTr) None
+        (* ; let e =
             let patts,exprs =
               map_type_param_names root_type.ptype_params
                 ~f:(fun name ->
@@ -227,10 +250,11 @@ let for_alias ~name ~root_type ~manifest : structure_item =
               |> List.split
             in
             let exprs = nolabelize @@ ( exprs @ [[%expr self]]) in
+            let patts = patts @ [ Pat.var @@ mknoloc "for_me" ] in
             Exp.fun_list ~args:patts @@
               Exp.apply (Exp.ident @@ lid @@  sprintf "%s_gcata" typname) exprs
           in
-          Cf.method_ (mknoloc @@ sprintf "t_%s" typname) Public (Cfk_concrete (Fresh, e) )
+          Cf.method_ (mknoloc @@ sprintf "t_%s" typname) Public (Cfk_concrete (Fresh, e) ) *)
         ]
   | _ -> assert false
 

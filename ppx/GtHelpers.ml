@@ -55,12 +55,13 @@ module Str = struct
   ]
 
 end
+
 open Parsetree
 let map_type_param_names ~f ps =
   List.map ps ~f:(fun (t,_) ->
     match t.ptyp_desc with
     | Ptyp_var name -> f name
-   | _ -> failwith "bad argument of map_type_param_names")
+    | _ -> failwith "bad argument of map_type_param_names")
 
 open Longident
 let affect_longident ~f = function
@@ -110,4 +111,8 @@ let string_of_core_type e =
   let open Migrate_parsetree in
   let ans = Format.asprintf "%a" Pprintast.core_type (migrate.Versions.copy_core_type e) in
   Format.set_margin 80;
-ans
+  ans
+
+let using_type ~typename root_type =
+  (* generation type specification by type declaration *)
+  Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)

@@ -11,5 +11,14 @@ let () =
   Printf.printf "%s\n%!" (show string_of_int (Cons (2, Cons (2, Nil))));
 ()
 
-(* type 'a list = ('a, 'a list) glist
-[@@deriving gt {show}] *)
+type 'a list = ('a, 'a list) glist
+[@@deriving gt {show}]
+
+let () =
+  let rec show fa xs =
+    list_gcata (GT.lift fa) (new show_list (show fa)) () xs
+  in
+  Printf.printf "%s\n%!" (show string_of_int (Nil));
+  Printf.printf "%s\n%!" (show (fun x -> x) (Cons ("FUCK", Nil)));
+  Printf.printf "%s\n%!" (show string_of_int (Cons (1, Cons (1, Nil))));
+  ()

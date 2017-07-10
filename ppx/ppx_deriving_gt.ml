@@ -180,11 +180,7 @@ let default_params root_type =
   in
   let ps = List.concat ps in
   let ps = ps @ [ [%type: 'inh]; [%type: 'syn] ] in
-  List.map (fun x -> (x,Invariant) ) ps
-
-let using_type ~typename root_type =
-  (* generation type specification by type declaration *)
-  Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)
+  invariantize ps
 
 (* Used when we need to check that type we working on references himself in
   it's body *)
@@ -314,6 +310,9 @@ module MakeMeta = struct
   let sig_tt_for_algebraic ~params ~typename cases_list =
     failwith "not implemented"
 
+  let standart_type_prefix ?(itself = [%type: 'type_itself]) ?(gt_a_for_self = [%type: 'gt_a_for_self]) () =
+    [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT]; itself; gt_a_for_self ]
+
   let t_params ~params =
     let poly_params = List.filter_map params ~f:(fun (p,_) ->
       match p.ptyp_desc with
@@ -323,11 +322,11 @@ module MakeMeta = struct
     in
     if List.length params <> List.length poly_params
     then failwith "constructor declaration has not vars in a params";
-    let ps = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT]; [%type: 'type_itself]; [%type: 'gt_a_for_self] ] in
+    let ps = standart_type_prefix () in
     let ps = ps @
       List.map (fun s -> Typ.var @@ "gt_a_for_"^s) poly_params
     in
-    List.map (fun p -> (p, Invariant)) ps
+    invariantize ps
 
   let str_tt_for_alias ~params ~tt_name ~manifest =
     let params = t_params params in
@@ -416,7 +415,11 @@ module MakeMeta = struct
           | [%type: string] as t -> Some t
           | [%type: char] as t -> Some t
           | t when Show.are_the_same t root_type ->
-              None
+              (* This 'gt_a_for_self can be wrong when we have different occurences of the derived type in itself
+                 For example:
+                    ('a,'b) t = ( ..., ('a,'b) t, ...., ('b,'a) t, ... ) gt
+              *)
+              Some [%type: 'gt_a_for_self]
           | typ -> failwith (sprintf "Don't know what to do about the type '%s'" (string_of_core_type typ))
           ) in
         let ps = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT]; [%type: 'type_itself] ; [%type: 'gt_a_for_self] ] @ ps in
@@ -541,7 +544,7 @@ let inherit_field_gen ~name ~root_type ~inh ~synh ~holder ~synh_root wrap =
       ~f:(fun name -> (synh name, [Typ.var name; inh name; synh name; holder name ]) )
   in
   let types = List.concat types in
-  wrap Typ.([%type: 'tpoT] :: types @ [ [%type: unit]; synh_root root_type synhs ])
+  wrap Typ.([%type: unit] :: (synh_root root_type synhs) :: [%type: 'tpoT] :: types)
 
 let inherit_cf ?args ~name ~root_type ~inh ~synh ~holder ~synh_root () =
   inherit_field_gen ~name ~root_type ~inh ~synh ~holder ~synh_root
@@ -621,6 +624,14 @@ let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
       in
       Sig.value (Val.mk (mknoloc typename) [%type: ([%t gcata_part], [%t plugins_part]) GT.t])
     in
+
+(*
+    let derivers_bunch =
+      [%sig let () = () ]
+    in *)
+
+
+
     ans @ [derivers_bunch]
   | _ -> raise_errorf "Some cases are not supported"
 
@@ -651,6 +662,7 @@ let plugin_decls (module P: Plugin) root_type =
   let plugin_name = P.name ^ "_" ^ typename in
   let plugin_meta_t = P.name ^ "_meta_" ^ typename in
   let param_names = map_type_param_names root_type.ptype_params ~f:(fun x -> x) in
+  
   match root_type.ptype_kind with
   | Ptype_abstract -> (match root_type.ptype_manifest with
     | None -> failwith "we can't generate anything for really abstract types"
@@ -670,8 +682,8 @@ let plugin_decls (module P: Plugin) root_type =
           [ Typ.var name; holder name ]
         ) |> List.concat
       in
-      let params = [Typ.var "tpoT"] @ params in
-      let params = List.map params ~f:(fun t -> (t,Invariant)) in
+      let params = [Typ.var "tpoT"] @ params @ [ [%type: 'self_holder] ] in
+      let params = invariantize params in
       let params = params @ (P.extra_params root_type)  in
 
       let inherit_f = inherit_cf ~name:typename_t ~root_type ~inh:P.inh ~synh:P.synh ~synh_root:P.synh_root ~holder ()
@@ -703,8 +715,13 @@ let plugin_decls (module P: Plugin) root_type =
           (Typ.alias (params_obj ~inh:(fun _ -> Typ.ground "unit") ~syn:(fun _ -> Typ.ground "string") root_type) "tpoT" )
           :: params
         in
+        let params = params @ [ using_type ~typename root_type] in
         let class_expr = Cl.constr (lid plugin_meta_t) params in
-        let args = List.map root_type.ptype_params ~f:(fun _ -> Nolabel, [%expr fun pa -> pa.GT.fx ()]) in
+        let args = nolabelize @@ map_type_param_names root_type.ptype_params
+          ~f:(fun name ->
+                let name = "p" ^ name in
+                [%expr fun [%p Pat.var@@ mknoloc name  ] -> [%e Exp.ident @@ lid name].GT.fx ()])
+        in
         let class_expr = match args with
         | [] -> class_expr
         | xs -> Cl.apply class_expr xs
@@ -788,6 +805,11 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
         ]
       }
     ]
+  in
+
+
+  let derivers_bunch =
+    [%stri let () = () ]
   in
 
   let make_primitive_bunch name prim_gcata =
@@ -919,14 +941,26 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
             )
           in
           let xs = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT] ] @ (List.flatten xs) in
-          List.map xs ~f:(fun x -> (x,Invariant))
+          invariantize xs
         in
         let params =
+          let ps =
+            let itself = using_type ~typename root_type in
+            MakeMeta.standart_type_prefix ~itself ~gt_a_for_self:itself ()
+          in
           (* TODO: hack here. *)
-          match MakeMeta.t_params ~params:root_type.ptype_params with
+          let poly_params = List.filter_map root_type.ptype_params ~f:(fun (p,_) ->
+            match p.ptyp_desc with
+            | Ptyp_var name -> Some name
+            | _ -> None
+            )
+          in
+          let tail = List.map poly_params ~f:(fun name -> Typ.var @@ sprintf "gt_a_for_%s" name) in
+          invariantize @@ ps @ tail
+          (* match MakeMeta.t_params ~params:root_type.ptype_params with
           | []
           | [_] -> assert false
-          | a::b::xs -> a :: (using_type ~typename root_type, Invariant) :: xs
+          | a::b::xs -> a :: (using_type ~typename root_type, Invariant) :: xs *)
         in
         let params = List.map ~f:fst params in
         Str.class_ [Ci.mk ~virt:Virtual ~params:t_class_params (mknoloc typename_t) @@
