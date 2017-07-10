@@ -414,13 +414,14 @@ module MakeMeta = struct
           | {ptyp_desc=Ptyp_var name;} -> Some (Typ.var @@ sprintf "gt_a_for_%s" name)
           | [%type: string] as t -> Some t
           | [%type: char] as t -> Some t
+          | [%type: int] as t -> Some t
           | t when Show.are_the_same t root_type ->
               (* This 'gt_a_for_self can be wrong when we have different occurences of the derived type in itself
                  For example:
                     ('a,'b) t = ( ..., ('a,'b) t, ...., ('b,'a) t, ... ) gt
               *)
               Some [%type: 'gt_a_for_self]
-          | typ -> failwith (sprintf "Don't know what to do about the type '%s'" (string_of_core_type typ))
+          | typ -> failwith (sprintf "%s %d: Don't know what to do about the type `%s`" __FILE__ __LINE__ (string_of_core_type typ))
           ) in
         let ps = [ [%type: 'inh]; [%type: 'syn]; [%type: 'tpoT]; [%type: 'type_itself] ; [%type: 'gt_a_for_self] ] @ ps in
         ps
@@ -662,7 +663,7 @@ let plugin_decls (module P: Plugin) root_type =
   let plugin_name = P.name ^ "_" ^ typename in
   let plugin_meta_t = P.name ^ "_meta_" ^ typename in
   let param_names = map_type_param_names root_type.ptype_params ~f:(fun x -> x) in
-  
+
   match root_type.ptype_kind with
   | Ptype_abstract -> (match root_type.ptype_manifest with
     | None -> failwith "we can't generate anything for really abstract types"

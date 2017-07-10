@@ -118,6 +118,7 @@ let core = function
 let is_ground_enough = function
   | [%type: string] -> true
   | [%type: char] -> true
+  | [%type: int] -> true
   | _ -> false
 
 let process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) t =
@@ -134,7 +135,9 @@ let process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) t =
   match t with
   | [%type: string] -> wrap t (Exp.ident @@ lid "string")
   | [%type: char]   -> wrap t (Exp.ident @@ lid "char")
-  | _ -> failwith "not ground enough"
+  | [%type: int]   -> wrap t (Exp.ident @@ lid "int")
+  | typ -> failwith (sprintf "%s %d: not ground enough `%s`" __FILE__ __LINE__
+                            (string_of_core_type typ))
 
 let meta_for_alias ~name ~root_type ~manifest : structure_item =
   (* params of meta class depend only on type parameters of a type being processed *)
@@ -155,12 +158,12 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
 
     | orig :: tl  when are_the_same orig root_type ->
         (* let transformer_pat  = Pat.var @@ mknoloc @@ sprintf "for_%d_%s" n name in *)
-        let transformer_expr = Exp.ident @@ lid @@ sprintf "for_me" in
+        (* let transformer_expr = Exp.ident @@ lid @@ sprintf "for_me" in *)
         let new_inh = [ using_type ~typename:root_type.ptype_name.txt root_type; [%type: 'self_holder] ] in
         helper  ~n:(n-1) tl
                 ~acc: ( topTr
                       , specTr
-                      , transformer_expr :: appTr
+                      , (*transformer_expr ::*) appTr
                       , types
                       , new_inh@inhTypes)
     | orig :: tl when is_ground_enough orig ->
@@ -174,11 +177,12 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
                         , (Exp.ident @@ lid @@ sprintf "for_%d" n) :: appTr
                         , types
                         , orig::orig::inhTypes) *)
-    | typ :: _ -> failwith (sprintf "Don't know what to do about the type '%s'" (string_of_core_type typ))
+    | typ :: _ -> failwith (sprintf "%s %d: Don't know what to do about the type `%s`" __FILE__ __LINE__
+                              (string_of_core_type typ))
     in
     let topTr, specTr, appTr, types, inhTypes =
       (* we reverse inout to make a result in th eright order *)
-      helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[],[],[]) (List.rev ps) in
+      helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[ [%expr for_me] ],[],[]) (List.rev ps) in
 
     (* now we add for_me *)
     let topTr = fun expr -> topTr (Cl.fun_ Nolabel None (Pat.var @@ mknoloc @@ sprintf "for_me" ) expr)
@@ -220,7 +224,7 @@ let for_alias ~name ~root_type ~manifest : structure_item =
               let name = "p" ^ name in
               [%expr fun [%p Pat.var@@ mknoloc name  ] -> [%e Exp.ident @@ lid name].GT.fx ()])
       in
-      let appTr = nolabelize @@ (appTr @ [ Exp.ident @@ lid "for_me"] ) in
+      let appTr = nolabelize @@ (appTr @ [ Exp.ident @@ lid "for_me" ] ) in
       let for_me_patt = Pat.var @@ mknoloc "for_me" in
       let inh_params =
         map_type_param_names root_type.ptype_params
