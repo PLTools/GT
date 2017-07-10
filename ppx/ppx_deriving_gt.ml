@@ -199,28 +199,25 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
   )
 
 let make_params_lambda_generic ~root_type namer expr  =
-  List.fold_right ~f:(fun ({ptyp_desc},_) acc ->
-    match ptyp_desc with
-    | Ptyp_var name -> [%expr fun [%p pvar @@ namer name] -> [%e acc ] ]
-    | _ -> assert false
-  ) root_type.ptype_params ~init:expr
+  map_type_param_names root_type.ptype_params ~f:id |>
+  List.fold_right ~f:(fun name acc ->
+    [%expr fun [%p pvar @@ namer name] -> [%e acc ] ]
+  )  ~init:expr
 
 let make_params_lambda_a  = make_params_lambda_generic (fun name -> name)
 let make_params_lambda_fa = make_params_lambda_generic ((^)"f")
 
-let wrap_with_fa ?(use_lift=false) ~root_type func lasts =
+let wrap_with_fa ?(use_lift=false) ?(add_subj=true) ~root_type func lasts =
   let right =
-    List.map (function ({ptyp_desc; _ },_) ->
-      match ptyp_desc with
-      | Ptyp_var name ->
-         (Nolabel,
-          if use_lift then [%expr GT.lift [%e Exp.ident @@ lid ("f"^ name)]]
-          else  Exp.ident @@ lid ("f"^ name)
-            )
-      | _ -> assert false) root_type.ptype_params
+    map_type_param_names root_type.ptype_params ~f:(fun name ->
+      if use_lift then [%expr GT.lift [%e Exp.ident @@ lid ("f"^ name)]]
+      else  Exp.ident @@ lid ("f"^ name)
+
+    )
   in
-  let right = right @ (List.map (fun typ -> (Nolabel, typ)) lasts) in
-  let right = Exp.apply func right in
+  let right = right @ (List.map (fun typ ->  typ) lasts) in
+  let right = Exp.apply func (nolabelize right) in
+  let right = if add_subj then[%expr fun subj  -> [%e right] subj ] else right in
   make_params_lambda_fa ~root_type right
 
 (* There we generate three lists
@@ -626,13 +623,6 @@ let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
       Sig.value (Val.mk (mknoloc typename) [%type: ([%t gcata_part], [%t plugins_part]) GT.t])
     in
 
-(*
-    let derivers_bunch =
-      [%sig let () = () ]
-    in *)
-
-
-
     ans @ [derivers_bunch]
   | _ -> raise_errorf "Some cases are not supported"
 
@@ -696,6 +686,7 @@ let plugin_decls (module P: Plugin) root_type =
       let class_expr = Cl.structure (Cstr.mk (Pat.var @@ mknoloc "this") (inherit_f::body) ) in
       let class_expr =
         let for_args = map_type_param_names root_type.ptype_params ~f:(fun s -> Pat.var @@ mknoloc @@ "for_"^s) in
+        let for_args = for_args @ [ for_me_patt ] in
         Cl.fun_list for_args class_expr
       in
 
@@ -723,6 +714,7 @@ let plugin_decls (module P: Plugin) root_type =
                 let name = "p" ^ name in
                 [%expr fun [%p Pat.var@@ mknoloc name  ] -> [%e Exp.ident @@ lid name].GT.fx ()])
         in
+        let args = args @ [ Nolabel,for_me_expr] in
         let class_expr = match args with
         | [] -> class_expr
         | xs -> Cl.apply class_expr xs
@@ -730,8 +722,9 @@ let plugin_decls (module P: Plugin) root_type =
         Cf.inherit_ Fresh class_expr None
       in
       Str.class_ [Ci.mk ~virt:Concrete ~params:(root_type.ptype_params @ (P.extra_params root_type))
-                     (mknoloc plugin_name)
-                     (Cl.structure (Cstr.mk (Pat.any ()) [inherit_f]))
+                    (mknoloc plugin_name)
+                    (Cl.fun_ Nolabel None for_me_patt @@
+                      Cl.structure (Cstr.mk (Pat.any ()) [inherit_f]))
                  ]
     in
     [ plugin_meta_class
@@ -789,17 +782,25 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let gmap_typename_t = "gmap_" ^ typename in
 
   let derivers_bunch =
+
     let wrap_meth mname cname =
       (* let typname = root_type.ptype_name.txt in *)
+      let self_shower =
+        let args = map_type_param_names root_type.ptype_params ~f:(fun name -> Exp.ident @@ lid @@ sprintf "f%s" name) in
+        [%expr  [%e Exp.new_ @@ lid cname]
+                [%e List.fold_left ~init:(Exp.(send (ident @@ lid "self")) (mknoloc mname)) args
+                      ~f:(fun acc x -> [%expr [%e acc] [%e x]])
+                ]]
+      in
       let body =
-        wrap_with_fa ~use_lift:true [%expr [%e Exp.ident @@ lid typename_gcata]] ~root_type
-          [ Exp.new_ @@ lid cname; [%expr () ] ]
+        wrap_with_fa ~use_lift:true (Exp.ident @@ lid typename_gcata) ~root_type
+          [ self_shower; [%expr () ] ]
       in
       Cf.method_ (Location.mknoloc mname) Public (Cfk_concrete (Fresh, body))
     in
     [%stri let [%p Pat.var @@ mknoloc typename] =
       { GT.gcata = [%e Exp.(ident @@ lid typename_gcata) ]
-      ; GT.plugins = [%e Exp.object_ @@ Cstr.mk (Pat.any()) @@
+      ; GT.plugins = [%e Exp.object_ @@ Cstr.mk (Pat.var @@ mknoloc "self") @@
         (if gt_show then [wrap_meth "show" show_typename_t] else []) @
         (if gt_gmap then [wrap_meth "gmap" gmap_typename_t] else []) @
         []
@@ -809,9 +810,9 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   in
 
 
-  let derivers_bunch =
+  (* let derivers_bunch =
     [%stri let () = () ]
-  in
+  in *)
 
   let make_primitive_bunch name prim_gcata =
     [%stri let [%p Pat.var @@ mknoloc name ] = { GT.gcata = [%e prim_gcata]; GT.plugins = [] }]

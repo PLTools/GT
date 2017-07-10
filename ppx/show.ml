@@ -163,7 +163,7 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
         helper  ~n:(n-1) tl
                 ~acc: ( topTr
                       , specTr
-                      , (*transformer_expr ::*) appTr
+                      , [%expr for_me] :: appTr
                       , types
                       , new_inh@inhTypes)
     | orig :: tl when is_ground_enough orig ->
@@ -185,8 +185,7 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
       helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[ [%expr for_me] ],[],[]) (List.rev ps) in
 
     (* now we add for_me *)
-    let topTr = fun expr -> topTr (Cl.fun_ Nolabel None (Pat.var @@ mknoloc @@ sprintf "for_me" ) expr)
-    in
+    let topTr = fun expr -> topTr (Cl.fun_ Nolabel None for_me_patt expr) in
     let types = [%type: 'tpoT] :: (List.concat types) in
     let types = types @ [ [%type: 'self_holder] ] in
 
@@ -225,7 +224,6 @@ let for_alias ~name ~root_type ~manifest : structure_item =
               [%expr fun [%p Pat.var@@ mknoloc name  ] -> [%e Exp.ident @@ lid name].GT.fx ()])
       in
       let appTr = nolabelize @@ (appTr @ [ Exp.ident @@ lid "for_me" ] ) in
-      let for_me_patt = Pat.var @@ mknoloc "for_me" in
       let inh_params =
         map_type_param_names root_type.ptype_params
           ~f:(fun name ->

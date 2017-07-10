@@ -75,6 +75,7 @@ end
 class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
     (for_a: 'a_holder -> string)
     (for_b: 'b_holder -> string)
+    for_me
   =
   object (this)
     inherit
@@ -87,27 +88,28 @@ class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
      method c_Nil inh subj = "Nil ()"
    end
 
-class ['a,'b] show_glist = object
+class ['a,'b] show_glist for_me = object
   inherit
     [ < a: unit -> 'a -> string; b: unit -> 'b -> string >  as 'tpoT
     , 'a,(unit,'a,string,'tpoT) GT.a
     , 'b,(unit,'b,string,'tpoT) GT.a
     , ('a, 'b) glist ]
-      show_meta_glist (fun pa  -> pa.GT.fx ()) (fun pb -> pb.GT.fx ())
+      show_meta_glist (fun pa  -> pa.GT.fx ()) (fun pb -> pb.GT.fx ()) for_me
 end
 
 let glist = {
   GT.gcata = glist_gcata;
   GT.plugins =
-     (object
-        method show fa fb =
-          glist_gcata (GT.lift fa) (GT.lift fb) (new show_glist) ()
+     (object (self)
+        method show fa fb xs =
+          glist_gcata (GT.lift fa) (GT.lift fb) (new show_glist @@ self#show fa fb) () xs
       end)
 }
 
 let () =
   let rec show fa xs =
-    glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs
+    glist.GT.plugins#show fa (show fa) xs
+    (* glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs *)
     in
   printf "%s\n%!" (show string_of_int (Nil));
   printf "%s\n%!" (show string_of_int (Cons (2, Nil)));
@@ -153,7 +155,7 @@ class virtual ['tpoT,'a,'a_holder, 'self_holder] show_meta_list for_a for_me =
   object (this)
     inherit ['tpoT, 'a, 'a_holder, 'a list, 'self_holder, 'a_holder list] show_meta_glist
       for_a
-      for_me
+      for_me for_me
 end
 
 class ['a, 'self_holder] show_list for_me = object(this)
@@ -166,14 +168,14 @@ class ['a, 'self_holder] show_list for_me = object(this)
   (* method t_list transform_a x = list_gcata transform_a this x *)
 end
 
-(*
+
 let list = {
   GT.gcata = list_gcata;
   GT.plugins =
-     (object
-        method show fa = list_gcata (GT.lift fa) (new show_list) ()
+     (object(self)
+        method show fa = list_gcata (GT.lift fa) (new show_list (self#show fa)) ()
       end)
-} *)
+}
 
 
 let () =

@@ -1,10 +1,9 @@
 type ('a,'b) glist = Nil | Cons of 'a * 'b
 [@@deriving gt {show}]
 
-
 let () =
-  let rec show fa xs =
-    glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs
+  let rec show fa xs = glist.GT.plugins#show fa (show fa) xs
+    (* glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs *)
   in
   Printf.printf "%s\n%!" (show string_of_int (Nil));
   Printf.printf "%s\n%!" (show string_of_int (Cons (2, Nil)));
@@ -19,8 +18,8 @@ let () =
     list_gcata (GT.lift fa) (new show_list (show fa)) () xs
   in
   Printf.printf "%s\n%!" (show string_of_int (Nil));
-  Printf.printf "%s\n%!" (show (fun x -> x) (Cons ("FUCK", Nil)));
-  Printf.printf "%s\n%!" (show string_of_int (Cons (1, Cons (1, Nil))));
+  Printf.printf "%s\n%!" (show (fun x -> x) (Cons ("WTF", Nil)));
+  Printf.printf "%s\n%!" (show string_of_int (Cons (3, Cons (4, Nil))));
   ()
 
 type intlist = int list

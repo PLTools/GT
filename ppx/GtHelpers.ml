@@ -1,3 +1,5 @@
+let id x = x
+
 module List = struct
   include ListLabels
   let split3 xs =
@@ -9,6 +11,10 @@ module List = struct
 
   let pp ~f xs =
     Printf.sprintf "[ %s ]" (String.concat "; " @@ List.map f xs)
+
+  let fold_left0 f = function
+  | [] -> failwith "wrong argument of fold_left0"
+  | h::tl -> fold_left ~f ~init:h tl
 end
 
 module Exp = struct
@@ -116,3 +122,6 @@ let string_of_core_type e =
 let using_type ~typename root_type =
   (* generation type specification by type declaration *)
   Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)
+
+let for_me_patt = Ast_helper.Pat.var @@ Location.mknoloc "for_me"
+let for_me_expr = Exp.ident @@ lid "for_me"
