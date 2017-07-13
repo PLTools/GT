@@ -31,39 +31,40 @@ class virtual ['inh,'syn,'tpoT,'a,'ia,'sa,'gt_a_for_a] logic_t =
   object (this)
     inherit  ['inh,'syn,'tpoT,'a logic,'a logic,'gt_a_for_a] logic_meta_t
   end
-
-class ['tpoT,'a,'a_holder,'self_holder] showF_meta_logic
+(* ******************************************************************************** *)
+class ['tpoT,'a,'a_holder,'self_holder] showT_meta_logic
   (for_a: Format.formatter -> 'a_holder -> unit)
   (for_me: Format.formatter -> 'self_holder -> unit) =
   object (this)
-    inherit  [Format.formatter,unit,'tpoT, 'a,Format.formatter,unit,'a_holder] logic_t
-    method c_Var fmt subj p0 =
+    inherit [ (Format.formatter * string) as 'inh,unit,'tpoT
+            , 'a,'inh,unit,'a_holder] logic_t
+    method c_Var (fmt,_) subj p0 =
       Format.fprintf fmt "Var (%s)" ((GT.lift (GT.int.GT.plugins)#show ()) p0)
-    method c_Value fmt subj (p0 : 'a_holder) =
-      Format.fprintf fmt "Value (%a)" for_a   p0
+    method c_Value (fmt,_) subj (p0 : 'a_holder) =
+      Format.fprintf fmt "Value (%a)" (fun fmt -> for_a fmt)  p0
   end
 class ['a] showF_logic for_me =
   object
     inherit
-      [ < a: Format.formatter -> 'a -> unit >  as 'tpoT
-      , 'a, (Format.formatter,'a,unit,'tpoT) GT.a
-      ,'a logic]
-      showF_meta_logic (fun fmt pa -> pa.GT.fx fmt) for_me
+      [ < a: ((Format.formatter*string) as 'inh) -> 'a -> unit >  as 'tpoT
+      , 'a, ('inh,'a,unit,'tpoT) GT.a
+      ,'a logic
+      ] showT_meta_logic (fun fmt pa -> pa.GT.fx (fmt, "logic")) for_me
   end
 let logic =
   { GT.gcata = logic_gcata
   ; GT.plugins = object (self)
         method showF fa fmt subj =
-          logic_gcata fa (new showF_logic (self#showF fa)) fmt subj
+          logic_gcata fa (new showF_logic (self#showF fa)) (fmt,"asdf") subj
       end
   }
 
-(* let (_:int) = logic.GT.plugins#showF *)
+type ('a, 'b) glist = Nil | Cons of 'a * 'b [@@deriving gt]
+type 'a llist = ('a, 'a llist) glist logic [@@deriving gt]
+
 
 let () =
   let rec showF fa fmt xs = logic.GT.plugins#showF fa fmt xs in
-  (* let (_:int) = showF (fun fmt -> Format.fprintf fmt "%s") in *)
-  Format.fprintf Format.std_formatter "%a@;@?" (showF (fun fmt -> Format.fprintf fmt "%d")) (Var 5);
-  Format.fprintf Format.std_formatter "%a@;@?" (showF (fun fmt -> Format.fprintf fmt "%s")) (Value "asdf");
-  (* printf "%s\n%!" (show string_of_int (Cons (2, Cons (2, Nil)))); *)
+  Format.fprintf Format.std_formatter "%a@;@?" (showF (fun (fmt,_) -> Format.fprintf fmt "%d")) (Var 5);
+  Format.fprintf Format.std_formatter "%a@;@?" (showF (fun (fmt,_) -> Format.fprintf fmt "%s")) (Value "asdf");
   ()
