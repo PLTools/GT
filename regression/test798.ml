@@ -5,7 +5,7 @@
 *)
 
 open Printf
-
+let (!!!) = Obj.magic
 (*
 thanks to def`
 
@@ -102,18 +102,19 @@ let glist = {
   GT.plugins =
      (object (self)
         method show fa fb xs =
-          glist_gcata (GT.lift fa) (GT.lift fb) (new show_glist @@ self#show fa fb) () xs
+          glist_gcata (fa) ( fb) (new show_glist @@ self#show fa fb) () xs
       end)
 }
 
 let () =
   let rec show fa xs =
-    glist.GT.plugins#show fa (show fa) xs
+    glist.GT.plugins#show fa (fun () -> show fa)  xs
     (* glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs *)
     in
-  printf "%s\n%!" (show string_of_int (Nil));
-  printf "%s\n%!" (show string_of_int (Cons (2, Nil)));
-  printf "%s\n%!" (show string_of_int (Cons (2, Cons (2, Nil))));
+  let soi = fun () -> string_of_int in
+  printf "%s\n%!" (show soi (Nil));
+  printf "%s\n%!" (show soi (Cons (2, Nil)));
+  printf "%s\n%!" (show soi (Cons (2, Cons (2, Nil))));
 ()
 
 
@@ -305,40 +306,82 @@ let rec llist_meta_gcata fa tpo trans initial_inh subj =
   match subj with
   | Value p0 -> trans#c_Value initial_inh (GT.make self subj tpo) (fa p0)
   | Var p0 -> trans#c_Var initial_inh (GT.make self subj tpo) p0
-let logic_gcata fa transformer initial_inh subj =
+let llist_gcata fa transformer initial_inh subj =
   let parameter_transforms_obj = object method a = fa end  in
-  logic_meta_gcata (fun x  -> GT.make fa x parameter_transforms_obj)
+  llist_meta_gcata (fun x  -> GT.make fa x parameter_transforms_obj)
     parameter_transforms_obj transformer initial_inh subj
 
 (* let (_: unit -> _ -> _ -> _ -> string) = fun () pa this for_me ->
   logic.GT.plugins#show
       (glist_gcata pa this (new show_meta_glist for_me) ()) () *)
 
+let assF _ = assert false
+
 class ['tpoT,'a,'a_holder,'self_holder] show_meta_llist
   (for_a: (unit as 'inh) -> 'a_holder -> (string as 'syn))
-  (for_me: 'inh -> 'self_holder -> 'syn) =
+  (for_me: 'inh -> 'self_holder -> 'syn)
+  (for_me_long: 'some_holder -> 'inh -> 'some_holder llist -> 'syn)
+  =
   (* let (_:int) = glist.gcata for_a in
   let (_:int -> int) = fun x -> GT.lift (logic.GT.plugins#show x) in *)
 
+  let self = Obj.magic (ref ())  in
   object (this)
+  initializer self := (this :> (('x1,'x2,'x3,'x4) show_meta_llist))
 
   inherit [ < a: unit -> 'a -> string > as 'tpoT
           , 'a
           , (unit, 'a, string, 'tpoT) GT.a
           , 'self_holder
           ] show_meta_logic
-          (* (fun pa -> pa.GT.fx ())  *)
-          (fun () pa ->
-            logic.GT.plugins#show
-                (glist_gcata pa.GT.f (fun _ -> assert false)
-                  (new show_meta_glist (fun _ -> assert false) (fun _ -> assert false)  (fun _ -> assert false)) )
-                ()
-                (* (Obj.magic pa.GT.x) *)
-                pa.GT.x
-            (* pa.GT.x *)
+          (fun () pb ->
+            (* sholud map values of type
+                   ('a, 'b logic) glist as 'b
+            *)
+            (* let rec show1 () xs = glist_gcata for_a
+              (fun inh x ->
+                  logic_gcata show1 (Obj.magic !self) inh x)
+              (new show_meta_glist assF assF assF) () xs
+            in
+            logic.GT.plugins#show show1 () pa.GT.x *)
+
+            (* let (_:int) = glist.GT.plugins#show in *)
+            (* let rec show1 () xs = glist_gcata for_a
+              (assF)
+              (new show_meta_glist assF assF assF) () xs
+            in
+            (* glist.GT.plugins#show for_a for_me pa.GT.x *)
+            glist.GT.plugins#show
+              for_a
+              (logic.GT.plugins#show show1)
+              (* !!!(logic_gcata for_a !self) *)
+              pb.GT.x *)
+
+            (* let rec for_b () gs =
+              glist.GT.plugins#show for_a for_logic_b gs
+            and for_logic_b () l =
+              logic.GT.plugins#show for_b () l
+            in
+            for_b () pb.GT.x *)
+            (* There are probles siwth using this here because we can't use this in the inherit
+              construction. Except maybe def's hack
+            *)
           )
           for_me
 
+(*
+(GT.lift
+   (logic.GT.plugins#show @@
+     GT.lift
+         (glist.GT.plugins#show
+             (subj.GT.t#a ())
+             (GT.transform xxx subj.GT.t#a this ())
+         )
+         ()
+   )
+   ()
+   p0)
+*)
 end
 
 class ['a] show_llist for_me =
@@ -347,5 +390,21 @@ class ['a] show_llist for_me =
       [ < a: (unit as 'inh) -> 'a -> (string as 'syn) >  as 'tpoT
       , 'a, ('inh,'a,'syn,'tpoT) GT.a
       ,'a logic]
-      show_meta_llist (fun () pa -> pa.GT.fx ()) for_me
+      show_meta_llist assF assF assF
+      (* show_meta_llist (fun () pa -> pa.GT.fx ()) for_me assF *)
   end
+
+let llist =
+  { GT.gcata = logic_gcata
+  ; GT.plugins = object (self)
+        method show fa subj =
+          llist_gcata fa (new show_llist (fun () -> assF)) () subj
+      end
+  }
+
+let () =
+  let rec show fa xs = llist.GT.plugins#show fa xs in
+  (* Printf.printf  "%s\n%!" @@ show (fun () -> Printf.sprintf "%d") () (Var 5); *)
+  Printf.printf  "%s\n%!" @@ show
+    (fun () -> Printf.sprintf "%s") (Value Nil);
+  ()
