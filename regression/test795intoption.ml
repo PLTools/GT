@@ -1,99 +1,77 @@
 (* There you can find manual implementation of the code to be derived from
-      type ('a,'b) glist = Nil | Cons of 'a * 'b
+      type 'a option = None | Some of 'a
   and
-      type 'a list = ('a, 'a list) glist
+      type intoption = int otpion
 *)
 
 open Printf
 let (!!!) = Obj.magic
-(*
-thanks to def`
 
-# class ['self] b = fun (f : 'self -> 'a) -> object end;;
-class ['self] b : ('self -> 'a) -> object end
-# class virtual a = object (this : 'self)
-    inherit['self] b (fun this -> this#foo)
-    method virtual foo : int
-  end;;
-class virtual a : object method virtual foo : int end
-*)
-
-type ('a, 'b) glist = Nil | Cons of 'a * 'b
-(* [@@deriving gt {show}] *)
+type 'a option = None | Some of 'a
 
 (* gcata goes in the beginnigbecause it doesn't depend on anything *)
-let rec glist_meta_gcata fa fb (tpo: 'tpoT) trans (initial_inh: 'inh) subj : 'syn =
-  let self = glist_meta_gcata fa fb tpo trans in
-   match subj with
-   | Nil  -> trans#c_Nil initial_inh (GT.make self subj tpo)
-   | Cons (p0,p1) ->
-       trans#c_Cons initial_inh (GT.make self subj tpo) (fa p0) (fb p1)
+let rec option_meta_gcata fa (tpo: 'tpoT) trans (initial_inh: 'inh) subj : 'syn =
+  let self = option_meta_gcata fa tpo trans in
+  match subj with
+  | None  -> trans#c_None initial_inh (GT.make self subj tpo)
+  | Some p0 ->
+      trans#c_Some initial_inh (GT.make self subj tpo) (fa p0)
 
 let glist_gcata fa fb transformer initial_inh subj =
   let parameter_transforms_obj = object method a = fa method b = fb end  in
-  glist_meta_gcata
+  option_meta_gcata
     (fun x  -> GT.make fa x parameter_transforms_obj)
-    (fun x  -> GT.make fb x parameter_transforms_obj)
     parameter_transforms_obj transformer initial_inh subj
 
-class type virtual
-   ['inh,'syn,'tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b] glist_meta_tt =
-   object
-     method  virtual c_Nil  : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a -> 'syn
-     method  virtual c_Cons : 'inh -> ('inh,'type_itself,'syn,'tpoT) GT.a ->
-           'gt_a_for_a -> 'gt_a_for_b -> 'syn
+class virtual
+  ['inh,'syn,'tpoT,'type_itself,'self_holder,'a_holder] option_meta_t =
+  object
+    (* TODO: introduce per-argument synthesized arguments *)
+     method  virtual c_None : 'inh -> 'self_holder -> 'syn
+     method  virtual c_Some : 'inh -> 'self_holder -> 'a_holder -> 'syn
    end
-class type virtual ['inh,'syn, 'a,'ia,'sa,'b,'ib,'sb] glist_tt =
+
+class virtual ['inh,'syn, 'a,'ia,'sa ] option_t =
   object
     inherit
       [ 'inh, 'syn
-      , < a: 'ia -> 'a -> 'sa; b: 'ib -> 'b -> 'sb >  as 'tpoT
-      , ('a, 'b) glist, 'gt_a_for_self
-      , ('ia,'a,'sa,'tpoT) GT.a
-      , ('ib,'b,'sb,'tpoT) GT.a
-      ] glist_meta_tt
-      method  t_glist :
-        ('ia -> 'a -> 'sa) ->
-        ('ib -> 'b -> 'sb) -> 'inh -> ('a,'b) glist -> 'syn
+      , < a: 'ia -> 'a -> 'sa > as 'tpoT
+      , 'a option
+      , 'self_holder
+      , 'a_holder
+      ] option_meta_t
+      constraint 'self_holder = ('ia,'a option,'sa,'tpoT) GT.a
+      constraint 'a_holder    = ('ia,'a,'sa,'tpoT) GT.a
   end
 
-class virtual ['inh,'syn,'tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b] glist_meta_t =
-  object (self : 'self)
-    constraint 'self =
-      ('inh,'syn, 'tpoT,'type_itself,'gt_a_for_self,'gt_a_for_a,'gt_a_for_b) #glist_meta_tt
-end
-class virtual [ 'inh,'syn, 'tpoT
-  ,'a,'ia,'sa,'gt_a_for_a
-  ,'b,'ib,'sb,'gt_a_for_b
-  ] glist_t =
-  object
-    inherit ['inh,'syn, 'tpoT
-            , ('a,'b) glist, ('a,'b) glist        (* ???? *)
-            ,'gt_a_for_a,'gt_a_for_b] glist_meta_t
+class ['a] show_option_t = object
+  inherit [ 'inh, 'syn, 'a, 'ia, 'sa ] option_t
+  constraint 'inh = unit
+  constraint 'syn = string
+  constraint 'ia  = 'inh
+  constraint 'sa  = 'syn
+  method c_None inh subj = "None"
+  method c_Some inh subj (p0 : 'a_holder) =
+     sprintf "Some (%s)" (p0.GT.fx inh)
 end
 
-class ['tpoT,'a,'a_holder,'b,'b_holder,'self_holder] show_meta_glist
-    (for_a: unit -> 'a_holder -> string)
-    (for_b: unit -> 'b_holder -> string)
-  =
-  object (this)
-    inherit
-      [ unit,string, 'tpoT
-      , 'a,unit,string,'a_holder
-      , 'b,unit,string,'b_holder
-      ] glist_t
-     method c_Cons inh subj (p0 : 'a_holder) (p1 : 'b_holder) =
-       sprintf "Cons (%s,%s)" (for_a inh p0) (for_b inh p1)
-     method c_Nil inh subj = "Nil ()"
-   end
+type iopt = int option
 
-class ['a,'b] show_glist = object
-  inherit
-    [ < a: unit -> 'a -> string; b: unit -> 'b -> string >  as 'tpoT
-    , 'a,(unit,'a,string,'tpoT) GT.a
-    , 'b,(unit,'b,string,'tpoT) GT.a
-    , ('a, 'b) glist ]
-      show_meta_glist (fun () pa  -> pa.GT.fx ()) (fun () pb -> pb.GT.fx ())
+class type virtual ['inh, 'syn] iopt_meta_t = object
+  inherit ['inh, 'syn, 'tpoT, 'type_itself, 'self_holder, 'a_holder] option_meta_t
+  constraint 'self_holder = ('inh, iopt, 'syn, < >) GT.a
+  (* TODO: we probably should not make self_holder concrete there, because
+    can be more than open parameter
+  *)
+  constraint 'a_holder = int
+end
+
+class type virtual [ 'inh,'syn ] iopt_t = object
+  inherit ['inh, 'syn] iopt_meta_t
+end
+
+class show_iopt_t = object
+  method c_Some
 end
 
 let glist = {
