@@ -13,6 +13,11 @@ package "ppx" (
   archive(ppx_driver, native) = "ppx_deriving_gt.cmxa"
   exists_if = "ppx_deriving_gt.cma"
 )
+
+package "expander" (
+  description = "Contains code that actually generates the code"        
+)
+
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
