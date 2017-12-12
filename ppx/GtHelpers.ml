@@ -15,21 +15,53 @@ module List = struct
   let fold_left0 f = function
   | [] -> failwith "wrong argument of fold_left0"
   | h::tl -> fold_left ~f ~init:h tl
+
+  let empty = function [] -> true | _ -> false
+end
+
+open Ppx_core
+open Ppx_core.Ast_builder.Default
+let (@@) = Caml.(@@)
+
+let lid ?(loc=Location.none) txt = { txt; loc }
+let mknoloc txt = lid txt
+let pexp_pair ?(loc=Location.none) a b = pexp_tuple ~loc [a; b]
+
+module Pat = struct
+  let any ?(loc=Location.none) () = ppat_any ~loc
+  let constraint_ ?(loc=Location.none) = ppat_constraint ~loc
+  let construct   ?(loc=Location.none) = ppat_construct  ~loc
+  let tuple ?(loc=Location.none) = ppat_tuple ~loc
+  let var ?(loc=Location.none) lid = ppat_var ~loc lid
 end
 
 module Exp = struct
-  open Ast_helper
-  include Exp
+  let apply ?(loc=Location.none) = pexp_apply ~loc
+  let case ?guard lhs rhs = case ~lhs ~rhs ~guard
+  let constant ?(loc=Location.none) = pexp_constant ~loc
+  let construct ?(loc=Location.none) = pexp_construct ~loc
 
-  let make_pair a b = tuple [a;b]
-  let make_list =
-    List.fold_right ~f:(fun e acc -> construct (lid "::") (Some (make_pair e acc)) )
-                    ~init:(Exp.construct (lid "[]") None)
+  let field ?(loc=Location.none) =
+    pexp_field ~loc
 
-  let fun_list ~args e =
-    if args = [] then e else
-    List.fold_right args ~init:e
-      ~f:(fun arg acc -> Exp.fun_ Nolabel None arg acc)
+  let ident ?(loc=Location.none) s = pexp_ident ~loc @@ Located.lident ~loc s
+  let ident_of_long ?(loc=Location.none) l = pexp_ident ~loc l
+  let make_list ?(loc=Location.none) xs =
+    List.fold_right xs
+      ~f:(fun e acc ->
+          construct ~loc (lid @@ lident "::")
+            (Some (pexp_pair ~loc e acc)) )
+      ~init:(construct ~loc (lid @@ lident "[]") None)
+  let match_ ?(loc=Location.none) = pexp_match ~loc
+  let new_ ?(loc=Location.none) = pexp_new ~loc
+  let object_ ?(loc=Location.none) = pexp_object ~loc
+  let fun_ ?(loc=Location.none) = pexp_fun ~loc
+  let fun_list ?(loc=Location.none) ~args e =
+    if List.is_empty args then e
+    else List.fold_right args
+        ~init:e
+        ~f:(fun arg acc -> pexp_fun ~loc Nolabel None arg acc)
+  let send ?(loc=Location.none) = pexp_send ~loc
 end
 
 module Cl = struct
@@ -37,29 +69,52 @@ module Cl = struct
   include Cl
 
   let fun_list args e =
-    if args = [] then e else
+    if List.is_empty [] then e else
     List.fold_right args ~init:e
       ~f:(fun arg acc -> Cl.fun_ Asttypes.Nolabel None arg acc)
 
   let apply e args =
-    if args = [] then e else Cl.apply e args
+    if List.is_empty args then e else Cl.apply e args
+
+  let fun_ ?(loc=Location.none) lab opt patt cl_expr =
+    pcl_fun ~loc lab opt patt cl_expr
+
+  let constr ?(loc=Location.none) (lid: longident_loc) ts =
+    pcl_constr ~loc lid ts
 end
+
 
 module Typ = struct
   open Ast_helper
   include Typ
-  let ground s = constr (lid s) []
+  let ground ?(loc=Location.none) s = constr (Located.lident ~loc s) []
+  let class_ ?(loc=Location.none) = ptyp_class ~loc
 end
 
 module Str = struct
   open Ast_helper
   include Str
 
-  let single_class ?(virt=Asttypes.Virtual) ?(pat=[%pat? _]) ?(wrap= (fun x -> x)) ~name ~params body =
-    Str.class_ [Ci.mk ~virt ~params (Location.mknoloc name) @@
+  let single_class ?(loc=Location.none) ?(virt=Asttypes.Virtual) ?(pat=[%pat? _])
+      ?(wrap= (fun x -> x)) ~name ~params body =
+    Str.class_ [Ci.mk ~virt ~params (mknoloc name) @@
                 wrap (Ast_helper.Cl.structure (Cstr.mk pat body))
   ]
 
+end
+
+module Cf = struct
+  let constraint_ ?(loc=Location.none) t1 t2 =
+    pcf_constraint ~loc (t1,t2)
+  let inherit_ ?(loc=Location.none) flg cl_expr opt =
+    pcf_inherit ~loc flg  cl_expr opt
+  let method_ ?(loc=Location.none) name flg kind =
+    pcf_method ~loc (mknoloc name, flg, kind)
+end
+module Ctf = struct
+  let method_ ?(loc=Location.none) name priv_flg virt_flg kind =
+    pctf_method ~loc (name, priv_flg, virt_flg, kind)
+  let inherit_ ?(loc=Location.none) = pctf_inherit ~loc
 end
 
 open Parsetree
@@ -78,50 +133,57 @@ let affect_longident ~f = function
 let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
 let invariantize types = List.map types ~f:(fun x -> x,Asttypes.Invariant)
 
-let make_gt_a_typ ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself]) ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
+let make_gt_a_typ ?(loc=Location.none)
+    ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself])
+    ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
   (* TODO: maybe add extra string argument to concat it with type variables to get
               ('a_inh, 'a, 'a_syn, 'heck) GT.a
   *)
   [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
 
-let arr_of_param ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) t =
+let arr_of_param ?(loc=Location.none)
+    ?(loc=Location.none) ?(inh=fun s -> Typ.var @@ "i"^s)
+    ?(syn=fun s -> Typ.var @@ "s"^s) t =
   (* does from 'a the 'ia -> 'a -> 'sa *)
   match t.ptyp_desc with
   | Ptyp_var n ->
-      (Location.mknoloc n, [],
+      (n, [],
         [%type: [%t inh n] -> [%t Typ.var n] -> [%t syn n]] )
   | _ ->
-      Ppx_deriving.raise_errorf "arr_of_param: not all type params are supported"
+      failwith "arr_of_param: not all type params are supported"
 
 
-let params_obj ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
+let params_obj ?(loc=Location.none)
+    ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
   (* converts 'a, 'b to
      < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
    *)
   let f (t,_) = arr_of_param ~inh ~syn t in
-  Typ.object_ (List.map f root_type.ptype_params) Asttypes.Closed
+  ptyp_object ~loc (List.map ~f root_type.ptype_params) Asttypes.Closed
 
-let migrate =
-  let open Migrate_parsetree in
-  Versions.migrate (module OCaml_405) (module OCaml_current)
+(* let migrate =
+ *   let open Migrate_parsetree in
+ *   Versions.migrate (module OCaml_405) (module OCaml_current) *)
 
-let string_of_expression e =
-  Format.set_margin 1000;
-  let open Migrate_parsetree in
-  let ans = Format.asprintf "%a" Pprintast.expression (migrate.Versions.copy_expression e) in
-  Format.set_margin 80;
-  ans
+(* let string_of_expression e =
+ *   Format.set_margin 1000;
+ *   let open Migrate_parsetree in
+ *   let ans = Format.asprintf "%a" Pprintast.expression (migrate.Versions.copy_expression e) in
+ *   Format.set_margin 80;
+ *   ans *)
 
-let string_of_core_type e =
-  Format.set_margin 1000;
-  let open Migrate_parsetree in
-  let ans = Format.asprintf "%a" Pprintast.core_type (migrate.Versions.copy_core_type e) in
-  Format.set_margin 80;
-  ans
+(* let string_of_core_type e =
+ *   Format.set_margin 1000;
+ *   let open Migrate_parsetree in
+ *   let ans = Format.asprintf "%a" Pprintast.core_type (migrate.Versions.copy_core_type e) in
+ *   Format.set_margin 80;
+ *   ans *)
 
-let using_type ~typename root_type =
+let using_type ~(typename: string) root_type =
+  let loc = root_type.ptype_loc in
   (* generation type specification by type declaration *)
-  Typ.constr (lid typename) (List.map ~f:fst @@ root_type.ptype_params)
+  ptyp_constr ~loc (Located.lident ~loc typename) (List.map ~f:fst @@ root_type.ptype_params)
 
-let for_me_patt = Ast_helper.Pat.var @@ Location.mknoloc "for_me"
-let for_me_expr = Exp.ident @@ lid "for_me"
+let for_me_patt ?(loc=Location.none) () = pvar ~loc "for_me"
+let for_me_expr ?(loc=Location.none) () = pexp_ident ~loc (mknoloc (Lident "for_me"))
+

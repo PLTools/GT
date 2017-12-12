@@ -7,12 +7,12 @@
  *
  *)
 
+open Ppx_core
 open Printf
 open Asttypes
 open Parsetree
 open Ast_helper
 open Location
-open Ppx_deriving
 open GtHelpers
 
 
@@ -24,27 +24,33 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
   Format.pp_print_flush Format.std_formatter (); *)
 
   (match typ.ptyp_desc with
-  | Ptyp_constr ({txt=Lident xxx},_) ->
-    let b = (xxx = tdecl.ptype_name.txt) in
+  | Ptyp_constr ({txt=Longident.Lident xxx},_) ->
+    let b = (String.equal xxx tdecl.ptype_name.txt) in
     (* printf "xxx = %s, tdecl.ptype_name.txt = %s, %b\n%!" xxx tdecl.ptype_name.txt b; *)
     b
   | _ ->
     false
   )
 
-let expr_of_arg reprname typ root_type =
-  let rec helper ?(toplevel=false) =
-    let maybe_apply e =
-      if toplevel then [%expr [%e e] [%e Exp.ident @@ lid reprname ] ]
+open Ppx_core.Ast_builder.Default
+
+let expr_of_arg ?(loc=Location.none) (reprname: string) typ root_type =
+  let open Ppx_core.Location in
+  let rec helper ?(loc=Location.none) ?(toplevel=false) =
+    let maybe_apply e : Ppx_core.expression =
+      if toplevel then [%expr [%e e] [%e Exp.ident ~loc reprname ] ]
       else e
     in
     function
     | x when are_the_same x root_type ->
      if toplevel
-     then [%expr GT.([%e Exp.(field (ident @@ lid reprname) (lid "fx")) ]) () ]
-     else [%expr GT.transform [%e Exp.ident@@lid root_type.ptype_name.txt] subj.GT.t#a this () ]
+     then [%expr GT.([%e pexp_field ~loc (Exp.ident ~loc reprname)
+                        (Located.lident ~loc "fx") ]) () ]
+     else [%expr GT.transform
+         [%e Exp.ident ~loc root_type.ptype_name.txt]
+         subj.GT.t#a this () ]
     | {ptyp_desc=Ptyp_var _alpha; _} ->
-        [%expr [%e Exp.(send [%expr subj.GT.t] (mknoloc _alpha)) ] ]
+        [%expr [%e pexp_send ~loc [%expr subj.GT.t] _alpha ] ]
     | [%type: int]
     | [%type: GT.int] ->
         maybe_apply [%expr GT.lift GT.int.GT.plugins#show () ]
@@ -58,22 +64,24 @@ let expr_of_arg reprname typ root_type =
                              [{ptyp_desc=Ptyp_constr({txt=Lident argname;_},
                                                      _)
                               }]); _ }
-     when argname = root_type.ptype_name.txt ->
+     when String.equal argname root_type.ptype_name.txt ->
        let head = List.fold_left
            ~f:(fun acc (tparam,_) ->
               match tparam with
               | {ptyp_desc=Ptyp_var alpha; _} ->
-                  [%expr [%e acc] [%e Exp.send [%expr subj.GT.t] (mknoloc alpha) ] ]
+                  [%expr [%e acc] [%e pexp_send ~loc [%expr subj.GT.t] alpha ] ]
               | _ -> assert false
            )
-           ~init:[%expr GT.transform [%e Exp.ident@@lid argname]]
+           ~init:[%expr GT.transform [%e
+               pexp_ident ~loc @@Located.lident ~loc argname ]]
            root_type.ptype_params
        in
        maybe_apply
          [%expr  GT.transform
-                 [%e Exp.ident @@ lid cname]
+                 [%e pexp_ident ~loc @@ Located.lident ~loc cname]
                  ([%e head] this)
-                 [%e Exp.(new_ @@ lid @@ sprintf "show_%s_t" cname) ]
+                 [%e pexp_new ~loc @@ Located.lident ~loc @@
+                   sprintf "show_%s_t" cname ]
                  ()
          ]
     | {ptyp_desc=Ptyp_constr ({txt=Lident cname;_},
@@ -81,38 +89,45 @@ let expr_of_arg reprname typ root_type =
      ->
      maybe_apply
        [%expr  GT.transform
-                 [%e Exp.ident @@ lid cname]
+                 [%e pexp_ident ~loc @@ Located.lident ~loc cname]
                  [%e helper  typ_arg1 ]
-                 [%e Exp.(new_ @@ lid @@ sprintf "show_%s_t" cname) ]
+                 [%e pexp_new ~loc @@ Located.lident ~loc (sprintf "show_%s_t" cname) ]
                  ()
        ]
     | _ ->
-      [%expr [%e Exp.(field (ident @@ lid reprname) (lid "GT.fx")) ] ]
+      [%expr [%e Exp.field ~loc (Exp.ident ~loc reprname) (Located.lident ~loc "GT.fx") ] ]
   in
 
   match typ with
   | {ptyp_desc=Ptyp_var alpha; _} ->
-    Exp.(apply (ident @@ lid @@ "for_"^alpha) [Nolabel, ident @@ lid reprname] )
+    pexp_apply ~loc (pexp_ident ~loc @@ Located.lident ~loc ("for_"^alpha) )
+      [Nolabel, Exp.ident ~loc reprname]
     (* [%expr [%e Exp.(field (ident @@ lid reprname) (lid "GT.fx")) ] () ] *)
-  | _ -> helper ~toplevel:true typ
+  | _ -> helper ~loc ~toplevel:true typ
 
 let name = "show"
 
 let extra_params _ = []
 
-let inh _  = [%type: unit]
-let synh _ = [%type: string]
+let inh  ?(loc=Location.none) _ = [%type: unit]
+let synh ?(loc=Location.none) _ = [%type: string]
 
-let synh_root _ _ = [%type: string]
+let synh_root tdecl _ =
+  let loc = tdecl.ptype_loc in
+  [%type: string]
 
 let core = function
-  | [%type: int] ->
-    Cl.structure (Cstr.mk (Pat.any ()) [ Cf.inherit_ Fresh (Cl.constr (lid "GT.show_int_t") []) None ])
+  | [%type: int] as t ->
+    let loc = t.ptyp_loc in
+    pcl_structure ~loc (class_structure ~self:(ppat_any ~loc)
+                          ~fields:[ pcf_inherit ~loc Fresh
+                              (pcl_constr ~loc (Located.lident ~loc "GT.show_int_t") [])
+                              None ])
   | t ->
     let b = Buffer.create 40 in
-    let fmt = Format.formatter_of_buffer b in
-    Pprintast.core_type fmt (Obj.magic t);
-    Format.pp_flush_formatter fmt;
+    let fmt = Caml.Format.formatter_of_buffer b in
+    Pprintast.core_type fmt (Caml.Obj.magic t);
+    Caml.Format.pp_flush_formatter fmt;
     raise_errorf "%s\n%s" "not implemented?4 " (Buffer.contents b)
 
 let is_ground_enough = function
@@ -122,33 +137,36 @@ let is_ground_enough = function
   | _ -> false
 
 let process_ground_enough ~n (topTr, specTr, appTr, types, inhTypes) t =
+  let loc = t.ptyp_loc in
   let wrap orig ident =
     let transformer_pat = Pat.var @@ mknoloc @@ sprintf "for_%d" n in
-    let for_expr = [%expr let open GT in lift
-                      [%e Exp.field ident (lid "plugins")  ] #show () ] in
+    let for_expr = [%expr let open GT in
+      lift [%e pexp_field ~loc ident
+          (Located.lident ~loc "plugins") ] #show () ]
+    in
     ( topTr
     , (fun e -> Cl.let_ Nonrecursive [Vb.mk transformer_pat for_expr] (specTr e))
-    , (Exp.ident @@ lid @@ sprintf "for_%d" n) :: appTr
+    , (pexp_ident ~loc @@  Located.lident ~loc (sprintf "for_%d" n)) :: appTr
     , types
     , orig::orig::inhTypes)
   in
   match t with
-  | [%type: string] -> wrap t (Exp.ident @@ lid "string")
-  | [%type: char]   -> wrap t (Exp.ident @@ lid "char")
-  | [%type: int]   -> wrap t (Exp.ident @@ lid "int")
-  | typ -> failwith (sprintf "%s %d: not ground enough `%s`" __FILE__ __LINE__
+  | [%type: string] -> wrap t (pexp_ident ~loc @@ Located.lident ~loc "string")
+  | [%type: char]   -> wrap t (pexp_ident ~loc @@ Located.lident ~loc "char")
+  | [%type: int]    -> wrap t (pexp_ident ~loc @@ Located.lident ~loc "int")
+  | typ -> failwith (sprintf "%s %d: not ground enough `%s`" Caml.__FILE__ Caml.__LINE__
                             (string_of_core_type typ))
 
 let meta_for_alias ~name ~root_type ~manifest : structure_item =
   (* params of meta class depend only on type parameters of a type being processed *)
-
+  let loc = root_type.ptype_loc in
   let eval_params ps =
     let rec helper ~n ~acc:(topTr, specTr, appTr, types, inhTypes) = function
     | [] -> (topTr, specTr, appTr, types, inhTypes)
     | {ptyp_desc=Ptyp_var name; _} :: tl ->
         let new_params = [Typ.var name; Typ.var @@ name^"_holder"] in
-        let transformer_pat = Pat.var @@ mknoloc @@ sprintf "for_%d_%s" n name in
-        let transformer_expr = Exp.ident @@ lid @@ sprintf "for_%d_%s" n name in
+        let transformer_pat = pvar ~loc @@ sprintf "for_%d_%s" n name in
+        let transformer_expr = pexp_ident ~loc @@ Located.lident ~loc (sprintf "for_%d_%s" n name) in
         helper ~n:(n-1) tl
                   ~acc: ( (fun e -> Cl.fun_ Nolabel None transformer_pat (topTr e))
                         , specTr
@@ -177,7 +195,7 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
                         , (Exp.ident @@ lid @@ sprintf "for_%d" n) :: appTr
                         , types
                         , orig::orig::inhTypes) *)
-    | typ :: _ -> failwith (sprintf "%s %d: Don't know what to do about the type `%s`" __FILE__ __LINE__
+    | typ :: _ -> failwith (sprintf "%s %d: Don't know what to do about the type `%s`" Caml.__FILE__ Caml.__LINE__
                               (string_of_core_type typ))
     in
     let topTr, specTr, appTr, types, inhTypes =
@@ -185,14 +203,14 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
       helper ~n:(List.length ps) ~acc:((fun x -> x),(fun x -> x),[ [%expr for_me] ],[],[]) (List.rev ps) in
 
     (* now we add for_me *)
-    let topTr = fun expr -> topTr (Cl.fun_ Nolabel None for_me_patt expr) in
+    let topTr expr = topTr (pcl_fun ~loc Nolabel None (for_me_patt ~loc ()) expr) in
     let types = [%type: 'tpoT] :: (List.concat types) in
     let types = types @ [ [%type: 'self_holder] ] in
 
     let inhTypes =
       let last_inh_self_holder =
-        Typ.constr (lid root_type.ptype_name.txt) @@
-          map_type_param_names root_type.ptype_params ~f:(fun name -> Typ.var @@ name^"_holder" )
+        ptyp_constr ~loc (Located.lident ~loc root_type.ptype_name.txt) @@
+          map_type_param_names root_type.ptype_params ~f:(fun name -> ptyp_var ~loc @@ name^"_holder" )
       in
       [ [%type: 'tpoT] ] @ inhTypes @ [ last_inh_self_holder ]
     in
@@ -216,14 +234,16 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
 
 (* make normal class like show_list *)
 let for_alias ~name ~root_type ~manifest : structure_item =
+  let loc = root_type.ptype_loc in
   match manifest.ptyp_desc with
   | Ptyp_constr ({txt=ident;_}, params) ->
       let appTr = map_type_param_names root_type.ptype_params
         ~f:(fun name ->
               let name = "p" ^ name in
-              [%expr fun [%p Pat.var@@ mknoloc name  ] -> [%e Exp.ident @@ lid name].GT.fx ()])
+              [%expr fun [%p Pat.var@@ mknoloc name  ] ->
+                [%e Exp.ident ~loc name].GT.fx ()])
       in
-      let appTr = nolabelize @@ (appTr @ [ Exp.ident @@ lid "for_me" ] ) in
+      let appTr = nolabelize @@ (appTr @ [ for_me_expr ~loc () ] ) in
       let inh_params =
         map_type_param_names root_type.ptype_params
           ~f:(fun name ->
@@ -239,10 +259,10 @@ let for_alias ~name ~root_type ~manifest : structure_item =
         [ ([%type: 'self_holder], Invariant) ]
       in
       Str.single_class ~params:class_params ~name ~pat:[%pat? self] ~virt:Concrete
-        ~wrap:(Cl.fun_ Nolabel None for_me_patt)
+        ~wrap:(Cl.fun_ Nolabel None (for_me_patt ~loc ()))
         [
           Cf.inherit_ Fresh
-              (Cl.apply (Cl.constr (lid @@ sprintf "show_meta_%s" typname) inh_params) appTr) None
+              (Cl.apply (Cl.constr (Located.lident ~loc @@ sprintf "show_meta_%s" typname) inh_params) appTr) None
         (* ; let e =
             let patts,exprs =
               map_type_param_names root_type.ptype_params
@@ -261,6 +281,7 @@ let for_alias ~name ~root_type ~manifest : structure_item =
   | _ -> assert false
 
 let constructor root_type constr =
+  let loc = root_type.ptype_loc in
   let name = constr.pcd_name in
   (* let param_names = map_type_param_names ~f:(fun x -> x) root_type.ptype_params in *)
   match constr.pcd_args with
@@ -292,5 +313,5 @@ let constructor root_type constr =
       in
       List.fold_right pats ~f:(fun pat acc -> Exp.fun_ Nolabel None pat acc) ~init:body
     in
-    Cf.method_ (mknoloc @@ "c_" ^ name.txt) Public (Cfk_concrete (Fresh, e))
+    Cf.method_ ("c_" ^ name.txt) Public (Cfk_concrete (Fresh, e))
   | _ -> failwith "Non-tuple constructor arguments are not supported"

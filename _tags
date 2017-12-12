@@ -9,8 +9,8 @@ true: debug, rectypes, bin_annot
 <plugins/*.ml>: link_pa_gt
 <plugins/*.cmo>: pp(camlp5o), package(camlp5)
 
-<ppx/*>: package(ocaml-migrate-parsetree ocaml-migrate-parsetree ppx_tools_versioned.metaquot_405)
-<ppx/*>: package(ppx_tools_versioned,ppx_tools_versioned.metaquot_405,ppx_deriving.std),open(Ast_convenience_405),open(Ppx_tools_405),open(Ast_405)
+#<ppx/*>: package(ocaml-migrate-parsetree ocaml-migrate-parsetree ppx_tools_versioned.metaquot_405)
+<ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
 
 <regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
 
