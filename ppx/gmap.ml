@@ -6,13 +6,13 @@
  * St.Petersburg State University, JetBrains Research
  *)
 
+open Ppx_core
 open Printf
 open Asttypes
-open Parsetree
 open Ast_helper
 open Location
-open Ppx_deriving
 open GtHelpers
+open Ppx_core.Ast_builder.Default
 
 let are_the_same (typ: core_type) (tdecl: type_declaration) =
   (* Pprintast.core_type Format.std_formatter (Obj.magic typ);
@@ -20,27 +20,27 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
   Format.pp_print_flush Format.std_formatter (); *)
 
   (match typ.ptyp_desc with
-  | Ptyp_constr ({txt=Lident xxx},_) ->
-    let b = (xxx = tdecl.ptype_name.txt) in
+  | Ptyp_constr ({txt=Longident.Lident xxx},_) ->
+    let b = String.equal xxx tdecl.ptype_name.txt in
     (* printf "xxx = %s, tdecl.ptype_name.txt = %s, %b\n%!" xxx tdecl.ptype_name.txt b; *)
     b
   | _ ->
     false
   )
 
-let expr_of_arg reprname typ root_type =
-  let rec helper ?(toplevel=false) =
+let expr_of_arg ?(loc=Location.none) reprname typ root_type =
+  let rec helper ?(loc=Location.none) ?(toplevel=false) =
    let maybe_apply e =
-     if toplevel then [%expr [%e e] [%e Exp.ident @@ lid reprname ] ]
+     if toplevel then [%expr [%e e] [%e Exp.ident reprname ] ]
      else e
    in
   function
   | x when are_the_same x root_type ->
    if toplevel
-   then [%expr GT.([%e Exp.(field (ident @@ lid reprname) (lid "fx")) ]) () ]
-   else [%expr GT.transform [%e Exp.ident@@lid root_type.ptype_name.txt] subj.GT.t#a this () ]
-  | {ptyp_desc=Ptyp_var _alpha; _} ->
-   [%expr [%e Exp.(send [%expr subj.GT.t] (mknoloc _alpha)) ] ]
+   then [%expr GT.([%e Exp.(field ~loc (ident ~loc reprname)
+                              (Located.lident ~loc "fx")) ]) () ]
+   else [%expr GT.transform [%e Exp.ident root_type.ptype_name.txt] subj.GT.t#a this () ]
+  | {ptyp_desc=Ptyp_var _alpha; _} -> Exp.(send ~loc [%expr subj.GT.t] _alpha)
   | [%type: int]
   | [%type: GT.int] ->
    maybe_apply [%expr GT.lift GT.int.GT.plugins#gmap () ]
@@ -76,21 +76,23 @@ let expr_of_arg reprname typ root_type =
                            [typ_arg1]); }
    ->
    maybe_apply
-     [%expr  GT.transform
-               [%e Exp.ident @@ lid cname]
-               [%e helper  typ_arg1 ]
-               [%e Exp.(new_ @@ lid @@ sprintf "gmap_%s_t" cname) ]
-               ()
+     [%expr GT.transform
+         [%e Exp.ident ~loc cname]
+         [%e helper  typ_arg1 ]
+         [%e Exp.new_ ~loc @@ Located.lident ~loc (sprintf "gmap_%s_t" cname) ]
+         ()
      ]
   | _ ->
-   [%expr [%e Exp.(field (ident @@ lid reprname) (lid "GT.fx")) ] ]
+      Exp.field ~loc (Exp.ident ~loc reprname) (Located.lident ~loc "GT.fx") 
   in
 
   match typ with
   | {ptyp_desc=Ptyp_var _alpha; _} ->
-   [%expr [%e Exp.(field (ident @@ lid reprname) (lid "GT.fx")) ] () ]
-  | _ -> [%expr [%e helper ~toplevel:true typ ]
-         ]
+      [%expr [%e
+        Exp.(field ~loc (ident reprname)) 
+          (Located.lident ~loc "GT.fx")
+      ] () ]
+  | _ -> helper ~toplevel:true typ
 
 
 let name = "gmap"
@@ -103,11 +105,12 @@ let extra_params root_type =
     )
 
 
-let inh _  = [%type: unit]
-let synh s = Typ.var @@ "s" ^s
+let inh  ?(loc=Location.none) _  = [%type: unit]
+let synh ?(loc=Location.none) s = Typ.var @@ "s" ^s
 
 let synh_root root_type params =
-  Typ.constr (lid root_type.ptype_name.txt) params
+  let loc = root_type.ptype_loc in
+  Typ.constr ~loc (Located.lident ~loc root_type.ptype_name.txt) params
 
 
 let core = function
@@ -128,7 +131,7 @@ let meta_for_alias  ~root_type ~manifest : structure_item =
 
 let for_alias  ~root_type ~manifest : structure_item =
   assert false
-  
+
 let constructor root_type constr =
   let name = constr.pcd_name in
   match constr.pcd_args with

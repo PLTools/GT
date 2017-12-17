@@ -76,11 +76,12 @@ module Cl = struct
   let apply e args =
     if List.is_empty args then e else Cl.apply e args
 
-  let fun_ ?(loc=Location.none) lab opt patt cl_expr =
-    pcl_fun ~loc lab opt patt cl_expr
+  let fun_ ?(loc=Location.none) = pcl_fun ~loc
 
   let constr ?(loc=Location.none) (lid: longident_loc) ts =
     pcl_constr ~loc lid ts
+
+  let structure ?(loc=Location.none) = pcl_structure ~loc
 end
 
 
@@ -89,6 +90,7 @@ module Typ = struct
   include Typ
   let ground ?(loc=Location.none) s = constr (Located.lident ~loc s) []
   let class_ ?(loc=Location.none) = ptyp_class ~loc
+  let constr ?(loc=Location.none) = ptyp_constr ~loc
 end
 
 module Str = struct

@@ -14,7 +14,7 @@ open Parsetree
 open Ast_helper
 open Location
 open GtHelpers
-
+open Ppx_core.Ast_builder.Default
 
 (* Used when we need to check that type we working on references himself in
   it's body *)
@@ -32,7 +32,6 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
     false
   )
 
-open Ppx_core.Ast_builder.Default
 
 let expr_of_arg ?(loc=Location.none) (reprname: string) typ root_type =
   let open Ppx_core.Location in
@@ -49,8 +48,7 @@ let expr_of_arg ?(loc=Location.none) (reprname: string) typ root_type =
      else [%expr GT.transform
          [%e Exp.ident ~loc root_type.ptype_name.txt]
          subj.GT.t#a this () ]
-    | {ptyp_desc=Ptyp_var _alpha; _} ->
-        [%expr [%e pexp_send ~loc [%expr subj.GT.t] _alpha ] ]
+    | {ptyp_desc=Ptyp_var _alpha; _} -> Exp.send ~loc [%expr subj.GT.t] _alpha
     | [%type: int]
     | [%type: GT.int] ->
         maybe_apply [%expr GT.lift GT.int.GT.plugins#show () ]
@@ -88,14 +86,14 @@ let expr_of_arg ?(loc=Location.none) (reprname: string) typ root_type =
                              [typ_arg1]); }
      ->
      maybe_apply
-       [%expr  GT.transform
-                 [%e pexp_ident ~loc @@ Located.lident ~loc cname]
-                 [%e helper  typ_arg1 ]
-                 [%e pexp_new ~loc @@ Located.lident ~loc (sprintf "show_%s_t" cname) ]
-                 ()
+       [%expr GT.transform
+           [%e Exp.ident ~loc cname]
+           [%e helper typ_arg1 ]
+           [%e Exp.new_ ~loc @@ Located.lident ~loc (sprintf "show_%s_t" cname) ]
+           ()
        ]
     | _ ->
-      [%expr [%e Exp.field ~loc (Exp.ident ~loc reprname) (Located.lident ~loc "GT.fx") ] ]
+        Exp.field ~loc (Exp.ident ~loc reprname) (Located.lident ~loc "GT.fx") 
   in
 
   match typ with
