@@ -18,8 +18,8 @@ open GtHelpers
 let deriver = "gt"
 let raise_errorf ?loc fmt = ksprintf failwith fmt
 
-type supported_derivers = { gt_show: bool; gt_eq: bool; gt_gmap: bool }
-
+type supported_derivers = { gt_show: bool; gt_gmap: bool }
+(*
 let parse_options options =
   List.fold_left ~f:(fun acc (name,expr) ->
     match name with
@@ -28,7 +28,7 @@ let parse_options options =
     | _ -> raise_errorf ~loc:expr.pexp_loc "%s does not support option %s" deriver name)
     ~init:{ gt_show=false; gt_eq=false; gt_gmap=false }
     options
-
+  *)
 let argn = Printf.sprintf "a%d"
 
 let default_params ?(loc=Location.none) root_type =
@@ -434,7 +434,7 @@ let inherit_cf ?args ~name ~root_type ~inh ~synh ~holder ~synh_root () =
 let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let loc = root_type.ptype_loc in
 
-  let { gt_show; gt_gmap } = parse_options options in
+  let { gt_show; gt_gmap } = options in
 
   let typename    = root_type.ptype_name.txt in
   let typename_t  = typename ^ "_t"  in
@@ -648,7 +648,7 @@ let make_gcata ~root_type ~name ~metaname =
 
 let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let loc = root_type.ptype_loc in
-  let { gt_show; gt_gmap } = parse_options options in
+  let { gt_show; gt_gmap } = options in
   let _quoter = Ppx_deriving.create_quoter () in
   (* let path = Ppx_deriving.path_of_type_decl ~path root_type in *)
 
@@ -878,5 +878,6 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   | _ -> raise_errorf ~loc:root_type.ptype_loc "%s: some error2" deriver
 
 
-let str_type_decl ~loc ~path  (flg,tdls) with_show with_gt =
-  []
+let str_type_decl ~loc ~path  (_flg,tdls) gt_show gt_gmap =
+  List.concat (List.map (str_of_type ~options:{gt_show; gt_gmap} ~path) tdls)
+

@@ -31,7 +31,7 @@ syntax:
 	$(OB) camlp5/pa_gt.cmo
 
 ppx:
-	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/ppx_gt_expander.cma
+	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/ppx_gt_expander.cma ppx/pp_gt.native
 
 PLUGINS=compare eq foldl foldr html gmap show typename
 plugins: syntax
