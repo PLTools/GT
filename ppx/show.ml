@@ -16,24 +16,8 @@ open Location
 open GtHelpers
 open Ppx_core.Ast_builder.Default
 
-(* Used when we need to check that type we working on references himself in
-  it's body *)
-let are_the_same (typ: core_type) (tdecl: type_declaration) =
-  (* Pprintast.core_type Format.std_formatter (Obj.magic typ);
-  Format.pp_force_newline Format.std_formatter ();
-  Format.pp_print_flush Format.std_formatter (); *)
-
-  (match typ.ptyp_desc with
-  | Ptyp_constr ({txt=Longident.Lident xxx},_) ->
-    let b = (String.equal xxx tdecl.ptype_name.txt) in
-    (* printf "xxx = %s, tdecl.ptype_name.txt = %s, %b\n%!" xxx tdecl.ptype_name.txt b; *)
-    b
-  | _ ->
-    false
-  )
-
-
-let expr_of_arg ?(loc=Location.none) (reprname: string) typ root_type =
+let expr_of_arg (reprname: string) typ root_type =
+  let loc = root_type.ptype_loc in
   let open Ppx_core.Location in
   let rec helper ?(loc=Location.none) ?(toplevel=false) =
     let maybe_apply e : Ppx_core.expression =

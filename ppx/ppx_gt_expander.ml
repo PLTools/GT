@@ -282,7 +282,7 @@ module MakeMeta = struct
           | [%type: string] as t -> Some t
           | [%type: char] as t -> Some t
           | [%type: int] as t -> Some t
-          | t when Show.are_the_same t root_type ->
+          | t when are_the_same t root_type ->
               (* This 'gt_a_for_self can be wrong when we have different occurences of the derived type in itself
                  For example:
                     ('a,'b) t = ( ..., ('a,'b) t, ...., ('b,'a) t, ... ) gt
@@ -685,7 +685,7 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
     in
     [%stri let [%p Pat.var @@ mknoloc typename] =
       { GT.gcata = [%e Exp.(ident typename_gcata) ]
-      ; GT.plugins = [%e Exp.object_ @@ Cstr.mk (Pat.var @@ mknoloc "self") @@
+      ; GT.plugins = [%e Exp.object_ @@ Cstr.mk ~self:(Pat.var (mknoloc "self")) @@
         (if gt_show then [wrap_meth "show" show_typename_t] else []) @
         (if gt_gmap then [wrap_meth "gmap" gmap_typename_t] else []) @
         []

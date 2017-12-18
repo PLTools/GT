@@ -11,6 +11,7 @@ true: debug, rectypes, bin_annot
 
 #<ppx/*>: package(ocaml-migrate-parsetree ocaml-migrate-parsetree ppx_tools_versioned.metaquot_405)
 <ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
+<ppx/pp_gt.*>: package(ppx_driver), make_pp_gt, linkall
 
 <regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
 

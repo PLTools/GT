@@ -1,4 +1,5 @@
 let id x = x
+let raise_errorf ?loc fmt = Printf.ksprintf failwith fmt
 
 module List = struct
   include ListLabels
@@ -55,6 +56,7 @@ module Exp = struct
   let match_ ?(loc=Location.none) = pexp_match ~loc
   let new_ ?(loc=Location.none) = pexp_new ~loc
   let object_ ?(loc=Location.none) = pexp_object ~loc
+  let tuple ?(loc=Location.none) = pexp_tuple ~loc
   let fun_ ?(loc=Location.none) = pexp_fun ~loc
   let fun_list ?(loc=Location.none) ~args e =
     if List.is_empty args then e
@@ -80,7 +82,6 @@ module Cl = struct
 
   let constr ?(loc=Location.none) (lid: longident_loc) ts =
     pcl_constr ~loc lid ts
-
   let structure ?(loc=Location.none) = pcl_structure ~loc
 end
 
@@ -117,6 +118,10 @@ module Ctf = struct
   let method_ ?(loc=Location.none) name priv_flg virt_flg kind =
     pctf_method ~loc (name, priv_flg, virt_flg, kind)
   let inherit_ ?(loc=Location.none) = pctf_inherit ~loc
+end
+
+module Cstr = struct
+  let mk ~self fields = class_structure ~self ~fields
 end
 
 open Parsetree
@@ -189,3 +194,13 @@ let using_type ~(typename: string) root_type =
 let for_me_patt ?(loc=Location.none) () = pvar ~loc "for_me"
 let for_me_expr ?(loc=Location.none) () = pexp_ident ~loc (mknoloc (Lident "for_me"))
 
+(* Used when we need to check that type we working on references himself in
+  it's body *)
+let are_the_same (typ: core_type) (tdecl: type_declaration) =
+  (match typ.ptyp_desc with
+  | Ptyp_constr ({txt=Longident.Lident xxx},_) ->
+    let b = (String.equal xxx tdecl.ptype_name.txt) in
+    b
+  | _ ->
+    false
+  )
