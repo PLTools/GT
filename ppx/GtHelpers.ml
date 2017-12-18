@@ -71,7 +71,7 @@ module Cl = struct
   include Cl
 
   let fun_list args e =
-    if List.is_empty [] then e else
+    if List.is_empty args then e else
     List.fold_right args ~init:e
       ~f:(fun arg acc -> Cl.fun_ Asttypes.Nolabel None arg acc)
 

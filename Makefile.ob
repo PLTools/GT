@@ -31,7 +31,9 @@ syntax:
 	$(OB) camlp5/pa_gt.cmo
 
 ppx:
-	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/ppx_gt_expander.cma ppx/pp_gt.native
+	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
+		ppx/ppx_gt_expander.cma ppx/ppx_gt_expander.cmxa \
+		ppx/pp_gt.native
 
 PLUGINS=compare eq foldl foldr html gmap show typename
 plugins: syntax
@@ -111,7 +113,9 @@ INSTALL_TARGETS=META \
 	_build/ppx/ppx_deriving_gt.cmxs \
 	_build/ppx/ppx_deriving_gt.cmi \
 	_build/ppx/ppx_gt_expander.cma \
+	_build/ppx/ppx_gt_expander.cmxa \
 	_build/ppx/ppx_gt_expander.cmi \
+	_build/ppx/ppx_gt_expander.a \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .cmo,$(PLUGINS))) ) \
 
 BUNDLEDIR=_build/bundle/$(PKGNAME)

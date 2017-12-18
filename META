@@ -16,7 +16,8 @@ package "ppx" (
 
 package "expander" (
   description = "Contains code that actually generates the code"
-  archive(byte) = "ppx_gt_expander.cma"
+  archive(byte)   = "ppx_gt_expander.cma"
+  archive(native) = "ppx_gt_expander.cmxa"
   requires = "ppx_core"
 )
 
