@@ -894,7 +894,7 @@ module Sexp_of = struct
 
   let str_type_decl : (_, _) Type_conv.Generator.t =
     Type_conv.Generator.make
-      Type_conv.Args.(empty +> flag "show" +> flag "gt")
+      Type_conv.Args.(empty +> flag "show" +> flag "gmap")
       E.str_type_decl
       (* ~attributes:[ Attribute.T Attrs.default
        *             ; Attribute.T Attrs.drop_default

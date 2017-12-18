@@ -9,7 +9,6 @@ true: debug, rectypes, bin_annot
 <plugins/*.ml>: link_pa_gt
 <plugins/*.cmo>: pp(camlp5o), package(camlp5)
 
-#<ppx/*>: package(ocaml-migrate-parsetree ocaml-migrate-parsetree ppx_tools_versioned.metaquot_405)
 <ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
 <ppx/pp_gt.*>: package(ppx_driver), make_pp_gt, linkall
 

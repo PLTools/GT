@@ -183,7 +183,8 @@ module MakeMeta = struct
       | _ -> None
       )
     in
-    if Int.(List.length params = List.length poly_params)
+
+    if Int.(List.length params <> List.length poly_params)
     then failwith "constructor declaration has not vars in a params";
     let ps = standart_type_prefix () in
     let ps = ps @
@@ -649,7 +650,7 @@ let make_gcata ~root_type ~name ~metaname =
 let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let loc = root_type.ptype_loc in
   let { gt_show; gt_gmap } = options in
-  let _quoter = Ppx_deriving.create_quoter () in
+  (* let _quoter = Ppx_deriving.create_quoter () in *)
   (* let path = Ppx_deriving.path_of_type_decl ~path root_type in *)
 
   let typename    = root_type.ptype_name.txt in
