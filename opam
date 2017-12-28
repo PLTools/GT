@@ -18,6 +18,7 @@ depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
   "ppx_tools_versioned"
+  "ppx_deriving"
   "ppx_type_conv"
   "ppx_core"
   "camlp5"
