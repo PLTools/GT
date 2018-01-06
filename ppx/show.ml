@@ -210,7 +210,7 @@ let meta_for_alias ~name ~root_type ~manifest : structure_item =
     Str.single_class ~params:(invariantize types) ~name
       ~wrap:(fun x -> topTr @@ specTr x)
       [
-        Cf.inherit_ Fresh (Cl.apply (Cl.constr (mknoloc parent_meta) inhTypes) appTr) None
+        Cf.inherit_ (Cl.apply (Cl.constr (mknoloc parent_meta) inhTypes) appTr)
       ]
   | _ -> failwith "not implemented"
 
@@ -243,8 +243,8 @@ let for_alias ~name ~root_type ~manifest : structure_item =
       Str.single_class ~params:class_params ~name ~pat:[%pat? self] ~virt:Concrete
         ~wrap:(Cl.fun_ Nolabel None (for_me_patt ~loc ()))
         [
-          Cf.inherit_ Fresh
-              (Cl.apply (Cl.constr (Located.lident ~loc @@ sprintf "show_meta_%s" typname) inh_params) appTr) None
+          Cf.inherit_ 
+              (Cl.apply (Cl.constr (Located.lident ~loc @@ sprintf "show_meta_%s" typname) inh_params) appTr) 
         (* ; let e =
             let patts,exprs =
               map_type_param_names root_type.ptype_params

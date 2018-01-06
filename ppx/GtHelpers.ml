@@ -17,6 +17,7 @@ module List = struct
   | [] -> failwith "wrong argument of fold_left0"
   | h::tl -> fold_left ~f ~init:h tl
 
+  let concat_map ~f xs = List.concat @@ List.map f xs
   let empty = function [] -> true | _ -> false
 end
 
@@ -104,13 +105,14 @@ module Str = struct
                 wrap (Ast_helper.Cl.structure (Cstr.mk pat body))
   ]
 
+  let class_single = single_class
 end
 
 module Cf = struct
   let constraint_ ?(loc=Location.none) t1 t2 =
     pcf_constraint ~loc (t1,t2)
-  let inherit_ ?(loc=Location.none) flg cl_expr opt =
-    pcf_inherit ~loc flg  cl_expr opt
+  let inherit_ ?(loc=Location.none) ?(flg=Fresh) ?as_ cl_expr =
+    pcf_inherit ~loc flg  cl_expr as_
   let method_ ?(loc=Location.none) name flg kind =
     pcf_method ~loc (mknoloc name, flg, kind)
 end
@@ -133,9 +135,25 @@ let map_type_param_names ~f ps =
 
 open Longident
 let affect_longident ~f = function
-  | Longident.Lident x -> Longident.Lident (f x)
+  | Lident x -> Lident (f x)
   | (Ldot _) as l -> l
-  | (Longident.Lapply (_,_)) as l -> l
+  | (Lapply (_,_)) as l -> l
+
+let rec map_longident ~f = function
+  | Lident x -> Lident (f x)
+  | Ldot (l,s) -> Ldot(l, f s)
+  | Lapply (l,r) -> Lapply (l, map_longident ~f r)
+
+let map_core_type ~onvar t =
+  let rec helper t = 
+    match t.ptyp_desc with
+    | Ptyp_any -> t
+    | Ptyp_var name -> onvar name
+    | Ptyp_constr (name, args) ->
+        {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
+    | _ -> t
+  in
+  helper t
 
 let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
 let invariantize types = List.map types ~f:(fun x -> x,Asttypes.Invariant)
@@ -194,6 +212,7 @@ let using_type ~(typename: string) root_type =
 let for_me_patt ?(loc=Location.none) () = pvar ~loc "for_me"
 let for_me_expr ?(loc=Location.none) () = pexp_ident ~loc (mknoloc (Lident "for_me"))
 
+let inh_syn_ts ?(loc=Location.none) () = [ [%type: 'inh]; [%type: 'syn] ]
 (* Used when we need to check that type we working on references himself in
   it's body *)
 let are_the_same (typ: core_type) (tdecl: type_declaration) =

@@ -17,6 +17,8 @@ open GtHelpers
 
 let deriver = "gt"
 let raise_errorf ?loc fmt = ksprintf failwith fmt
+let not_implemented ?loc fmt =
+  ksprintf (raise_errorf ~loc "%s are not yet implemented") fmt
 
 type supported_derivers = { gt_show: bool; gt_gmap: bool }
 (*
@@ -298,7 +300,7 @@ module MakeMeta = struct
       in
       let parent_name = affect_longident ident ~f:(fun s -> s^"_meta_t") in
       Str.single_class ~params ~name
-                      [ Cf.inherit_ Fresh (Cl.constr (mknoloc parent_name) inh_types) None
+                      [ Cf.inherit_ (Cl.constr (mknoloc parent_name) inh_types) 
                       (* ; Cf.constraint_ [%type: 'self] @@
                           Typ.class_ (mknoloc parent_name) (List.map ~f:fst params) *)
                       ]
@@ -430,7 +432,7 @@ let inherit_cf ?args ~name ~root_type ~inh ~synh ~holder ~synh_root () =
         | None -> class_expr
         | Some xs -> Cl.apply class_expr xs
       in
-      Cf.inherit_ Fresh class_expr None)
+      Cf.inherit_ class_expr)
 
 let sig_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   let loc = root_type.ptype_loc in
@@ -600,7 +602,7 @@ let plugin_decls (module P: Plugin) root_type =
         | [] -> class_expr
         | xs -> Cl.apply class_expr xs
         in
-        Cf.inherit_ Fresh class_expr None
+        Cf.inherit_  class_expr 
       in
       Str.class_ [Ci.mk ~virt:Concrete ~params:(root_type.ptype_params @ (P.extra_params root_type))
                     (mknoloc plugin_name)
@@ -858,8 +860,8 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
           ~params:t_class_params
           ~name:typename_t
           ~pat:(Pat.var @@ mknoloc "this")
-          [Cf.inherit_ Fresh (Cl.constr
-                                (Located.lident ~loc typename_meta_t) params) None]
+          [Cf.inherit_ (Cl.constr
+                          (Located.lident ~loc typename_meta_t) params)]
       in
       let ans =
         [ MakeMeta.str_meta_gcata_for_algebraic ~root_type ~typename
@@ -878,7 +880,101 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
 
   | _ -> raise_errorf ~loc:root_type.ptype_loc "%s: some error2" deriver
 
+let make_interface_class ~loc params sort name manifest : structure_item =
+  (* actual params depend on sort of type.
+     2 + 3*params_count + 1 (if polyvar)
+  *)
+  let prepare_params is_poly =
+    let ps = List.concat @@ List.map params ~f:(fun t ->
+      match t.ptyp_desc with
+      | Ptyp_var n -> Typ.([var n; var @@ "i"^n; var @@ "s"^n])
+      | _ -> raise_errorf "default_params: can't construct"
+    )
+    in
+    let tail = [ [%type: 'inh]; [%type: 'syn] ] in
+    if is_poly
+    then failwith "polyvariants not yet work"
+    else ps @ tail
+  in
 
-let str_type_decl ~loc ~path  (_flg,tdls) gt_show gt_gmap =
-  List.concat (List.map (str_of_type ~options:{gt_show; gt_gmap} ~path) tdls)
+  let ans ?(is_poly=false) fields =
+    Str.class_single ~loc ~name:(sprintf "class_%s" name.txt) fields
+      ~params:(prepare_params is_poly |> invariantize)
+  in
+  match sort with
+  | Ptype_record _ ->
+      (* we probably need there to unpack the record because it's type can't escape*)
+      not_implemented ~loc "record types"
+  | Ptype_open     -> not_implemented ~loc "open types"
+  | Ptype_variant cds ->
+      ans @@
+      List.map cds ~f:(fun cd ->
+        let methname = sprintf "c_%s" cd.pcd_name.txt in
+        match cd.pcd_args with
+        | Pcstr_record _ -> not_implemented "record constructors"
+        | Pcstr_tuple ts ->
+            Cf.method_ ~loc methname Public @@ Cfk_virtual
+               (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
+                |> (Typ.arrow Nolabel [%type: 'inh])
+               )
+      )
+  | Ptype_abstract ->
+      match manifest with
+      | None -> failwith "abstract types without manifest can't be supported"
+      | Some typ ->
+          let wrap name params =
+            let inh_params =
+                List.concat_map params ~f:(fun typ ->
+                  [ typ
+                  ; map_core_type typ ~onvar:(fun n -> Typ.var ("i"^n) )
+                  ; map_core_type typ ~onvar:(fun n -> Typ.var ("s"^n) )
+                  ]
+                )
+              in
+              let inh_params = inh_params @ inh_syn_ts ~loc () in
+              ans
+                [ Cf.inherit_ ~loc @@
+                  Cl.constr (mknoloc @@ map_longident ~f:(sprintf "class_%s") name)
+                    inh_params
+                ]
+          in
+
+          let rec helper typ = match typ with
+          | {ptyp_desc=Ptyp_var name} -> not_implemented "antiphantom types"
+          | [%type: string]
+          | [%type: char]
+          | [%type: int]  ->
+              not_implemented "%s " Caml.__FILE__ (* Caml.__LINE__ *)
+          | {ptyp_desc=Ptyp_constr ({txt;loc}, params)} ->
+              (* a type alias on toplevel *)
+              wrap txt params
+          | {ptyp_desc=Ptyp_alias (typ, new_name)} ->
+              map_core_type typ ~onvar:(fun as_ ->
+                if String.equal as_ new_name
+                then Typ.constr (Located.lident ~loc name.txt) params
+                else Typ.var ~loc as_
+              ) |> helper
+          in
+          helper typ
+
+let do_typ ~loc options is_rec root_type =
+  let intf_class = make_interface_class ~loc (List.map ~f:fst root_type.ptype_params)
+      root_type.ptype_kind root_type.ptype_name root_type.ptype_manifest
+  in
+
+  intf_class :: []
+
+let do_mutal_types ~loc options tdecls =
+  print_endline "HERR";
+  []
+
+let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
+  let options = {gt_show; gt_gmap} in
+  match rec_flag, tdls with
+  | Recursive, []      -> []
+  | Recursive, [tdecl] -> do_typ ~loc options true tdecl
+  | Recursive, ts      -> do_mutal_types ~loc options ts
+  | Nonrecursive, ts ->
+      List.concat @@ List.map (do_typ ~loc options false) tdls
+
 
