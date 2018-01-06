@@ -1,8 +1,10 @@
 let id x = x
 let raise_errorf ?loc fmt = Printf.ksprintf failwith fmt
+let not_implemented ?loc fmt =
+  Printf.ksprintf (raise_errorf ~loc "%s are not yet implemented") fmt
 
 module List = struct
-  include ListLabels
+  include Ppx_core.List
   let split3 xs =
     List.fold_right (fun (a,b,c) (ac,bc,cc) -> (a::ac,b::bc,c::cc))
       xs ([],[],[])
@@ -29,12 +31,21 @@ let lid ?(loc=Location.none) txt = { txt; loc }
 let mknoloc txt = lid txt
 let pexp_pair ?(loc=Location.none) a b = pexp_tuple ~loc [a; b]
 
+let const_string ?wtf s = Pconst_string (s, wtf)
+
 module Pat = struct
   let any ?(loc=Location.none) () = ppat_any ~loc
   let constraint_ ?(loc=Location.none) = ppat_constraint ~loc
-  let construct   ?(loc=Location.none) = ppat_construct  ~loc
+  let construct   ?(loc=Location.none) lident pat =
+    match pat with
+    | Some {ppat_desc=Ppat_tuple [] } -> ppat_construct ~loc lident None
+    | _ -> ppat_construct ~loc lident pat
+
   let tuple ?(loc=Location.none) = ppat_tuple ~loc
   let var ?(loc=Location.none) lid = ppat_var ~loc lid
+  let of_string ?(loc=Location.none) s = var ~loc (lid ~loc s)
+  let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (of_string ~loc) fmt
+  let alias ?(loc=Location.none) p s = ppat_alias ~loc p (lid ~loc s)
 end
 
 module Exp = struct
@@ -48,6 +59,7 @@ module Exp = struct
 
   let ident ?(loc=Location.none) s = pexp_ident ~loc @@ Located.lident ~loc s
   let ident_of_long ?(loc=Location.none) l = pexp_ident ~loc l
+  let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (ident ~loc) fmt
   let make_list ?(loc=Location.none) xs =
     List.fold_right xs
       ~f:(fun e acc ->
@@ -113,8 +125,11 @@ module Cf = struct
     pcf_constraint ~loc (t1,t2)
   let inherit_ ?(loc=Location.none) ?(flg=Fresh) ?as_ cl_expr =
     pcf_inherit ~loc flg  cl_expr as_
-  let method_ ?(loc=Location.none) name flg kind =
+  let method_ ?(loc=Location.none) name ?(flg=Public) kind =
     pcf_method ~loc (mknoloc name, flg, kind)
+  let method_concrete ?(loc=Location.none) name ?(flg=Public) ?(over_flg=Fresh) e =
+    method_ ~loc name ~flg (Cfk_concrete (over_flg,e))
+
 end
 module Ctf = struct
   let method_ ?(loc=Location.none) name priv_flg virt_flg kind =
@@ -177,6 +192,24 @@ let arr_of_param ?(loc=Location.none)
   | _ ->
       failwith "arr_of_param: not all type params are supported"
 
+let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
+    ?(normal=fun ~loc s -> Typ.var ~loc @@ s)
+    ?(inh=fun ~loc s -> Typ.var ~loc @@ "i"^s)
+    ?(syn=fun ~loc s -> Typ.var ~loc @@ "s"^s)
+    ?(default_syn=[%type: 'syn])
+    ?(default_inh=[%type: 'inh])
+
+    params =
+  let ps = List.concat @@ List.map params ~f:(fun t ->
+    match t.ptyp_desc with
+    | Ptyp_var n -> [normal ~loc n; inh ~loc n; syn ~loc n]
+    | _ -> raise_errorf "param_triples: can't construct"
+    )
+  in
+  let tail = [ default_inh; default_syn ] in
+  ps @ (extra ()) @ tail
+
+
 
 let params_obj ?(loc=Location.none)
     ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
@@ -223,3 +256,21 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
   | _ ->
     false
   )
+
+
+let visit_typedecl ~loc
+  ?(onrecord  =fun _ -> not_implemented ~loc "record types")
+  ?(onmanifest=fun _ -> not_implemented ~loc "manifest")
+  ?(onvariant =fun _ -> not_implemented ~loc "vairant types")
+    tdecl =
+  match tdecl.ptype_kind with
+  | Ptype_record r -> onrecord r
+  | Ptype_open     -> not_implemented ~loc "open types"
+  | Ptype_variant cds -> onvariant cds
+  | Ptype_abstract ->
+      match tdecl.ptype_manifest with
+      | None -> failwith "abstract types without manifest can't be supported"
+      | Some typ -> onmanifest typ
+
+
+

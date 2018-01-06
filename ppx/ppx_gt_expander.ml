@@ -16,11 +16,9 @@ open Ast_helper
 open GtHelpers
 
 let deriver = "gt"
-let raise_errorf ?loc fmt = ksprintf failwith fmt
-let not_implemented ?loc fmt =
-  ksprintf (raise_errorf ~loc "%s are not yet implemented") fmt
 
 type supported_derivers = { gt_show: bool; gt_gmap: bool }
+                          (*
 (*
 let parse_options options =
   List.fold_left ~f:(fun acc (name,expr) ->
@@ -879,22 +877,16 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
       ans @ [derivers_bunch]
 
   | _ -> raise_errorf ~loc:root_type.ptype_loc "%s: some error2" deriver
+         *)
 
 let make_interface_class ~loc params sort name manifest : structure_item =
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (if polyvar)
   *)
   let prepare_params is_poly =
-    let ps = List.concat @@ List.map params ~f:(fun t ->
-      match t.ptyp_desc with
-      | Ptyp_var n -> Typ.([var n; var @@ "i"^n; var @@ "s"^n])
-      | _ -> raise_errorf "default_params: can't construct"
-    )
-    in
-    let tail = [ [%type: 'inh]; [%type: 'syn] ] in
     if is_poly
     then failwith "polyvariants not yet work"
-    else ps @ tail
+    else prepare_param_triples ~loc params
   in
 
   let ans ?(is_poly=false) fields =
@@ -913,7 +905,7 @@ let make_interface_class ~loc params sort name manifest : structure_item =
         match cd.pcd_args with
         | Pcstr_record _ -> not_implemented "record constructors"
         | Pcstr_tuple ts ->
-            Cf.method_ ~loc methname Public @@ Cfk_virtual
+            Cf.method_ ~loc methname ~flg:Public @@ Cfk_virtual
                (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
                 |> (Typ.arrow Nolabel [%type: 'inh])
                )
@@ -957,16 +949,73 @@ let make_interface_class ~loc params sort name manifest : structure_item =
           in
           helper typ
 
+let make_gcata ~loc root_type =
+  let gcata_pat =
+    Pat.var (mknoloc @@
+             sprintf "gcata_%s" root_type.ptype_name.txt)
+  in
+  match root_type.ptype_kind with
+  | Ptype_record _ ->
+      (* we probably need there to unpack the record because it's type can't escape*)
+      not_implemented ~loc "record types"
+  | Ptype_open     -> not_implemented ~loc "open types"
+  | Ptype_variant cds ->
+      let ans cases =
+        let m = Exp.match_ ~loc [%expr t] cases in
+        Str.value ~loc Nonrecursive
+          [value_binding ~loc
+             ~pat:gcata_pat
+             ~expr:[%expr fun tr inh t -> [%e m] ]
+          ]
+      in
+      ans @@ List.map cds ~f:(fun cd ->
+        match cd.pcd_args with
+        | Pcstr_record _ -> not_implemented "wtf"
+        | Pcstr_tuple ts ->
+            let names = List.mapi ts
+                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
+                       (n + Char.to_int 'a'))
+            in
+
+            case ~guard:None
+              ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
+                    Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names)
+                         ))
+              ~rhs:(List.fold_left ("inh"::names)
+                      ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cd.pcd_name.txt))
+                      ~f:(fun acc arg -> Exp.apply ~loc acc
+                             [Nolabel, Exp.ident arg])
+              )
+      )
+  | Ptype_abstract ->
+      match root_type.ptype_manifest with
+      | None -> failwith "abstract types without manifest can't be supported"
+      | Some typ ->
+          let rec do_typ t = match t.ptyp_desc with
+          | Ptyp_alias (t,_) -> do_typ t
+          | Ptyp_constr ({txt},_) ->
+              Str.value ~loc Nonrecursive
+                [value_binding ~loc
+                   ~pat:gcata_pat
+                   ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
+                          map_longident txt ~f:(fun s -> s^"_gcata") )
+                ]
+          in
+          do_typ typ
+
+
 let do_typ ~loc options is_rec root_type =
   let intf_class = make_interface_class ~loc (List.map ~f:fst root_type.ptype_params)
       root_type.ptype_kind root_type.ptype_name root_type.ptype_manifest
   in
-
-  intf_class :: []
+  let gcata = make_gcata ~loc root_type in
+  intf_class :: gcata :: []
 
 let do_mutal_types ~loc options tdecls =
-  print_endline "HERR";
-  []
+  print_endline "interface classes are omitted for debug purposes";
+  if options.gt_show
+  then Show.do_mutals ~loc ~is_rec:true tdecls
+  else []
 
 let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
   let options = {gt_show; gt_gmap} in
@@ -975,6 +1024,6 @@ let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
   | Recursive, [tdecl] -> do_typ ~loc options true tdecl
   | Recursive, ts      -> do_mutal_types ~loc options ts
   | Nonrecursive, ts ->
-      List.concat @@ List.map (do_typ ~loc options false) tdls
+      List.concat_map ~f:(do_typ ~loc options false) tdls
 
 

@@ -87,8 +87,10 @@ let expr_of_arg (reprname: string) typ root_type =
     (* [%expr [%e Exp.(field (ident @@ lid reprname) (lid "GT.fx")) ] () ] *)
   | _ -> helper ~loc ~toplevel:true typ
 
-let name = "show"
 
+let plugin_name = "show"
+
+(*
 let extra_params _ = []
 
 let inh  ?(loc=Location.none) _ = [%type: unit]
@@ -297,3 +299,105 @@ let constructor root_type constr =
     in
     Cf.method_ ("c_" ^ name.txt) Public (Cfk_concrete (Fresh, e))
   | _ -> failwith "Non-tuple constructor arguments are not supported"
+         *)
+
+
+let make_class ~loc tdecl ~is_rec mutal_names =
+  let default_inh = [%type: unit] in
+  let default_syn = [%type: string] in
+
+  let cur_name = tdecl.ptype_name.txt in
+  (* TODO: support is_rec to handle `type nonrec t = option t` *)
+  let ans fields =
+    (* inherit class_t and prepare to put other members *)
+    Str.class_single ~loc
+      ~wrap:(fun body ->
+        (* constructor arguments are *)
+        let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
+                    [Pat.(alias ~loc (sprintf "show_%s" cur_name) "_fself")] @
+                    List.map tdecl.ptype_params ~f:(fun (t,_) ->
+                      match t.ptyp_desc with
+                      | Ptyp_var name -> Pat.sprintf ~loc "f%s" name
+                      | _ -> assert false
+                    )
+        in
+        Cl.fun_list names body
+      )
+      ~name:(sprintf "%s_%s_stub" plugin_name cur_name)
+      ~params:[]
+      @@
+      [ let inh_params = prepare_param_triples ~loc
+            ~inh:(fun ~loc _ -> default_inh)
+            ~syn:(fun ~loc _ -> default_syn)
+            (List.map ~f:fst tdecl.ptype_params)
+        in
+        Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
+      ] @ fields
+  in
+
+  let is_self_rec t =
+
+    false
+  in
+  ans @@ visit_typedecl ~loc tdecl
+    ~onvariant:(fun cds ->
+      List.map cds ~f:(fun cd ->
+        let constr_name = cd.pcd_name.txt in
+        match cd.pcd_args with
+        | Pcstr_record _ -> not_implemented "wtf"
+        | Pcstr_tuple ts ->
+            let names = List.mapi ts
+                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
+                       (n + Char.to_int 'a'))
+            in
+            Cf.method_concrete ~loc ("c_"^cd.pcd_name.txt)
+              [%expr fun () -> [%e
+                Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
+                if List.length ts = 0
+                then Exp.constant ~loc (Pconst_string (constr_name, None))
+                else
+                  let rec do_typ ?with_arg t =
+                    let app_arg e =
+                      match with_arg with
+                      | Some x -> Exp.apply ~loc e [Nolabel, Exp.ident x]
+                      | None -> e
+                    in
+                    if is_self_rec t then app_arg [%expr _fself () ]
+                    else
+                      match t with
+                      | [%type: int] -> app_arg [%expr string_of_int ]
+                      | {ptyp_desc=Ptyp_var name} ->
+                          app_arg Exp.(sprintf "f%s" name)
+                      | {ptyp_desc=Ptyp_tuple ts} ->
+                          failwith "not implemented yet"
+                      | {ptyp_desc=Ptyp_constr ({txt}, params) } ->
+                          app_arg @@
+                          Exp.apply
+                            (Exp.ident_of_long @@ mknoloc @@
+                             map_longident ~f:((^)"show_") txt)
+                            (List.map params ~f:(fun t -> Nolabel, do_typ t))
+                      | _ -> failwith "Finish it!"
+                  in
+                  List.fold_left
+                    (List.zip_exn names ts)
+                    ~f:(fun acc (name, typ) ->
+                      Exp.apply ~loc acc [(Nolabel, do_typ ~with_arg:name typ)] )
+                    ~init:[%expr Format.sprintf [%e
+                        let fmt = String.concat ~sep:", " @@ List.map names
+                            ~f:(fun _ -> "%s")
+                        in
+                        Exp.constant ~loc @@  const_string @@
+                        sprintf "%s(%s)" constr_name fmt
+                      ]]
+              ]]
+      )
+    )
+
+let do_mutals ~loc ~is_rec tdecls =
+  (* for mutal recursion we need to generate two classes and one function *)
+  let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
+  List.concat_map tdecls ~f:(fun tdecl ->
+    [ make_class ~loc ~is_rec: true tdecl @@
+      List.filter mut_names ~f:(String.(<>) tdecl.ptype_name.txt)
+    ]
+  )
