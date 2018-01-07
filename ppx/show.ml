@@ -301,11 +301,14 @@ let constructor root_type constr =
   | _ -> failwith "Non-tuple constructor arguments are not supported"
          *)
 
+let make_new_names n =
+  List.init n ~f:(fun n ->  Char.to_string @@ Char.of_int_exn (n + Char.to_int 'a'))
+            
+
+let default_inh = let loc = Location.none in [%type: unit]
+let default_syn = let loc = Location.none in [%type: string]
 
 let make_class ~loc tdecl ~is_rec mutal_names =
-  let default_inh = [%type: unit] in
-  let default_syn = [%type: string] in
-
   let cur_name = tdecl.ptype_name.txt in
   (* TODO: support is_rec to handle `type nonrec t = option t` *)
   let ans fields =
@@ -368,8 +371,12 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                       | [%type: int] -> app_arg [%expr string_of_int ]
                       | {ptyp_desc=Ptyp_var name} ->
                           app_arg Exp.(sprintf "f%s" name)
-                      | {ptyp_desc=Ptyp_tuple ts} ->
-                          failwith "not implemented yet"
+                      | {ptyp_desc=Ptyp_tuple params} ->
+                          app_arg @@
+                          Exp.apply
+                            (Exp.sprintf "show_tuple%d" (List.length params))
+                            (List.map params ~f:(fun t -> Nolabel, do_typ t))
+
                       | {ptyp_desc=Ptyp_constr ({txt}, params) } ->
                           app_arg @@
                           Exp.apply
@@ -393,11 +400,55 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       )
     )
 
+
+let make_trans_functions ~loc ~is_rec mutal_names tdecls =
+  (* we will generate mutally recrsive showers here *)
+
+  let make_class_name typname = sprintf "show_%s_stub" typname in
+  Str.value ~loc Recursive @@ List.map tdecls ~f:(fun tdecl ->
+    let cur_name = tdecl.ptype_name.txt in
+    let others =
+      List.filter mutal_names ~f:(String.(<>) cur_name)
+    in
+    value_binding ~loc ~pat:(Pat.sprintf "show_%s" tdecl.ptype_name.txt)
+      ~expr:(
+        Exp.fun_list ~loc
+          ~args:(map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s"))
+          [%expr fun t -> fix0 (fun self ->
+            [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" cur_name) @@
+              Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc @@
+                              make_class_name cur_name) @@
+              (List.map others ~f:(fun name -> Nolabel,[%expr fun () -> [%e Exp.sprintf ~loc "show_%s" name]])
+              @ [Nolabel, [%expr self] ]) 
+            ]
+          ) t
+          ]
+      )
+  )
+
+let make_shortend_class ~loc ~is_rec mutal_names tdecls =
+  List.map tdecls ~f:(fun tdecl ->
+    let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in
+    let class_name = sprintf "show_%s" tdecl.ptype_name.txt in
+    let stub_name = class_name ^ "_stub" in
+    let mut_funcs = List.map ~f:((^)"show_") mutal_names in
+    let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
+    Str.single_class ~loc ~name:class_name
+      ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
+      ~params:tdecl.ptype_params
+      [ Cf.inherit_ ~loc @@ Cl.apply
+          (Cl.constr ~loc (Located.lident ~loc stub_name) (List.map ~f:fst tdecl.ptype_params))
+          (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) real_args)
+      ]
+  )
+
 let do_mutals ~loc ~is_rec tdecls =
   (* for mutal recursion we need to generate two classes and one function *)
   let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
   List.concat_map tdecls ~f:(fun tdecl ->
-    [ make_class ~loc ~is_rec: true tdecl @@
+    [ make_class ~loc ~is_rec:true tdecl @@
       List.filter mut_names ~f:(String.(<>) tdecl.ptype_name.txt)
     ]
-  )
+  ) @
+  [make_trans_functions ~loc ~is_rec:true mut_names tdecls] @
+  (make_shortend_class  ~loc ~is_rec:true mut_names tdecls)

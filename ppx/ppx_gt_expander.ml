@@ -879,7 +879,11 @@ let str_of_type ~options ~path ({ ptype_params=type_params } as root_type) =
   | _ -> raise_errorf ~loc:root_type.ptype_loc "%s: some error2" deriver
          *)
 
-let make_interface_class ~loc params sort name manifest : structure_item =
+let make_interface_class ~loc root_type =
+  let params = List.map ~f:fst root_type.ptype_params in
+  (* let sort = root_type *)
+  let name = root_type.ptype_name in
+  let manifest = root_type.ptype_manifest in
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (if polyvar)
   *)
@@ -893,12 +897,8 @@ let make_interface_class ~loc params sort name manifest : structure_item =
     Str.class_single ~loc ~name:(sprintf "class_%s" name.txt) fields
       ~params:(prepare_params is_poly |> invariantize)
   in
-  match sort with
-  | Ptype_record _ ->
-      (* we probably need there to unpack the record because it's type can't escape*)
-      not_implemented ~loc "record types"
-  | Ptype_open     -> not_implemented ~loc "open types"
-  | Ptype_variant cds ->
+  visit_typedecl ~loc root_type
+    ~onvariant:(fun cds ->
       ans @@
       List.map cds ~f:(fun cd ->
         let methname = sprintf "c_%s" cd.pcd_name.txt in
@@ -910,10 +910,8 @@ let make_interface_class ~loc params sort name manifest : structure_item =
                 |> (Typ.arrow Nolabel [%type: 'inh])
                )
       )
-  | Ptype_abstract ->
-      match manifest with
-      | None -> failwith "abstract types without manifest can't be supported"
-      | Some typ ->
+    )
+    ~onmanifest:(fun typ ->
           let wrap name params =
             let inh_params =
                 List.concat_map params ~f:(fun typ ->
@@ -948,18 +946,15 @@ let make_interface_class ~loc params sort name manifest : structure_item =
               ) |> helper
           in
           helper typ
+    )
 
 let make_gcata ~loc root_type =
   let gcata_pat =
     Pat.var (mknoloc @@
              sprintf "gcata_%s" root_type.ptype_name.txt)
   in
-  match root_type.ptype_kind with
-  | Ptype_record _ ->
-      (* we probably need there to unpack the record because it's type can't escape*)
-      not_implemented ~loc "record types"
-  | Ptype_open     -> not_implemented ~loc "open types"
-  | Ptype_variant cds ->
+  visit_typedecl ~loc root_type
+    ~onvariant:(fun cds ->
       let ans cases =
         let m = Exp.match_ ~loc [%expr t] cases in
         Str.value ~loc Nonrecursive
@@ -987,35 +982,36 @@ let make_gcata ~loc root_type =
                              [Nolabel, Exp.ident arg])
               )
       )
-  | Ptype_abstract ->
-      match root_type.ptype_manifest with
-      | None -> failwith "abstract types without manifest can't be supported"
-      | Some typ ->
-          let rec do_typ t = match t.ptyp_desc with
-          | Ptyp_alias (t,_) -> do_typ t
-          | Ptyp_constr ({txt},_) ->
-              Str.value ~loc Nonrecursive
-                [value_binding ~loc
-                   ~pat:gcata_pat
-                   ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
-                          map_longident txt ~f:(fun s -> s^"_gcata") )
-                ]
-          in
-          do_typ typ
-
+    )
+    ~onmanifest:(fun typ ->
+      let rec do_typ t = match t.ptyp_desc with
+      | Ptyp_alias (t,_) -> do_typ t
+      | Ptyp_constr ({txt},_) ->
+          Str.value ~loc Nonrecursive
+            [value_binding ~loc
+               ~pat:gcata_pat
+               ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
+                      map_longident txt ~f:(fun s -> s^"_gcata") )
+            ]
+      in
+      do_typ typ
+    )
 
 let do_typ ~loc options is_rec root_type =
-  let intf_class = make_interface_class ~loc (List.map ~f:fst root_type.ptype_params)
-      root_type.ptype_kind root_type.ptype_name root_type.ptype_manifest
-  in
+  let intf_class = make_interface_class ~loc root_type in
   let gcata = make_gcata ~loc root_type in
   intf_class :: gcata :: []
 
 let do_mutal_types ~loc options tdecls =
-  print_endline "interface classes are omitted for debug purposes";
-  if options.gt_show
+  List.concat_map tdecls ~f:(fun tdecl ->
+    let intf_class = make_interface_class ~loc tdecl in
+    let gcata = make_gcata ~loc tdecl in
+    [intf_class; gcata]
+  ) @
+
+  (if options.gt_show
   then Show.do_mutals ~loc ~is_rec:true tdecls
-  else []
+  else [])
 
 let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
   let options = {gt_show; gt_gmap} in
@@ -1027,3 +1023,4 @@ let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
       List.concat_map ~f:(do_typ ~loc options false) tdls
 
 
+       

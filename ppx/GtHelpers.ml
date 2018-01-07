@@ -50,6 +50,7 @@ end
 
 module Exp = struct
   let apply ?(loc=Location.none) = pexp_apply ~loc
+  let apply1 ?(loc=Location.none) ?(label=Nolabel) f arg = apply ~loc f [label,arg]
   let case ?guard lhs rhs = case ~lhs ~rhs ~guard
   let constant ?(loc=Location.none) = pexp_constant ~loc
   let construct ?(loc=Location.none) = pexp_construct ~loc
