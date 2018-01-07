@@ -16,10 +16,12 @@ let m4_rules ext =
 
 open Command;;
 
-let () = dispatch (function
- | Before_rules -> ()
+let () = dispatch (fun hook ->
+  Ppx_driver_ocamlbuild.dispatch hook;
+  match hook with
+  | Before_rules -> ()
 
- | After_rules ->
+  | After_rules ->
      ocaml_lib "src/GT";
 
      m4_rules ();

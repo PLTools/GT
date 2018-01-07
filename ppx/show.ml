@@ -314,6 +314,8 @@ let make_class ~loc tdecl ~is_rec mutal_names =
   let ans fields =
     (* inherit class_t and prepare to put other members *)
     Str.class_single ~loc
+      ~virt:Concrete
+      ~params:tdecl.ptype_params
       ~wrap:(fun body ->
         (* constructor arguments are *)
         let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
@@ -327,7 +329,6 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         Cl.fun_list names body
       )
       ~name:(sprintf "%s_%s_stub" plugin_name cur_name)
-      ~params:[]
       @@
       [ let inh_params = prepare_param_triples ~loc
             ~inh:(fun ~loc _ -> default_inh)
@@ -338,9 +339,15 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       ] @ fields
   in
 
-  let is_self_rec t =
-
-    false
+  let is_self_rec t = is_rec &&
+    (match t.ptyp_desc with
+    | Ptyp_var _ -> false
+    | Ptyp_constr ({txt=Lident s}, params)
+      when String.equal s cur_name && List.length params = List.length tdecl.ptype_params &&
+           List.for_all2_exn params tdecl.ptype_params ~f:(fun a (b,_) -> 0=compare_core_type a b)
+      -> is_rec
+    | _ -> false
+    )
   in
   ans @@ visit_typedecl ~loc tdecl
     ~onvariant:(fun cds ->
@@ -412,14 +419,17 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
     in
     value_binding ~loc ~pat:(Pat.sprintf "show_%s" tdecl.ptype_name.txt)
       ~expr:(
+        let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
         Exp.fun_list ~loc
-          ~args:(map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s"))
+          ~args:(List.map arg_transfrs ~f:(Pat.sprintf ~loc "%s"))
           [%expr fun t -> fix0 (fun self ->
             [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" cur_name) @@
               Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc @@
                               make_class_name cur_name) @@
-              (List.map others ~f:(fun name -> Nolabel,[%expr fun () -> [%e Exp.sprintf ~loc "show_%s" name]])
-              @ [Nolabel, [%expr self] ]) 
+              (List.map others ~f:(fun name -> Nolabel,[%expr [%e Exp.sprintf ~loc "show_%s" name]])
+               @ [Nolabel, [%expr self] ]
+               @ List.map arg_transfrs ~f:(fun s -> Nolabel, [%expr fun () -> [%e Exp.sprintf ~loc "%s" s]])
+              )
             ]
           ) t
           ]

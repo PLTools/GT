@@ -4,13 +4,14 @@ archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
 
 package "ppx" (
-  version = "0.1"
-  description = "PPX syntax extensionon top of ppx_deriving"
-  requires(-ppx_driver) = "ppx_deriving"
-  ppxopt(-ppx_driver,-custom_ppx) = "ppx_deriving,-deriving-plugin,./ppx_deriving_gt.cma"
-  requires(ppx_driver) = "ppx_deriving.api"
-  archive(ppx_driver, byte) = "ppx_deriving_gt.cma"
-  archive(ppx_driver, native) = "ppx_deriving_gt.cmxa"
+  description = "PPX syntax extensionon top of ppx_core"
+
+  requires(ppx_driver)        = "ppx_core ppx_driver"
+  archives(ppx_driver,byte)   = "ppx_deriving_gt.cma"
+  archives(ppx_driver,native) = "ppx_deriving_gt.cmxa"
+  plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
+  plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
+
   exists_if = "ppx_deriving_gt.cma"
 )
 

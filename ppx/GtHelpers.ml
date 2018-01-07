@@ -171,6 +171,20 @@ let map_core_type ~onvar t =
   in
   helper t
 
+module Format = struct
+  include Ppx_core.Format
+  let easy_string f x =
+    let (_:string) = Format.flush_str_formatter () in
+    f Format.str_formatter x;
+    Format.flush_str_formatter ()
+
+end
+
+let compare_core_type a b =
+  String.compare
+    (Format.easy_string Pprintast.core_type a)
+    (Format.easy_string Pprintast.core_type b)
+
 let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
 let invariantize types = List.map types ~f:(fun x -> x,Asttypes.Invariant)
 

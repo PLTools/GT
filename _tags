@@ -16,3 +16,7 @@ true: debug, rectypes, bin_annot
 
 <regression/orig/*>: traverse
 <regression/test0*.*>: use_pa_gt, use_plugins
+
+#<regression_ppx/**>:       predicate(custom_ppx), package(ppx_core)
+#<regression_ppx/test*.*>:  ppx-driver(GT.ppx)
+<regression_ppx/test*.*>:  ppx(ppx/pp_gt.native --as-ppx), package(GT)

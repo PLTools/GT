@@ -991,7 +991,7 @@ let make_gcata ~loc root_type =
             [value_binding ~loc
                ~pat:gcata_pat
                ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
-                      map_longident txt ~f:(fun s -> s^"_gcata") )
+                      map_longident txt ~f:(fun s -> "gcata_"^s) )
             ]
       in
       do_typ typ
@@ -1023,4 +1023,3 @@ let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
       List.concat_map ~f:(do_typ ~loc options false) tdls
 
 
-       
