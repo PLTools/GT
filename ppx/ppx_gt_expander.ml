@@ -14,6 +14,7 @@ open Longident
 open Asttypes
 open Ast_helper
 open GtHelpers
+let (@@) = Caml.(@@)
 
 let deriver = "gt"
 
@@ -23,7 +24,7 @@ type supported_derivers = { gt_show: bool; gt_gmap: bool }
 let parse_options options =
   List.fold_left ~f:(fun acc (name,expr) ->
     match name with
-    | "show" -> {acc with gt_show = true}
+    | "show" -> {acc with gt_show = true}ук
     | "gmap" -> {acc with gt_gmap = true}
     | _ -> raise_errorf ~loc:expr.pexp_loc "%s does not support option %s" deriver name)
     ~init:{ gt_show=false; gt_eq=false; gt_gmap=false }
@@ -948,22 +949,10 @@ let make_interface_class ~loc root_type =
           helper typ
     )
 
-let make_gcata ~loc root_type =
-  let gcata_pat =
-    Pat.var (mknoloc @@
-             sprintf "gcata_%s" root_type.ptype_name.txt)
-  in
-  visit_typedecl ~loc root_type
-    ~onvariant:(fun cds ->
-      let ans cases =
-        let m = Exp.match_ ~loc [%expr t] cases in
-        Str.value ~loc Nonrecursive
-          [value_binding ~loc
-             ~pat:gcata_pat
-             ~expr:[%expr fun tr inh t -> [%e m] ]
-          ]
-      in
-      ans @@ List.map cds ~f:(fun cd ->
+let prepare_patt_match ~loc what constructors make_rhs =
+  let on_alg cdts =
+    let k cs = Exp.match_ ~loc what cs in
+    k @@ List.map cdts ~f:(fun cd ->
         match cd.pcd_args with
         | Pcstr_record _ -> not_implemented "wtf"
         | Pcstr_tuple ts ->
@@ -971,20 +960,44 @@ let make_gcata ~loc root_type =
                 ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
                        (n + Char.to_int 'a'))
             in
-
             case ~guard:None
               ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
                     Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names)
                          ))
-              ~rhs:(List.fold_left ("inh"::names)
-                      ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cd.pcd_name.txt))
-                      ~f:(fun acc arg -> Exp.apply ~loc acc
-                             [Nolabel, Exp.ident arg])
-              )
+              ~rhs:(make_rhs cd names)
+
       )
-    )
+  in
+  let on_poly cs =
+    assert false
+  in
+  match constructors with
+  | `Algebraic cdts -> on_alg cdts
+  | `PolyVar cs -> on_poly cs
+
+
+let make_gcata ~loc root_type =
+  let gcata_pat =
+    Pat.var (mknoloc @@
+             sprintf "gcata_%s" root_type.ptype_name.txt)
+  in
+  visit_typedecl ~loc root_type
+    ~onvariant:(fun cds ->
+      let ans k =
+        Str.value ~loc Nonrecursive
+          [value_binding ~loc
+             ~pat:gcata_pat
+             ~expr:[%expr fun tr inh t -> [%e k] ]
+          ]
+      in
+      ans @@ prepare_patt_match ~loc [%expr t] (`Algebraic cds) (fun cd names ->
+          List.fold_left ("inh"::names)
+            ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cd.pcd_name.txt))
+            ~f:(fun acc arg -> Exp.apply ~loc acc [Nolabel, Exp.ident arg])
+        )
+      )
     ~onmanifest:(fun typ ->
-      let rec do_typ t = match t.ptyp_desc with
+        let rec do_typ t = match t.ptyp_desc with
       | Ptyp_alias (t,_) -> do_typ t
       | Ptyp_constr ({txt},_) ->
           Str.value ~loc Nonrecursive
