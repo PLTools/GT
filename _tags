@@ -10,13 +10,12 @@ true: debug, rectypes, bin_annot
 <plugins/*.cmo>: pp(camlp5o), package(camlp5)
 
 <ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
-<ppx/pp_gt.*>: package(ppx_driver), make_pp_gt, linkall
+<ppx/ppx_deriving_gt.cm*>: linkall
+<ppx/pp_gt.*>: package(ppx_driver), make_pp_gt
 
 <regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
 
 <regression/orig/*>: traverse
 <regression/test0*.*>: use_pa_gt, use_plugins
 
-#<regression_ppx/**>:       predicate(custom_ppx), package(ppx_core)
-#<regression_ppx/test*.*>:  ppx-driver(GT.ppx)
-<regression_ppx/test*.*>:  ppx(ppx/pp_gt.native --as-ppx), package(GT)
+<regression_ppx/test*.*>:  predicate(custom_ppx), ppx-driver(ppx_driver,GT.ppx)

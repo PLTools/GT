@@ -115,10 +115,12 @@ INSTALL_TARGETS=META \
 	_build/src/View.cmi \
 	_build/src/HTML.cmi \
 	_build/src/GT.cmi \
+	_build/ppx/ppx_deriving_gt.a \
 	_build/ppx/ppx_deriving_gt.cma \
 	_build/ppx/ppx_deriving_gt.cmxa \
 	_build/ppx/ppx_deriving_gt.cmxs \
 	_build/ppx/ppx_deriving_gt.cmi \
+	_build/ppx/pp_gt.native \
 	_build/ppx/ppx_gt_expander.cma \
 	_build/ppx/ppx_gt_expander.cmxa \
 	_build/ppx/ppx_gt_expander.cmi \
