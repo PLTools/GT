@@ -949,32 +949,6 @@ let make_interface_class ~loc root_type =
           helper typ
     )
 
-let prepare_patt_match ~loc what constructors make_rhs =
-  let on_alg cdts =
-    let k cs = Exp.match_ ~loc what cs in
-    k @@ List.map cdts ~f:(fun cd ->
-        match cd.pcd_args with
-        | Pcstr_record _ -> not_implemented "wtf"
-        | Pcstr_tuple ts ->
-            let names = List.mapi ts
-                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
-                       (n + Char.to_int 'a'))
-            in
-            case ~guard:None
-              ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
-                    Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names)
-                         ))
-              ~rhs:(make_rhs cd names)
-
-      )
-  in
-  let on_poly cs =
-    assert false
-  in
-  match constructors with
-  | `Algebraic cdts -> on_alg cdts
-  | `PolyVar cs -> on_poly cs
-
 
 let make_gcata ~loc root_type =
   let gcata_pat =
@@ -1013,7 +987,11 @@ let make_gcata ~loc root_type =
 let do_typ ~loc options is_rec root_type =
   let intf_class = make_interface_class ~loc root_type in
   let gcata = make_gcata ~loc root_type in
-  intf_class :: gcata :: []
+  intf_class :: gcata ::
+  (if options.gt_show
+  then Show.do_single ~loc ~is_rec:true root_type
+  else [])
+
 
 let do_mutal_types ~loc options tdecls =
   List.concat_map tdecls ~f:(fun tdecl ->

@@ -1,10 +1,6 @@
-FLG -rectypes
 S .
 B ../_build/ppx
 
-#FLG -open Ast_405
-#FLG -open Ast_convenience_405
-#FLG -open Ppx_tools_405
 FLG -short-paths
-PKG ppx_metauot ppx_core ppx_driver ppx_type_conv
-
+PKG ppx_metaquot ppx_core ppx_driver ppx_type_conv
+FLG -rectypes

@@ -303,7 +303,7 @@ let constructor root_type constr =
 
 let make_new_names n =
   List.init n ~f:(fun n ->  Char.to_string @@ Char.of_int_exn (n + Char.to_int 'a'))
-            
+
 
 let default_inh = let loc = Location.none in [%type: unit]
 let default_syn = let loc = Location.none in [%type: string]
@@ -350,6 +350,33 @@ let make_class ~loc tdecl ~is_rec mutal_names =
     )
   in
   ans @@ visit_typedecl ~loc tdecl
+    ~onmanifest:(fun typ ->
+        match typ with
+        | {ptyp_desc=Ptyp_constr (cid, params)} ->
+          let inh_params =
+            List.concat_map params ~f:(fun typ ->
+                [ typ
+                ; map_core_type typ ~onvar:(fun n -> Typ.var ("i"^n) )
+                ; map_core_type typ ~onvar:(fun n -> Typ.var ("s"^n) )
+                ]
+              )
+          in
+          let inh_params = inh_params @ [default_inh; default_syn] in
+
+          let ans args =
+            [ Cf.inherit_ ~loc @@ Cl.apply
+                (Cl.constr
+                   ({cid with txt = map_longident cid.txt ~f:((^)"show_class_")})
+                   inh_params)
+                (nolabelize args)
+            ]
+          in
+          let rec wrap typ =
+            [%expr 1]
+          in
+          ans @@ List.map params ~f:wrap
+        | _ -> assert false
+      )
     ~onvariant:(fun cds ->
       List.map cds ~f:(fun cd ->
         let constr_name = cd.pcd_name.txt in
@@ -420,9 +447,9 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
     value_binding ~loc ~pat:(Pat.sprintf "show_%s" tdecl.ptype_name.txt)
       ~expr:(
         let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
-        let fixe = Exp.ident_of_long ~loc @@ Located.mk ~loc
-            Longident.(Ldot (Lident "GT", sprintf "fix%d" (List.length tdecl.ptype_params)))
-        in
+        (* let fixe = Exp.ident_of_long ~loc @@ Located.mk ~loc
+         *     Longident.(Ldot (Lident "GT", sprintf "fix%d" (List.length tdecl.ptype_params)))
+         * in *)
         let fixe = [%expr fix0 ] in
         Exp.fun_list ~loc
           ~args:(List.map arg_transfrs ~f:(Pat.sprintf ~loc "%s"))
@@ -455,6 +482,11 @@ let make_shortend_class ~loc ~is_rec mutal_names tdecls =
           (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) @@ (mut_funcs@real_args))
       ]
   )
+
+let do_single ~loc ~is_rec tdecl =
+  [ make_class ~loc ~is_rec:true tdecl []
+  ] @
+  [make_trans_functions ~loc ~is_rec:true [] [tdecl]]
 
 let do_mutals ~loc ~is_rec tdecls =
   (* for mutal recursion we need to generate two classes and one function *)

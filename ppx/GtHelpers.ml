@@ -161,7 +161,7 @@ let rec map_longident ~f = function
   | Lapply (l,r) -> Lapply (l, map_longident ~f r)
 
 let map_core_type ~onvar t =
-  let rec helper t = 
+  let rec helper t =
     match t.ptyp_desc with
     | Ptyp_any -> t
     | Ptyp_var name -> onvar name
@@ -287,5 +287,28 @@ let visit_typedecl ~loc
       | None -> failwith "abstract types without manifest can't be supported"
       | Some typ -> onmanifest typ
 
+let prepare_patt_match ~loc what constructors make_rhs =
+  let on_alg cdts =
+    let k cs = Exp.match_ ~loc what cs in
+    k @@ List.map cdts ~f:(fun cd ->
+        match cd.pcd_args with
+        | Pcstr_record _ -> not_implemented "wtf"
+        | Pcstr_tuple ts ->
+            let names = List.mapi ts
+                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
+                       (n + Char.to_int 'a'))
+            in
+            case ~guard:None
+              ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
+                    Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names)
+                         ))
+              ~rhs:(make_rhs cd names)
 
-
+      )
+  in
+  let on_poly cs =
+    assert false
+  in
+  match constructors with
+  | `Algebraic cdts -> on_alg cdts
+  | `PolyVar cs -> on_poly cs
