@@ -604,10 +604,20 @@ let fix0 f t =
   knot := recurse;
   recurse t
 
-let fix f inh t =
+let fix1 f inh t =
   let knot = ref (fun _ -> assert false) in
   let recurse inh t = f !knot inh t in
   knot := recurse;
   recurse inh t
 
+let fix2 f a b t =
+  let knot = ref (fun _ -> assert false) in
+  let recurse a b t = f !knot a b t in
+  knot := recurse;
+  recurse a b t
 
+let fix3 f a b c t =
+  let knot = ref (fun _ -> assert false) in
+  let recurse a b c t = f !knot a b c t in
+  knot := recurse;
+  recurse a b c t

@@ -172,11 +172,11 @@ let map_core_type ~onvar t =
   helper t
 
 module Format = struct
-  include Ppx_core.Format
+  include Caml.Format
   let easy_string f x =
-    let (_:string) = Format.flush_str_formatter () in
-    f Format.str_formatter x;
-    Format.flush_str_formatter ()
+    let (_:string) = flush_str_formatter () in
+    f str_formatter x;
+    flush_str_formatter ()
 
 end
 

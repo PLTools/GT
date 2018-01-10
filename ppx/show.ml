@@ -377,7 +377,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                       match t with
                       | [%type: int] -> app_arg [%expr string_of_int ]
                       | {ptyp_desc=Ptyp_var name} ->
-                          app_arg Exp.(sprintf "f%s" name)
+                          app_arg Exp.(apply1 ~loc (sprintf "f%s" name) [%expr ()])
                       | {ptyp_desc=Ptyp_tuple params} ->
                           app_arg @@
                           Exp.apply
@@ -420,9 +420,13 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
     value_binding ~loc ~pat:(Pat.sprintf "show_%s" tdecl.ptype_name.txt)
       ~expr:(
         let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
+        let fixe = Exp.ident_of_long ~loc @@ Located.mk ~loc
+            Longident.(Ldot (Lident "GT", sprintf "fix%d" (List.length tdecl.ptype_params)))
+        in
+        let fixe = [%expr fix0 ] in
         Exp.fun_list ~loc
           ~args:(List.map arg_transfrs ~f:(Pat.sprintf ~loc "%s"))
-          [%expr fun t -> fix0 (fun self ->
+          [%expr fun t -> [%e fixe] (fun self ->
             [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" cur_name) @@
               Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc @@
                               make_class_name cur_name) @@
@@ -431,7 +435,7 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
                @ List.map arg_transfrs ~f:(fun s -> Nolabel, [%expr fun () -> [%e Exp.sprintf ~loc "%s" s]])
               )
             ]
-          ) t
+          ) () t
           ]
       )
   )
@@ -448,7 +452,7 @@ let make_shortend_class ~loc ~is_rec mutal_names tdecls =
       ~params:tdecl.ptype_params
       [ Cf.inherit_ ~loc @@ Cl.apply
           (Cl.constr ~loc (Located.lident ~loc stub_name) (List.map ~f:fst tdecl.ptype_params))
-          (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) real_args)
+          (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) @@ (mut_funcs@real_args))
       ]
   )
 
