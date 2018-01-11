@@ -343,14 +343,15 @@ let make_class ~loc tdecl ~is_rec mutal_names =
   in
 
   let is_self_rec t = is_rec &&
-    (match t.ptyp_desc with
+    match t.ptyp_desc with
     | Ptyp_var _ -> false
     | Ptyp_constr ({txt=Lident s}, params)
-      when String.equal s cur_name && List.length params = List.length tdecl.ptype_params &&
-           List.for_all2_exn params tdecl.ptype_params ~f:(fun a (b,_) -> 0=compare_core_type a b)
+      when String.equal s cur_name &&
+           List.length params = List.length tdecl.ptype_params &&
+           List.for_all2_exn params tdecl.ptype_params
+             ~f:(fun a (b,_) -> 0=compare_core_type a b)
       -> is_rec
     | _ -> false
-    )
   in
   let rec do_typ ?with_arg t =
     let app_arg e =
@@ -410,30 +411,24 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         | _ -> failwith "Finish it!"
   in
 
-
   ans @@ visit_typedecl ~loc tdecl
     ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
           | Ptyp_alias (t, aname) ->
-            (* let tvar = Typ.var ~loc as_ in *)
             map_core_type t ~onvar:(fun as_ ->
               if String.equal as_ aname
               then Typ.constr (Located.lident ~loc tdecl.ptype_name.txt)@@
                 List.map tdecl.ptype_params ~f:fst
               else Typ.var ~loc as_
-            ) |> helper
-          | Ptyp_constr (cid, params) ->
-            let inh_params =
-              List.concat_map params ~f:(fun typ ->
-                  [ typ
-                  ; map_core_type typ ~onvar:(fun n -> Typ.var ("i"^n) )
-                  ; map_core_type typ ~onvar:(fun n -> Typ.var ("s"^n) )
-                  ]
-                )
-            in
-            let inh_params = inh_params @ [default_inh; default_syn] in
-
+              ) |> helper
+          | _ -> typ
+        in
+        let typ = helper typ in
+        match typ.ptyp_desc with
+        | Ptyp_alias (_,_) -> assert false
+        | Ptyp_constr (cid, params) ->
+            let inh_params = params in
             let ans args =
               [ Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
@@ -442,11 +437,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                   (nolabelize args)
               ]
             in
-            ans @@ List.map params ~f:do_typ
-          | _ -> assert false
-        in
-        helper typ
-      )
+            let self_arg = [%expr fun () -> [%e do_typ typ]] in
+            ans @@ self_arg :: (List.map params ~f:do_typ)
+        | _ -> assert false
+    )
     ~onvariant:(fun cds ->
       List.map cds ~f:(fun cd ->
         let constr_name = cd.pcd_name.txt in
