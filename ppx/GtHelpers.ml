@@ -45,7 +45,8 @@ module Pat = struct
   let var ?(loc=Location.none) lid = ppat_var ~loc lid
   let of_string ?(loc=Location.none) s = var ~loc (lid ~loc s)
   let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (of_string ~loc) fmt
-  let alias ?(loc=Location.none) p s = ppat_alias ~loc p (lid ~loc s)
+  let alias ?(loc=Location.none) p s   = ppat_alias ~loc p (lid ~loc s)
+  let variant ?(loc=Location.none) l p = ppat_variant ~loc l p
 end
 
 module Exp = struct
@@ -286,6 +287,27 @@ let visit_typedecl ~loc
       match tdecl.ptype_manifest with
       | None -> failwith "abstract types without manifest can't be supported"
       | Some typ -> onmanifest typ
+
+let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel =
+  let k cs = Exp.match_ ~loc what cs in
+  let rs =
+    List.map rows ~f:(function
+        | Rinherit _ -> not_implemented "inherit fields in polyvars"
+        | Rtag (lab, _, _, args) ->
+            let names = List.mapi args
+                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
+                       (n + Char.to_int 'a'))
+            in
+            let lhs = Pat.variant ~loc  lab @@ match args with
+              | [] -> None
+              | _  -> Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names))
+            in
+            case ~guard:None ~lhs
+              ~rhs:(onrow lab @@ List.zip_exn names args)
+
+      )
+  in
+  k rs
 
 let prepare_patt_match ~loc what constructors make_rhs =
   let on_alg cdts =

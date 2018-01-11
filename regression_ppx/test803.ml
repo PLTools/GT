@@ -1,7 +1,5 @@
 open GT
 
-
-
 type t = [ `A | `B ] list
 [@@deriving gt ~gmap ~show ]
 

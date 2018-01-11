@@ -884,7 +884,8 @@ let make_interface_class ~loc root_type =
   let params = List.map ~f:fst root_type.ptype_params in
   (* let sort = root_type *)
   let name = root_type.ptype_name in
-  let manifest = root_type.ptype_manifest in
+  (* let manifest = root_type.ptype_manifest in *)
+
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (if polyvar)
   *)
