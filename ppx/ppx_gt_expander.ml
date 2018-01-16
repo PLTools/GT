@@ -1013,5 +1013,3 @@ let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
   | Recursive, ts      -> do_mutal_types ~loc options ts
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc options false) tdls
-
-

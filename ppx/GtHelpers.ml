@@ -27,6 +27,9 @@ open Ppx_core
 open Ppx_core.Ast_builder.Default
 let (@@) = Caml.(@@)
 
+let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
+let invariantize types = List.map types ~f:(fun x -> x,Asttypes.Invariant)
+
 let lid ?(loc=Location.none) txt = { txt; loc }
 let mknoloc txt = lid txt
 let pexp_pair ?(loc=Location.none) a b = pexp_tuple ~loc [a; b]
@@ -51,6 +54,7 @@ end
 
 module Exp = struct
   let apply ?(loc=Location.none) = pexp_apply ~loc
+  let apply_nolabeled ?(loc=Location.none) e xs = pexp_apply ~loc e (nolabelize xs)
   let apply1 ?(loc=Location.none) ?(label=Nolabel) f arg = apply ~loc f [label,arg]
   let case ?guard lhs rhs = case ~lhs ~rhs ~guard
   let constant ?(loc=Location.none) = pexp_constant ~loc
@@ -186,9 +190,6 @@ let compare_core_type a b =
     (Format.easy_string Pprintast.core_type a)
     (Format.easy_string Pprintast.core_type b)
 
-let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
-let invariantize types = List.map types ~f:(fun x -> x,Asttypes.Invariant)
-
 let make_gt_a_typ ?(loc=Location.none)
     ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself])
     ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
@@ -234,24 +235,6 @@ let params_obj ?(loc=Location.none)
    *)
   let f (t,_) = arr_of_param ~inh ~syn t in
   ptyp_object ~loc (List.map ~f root_type.ptype_params) Asttypes.Closed
-
-(* let migrate =
- *   let open Migrate_parsetree in
- *   Versions.migrate (module OCaml_405) (module OCaml_current) *)
-
-(* let string_of_expression e =
- *   Format.set_margin 1000;
- *   let open Migrate_parsetree in
- *   let ans = Format.asprintf "%a" Pprintast.expression (migrate.Versions.copy_expression e) in
- *   Format.set_margin 80;
- *   ans *)
-
-(* let string_of_core_type e =
- *   Format.set_margin 1000;
- *   let open Migrate_parsetree in
- *   let ans = Format.asprintf "%a" Pprintast.core_type (migrate.Versions.copy_core_type e) in
- *   Format.set_margin 80;
- *   ans *)
 
 let using_type ~(typename: string) root_type =
   let loc = root_type.ptype_loc in
