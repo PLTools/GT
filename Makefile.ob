@@ -2,7 +2,7 @@ PKGNAME=GT
 MKDIR ?= mkdir -vp
 CP    ?= cp
 
-OB=ocamlbuild -use-ocamlfind -plugin-tag "package(ppx_driver.ocamlbuild)" -classic-display \
+OB=ocamlbuild -use-ocamlfind -plugin-tag "package(ocaml-migrate-parsetree-ocamlbuild)" -classic-display \
       -ignore Test025
 ifdef OBV
 OB += -verbose 6

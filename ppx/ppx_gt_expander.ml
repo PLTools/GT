@@ -946,6 +946,23 @@ let make_interface_class ~loc root_type =
                 then Typ.constr (Located.lident ~loc name.txt) params
                 else Typ.var ~loc as_
               ) |> helper
+          | {ptyp_desc=Ptyp_variant (rows,_,_labels)} ->
+              (* rows go to virtual methods. label goes to inherit fields *)
+              let meths =
+                List.map rows ~f:(function
+                | Rinherit _ -> assert false
+                | Rtag (lab,_,_,args)  ->
+                    let methname = sprintf "c_%s" lab in
+                    Cf.method_ ~loc methname @@ Cfk_virtual
+                      (List.fold_right args ~init:[%type: 'syn]
+                         ~f:(Typ.arrow Nolabel)
+                       |> (Typ.arrow Nolabel [%type: 'inh])
+                      )
+                )
+              in
+              (* TODO: implement inherit fields*)
+              ans meths
+          | _ -> failwith "not implemented"
           in
           helper typ
     )
@@ -972,7 +989,7 @@ let make_gcata ~loc root_type =
         )
       )
     ~onmanifest:(fun typ ->
-        let rec do_typ t = match t.ptyp_desc with
+      let rec do_typ t = match t.ptyp_desc with
       | Ptyp_alias (t,_) -> do_typ t
       | Ptyp_constr ({txt},_) ->
           Str.value ~loc Nonrecursive
@@ -981,6 +998,25 @@ let make_gcata ~loc root_type =
                ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
                       map_longident txt ~f:(fun s -> "gcata_"^s) )
             ]
+      | Ptyp_variant (rows,_,maybe_labels) ->
+          (* [%stri let _gcata_poly = 1] *)
+          let ans k =
+            Str.value ~loc Nonrecursive
+              [value_binding ~loc
+                 ~pat:gcata_pat
+                 ~expr:[%expr fun tr inh t -> [%e k] ]
+              ]
+          in
+          ans @@ prepare_patt_match_poly ~loc [%expr t] rows maybe_labels
+            ~onrow:(fun cname  names ->
+              List.fold_left ("inh"::(List.map ~f:fst names))
+                ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cname))
+                ~f:(fun acc arg -> 
+                       Exp.apply ~loc acc [Nolabel, Exp.ident arg]
+                   )
+            )
+            ~onlabel:1
+        
       in
       do_typ typ
     )

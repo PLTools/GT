@@ -17,7 +17,7 @@ let m4_rules ext =
 open Command;;
 
 let () = dispatch (fun hook ->
-  Ppx_driver_ocamlbuild.dispatch hook;
+  Migrate_parsetree_ocamlbuild.dispatch hook;
   match hook with
   | Before_rules -> ()
 

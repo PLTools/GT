@@ -441,6 +441,37 @@ let make_class ~loc tdecl ~is_rec mutal_names =
             in
             let self_arg = do_typ typ in
             ans @@ (self_arg @ (List.concat_map params ~f:do_typ))
+        | Ptyp_variant (rows,_,_) ->
+            (* todo: inherit something *)
+            List.map rows ~f:(function
+            | Rinherit _ -> assert false
+            | Rtag (constr_name,_,_,args) ->
+                let names = List.mapi args
+                    ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
+                           (n + Char.to_int 'a'))
+                in
+
+                Cf.method_concrete ~loc ("c_" ^ constr_name)
+                  [%expr fun () -> [%e
+                    Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
+                    if List.length args = 0
+                    then Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
+                    else
+                      List.fold_left
+                        (List.zip_exn names args)
+                        ~f:(fun acc (name, typ) ->
+                          Exp.apply_nolabeled ~loc acc (do_typ ~with_arg:name typ) )
+                        ~init:[%expr Format.sprintf [%e
+                            let fmt = String.concat ~sep:", " @@ List.map names
+                                ~f:(fun _ -> "%a")
+                            in
+                            Exp.constant ~loc @@  const_string @@
+                            sprintf "`%s(%s)" constr_name fmt
+                      ]]
+
+                  ]]
+
+            )
         | _ -> assert false
     )
     ~onvariant:(fun cds ->
