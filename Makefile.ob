@@ -49,16 +49,18 @@ clean: clean_tests
 REGRES_CASES := #$(shell seq -s \  -w 1 024) $(shell seq -s \  -w 26 028)
 REGRES_CASES := #795intoption #799 798 798gen 796scheme_gen 794camlp5 790showF 791showT #705
 REGRES_CASES := 801 802 803
-$(warning $(REGRES_CASES) )
+#$(warning $(REGRES_CASES) )
 
 define TESTRULES
 ML_FILE_$(1) = $(wildcard regression_ppx/test$(1)*.ml)
 
-NATIVE_$(1) = $$(patsubst %.ml,%.native,$$(ML_FILE_$(1)) )
-#TEST$(1)_NAME := $$(ML_FILE_$(1):regression/test$(1)%.ml=%)
-
-BYTE_TEST_EXECUTABLES += BYTE_$(1)
+NATIVE_$(1) := $$(patsubst %.ml,%.native,$$(ML_FILE_$(1)) )
+#BYTE_TEST_EXECUTABLES += BYTE_$(1)
 NATIVE_TEST_EXECUTABLES += $$(NATIVE_$(1))
+
+TEST$(1)_NAME := $$(ML_FILE_$(1):regression_ppx/test$(1)%.ml=%)
+#$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
+#$$(info $$(NATIVE_TEST_EXECUTABLES)) 
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
 test$(1).native: plugins ppx bundle regression/test$(1).native
@@ -67,19 +69,19 @@ test$(1).byte:   plugins ppx bundle regression/test$(1).byte
 #regression/test$(1).byte: regression/test$(1).ml 
 #	$(OB) -Is src $$@
 
-regression/test$(1).native: $$(ML_FILE_$(1))
+regression/$$(NATIVE_$(1)): $$(ML_FILE_$(1))
 	OCAMLPATH=`pwd`/bundle \
 	$(OB) $$@
 
 run_tests: test_$(1)
 test_$(1):
-	@cd regression_ppx && $(TESTS_ENVIRONMENT) ../test$(1).native; \
+	cd regression_ppx && $(TESTS_ENVIRONMENT) ../$$(notdir $$(NATIVE_$(1))); \
 	if [ $$$$? -ne 0 ] ; then echo "$(1) FAILED"; else echo "$(1) PASSED"; fi
 
 promote_all: promote_$(1)
 promote_test$(1): promote_$(1)
 promote_$(1):
-	./test$(1).native > regression_ppx/orig/test$(1).log
+	./$$(notdir $$(NATIVE_$(1)) ) > regression_ppx/orig/test$(1)$$(TEST$(1)_NAME).log
 
 endef
 $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
@@ -98,8 +100,7 @@ compile_tests: compile_tests_native
 clean_tests:
 	$(RM) -r _build/regression
 
-promote:
-	$(MAKE) -C regression promote TEST=$(TEST)
+promote: promote_all
 
 tests: all compile_tests run_tests
 regression: tests

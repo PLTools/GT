@@ -50,6 +50,7 @@ module Pat = struct
   let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (of_string ~loc) fmt
   let alias ?(loc=Location.none) p s   = ppat_alias ~loc p (lid ~loc s)
   let variant ?(loc=Location.none) l p = ppat_variant ~loc l p
+  let type_ ?(loc=Location.none) lident = ppat_type ~loc lident
 end
 
 module Exp = struct
@@ -271,11 +272,10 @@ let visit_typedecl ~loc
       | None -> failwith "abstract types without manifest can't be supported"
       | Some typ -> onmanifest typ
 
-let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel =
+let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
     List.map rows ~f:(function
-        | Rinherit _ -> not_implemented "inherit fields in polyvars"
         | Rtag (lab, _, _, args) ->
             let names = List.mapi args
                 ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
@@ -287,10 +287,27 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel =
             in
             case ~guard:None ~lhs
               ~rhs:(onrow lab @@ List.zip_exn names args)
+        | Rinherit typ ->
+          match typ.ptyp_desc with
+          | Ptyp_constr({txt;loc},ts) ->
+            let newname = "subj" in
+            let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc txt)) newname
+            in
+            case ~guard:None ~lhs ~rhs:(oninherit ts txt newname)
+          | _ -> failwith "this inherit field isn't supported"
 
       )
   in
-  k rs
+  let ls = match labels with
+    | None -> []
+    | Some ls -> List.map ls ~f:(fun lab ->
+        let newname = "subj" in
+        let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc (Lident lab)) ) newname
+        in
+        case ~guard:None ~lhs ~rhs:(onlabel lab newname)
+      )
+  in
+  k @@ rs@ls
 
 let prepare_patt_match ~loc what constructors make_rhs =
   let on_alg cdts =
@@ -317,3 +334,8 @@ let prepare_patt_match ~loc what constructors make_rhs =
   match constructors with
   | `Algebraic cdts -> on_alg cdts
   | `PolyVar cs -> on_poly cs
+
+let with_constr_typ typ ~ok ~fail =
+  match typ.ptyp_desc with
+  | Ptyp_constr (cid,params) -> ok cid params
+  | _ -> fail ()

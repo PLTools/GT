@@ -389,7 +389,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                            (Exp.constant ~loc @@ const_string fmt))
                         (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
                 )
-                ~onlabel:1
+                ~onlabel:(fun _ _ -> [%expr 1])
+                ~oninherit:(fun typs cident varname ->
+                    [%expr 1]
+                  )
                 :: []
             | None ->
               let k e = [%expr fun () foo -> [%e e]] :: [] in
@@ -406,9 +409,11 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                            (Exp.constant ~loc @@ const_string fmt))
                         (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
 
-                )
-                ~onlabel:1
-
+                  )
+                ~onlabel:(fun _ _ -> [%expr 1])
+                ~oninherit:(fun typs cident varname ->
+                    [%expr 1]
+                  )
           end
         | _ -> failwith "Finish it!"
   in
@@ -444,7 +449,19 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         | Ptyp_variant (rows,_,_) ->
             (* todo: inherit something *)
             List.map rows ~f:(function
-            | Rinherit _ -> assert false
+            | Rinherit typ ->
+                with_constr_typ typ
+                  ~fail:(fun () -> failwith "type is not a constructor")
+                  ~ok:(fun cid params ->
+                      let args = List.concat_map params ~f:do_typ in
+                      let inh_params = params in
+                      Cf.inherit_ ~loc @@ Cl.apply
+                        (Cl.constr
+                           ({cid with txt = map_longident cid.txt ~f:((^)"show_")})
+                           inh_params
+                        )
+                        (nolabelize ([%expr _fself]::args))
+                    )
             | Rtag (constr_name,_,_,args) ->
                 let names = List.mapi args
                     ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
