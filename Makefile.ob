@@ -48,7 +48,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #$(shell seq -s \  -w 1 024) $(shell seq -s \  -w 26 028)
 REGRES_CASES := #795intoption #799 798 798gen 796scheme_gen 794camlp5 790showF 791showT #705
-REGRES_CASES := 801 802 803
+REGRES_CASES := 801 802 803 804
 #$(warning $(REGRES_CASES) )
 
 define TESTRULES
@@ -75,7 +75,7 @@ regression/$$(NATIVE_$(1)): $$(ML_FILE_$(1))
 
 run_tests: test_$(1)
 test_$(1):
-	cd regression_ppx && $(TESTS_ENVIRONMENT) ../$$(notdir $$(NATIVE_$(1))); \
+	@cd regression_ppx && $(TESTS_ENVIRONMENT) ../$$(notdir $$(NATIVE_$(1))); \
 	if [ $$$$? -ne 0 ] ; then echo "$(1) FAILED"; else echo "$(1) PASSED"; fi
 
 promote_all: promote_$(1)
