@@ -112,7 +112,7 @@ let make_interface_class ~loc root_type =
 
 let make_gcata ~loc root_type =
   let gcata_pat =
-    Pat.var (mknoloc @@
+     Pat.var (mknoloc @@
              sprintf "gcata_%s" root_type.ptype_name.txt)
   in
   visit_typedecl ~loc root_type

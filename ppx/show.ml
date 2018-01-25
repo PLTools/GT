@@ -27,6 +27,8 @@ let default_syn = let loc = Location.none in [%type: string]
 let make_class ~loc tdecl ~is_rec mutal_names =
   let cur_name = tdecl.ptype_name.txt in
   (* TODO: support is_rec to handle `type nonrec t = option t` *)
+
+  let self_arg_name = "_fself" in
   let ans fields =
     (* inherit class_t and prepare to put other members *)
     let name = sprintf "%s_%s%s" plugin_name cur_name
@@ -39,7 +41,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       ~wrap:(fun body ->
         (* constructor arguments are *)
         let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
-                    [Pat.(alias ~loc (sprintf "show_%s" cur_name) "_fself")] @
+                    [Pat.(alias ~loc (sprintf "show_%s" cur_name) self_arg_name)] @
                     map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
         in
         Cl.fun_list names body
@@ -91,6 +93,13 @@ let make_class ~loc tdecl ~is_rec mutal_names =
              map_longident ~f:((^)"show_") txt)
             (List.concat_map params ~f:do_typ |> nolabelize)
         | Ptyp_variant (rows, _, maybe_labels) -> begin
+            let oninherit  = fun typs cident varname ->
+                    Exp.apply_nolabeled ~loc
+                      Exp.(ident_of_long ~loc @@ mknoloc @@
+                           map_longident cident ~f:((^)"show_"))
+                      ((List.concat_map typs ~f:(do_typ)) @
+                       [[%expr ()]; Exp.ident ~loc varname])
+            in
             match with_arg with
             | Some s ->
               prepare_patt_match_poly ~loc
@@ -98,7 +107,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                 ~onrow:(fun lab -> function
                     | [] -> Exp.constant @@ const_string ("`"^lab)
                     | args ->
-                      let fmt = List.map args ~f:(fun _ -> "%s") in
+                      let fmt = List.map args ~f:(fun _ -> "%a") in
                       let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
                       Exp.apply_nolabeled ~loc
                         (Exp.apply1 ~loc [%expr Printf.sprintf]
@@ -106,9 +115,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                         (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
                 )
                 ~onlabel:(fun _ _ -> [%expr 1])
-                ~oninherit:(fun typs cident varname ->
-                    [%expr 1]
-                  )
+                ~oninherit
                 :: []
             | None ->
               let k e = [%expr fun () foo -> [%e e]] :: [] in
@@ -117,7 +124,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                 ~onrow:(fun lab -> function
                     | [] -> Exp.constant @@ const_string ("`"^lab)
                     | args ->
-                      let fmt = List.map args ~f:(fun _ -> "%s") in
+                      let fmt = List.map args ~f:(fun _ -> "%a") in
                       let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
 
                       Exp.apply_nolabeled ~loc
@@ -127,9 +134,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
 
                   )
                 ~onlabel:(fun _ _ -> [%expr 1])
-                ~oninherit:(fun typs cident varname ->
-                    [%expr 1]
-                  )
+                ~oninherit
           end
         | _ -> failwith "Finish it!"
   in
@@ -160,8 +165,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                   (nolabelize args)
               ]
             in
-            let self_arg = do_typ typ in
-            ans @@ (self_arg @ (List.concat_map params ~f:do_typ))
+            (* for typ aliases we can cheat because first argument of constructor of type
+               on rhs is self transformer function *)
+            (* let self_arg = do_typ typ in *)
+            ans @@ (Exp.sprintf ~loc "%s" self_arg_name) :: (List.concat_map params ~f:do_typ)
         | Ptyp_variant (rows,_,_) ->
             (* todo: inherit something *)
             List.map rows ~f:(function
