@@ -45,8 +45,8 @@ module Pat = struct
     | _ -> ppat_construct ~loc lident pat
 
   let tuple ?(loc=Location.none) = ppat_tuple ~loc
-  let var ?(loc=Location.none) lid = ppat_var ~loc lid
-  let of_string ?(loc=Location.none) s = var ~loc (lid ~loc s)
+  let var ?(loc=Location.none) s = ppat_var ~loc (Located.mk ~loc s)
+  let of_string ?(loc=Location.none) s = var ~loc s
   let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (of_string ~loc) fmt
   let alias ?(loc=Location.none) p s   = ppat_alias ~loc p (lid ~loc s)
   let variant ?(loc=Location.none) l p = ppat_variant ~loc l p
@@ -283,7 +283,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
             in
             let lhs = Pat.variant ~loc  lab @@ match args with
               | [] -> None
-              | _  -> Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names))
+              | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
             in
             case ~guard:None ~lhs
               ~rhs:(onrow lab @@ List.zip_exn names args)
@@ -322,7 +322,7 @@ let prepare_patt_match ~loc what constructors make_rhs =
             in
             case ~guard:None
               ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
-                    Some (Pat.tuple (List.map ~f:(fun n -> Pat.var (mknoloc n))names)
+                    Some (Pat.tuple (List.map ~f:(Pat.var ~loc) names)
                          ))
               ~rhs:(make_rhs cd names)
 
@@ -339,3 +339,7 @@ let with_constr_typ typ ~ok ~fail =
   match typ.ptyp_desc with
   | Ptyp_constr (cid,params) -> ok cid params
   | _ -> fail ()
+
+let constr_of_tuple ?(loc=Location.none) ts =
+  let new_lident = Ldot (Lident "GT", Printf.sprintf "tuple%d" @@ List.length ts) in
+  Typ.constr ~loc (Located.mk ~loc new_lident) ts

@@ -596,7 +596,17 @@ let foldr   t = t.plugins#foldr
 let eq      t = t.plugins#eq
 let compare t = t.plugins#compare
 
-let show_tuple2 f g p = show pair f g p
+class virtual ['a,'ia,'sa,'b,'ib,'sb,'inh,'syn] class_tuple2 = object
+  method virtual  c_Pair : 'inh -> 'a -> 'b -> 'syn
+end
+let gcata_tuple2 tr inh (a,b) = tr#c_Pair inh a b
+class ['a, 'b] show_tuple2 _self fa fb =
+  object
+    inherit ['a, unit, string, 'b, unit, string, unit, string] class_tuple2
+    method c_Pair () x y = Printf.sprintf "(%s,%s)" (fa x) (fb y)
+  end
+
+let show_tuple2 f g () = (new show_tuple2 (fun _ -> assert false) f g)#c_Pair ()
 
 let fix0 f t =
   let knot = ref (fun _ -> assert false) in

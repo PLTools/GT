@@ -41,7 +41,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       ~wrap:(fun body ->
         (* constructor arguments are *)
         let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
-                    [Pat.(alias ~loc (sprintf "show_%s" cur_name) self_arg_name)] @
+                    [Pat.var ~loc self_arg_name] @
                     map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
         in
         Cl.fun_list names body
@@ -86,6 +86,8 @@ let make_class ~loc tdecl ~is_rec mutal_names =
           Exp.apply
             (Exp.sprintf "show_tuple%d" (List.length params))
             (List.concat_map params ~f:do_typ |> nolabelize)
+        | Ptyp_constr (_,_) when is_self_rec t ->
+          app_arg [%expr _fself ]
         | Ptyp_constr ({txt}, params) ->
           app_arg @@
           Exp.apply
@@ -150,12 +152,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                 List.map tdecl.ptype_params ~f:fst
               else Typ.var ~loc as_
               ) |> helper
-          | _ -> typ
-        in
-        let typ = helper typ in
-        match typ.ptyp_desc with
-        | Ptyp_alias (_,_) -> assert false
-        | Ptyp_constr (cid, params) ->
+          | Ptyp_constr (cid, params) ->
             let inh_params = params in
             let ans args =
               [ Cf.inherit_ ~loc @@ Cl.apply
@@ -169,7 +166,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                on rhs is self transformer function *)
             (* let self_arg = do_typ typ in *)
             ans @@ (Exp.sprintf ~loc "%s" self_arg_name) :: (List.concat_map params ~f:do_typ)
-        | Ptyp_variant (rows,_,_) ->
+          | Ptyp_tuple ts ->
+            (* let's say we have predefined aliases for now *)
+            helper @@ constr_of_tuple ~loc ts
+          | Ptyp_variant (rows,_,_) ->
             (* todo: inherit something *)
             List.map rows ~f:(function
             | Rinherit typ ->
@@ -186,10 +186,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                         (nolabelize ([%expr _fself]::args))
                     )
             | Rtag (constr_name,_,_,args) ->
-                let names = List.mapi args
-                    ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
-                           (n + Char.to_int 'a'))
-                in
+                let names = make_new_names (List.length args) in
 
                 Cf.method_concrete ~loc ("c_" ^ constr_name)
                   [%expr fun () -> [%e
@@ -213,6 +210,8 @@ let make_class ~loc tdecl ~is_rec mutal_names =
 
             )
         | _ -> assert false
+        in
+        helper typ
     )
     ~onvariant:(fun cds ->
       List.map cds ~f:(fun cd ->
@@ -267,9 +266,10 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
             [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" cur_name) @@
               Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc @@
                               make_class_name cur_name) @@
-              (List.map others ~f:(fun name -> Nolabel,[%expr [%e Exp.sprintf ~loc "show_%s" name]])
-               @ [Nolabel, [%expr self] ]
-               @ List.map arg_transfrs ~f:(fun s -> Nolabel,  Exp.sprintf ~loc "%s" s)
+              (nolabelize @@
+               List.map others ~f:(Exp.sprintf ~loc "show_%s")
+               @ [[%expr self] ]
+               @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
               )
             ]
           ) () t
@@ -294,17 +294,16 @@ let make_shortend_class ~loc ~is_rec mutal_names tdecls =
   )
 
 let do_single ~loc ~is_rec tdecl =
-  [ make_class ~loc ~is_rec:true tdecl []
-  ] @
-  [make_trans_functions ~loc ~is_rec:true [] [tdecl]]
+  [ make_class ~loc ~is_rec tdecl []
+  ; make_trans_functions ~loc ~is_rec [] [tdecl]
+  ]
 
 let do_mutals ~loc ~is_rec tdecls =
   (* for mutal recursion we need to generate two classes and one function *)
   let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
-  List.concat_map tdecls ~f:(fun tdecl ->
-    [ make_class ~loc ~is_rec:true tdecl @@
+  List.map tdecls ~f:(fun tdecl ->
+    make_class ~loc ~is_rec:true tdecl @@
       List.filter mut_names ~f:(String.(<>) tdecl.ptype_name.txt)
-    ]
   ) @
-  [make_trans_functions ~loc ~is_rec:true mut_names tdecls] @
+  (make_trans_functions ~loc ~is_rec:true mut_names tdecls) ::
   (make_shortend_class  ~loc ~is_rec:true mut_names tdecls)

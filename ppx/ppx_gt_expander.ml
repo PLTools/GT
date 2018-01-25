@@ -71,21 +71,27 @@ let make_interface_class ~loc root_type =
           in
 
           let rec helper typ = match typ with
-          | {ptyp_desc=Ptyp_var name} -> not_implemented "antiphantom types"
           | [%type: string]
           | [%type: char]
           | [%type: int]  ->
-              not_implemented "%s " Caml.__FILE__ (* Caml.__LINE__ *)
-          | {ptyp_desc=Ptyp_constr ({txt;loc}, params)} ->
-              (* a type alias on toplevel *)
-              ans @@ wrap txt params
-          | {ptyp_desc=Ptyp_alias (typ, new_name)} ->
+            not_implemented "%s " Caml.__FILE__ (* Caml.__LINE__ *)
+          | _ -> match typ.ptyp_desc with
+          | Ptyp_var name -> not_implemented "antiphantom types"
+          | Ptyp_constr ({txt;loc}, params) ->
+            (* a type alias on toplevel *)
+            ans @@ wrap txt params
+          | Ptyp_tuple ts ->
+            (* let's say we have predefined aliases for now *)
+            let loc = typ.ptyp_loc in
+            let new_lident = Ldot (Lident "GT", sprintf "tuple%d" @@ List.length ts) in
+            helper @@ Typ.constr ~loc (Located.mk ~loc new_lident) ts
+          | Ptyp_alias (typ, new_name) ->
               map_core_type typ ~onvar:(fun as_ ->
                 if String.equal as_ new_name
                 then Typ.constr (Located.lident ~loc name.txt) params
                 else Typ.var ~loc as_
               ) |> helper
-          | {ptyp_desc=Ptyp_variant (rows,_,labels)} ->
+          | Ptyp_variant (rows,_,labels) ->
               (* rows go to virtual methods. label goes to inherit fields *)
               let meths =
                 List.concat_map rows ~f:(function
@@ -112,18 +118,17 @@ let make_interface_class ~loc root_type =
 
 let make_gcata ~loc root_type =
   let gcata_pat =
-     Pat.var (mknoloc @@
-             sprintf "gcata_%s" root_type.ptype_name.txt)
+     Pat.var ~loc (sprintf "gcata_%s" root_type.ptype_name.txt)
+  in
+  let ans k =
+    Str.value ~loc Nonrecursive
+      [value_binding ~loc
+         ~pat:gcata_pat
+         ~expr:[%expr fun tr inh t -> [%e k] ]
+      ]
   in
   visit_typedecl ~loc root_type
     ~onvariant:(fun cds ->
-      let ans k =
-        Str.value ~loc Nonrecursive
-          [value_binding ~loc
-             ~pat:gcata_pat
-             ~expr:[%expr fun tr inh t -> [%e k] ]
-          ]
-      in
       ans @@ prepare_patt_match ~loc [%expr t] (`Algebraic cds) (fun cd names ->
           List.fold_left ("inh"::names)
             ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cd.pcd_name.txt))
@@ -140,14 +145,11 @@ let make_gcata ~loc root_type =
                ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
                       map_longident txt ~f:(fun s -> "gcata_"^s) )
             ]
+      | Ptyp_tuple ts ->
+        (* let's say we have predefined aliases for now *)
+        do_typ @@ constr_of_tuple ~loc ts
+
       | Ptyp_variant (rows,_,maybe_labels) ->
-          let ans k =
-            Str.value ~loc Nonrecursive
-              [value_binding ~loc
-                 ~pat:gcata_pat
-                 ~expr:[%expr fun tr inh t -> [%e k] ]
-              ]
-          in
           ans @@ prepare_patt_match_poly ~loc [%expr t] rows maybe_labels
             ~onrow:(fun cname  names ->
               List.fold_left ("inh"::(List.map ~f:fst names))
@@ -156,9 +158,7 @@ let make_gcata ~loc root_type =
                        Exp.apply ~loc acc [Nolabel, Exp.ident arg]
                    )
             )
-            ~onlabel:(fun label patname ->
-                Exp.apply_nolabeled ~loc (Exp.sprintf "gcata_%s" label) []
-              )
+            ~onlabel:(fun label patname -> failwith "not implemented")
             ~oninherit:(fun params cident patname ->
                 Exp.apply_nolabeled
                   (Exp.ident_of_long ~loc  @@
@@ -176,7 +176,7 @@ let do_typ ~loc options is_rec root_type =
   let gcata = make_gcata ~loc root_type in
   intf_class :: gcata ::
   (if options.gt_show
-  then Show.do_single ~loc ~is_rec:true root_type
+  then Show.do_single ~loc ~is_rec root_type
   else [])
 
 
