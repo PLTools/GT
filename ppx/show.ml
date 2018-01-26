@@ -50,6 +50,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       [ let inh_params = prepare_param_triples ~loc
             ~inh:(fun ~loc _ -> default_inh)
             ~syn:(fun ~loc _ -> default_syn)
+            ~default_syn
             (List.map ~f:fst tdecl.ptype_params)
         in
         Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
@@ -102,20 +103,21 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                       ((List.concat_map typs ~f:(do_typ)) @
                        [[%expr ()]; Exp.ident ~loc varname])
             in
+            let onrow = fun lab -> function
+            | [] -> Exp.constant @@ const_string ("`"^lab)
+            | args ->
+                let fmt = List.map args ~f:(fun _ -> "%a") in
+                let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
+                Exp.apply_nolabeled ~loc
+                  (Exp.apply1 ~loc [%expr Printf.sprintf]
+                     (Exp.constant ~loc @@ const_string fmt))
+                  (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
+            in
             match with_arg with
             | Some s ->
               prepare_patt_match_poly ~loc
                 (Exp.sprintf ~loc "%s" s) rows maybe_labels
-                ~onrow:(fun lab -> function
-                    | [] -> Exp.constant @@ const_string ("`"^lab)
-                    | args ->
-                      let fmt = List.map args ~f:(fun _ -> "%a") in
-                      let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
-                      Exp.apply_nolabeled ~loc
-                        (Exp.apply1 ~loc [%expr Printf.sprintf]
-                           (Exp.constant ~loc @@ const_string fmt))
-                        (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
-                )
+                ~onrow
                 ~onlabel:(fun _ _ -> [%expr 1])
                 ~oninherit
                 :: []
@@ -123,18 +125,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
               let k e = [%expr fun () foo -> [%e e]] :: [] in
               k @@ prepare_patt_match_poly ~loc
                 (Exp.sprintf ~loc "foo") rows maybe_labels
-                ~onrow:(fun lab -> function
-                    | [] -> Exp.constant @@ const_string ("`"^lab)
-                    | args ->
-                      let fmt = List.map args ~f:(fun _ -> "%a") in
-                      let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
-
-                      Exp.apply_nolabeled ~loc
-                        (Exp.apply1 ~loc [%expr Printf.sprintf]
-                           (Exp.constant ~loc @@ const_string fmt))
-                        (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
-
-                  )
+                ~onrow
                 ~onlabel:(fun _ _ -> [%expr 1])
                 ~oninherit
           end

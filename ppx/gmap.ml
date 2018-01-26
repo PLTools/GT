@@ -17,89 +17,26 @@ open Ppx_core.Ast_builder.Default
 
 let plugin_name = "gmap"
 
-(*
-let expr_of_arg ?(loc=Location.none) reprname typ root_type =
-  let rec helper ?(loc=Location.none) ?(toplevel=false) =
-   let maybe_apply e =
-     if toplevel then [%expr [%e e] [%e Exp.ident reprname ] ]
-     else e
-   in
-  function
-  | x when are_the_same x root_type ->
-   if toplevel
-   then [%expr GT.([%e Exp.(field ~loc (ident reprname) (Located.lident ~loc "fx")) ]) () ]
-   else [%expr GT.transform [%e Exp.ident root_type.ptype_name.txt] subj.GT.t#a this () ]
-  | {ptyp_desc=Ptyp_var alpha; _} ->
-    [%expr [%e Exp.(send [%expr subj.GT.t] alpha) ] ]
-  | [%type: int]
-  | [%type: GT.int] ->
-    maybe_apply [%expr GT.lift GT.int.GT.plugins#gmap () ]
-  | [%type: string]
-  | [%type: GT.string] ->
-    maybe_apply [%expr GT.transform GT.string (new GT.gmap_string_t) () ]
-  | [%type: [%t? t] GT.list]
-  | [%type: [%t? t] list] ->
-    maybe_apply [%expr GT.lift (GT.list.GT.plugins#gmap [%e helper t]) () ]
-  | {ptyp_desc=Ptyp_constr ({txt=Lident cname;_},
-                           [typ_arg1]); }
-   ->
-   maybe_apply
-     [%expr  GT.transform
-               [%e Exp.ident ~loc cname]
-               [%e helper typ_arg1 ]
-               [%e Exp.new_ @@ Located.lident ~loc (sprintf "gmap_%s_t" cname) ]
-               ()
-     ]
-  | _ ->
-   [%expr [%e Exp.(field (ident reprname) (Located.lident ~loc "GT.fx")) ] ]
-  in
-
-  match typ with
-  | {ptyp_desc=Ptyp_var _alpha; _} ->
-    [%expr [%e Exp.(field (ident  reprname) (Located.lident ~loc "GT.fx")) ] () ]
-  | _ -> helper ~loc ~toplevel:true typ
-         *)
-
-
-(* let extra_params root_type =
- *   List.map root_type.ptype_params ~f:(fun (typ,v) ->
- *     match typ.ptyp_desc with
- *     | Ptyp_var name -> (Typ.var @@ "s" ^ name), v
- *     | _ -> assert false
- *     ) *)
-
-
-(* let inh  ?(loc=Location.none) _ = [%type: unit]
- *
- * let constructor root_type constr =
- *   let loc = root_type.ptype_loc in
- *   let name = constr.pcd_name in
- *   match constr.pcd_args with
- *   | Pcstr_tuple arg_types ->
- *     let arg_names = List.mapi (fun n _ -> sprintf "p%d" n) arg_types in
- *     let body =
- *       match List.combine arg_names arg_types with
- *       | [] -> Exp.construct (Located.lident ~loc name.txt) None
- *       | [(argn, argt)] -> Exp.construct (Located.lident ~loc name.txt) @@ Some (expr_of_arg argn argt root_type)
- *       | args ->
- *          let xs = List.map (fun (argn,argt) -> expr_of_arg argn argt root_type) args in
- *          Exp.construct (Located.lident ~loc name.txt) @@ Some (Exp.tuple ~loc xs)
- *     in
- *     let e =
- *       let pats = ("inh"::"subj"::arg_names) in
- *       List.fold_right pats ~init:body
- *         ~f:(fun name acc -> Exp.fun_ Nolabel None (Pat.var @@ mknoloc name) acc)
- *     in
- *     Cf.method_ ("c_" ^ name.txt) Public (Cfk_concrete (Fresh, e))
- *   | _ -> failwith "Non-tuple constructor arguments are not supported" *)
-
-
 let default_inh = let loc = Location.none in [%type: unit]
 let default_syn s = let loc = Location.none in Typ.var ~loc @@ "s" ^ s
+
+let hack_params ?(loc=Location.none) ps =
+  let param_names = map_type_param_names ps ~f:id in
+  let rez_names = List.map param_names ~f:(fun name -> name ^ "_2") in
+  let name_migrations = List.zip_exn param_names rez_names in
+  let assoc = List.Assoc.find_exn ~equal:String.equal name_migrations in
+  let blownup_params = List.concat_map param_names
+      ~f:(fun s1 ->
+        [Typ.var ~loc s1; Typ.var ~loc @@ assoc s1 ]
+      )
+  in
+  (param_names, rez_names, assoc, blownup_params)
 
 let make_class ~loc tdecl ~is_rec mutal_names =
   let cur_name = tdecl.ptype_name.txt in
   (* TODO: support is_rec to handle `type nonrec t = option t` *)
+
+  let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
 
   let self_arg_name = "_fself" in
   let ans fields =
@@ -110,7 +47,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
     Str.class_single ~loc
       ~name
       ~virt:Concrete
-      ~params:tdecl.ptype_params
+      ~params:(invariantize blownup_params)
       ~wrap:(fun body ->
         (* constructor arguments are *)
         let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
@@ -122,7 +59,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       @@
       [ let inh_params = prepare_param_triples ~loc
             ~inh:(fun ~loc _ -> default_inh)
-            ~syn:(fun ~loc   -> default_syn)
+            ~syn:(fun ~loc s -> Typ.var ~loc @@ find_param s)
+            ~default_syn:(Typ.constr ~loc (Located.lident ~loc cur_name) @@
+                          List.map rez_names ~f:(Typ.var ~loc)
+                         )
             (List.map ~f:fst tdecl.ptype_params)
         in
         Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
@@ -145,13 +85,13 @@ let make_class ~loc tdecl ~is_rec mutal_names =
     (* TODO: if with_arg we need to apply result to arg else return result as it is *)
     let app_arg e =
       match with_arg with
-      | Some x -> [e; Exp.ident x]
+      | Some x -> [Exp.apply_nolabeled ~loc e [ [%expr ()]; Exp.ident ~loc x] ]
       | None -> [e]
     in
     if is_self_rec t then app_arg [%expr _fself ]
     else
       match t with
-      | [%type: int]    -> app_arg [%expr fun () -> string_of_int ]
+      | [%type: int]    (* -> app_arg [%expr fun > string_of_int ] *)
       | [%type: string] -> app_arg [%expr fun () x -> x ]
       | t -> match t.ptyp_desc with
         | Ptyp_var name ->
@@ -159,15 +99,15 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         | Ptyp_tuple params ->
           app_arg @@
           Exp.apply
-            (Exp.sprintf "show_tuple%d" (List.length params))
+            (Exp.sprintf "gmap_tuple%d" (List.length params))
             (List.concat_map params ~f:do_typ |> nolabelize)
         | Ptyp_constr (_,_) when is_self_rec t ->
-          app_arg [%expr _fself ]
+          app_arg [%expr _fself]
         | Ptyp_constr ({txt}, params) ->
           app_arg @@
           Exp.apply
             (Exp.ident_of_long @@ mknoloc @@
-             map_longident ~f:((^)"show_") txt)
+             map_longident ~f:((^)"gmap_") txt)
             (List.concat_map params ~f:do_typ |> nolabelize)
         | Ptyp_variant (rows, _, maybe_labels) -> begin
             let oninherit  = fun typs cident varname ->
@@ -177,20 +117,18 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                       ((List.concat_map typs ~f:(do_typ)) @
                        [[%expr ()]; Exp.ident ~loc varname])
             in
+            let onrow = fun lab -> function
+            | [] -> Exp.variant ~loc lab None
+            | args ->
+                Exp.variant ~loc lab @@ Option.some @@ Exp.tuple ~loc @@
+                List.concat_map args ~f:(fun (name,t) ->
+                  do_typ ~with_arg:name t)
+            in
             match with_arg with
             | Some s ->
               prepare_patt_match_poly ~loc
                 (Exp.sprintf ~loc "%s" s) rows maybe_labels
-                ~onrow:(fun lab -> function
-                    | [] -> Exp.constant @@ const_string ("`"^lab)
-                    | args ->
-                      let fmt = List.map args ~f:(fun _ -> "%a") in
-                      let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
-                      Exp.apply_nolabeled ~loc
-                        (Exp.apply1 ~loc [%expr Printf.sprintf]
-                           (Exp.constant ~loc @@ const_string fmt))
-                        (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
-                )
+                ~onrow
                 ~onlabel:(fun _ _ -> [%expr 1])
                 ~oninherit
                 :: []
@@ -198,18 +136,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
               let k e = [%expr fun () foo -> [%e e]] :: [] in
               k @@ prepare_patt_match_poly ~loc
                 (Exp.sprintf ~loc "foo") rows maybe_labels
-                ~onrow:(fun lab -> function
-                    | [] -> Exp.constant @@ const_string ("`"^lab)
-                    | args ->
-                      let fmt = List.map args ~f:(fun _ -> "%a") in
-                      let fmt = sprintf "`%s (%s)" lab (String.concat ~sep:"," fmt) in
-
-                      Exp.apply_nolabeled ~loc
-                        (Exp.apply1 ~loc [%expr Printf.sprintf]
-                           (Exp.constant ~loc @@ const_string fmt))
-                        (List.concat_map args ~f:(fun (name,t) -> do_typ ~with_arg:name t))
-
-                  )
+                ~onrow
                 ~onlabel:(fun _ _ -> [%expr 1])
                 ~oninherit
           end
@@ -228,11 +155,17 @@ let make_class ~loc tdecl ~is_rec mutal_names =
               else Typ.var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
-            let inh_params = params in
-            let ans args =
+              let inh_params =
+                List.concat_map params ~f:(fun typ ->
+                  [ typ; map_core_type typ ~onvar:(fun s ->
+                      Typ.var ~loc @@ find_param s)
+                  ]
+                )
+              in
+              let ans args =
               [ Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
-                     ({cid with txt = map_longident cid.txt ~f:((^)"map_")})
+                     ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
                      inh_params)
                   (nolabelize args)
               ]
@@ -251,34 +184,44 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                   ~fail:(fun () -> failwith "type is not a constructor")
                   ~ok:(fun cid params ->
                       let args = List.concat_map params ~f:do_typ in
-                      let inh_params = params in
+                      let inh_params = blownup_params in
                       Cf.inherit_ ~loc @@ Cl.apply
                         (Cl.constr
-                           ({cid with txt = map_longident cid.txt ~f:((^)"show_")})
+                           ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
                            inh_params
                         )
                         (nolabelize ([%expr _fself]::args))
                     )
-            | Rtag (constr_name,_,_,args) ->
-                let names = make_new_names (List.length args) in
+            | Rtag (constr_name,_,_,ts) ->
+                let names = make_new_names (List.length ts) in
 
                 Cf.method_concrete ~loc ("c_" ^ constr_name)
                   [%expr fun () -> [%e
                     Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-                    if List.length args = 0
-                    then Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
-                    else
-                      List.fold_left
-                        (List.zip_exn names args)
-                        ~f:(fun acc (name, typ) ->
-                          Exp.apply_nolabeled ~loc acc (do_typ ~with_arg:name typ) )
-                        ~init:[%expr Format.sprintf [%e
-                            let fmt = String.concat ~sep:", " @@ List.map names
-                                ~f:(fun _ -> "%a")
-                            in
-                            Exp.constant ~loc @@  const_string @@
-                            sprintf "`%s(%s)" constr_name fmt
-                      ]]
+                    let ctuple =
+                      if List.length ts = 0
+                      then None
+                      else Some (Exp.tuple ~loc @@
+                                 List.concat_map (List.zip_exn names ts)
+                                   ~f:(fun (name, typ) -> do_typ ~with_arg:name typ )
+                                )
+                    in
+                    Exp.variant ~loc constr_name ctuple
+
+                    (* if List.length args = 0
+                     * then Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
+                     * else
+                     *   List.fold_left
+                     *     (List.zip_exn names args)
+                     *     ~f:(fun acc (name, typ) ->
+                     *       Exp.apply_nolabeled ~loc acc (do_typ ~with_arg:name typ) )
+                     *     ~init:[%expr Format.sprintf [%e
+                     *         let fmt = String.concat ~sep:", " @@ List.map names
+                     *             ~f:(fun _ -> "%a")
+                     *         in
+                     *         Exp.constant ~loc @@  const_string @@
+                     *         sprintf "`%s(%s)" constr_name fmt
+                     *   ]] *)
 
                   ]]
 
@@ -333,7 +276,7 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
               Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc @@
                               make_class_name cur_name) @@
               (nolabelize @@
-               List.map others ~f:(Exp.sprintf ~loc "map_%s")
+               List.map others ~f:(Exp.sprintf ~loc "gmap_%s")
                @ [[%expr self] ]
                @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
               )
@@ -350,11 +293,13 @@ let make_shortend_class ~loc ~is_rec mutal_names tdecls =
     let stub_name = class_name ^ "_stub" in
     let mut_funcs = List.map ~f:((^)"gmap_") mutal_names in
     let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
+    let param_names, _, find_param, blownup_params = hack_params tdecl.ptype_params in
     Str.single_class ~loc ~name:class_name
       ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
-      ~params:tdecl.ptype_params
+      ~params:(invariantize @@ blownup_params)
+      (* ~params:tdecl.ptype_params *)
       [ Cf.inherit_ ~loc @@ Cl.apply
-          (Cl.constr ~loc (Located.lident ~loc stub_name) (List.map ~f:fst tdecl.ptype_params))
+          (Cl.constr ~loc (Located.lident ~loc stub_name) blownup_params)
           (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) @@ (mut_funcs@real_args))
       ]
   )

@@ -60,6 +60,7 @@ module Exp = struct
   let case ?guard lhs rhs = case ~lhs ~rhs ~guard
   let constant ?(loc=Location.none) = pexp_constant ~loc
   let construct ?(loc=Location.none) = pexp_construct ~loc
+  let variant ?(loc=Location.none) e ts = pexp_variant ~loc e ts
 
   let field ?(loc=Location.none) =
     pexp_field ~loc
