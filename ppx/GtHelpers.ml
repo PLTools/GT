@@ -343,3 +343,6 @@ let with_constr_typ typ ~ok ~fail =
 let constr_of_tuple ?(loc=Location.none) ts =
   let new_lident = Ldot (Lident "GT", Printf.sprintf "tuple%d" @@ List.length ts) in
   Typ.constr ~loc (Located.mk ~loc new_lident) ts
+
+let make_new_names n =
+  List.init n ~f:(fun n ->  Char.to_string @@ Char.of_int_exn (n + Char.to_int 'a'))
