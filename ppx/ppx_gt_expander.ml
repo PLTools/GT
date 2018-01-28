@@ -171,25 +171,47 @@ let make_gcata ~loc root_type =
       do_typ typ
     )
 
+let make_heading ~loc tdecl =
+  print_endline "make heading";
+  visit_typedecl ~loc tdecl
+    ~onvariant:(fun _ -> [])
+    ~onmanifest:(fun typ -> match typ.ptyp_desc with
+    | Ptyp_variant (fields,_,labels) ->
+        [ Str.type_ ~loc Nonrecursive
+            [ let opened_t = Typ.variant ~loc fields Open labels in
+              let self_t = [%type: 'self] in
+              type_declaration ~loc
+                ~name:(Located.map (sprintf "%s_ext") tdecl.ptype_name)
+                ~params:((self_t,Invariant) :: tdecl.ptype_params)
+                ~manifest:(Some self_t)
+                ~private_:Public
+                ~kind:tdecl.ptype_kind
+                ~cstrs:[(self_t,opened_t,loc)]
+            ]
+        ]
+    | _ -> []
+    )
+
 let do_typ ~loc options is_rec root_type =
   let intf_class = make_interface_class ~loc root_type in
   let gcata = make_gcata ~loc root_type in
-  intf_class :: gcata ::
-  (if options.gt_show
-  then Show.do_single ~loc ~is_rec root_type
-  else []) @
-  (if options.gt_gmap
-  then Gmap.do_single ~loc ~is_rec root_type
-  else [])
-
+  List.concat
+    [ make_heading ~loc root_type
+    ; [intf_class; gcata]
+    ; if options.gt_show
+      then Show.do_single ~loc ~is_rec root_type
+      else []
+    ; if options.gt_gmap
+       then Gmap.do_single ~loc ~is_rec root_type
+       else []
+    ]
 
 let do_mutal_types ~loc options tdecls =
   List.concat_map tdecls ~f:(fun tdecl ->
-    let intf_class = make_interface_class ~loc tdecl in
-    let gcata = make_gcata ~loc tdecl in
-    [intf_class; gcata]
+    make_heading ~loc tdecl @
+    [ make_interface_class ~loc tdecl
+    ; make_gcata ~loc tdecl ]
   ) @
-
   (if options.gt_show
   then Show.do_mutals ~loc ~is_rec:true tdecls
   else []) @
