@@ -29,7 +29,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
   (* TODO: support is_rec to handle `type nonrec t = option t` *)
 
   let self_arg_name = "_fself" in
-  let ans fields =
+  let ans ?(is_poly=false) fields =
     (* inherit class_t and prepare to put other members *)
     let name = sprintf "%s_%s%s" plugin_name cur_name
         (match mutal_names with [] -> "" | _ -> "_stub")
@@ -51,6 +51,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
             ~inh:(fun ~loc _ -> default_inh)
             ~syn:(fun ~loc _ -> default_syn)
             ~default_syn
+            ~middle:(if is_poly
+                     then [using_type ~typename:cur_name tdecl]
+                     else []
+                    )
             (List.map ~f:fst tdecl.ptype_params)
         in
         Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
@@ -132,7 +136,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         | _ -> failwith "Finish it!"
   in
 
-  ans @@ visit_typedecl ~loc tdecl
+  visit_typedecl ~loc tdecl
     ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
@@ -145,7 +149,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
               ) |> helper
           | Ptyp_constr (cid, params) ->
             let inh_params = params in
-            let ans args =
+            let k args =
               [ Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"show_")})
@@ -155,13 +159,13 @@ let make_class ~loc tdecl ~is_rec mutal_names =
             in
             (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
-            (* let self_arg = do_typ typ in *)
-            ans @@ (Exp.sprintf ~loc "%s" self_arg_name) :: (List.concat_map params ~f:do_typ)
+            ans @@ k @@
+            (Exp.sprintf ~loc "%s" self_arg_name) :: (List.concat_map params ~f:do_typ)
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc ts
           | Ptyp_variant (rows,_,_) ->
-            (* todo: inherit something *)
+            ans ~is_poly:true @@
             List.map rows ~f:(function
             | Rinherit typ ->
                 with_constr_typ typ
@@ -205,6 +209,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         helper typ
     )
     ~onvariant:(fun cds ->
+      ans @@
       List.map cds ~f:(fun cd ->
         let constr_name = cd.pcd_name.txt in
         match cd.pcd_args with

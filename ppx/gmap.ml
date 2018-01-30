@@ -20,15 +20,24 @@ let plugin_name = "gmap"
 let default_inh = let loc = Location.none in [%type: unit]
 let default_syn s = let loc = Location.none in Typ.var ~loc @@ "s" ^ s
 
+
+let make_dest_param_names ?(loc=Location.none) ps =
+  map_type_param_names ps ~f:(sprintf "%s_2")
+
+
 let hack_params ?(loc=Location.none) ps =
   let param_names = map_type_param_names ps ~f:id in
-  let rez_names = List.map param_names ~f:(fun name -> name ^ "_2") in
+  let rez_names = make_dest_param_names ~loc ps in
   let name_migrations = List.zip_exn param_names rez_names in
   let assoc = List.Assoc.find_exn ~equal:String.equal name_migrations in
-  let blownup_params = List.concat_map param_names
+  let blownup_params =
+    let xs = List.concat_map param_names
       ~f:(fun s1 ->
-        [Typ.var ~loc s1; Typ.var ~loc @@ assoc s1 ]
-      )
+           [Typ.var ~loc s1; Typ.var ~loc @@ assoc s1 ]
+         )
+    in
+    (* if is_poly then xs @ [ [%type: 'polyvar_extra]]
+     * else *) xs
   in
   (param_names, rez_names, assoc, blownup_params)
 
@@ -39,7 +48,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
   let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
 
   let self_arg_name = "_fself" in
-  let ans fields =
+  let ans ?(is_poly=false) fields =
     (* inherit class_t and prepare to put other members *)
     let name = sprintf "%s_%s%s" plugin_name cur_name
         (match mutal_names with [] -> "" | _ -> "_stub")
@@ -64,6 +73,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                           List.map rez_names ~f:(Typ.var ~loc)
                          )
             (List.map ~f:fst tdecl.ptype_params)
+        in
+        let inh_params = inh_params @
+                         [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
+                           List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
         in
         Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
       ] @ fields
@@ -143,7 +156,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         | _ -> failwith "Finish it!"
   in
 
-  ans @@ visit_typedecl ~loc tdecl
+  visit_typedecl ~loc tdecl
     ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
@@ -155,36 +168,32 @@ let make_class ~loc tdecl ~is_rec mutal_names =
               else Typ.var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
-              let inh_params =
-                List.concat_map params ~f:(fun typ ->
-                  [ typ; map_core_type typ ~onvar:(fun s ->
-                      Typ.var ~loc @@ find_param s)
-                  ]
-                )
-              in
-              let ans args =
+              (* alias *)
+              let ans2 args =
               [ Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
-                     inh_params)
+                     blownup_params)
                   (nolabelize args)
               ]
             in
             (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
             (* let self_arg = do_typ typ in *)
-            ans @@ (Exp.sprintf ~loc "%s" self_arg_name) :: (List.concat_map params ~f:do_typ)
+            ans @@ ans2 @@
+            (Exp.sprintf ~loc "%s" self_arg_name) :: (List.concat_map params ~f:do_typ)
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc ts
           | Ptyp_variant (rows,_,_) ->
+            ans ~is_poly:true @@
             List.map rows ~f:(function
             | Rinherit typ ->
                 with_constr_typ typ
                   ~fail:(fun () -> failwith "type is not a constructor")
                   ~ok:(fun cid params ->
                       let args = List.concat_map params ~f:do_typ in
-                      let inh_params = blownup_params in
+                      let inh_params = blownup_params @ [[%type: 'polyvar_extra]] in
                       Cf.inherit_ ~loc @@ Cl.apply
                         (Cl.constr
                            ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
@@ -231,6 +240,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
         helper typ
     )
     ~onvariant:(fun cds ->
+      ans @@
       List.map cds ~f:(fun cd ->
         let constr_name = cd.pcd_name.txt in
         match cd.pcd_args with

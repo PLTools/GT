@@ -30,9 +30,8 @@ let make_interface_class ~loc root_type =
      2 + 3*params_count + 1 (if polyvar)
   *)
   let prepare_params is_poly =
-    if is_poly
-    then failwith "polyvariants not yet work"
-    else prepare_param_triples ~loc params
+    let middle = if is_poly then [[%type: 'polyvar_extra]] else [] in
+    prepare_param_triples ~loc ~middle params
   in
 
   let ans ?(is_poly=false) fields =
@@ -54,7 +53,7 @@ let make_interface_class ~loc root_type =
       )
     )
     ~onmanifest:(fun typ ->
-          let wrap name params =
+          let wrap ?(is_poly=false) name params =
             let inh_params =
                 List.concat_map params ~f:(fun typ ->
                   [ typ
@@ -62,12 +61,19 @@ let make_interface_class ~loc root_type =
                   ; map_core_type typ ~onvar:(fun n -> Typ.var ("s"^n) )
                   ]
                 )
-              in
-              let inh_params = inh_params @ inh_syn_ts ~loc () in
-              [ Cf.inherit_ ~loc @@
-                Cl.constr (mknoloc @@ map_longident ~f:(sprintf "class_%s") name)
-                  inh_params
-              ]
+            in
+            let inh_params = List.concat
+                [ inh_params
+                ; if is_poly then [[%type: 'polyvar_extra]]
+                  else []
+                ; inh_syn_ts ~loc ()
+                ]
+            in
+
+            [ Cf.inherit_ ~loc @@
+              Cl.constr (mknoloc @@ map_longident ~f:(sprintf "class_%s") name)
+                inh_params
+            ]
           in
 
           let rec helper typ = match typ with
@@ -105,11 +111,11 @@ let make_interface_class ~loc root_type =
                   ]
                 | Rinherit typ -> match typ.ptyp_desc with
                   | Ptyp_constr ({txt;loc}, params) ->
-                     wrap txt params
+                     wrap ~is_poly:true txt params
                   | _ -> assert false
                 )
               in
-              ans meths
+              ans ~is_poly:true meths
           | _ -> failwith "not implemented"
           in
           helper typ
@@ -172,7 +178,6 @@ let make_gcata ~loc root_type =
     )
 
 let make_heading ~loc tdecl =
-  print_endline "make heading";
   visit_typedecl ~loc tdecl
     ~onvariant:(fun _ -> [])
     ~onmanifest:(fun typ -> match typ.ptyp_desc with
@@ -181,7 +186,7 @@ let make_heading ~loc tdecl =
             [ let opened_t = Typ.variant ~loc fields Open labels in
               let self_t = [%type: 'self] in
               type_declaration ~loc
-                ~name:(Located.map (sprintf "%s_ext") tdecl.ptype_name)
+                ~name:(Located.map (sprintf "%s_open") tdecl.ptype_name)
                 ~params:((self_t,Invariant) :: tdecl.ptype_params)
                 ~manifest:(Some self_t)
                 ~private_:Public

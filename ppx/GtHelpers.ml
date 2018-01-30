@@ -217,7 +217,7 @@ let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
     ?(syn=fun ~loc s -> Typ.var ~loc @@ "s"^s)
     ?(default_syn=[%type: 'syn])
     ?(default_inh=[%type: 'inh])
-
+    ?(middle=[])
     params =
   let ps = List.concat @@ List.map params ~f:(fun t ->
     match t.ptyp_desc with
@@ -226,7 +226,7 @@ let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
     )
   in
   let tail = [ default_inh; default_syn ] in
-  ps @ (extra ()) @ tail
+  ps @ (extra ()) @ tail @ middle
 
 
 
