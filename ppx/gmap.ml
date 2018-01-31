@@ -74,9 +74,12 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                          )
             (List.map ~f:fst tdecl.ptype_params)
         in
-        let inh_params = inh_params @
-                         [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
-                           List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
+        let inh_params =
+          if is_poly
+          then inh_params @
+               [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
+                 List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
+          else inh_params
         in
         Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
       ] @ fields
