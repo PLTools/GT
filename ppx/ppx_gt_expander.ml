@@ -64,9 +64,8 @@ let make_interface_class ~loc root_type =
             in
             let inh_params = List.concat
                 [ inh_params
-                ; if is_poly then [[%type: 'polyvar_extra]]
-                  else []
                 ; inh_syn_ts ~loc ()
+                ; if is_poly then [[%type: 'polyvar_extra]] else []
                 ]
             in
 

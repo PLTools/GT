@@ -29,7 +29,11 @@ let hack_params ?(loc=Location.none) ps =
   let param_names = map_type_param_names ps ~f:id in
   let rez_names = make_dest_param_names ~loc ps in
   let name_migrations = List.zip_exn param_names rez_names in
-  let assoc = List.Assoc.find_exn ~equal:String.equal name_migrations in
+  let assoc s =
+    try List.Assoc.find_exn ~equal:String.equal name_migrations s
+    with Not_found ->
+      raise_errorf "can't find new typ for param `%s" s
+  in
   let blownup_params =
     let xs = List.concat_map param_names
       ~f:(fun s1 ->
@@ -53,10 +57,14 @@ let make_class ~loc tdecl ~is_rec mutal_names =
     let name = sprintf "%s_%s%s" plugin_name cur_name
         (match mutal_names with [] -> "" | _ -> "_stub")
     in
-    Str.class_single ~loc
+    let params = invariantize blownup_params in
+    let params =
+      if is_poly then params @ [[%type: 'polyvar_extra],Invariant]
+      else params
+    in
+    Str.class_single ~loc ~params
       ~name
       ~virt:Concrete
-      ~params:(invariantize blownup_params)
       ~wrap:(fun body ->
         (* constructor arguments are *)
         let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
@@ -69,9 +77,14 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       [ let inh_params = prepare_param_triples ~loc
             ~inh:(fun ~loc _ -> default_inh)
             ~syn:(fun ~loc s -> Typ.var ~loc @@ find_param s)
-            ~default_syn:(Typ.constr ~loc (Located.lident ~loc cur_name) @@
-                          List.map rez_names ~f:(Typ.var ~loc)
-                         )
+            ~default_syn:(
+              (if is_poly then (cur_name^"_open", "polyvar_extra"::rez_names)
+              else (cur_name,rez_names))
+              |> (fun (name,param_names) ->
+                  Typ.constr ~loc (Located.lident ~loc name) @@
+                  List.map param_names ~f:(Typ.var ~loc)
+                )
+            )
             (List.map ~f:fst tdecl.ptype_params)
         in
         let inh_params =
@@ -129,7 +142,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
             let oninherit  = fun typs cident varname ->
                     Exp.apply_nolabeled ~loc
                       Exp.(ident_of_long ~loc @@ mknoloc @@
-                           map_longident cident ~f:((^)"show_"))
+                           map_longident cident ~f:((^)"gmap_"))
                       ((List.concat_map typs ~f:(do_typ)) @
                        [[%expr ()]; Exp.ident ~loc varname])
             in
@@ -166,17 +179,20 @@ let make_class ~loc tdecl ~is_rec mutal_names =
           | Ptyp_alias (t, aname) ->
             map_core_type t ~onvar:(fun as_ ->
               if String.equal as_ aname
-              then Typ.constr (Located.lident ~loc tdecl.ptype_name.txt)@@
+              then Typ.constr (Located.lident ~loc tdecl.ptype_name.txt) @@
                 List.map tdecl.ptype_params ~f:fst
               else Typ.var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
-              (* alias *)
-              let ans2 args =
-              [ Cf.inherit_ ~loc @@ Cl.apply
-                  (Cl.constr
-                     ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
-                     blownup_params)
+            (* alias *)
+            let ans2 args =
+              [ let params = List.concat_map params ~f:(fun t ->
+                    [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
+                  ) in
+
+                Cf.inherit_ ~loc @@ Cl.apply
+                  (Cl.constr (Located.map (map_longident ~f:((^)"gmap_")) cid)
+                     params)
                   (nolabelize args)
               ]
             in

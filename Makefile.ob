@@ -131,7 +131,7 @@ BUNDLEDIR=_build/bundle/$(PKGNAME)
 
 define MAKE_BUNDLE_RULE
 $(BUNDLEDIR)/$(notdir $(1)): $(1)
-	cp $(1) $(BUNDLEDIR)
+	@cp $(1) $(BUNDLEDIR)
 MAKE_BUNDLE_TARGETS += $(BUNDLEDIR)/$(notdir $(1))
 
 endef
