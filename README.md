@@ -1,3 +1,10 @@
+# This branch adds PPX support for Generic Transformers.
+
+* Use `make ppx` to compile PPX syntax extension.
+* It creates and ocaml-migrate-parsetree plugin to run all required preprocessors together and a stand-alone rewriter (`./pp_gt.native`) that applies only our transformations and prints the generated code.
+* New tests and demos are in the directory `./regression_ppx`
+* To run PPX preprocessor and see the generated code, for example, the following command: `./pp_gt.native -type-conv-keep-w32 both regression_ppx/test801.ml`
+
 # Datatype-generic object-oriented transformations for OCaml
 
 This library implements a framework for datatype-generic programming in Objective Caml language. 
