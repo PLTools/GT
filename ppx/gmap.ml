@@ -18,7 +18,7 @@ open Ppx_core.Ast_builder.Default
 let plugin_name = "gmap"
 
 let default_inh = let loc = Location.none in [%type: unit]
-let default_syn s = let loc = Location.none in Typ.var ~loc @@ "s" ^ s
+let make_syn s = let loc = Location.none in Typ.var ~loc @@ "s" ^ s
 
 
 let make_dest_param_names ?(loc=Location.none) ps =
@@ -45,19 +45,65 @@ let hack_params ?(loc=Location.none) ps =
   in
   (param_names, rez_names, assoc, blownup_params)
 
-let make_class ~loc tdecl ~is_rec mutal_names =
-  let cur_name = tdecl.ptype_name.txt in
-  (* TODO: support is_rec to handle `type nonrec t = option t` *)
 
-  let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
 
-  let self_arg_name = "_fself" in
-  let ans ?(is_poly=false) fields =
+(* let make_shortend_class ~loc ~is_rec mutal_names tdecls =
+ *   List.map tdecls ~f:(fun tdecl ->
+ *     let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in
+ *     let class_name = sprintf "gmap_%s" tdecl.ptype_name.txt in
+ *     let stub_name = class_name ^ "_stub" in
+ *     let mut_funcs = List.map ~f:((^)"gmap_") mutal_names in
+ *     let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
+ *     let param_names, _, find_param, blownup_params = hack_params tdecl.ptype_params in
+ *     Str.single_class ~loc ~name:class_name
+ *       ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
+ *       ~params:(invariantize @@ blownup_params)
+ *       (\* ~params:tdecl.ptype_params *\)
+ *       [ Cf.inherit_ ~loc @@ Cl.apply
+ *           (Cl.constr ~loc (Located.lident ~loc stub_name) blownup_params)
+ *           (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) @@ (mut_funcs@real_args))
+ *       ]
+ *   )
+ *
+ * let do_single ~loc ~is_rec tdecl =
+ *   [ make_class ~loc ~is_rec tdecl []
+ *   ; make_trans_functions ~loc ~is_rec [] [tdecl]
+ *   ]
+ *
+ * let do_mutals ~loc ~is_rec tdecls =
+ *   (\* for mutal recursion we need to generate two classes and one function *\)
+ *   let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
+ *   List.map tdecls ~f:(fun tdecl ->
+ *     make_class ~loc ~is_rec:true tdecl @@
+ *       List.filter mut_names ~f:(String.(<>) tdecl.ptype_name.txt)
+ *   ) @
+ *   (make_trans_functions ~loc ~is_rec:true mut_names tdecls) ::
+ *   (make_shortend_class  ~loc ~is_rec:true mut_names tdecls) *)
+
+open Plugin
+
+let g = object(self)
+  inherit Plugin.generator
+
+  method plugin_name = "gmap"
+  method default_inh = let loc = Location.none in [%type: unit]
+  method default_syn = let loc = Location.none in [%type: 'wtf]
+
+  method plugin_class_params tdecl =
+    let param_names, _, find_param, blownup_params = hack_params tdecl.ptype_params in
+    blownup_params
+
+  method cur_name tdecl = tdecl.ptype_name.txt
+
+  method wrap_class_definition ?(is_poly=false) ~loc mutal_names tdecl ~default_syn fields
+      ~inh_params
+    =
+    let cur_name = self#cur_name tdecl in
     (* inherit class_t and prepare to put other members *)
     let name = sprintf "%s_%s%s" plugin_name cur_name
         (match mutal_names with [] -> "" | _ -> "_stub")
     in
-    let params = invariantize blownup_params in
+    let params = invariantize @@ self#plugin_class_params tdecl in
     let params =
       if is_poly then params @ [[%type: 'polyvar_extra],Invariant]
       else params
@@ -68,35 +114,45 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       ~wrap:(fun body ->
         (* constructor arguments are *)
         let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" plugin_name) @
-                    [Pat.var ~loc self_arg_name] @
+                    [Pat.var ~loc Plugin.self_arg_name] @
                     map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
         in
         Cl.fun_list names body
       )
       @@
-      [ let inh_params = prepare_param_triples ~loc
-            ~inh:(fun ~loc _ -> default_inh)
-            ~syn:(fun ~loc s -> Typ.var ~loc @@ find_param s)
-            ~default_syn:(
-              (if is_poly then (cur_name^"_open", "polyvar_extra"::rez_names)
-              else (cur_name,rez_names))
-              |> (fun (name,param_names) ->
-                  Typ.constr ~loc (Located.lident ~loc name) @@
-                  List.map param_names ~f:(Typ.var ~loc)
-                )
-            )
-            (List.map ~f:fst tdecl.ptype_params)
-        in
-        let inh_params =
-          if is_poly
-          then inh_params @
-               [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
-                 List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
-          else inh_params
-        in
+      [
         Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
       ] @ fields
-  in
+
+  method make_class ~loc tdecl ~is_rec mutal_names =
+    let cur_name = self#cur_name tdecl in
+    let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
+
+
+    let ans ?(is_poly=false) fields =
+      let syn_of_param ~loc s = Typ.var ~loc @@ find_param s in
+      self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
+        ~inh_params:(let inh_params = prepare_param_triples ~loc
+                         ~inh:(fun ~loc _ -> default_inh)
+                         ~syn:syn_of_param
+                         ~default_syn: self#default_syn
+                         (List.map ~f:fst tdecl.ptype_params)
+                     in
+                     if is_poly
+                     then inh_params @
+                          [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
+                            List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
+                     else inh_params
+                    )
+        ~default_syn:(
+          (if is_poly then (cur_name^"_open", "polyvar_extra"::rez_names)
+           else (cur_name,rez_names))
+          |> (fun (name,param_names) ->
+              Typ.constr ~loc (Located.lident ~loc name) @@
+              List.map param_names ~f:(Typ.var ~loc)
+            )
+        )
+    in
 
   let is_self_rec t = is_rec &&
     match t.ptyp_desc with
@@ -108,7 +164,8 @@ let make_class ~loc tdecl ~is_rec mutal_names =
              ~f:(fun a (b,_) -> 0=compare_core_type a b)
       -> is_rec
     | _ -> false
-  in
+    in
+
   (* TODO: do we really need it to return a list of expressions ? *)
   let rec do_typ ?with_arg t =
     (* TODO: if with_arg we need to apply result to arg else return result as it is *)
@@ -120,7 +177,7 @@ let make_class ~loc tdecl ~is_rec mutal_names =
     if is_self_rec t then app_arg [%expr _fself ]
     else
       match t with
-      | [%type: int]    (* -> app_arg [%expr fun > string_of_int ] *)
+      | [%type: int]
       | [%type: string] -> app_arg [%expr fun () x -> x ]
       | t -> match t.ptyp_desc with
         | Ptyp_var name ->
@@ -235,22 +292,6 @@ let make_class ~loc tdecl ~is_rec mutal_names =
                                 )
                     in
                     Exp.variant ~loc constr_name ctuple
-
-                    (* if List.length args = 0
-                     * then Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
-                     * else
-                     *   List.fold_left
-                     *     (List.zip_exn names args)
-                     *     ~f:(fun acc (name, typ) ->
-                     *       Exp.apply_nolabeled ~loc acc (do_typ ~with_arg:name typ) )
-                     *     ~init:[%expr Format.sprintf [%e
-                     *         let fmt = String.concat ~sep:", " @@ List.map names
-                     *             ~f:(fun _ -> "%a")
-                     *         in
-                     *         Exp.constant ~loc @@  const_string @@
-                     *         sprintf "`%s(%s)" constr_name fmt
-                     *   ]] *)
-
                   ]]
 
             )
@@ -282,11 +323,10 @@ let make_class ~loc tdecl ~is_rec mutal_names =
       )
     )
 
-
-let make_trans_functions ~loc ~is_rec mutal_names tdecls =
+  method make_trans_functions ~loc ~is_rec mutal_names tdecls =
   (* we will generate mutally recrsive showers here *)
 
-  let make_class_name typname = sprintf "gmap_%s%s" typname
+  let make_class_name typname = sprintf "%s_%s%s" self#plugin_name typname
       (match mutal_names with [] -> "" | _ -> "_stub")
   in
   Str.value ~loc Recursive @@ List.map tdecls ~f:(fun tdecl ->
@@ -315,35 +355,4 @@ let make_trans_functions ~loc ~is_rec mutal_names tdecls =
       )
   )
 
-let make_shortend_class ~loc ~is_rec mutal_names tdecls =
-  List.map tdecls ~f:(fun tdecl ->
-    let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in
-    let class_name = sprintf "gmap_%s" tdecl.ptype_name.txt in
-    let stub_name = class_name ^ "_stub" in
-    let mut_funcs = List.map ~f:((^)"gmap_") mutal_names in
-    let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
-    let param_names, _, find_param, blownup_params = hack_params tdecl.ptype_params in
-    Str.single_class ~loc ~name:class_name
-      ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
-      ~params:(invariantize @@ blownup_params)
-      (* ~params:tdecl.ptype_params *)
-      [ Cf.inherit_ ~loc @@ Cl.apply
-          (Cl.constr ~loc (Located.lident ~loc stub_name) blownup_params)
-          (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) @@ (mut_funcs@real_args))
-      ]
-  )
-
-let do_single ~loc ~is_rec tdecl =
-  [ make_class ~loc ~is_rec tdecl []
-  ; make_trans_functions ~loc ~is_rec [] [tdecl]
-  ]
-
-let do_mutals ~loc ~is_rec tdecls =
-  (* for mutal recursion we need to generate two classes and one function *)
-  let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
-  List.map tdecls ~f:(fun tdecl ->
-    make_class ~loc ~is_rec:true tdecl @@
-      List.filter mut_names ~f:(String.(<>) tdecl.ptype_name.txt)
-  ) @
-  (make_trans_functions ~loc ~is_rec:true mut_names tdecls) ::
-  (make_shortend_class  ~loc ~is_rec:true mut_names tdecls)
+end

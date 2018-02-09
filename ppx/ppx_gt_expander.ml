@@ -203,10 +203,10 @@ let do_typ ~loc options is_rec root_type =
     [ make_heading ~loc root_type
     ; [intf_class; gcata]
     ; if options.gt_show
-      then Show.do_single ~loc ~is_rec root_type
+      then Show.g#do_single ~loc ~is_rec root_type
       else []
     ; if options.gt_gmap
-       then Gmap.do_single ~loc ~is_rec root_type
+       then Gmap.g#do_single ~loc ~is_rec root_type
        else []
     ]
 
@@ -217,10 +217,10 @@ let do_mutal_types ~loc options tdecls =
     ; make_gcata ~loc tdecl ]
   ) @
   (if options.gt_show
-  then Show.do_mutals ~loc ~is_rec:true tdecls
+  then Show.g#do_mutals ~loc ~is_rec:true tdecls
   else []) @
   (if options.gt_gmap
-  then Gmap.do_mutals ~loc ~is_rec:true tdecls
+  then Gmap.g#do_mutals ~loc ~is_rec:true tdecls
   else [])
 
 let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
