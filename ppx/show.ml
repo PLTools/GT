@@ -21,7 +21,9 @@ let g = object(self)
 
   method plugin_name = "show"
   method default_inh = let loc = Location.none in [%type: unit]
-  method default_syn = let loc = Location.none in [%type: string]
+  method default_syn tdecl =
+    let loc = tdecl.ptype_loc in
+    [%type: string]
 
   method plugin_class_params tdecl = List.map ~f:fst tdecl.ptype_params
 
@@ -29,36 +31,60 @@ let g = object(self)
   let cur_name = tdecl.ptype_name.txt in
   (* TODO: support is_rec to handle `type nonrec t = option t` *)
 
+  let rez_names =  map_type_param_names tdecl.ptype_params ~f:id in
   let ans ?(is_poly=false) fields =
-    (* inherit class_t and prepare to put other members *)
-    let name = sprintf "%s_%s%s" self#plugin_name cur_name
-        (match mutal_names with [] -> "" | _ -> "_stub")
-    in
-    Str.class_single ~loc
-      ~name
-      ~virt:Concrete
-      ~params:tdecl.ptype_params
-      ~wrap:(fun body ->
-        (* constructor arguments are *)
-        let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" self#plugin_name) @
-                    [Pat.var ~loc Plugin.self_arg_name] @
-                    map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
-        in
-        Cl.fun_list names body
+    let syn_of_param ~loc _ = self#default_syn tdecl in
+    self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
+      ~inh_params:(let inh_params = prepare_param_triples ~loc
+                       ~inh:(fun ~loc _ -> self#default_inh)
+                       ~syn:syn_of_param
+                       ~default_syn:(self#default_syn tdecl)
+                       (List.map ~f:fst tdecl.ptype_params)
+                   in
+                   if is_poly
+                   then inh_params @
+                        [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
+                          List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
+                   else inh_params
+                  )
+      ~default_syn:(
+        (if is_poly then (cur_name^"_open", "polyvar_extra"::rez_names)
+         else (cur_name,rez_names))
+        |> (fun (name,param_names) ->
+          Typ.constr ~loc (Located.lident ~loc name) @@
+          List.map param_names ~f:(Typ.var ~loc)
+        )
       )
-      @@
-      [ let inh_params = prepare_param_triples ~loc
-            ~inh:(fun ~loc _ -> self#default_inh)
-            ~syn:(fun ~loc _ -> self#default_syn)
-            ~default_syn: self#default_syn
-            ~middle:(if is_poly
-                     then [using_type ~typename:cur_name tdecl]
-                     else []
-                    )
-            (List.map ~f:fst tdecl.ptype_params)
-        in
-        Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
-      ] @ fields
+
+    (* (\* inherit class_t and prepare to put other members *\)
+     * let name = sprintf "%s_%s%s" self#plugin_name cur_name
+     *     (match mutal_names with [] -> "" | _ -> "_stub")
+     * in
+     * Str.class_single ~loc
+     *   ~name
+     *   ~virt:Concrete
+     *   ~params:tdecl.ptype_params
+     *   ~wrap:(fun body ->
+     *     (\* constructor arguments are *\)
+     *     let names = List.map mutal_names ~f:(Pat.sprintf ~loc "%s_%s" self#plugin_name) @
+     *                 [Pat.var ~loc Plugin.self_arg_name] @
+     *                 map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
+     *     in
+     *     Cl.fun_list names body
+     *   )
+     *   @@
+     *   [ let inh_params = prepare_param_triples ~loc
+     *         ~inh:(fun ~loc _ -> self#default_inh)
+     *         ~syn:(fun ~loc _ -> self#default_syn tdecl)
+     *         ~default_syn:(self#default_syn tdecl)
+     *         ~middle:(if is_poly
+     *                  then [using_type ~typename:cur_name tdecl]
+     *                  else []
+     *                 )
+     *         (List.map ~f:fst tdecl.ptype_params)
+     *     in
+     *     Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
+     *   ] @ fields *)
   in
 
   let is_self_rec t = is_rec &&
@@ -160,7 +186,8 @@ let g = object(self)
             (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
             ans @@ k @@
-            (Exp.sprintf ~loc "%s" Plugin.self_arg_name) :: (List.concat_map params ~f:do_typ)
+            (Exp.sprintf ~loc "%s" Plugin.self_arg_name) ::
+            (List.concat_map params ~f:do_typ)
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc ts
@@ -171,10 +198,11 @@ let g = object(self)
                 with_constr_typ typ
                   ~fail:(fun () -> failwith "type is not a constructor")
                   ~ok:(fun cid params ->
-                      let args = List.concat_map params ~f:do_typ in
-                      let inh_params = params in
-                      Cf.inherit_ ~loc @@ Cl.apply
-                        (Cl.constr
+                    let args = List.concat_map params ~f:do_typ in
+                    (* gmap has blownup_params here. Maybe we should abstract this *)
+                    let inh_params = params @ [[%type: 'polyvar_extra]] in
+                    Cf.inherit_ ~loc @@ Cl.apply
+                      (Cl.constr
                            ({cid with txt = map_longident cid.txt ~f:((^)"show_")})
                            inh_params
                         )
