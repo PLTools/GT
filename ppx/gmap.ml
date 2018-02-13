@@ -96,6 +96,7 @@ let g = object(self)
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
     blownup_params
 
+
   method make_class ~loc tdecl ~is_rec mutal_names =
     let cur_name = self#cur_name tdecl in
     let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
@@ -103,16 +104,22 @@ let g = object(self)
     let ans ?(is_poly=false) fields =
       let syn_of_param ~loc s = Typ.var ~loc @@ find_param s in
       self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
-        ~inh_params:(let inh_params = prepare_param_triples ~loc
+        ~inh_params:(let default_syn =
+                       if is_poly
+                       then Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
+                              List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc)
+                       else self#default_syn tdecl
+                     in
+                     let inh_params = prepare_param_triples ~loc
                          ~inh:(fun ~loc _ -> default_inh)
                          ~syn:syn_of_param
-                         ~default_syn:(self#default_syn tdecl)
+                         ~default_syn
                          (List.map ~f:fst tdecl.ptype_params)
                      in
                      if is_poly
-                     then inh_params @
-                          [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
-                            List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
+                     then inh_params @ [[%type: 'polyvar_extra]]
+                          (* [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
+                           *   List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ] *)
                      else inh_params
                     )
         ~default_syn:(
