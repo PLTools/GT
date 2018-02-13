@@ -9,10 +9,7 @@
 
 open Ppx_core
 open Printf
-open Asttypes
-open Parsetree
 open Ast_helper
-open Location
 open GtHelpers
 open Ppx_core.Ast_builder.Default
 

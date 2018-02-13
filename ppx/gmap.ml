@@ -8,26 +8,13 @@
 
 open Ppx_core
 open Printf
-open Asttypes
-open Parsetree
 open Ast_helper
-open Location
 open GtHelpers
 open Ppx_core.Ast_builder.Default
 
-let plugin_name = "gmap"
-
-let default_inh = let loc = Location.none in [%type: unit]
-let make_syn s = let loc = Location.none in Typ.var ~loc @@ "s" ^ s
-
-
-let make_dest_param_names ?(loc=Location.none) ps =
-  map_type_param_names ps ~f:(sprintf "%s_2")
-
-
 let hack_params ?(loc=Location.none) ps =
   let param_names = map_type_param_names ps ~f:id in
-  let rez_names = make_dest_param_names ~loc ps in
+  let rez_names = map_type_param_names ps ~f:(sprintf "%s_2") in
   let name_migrations = List.zip_exn param_names rez_names in
   let assoc s =
     try List.Assoc.find_exn ~equal:String.equal name_migrations s
@@ -74,7 +61,7 @@ let g = object(self: 'self)
                        else self#default_syn tdecl
                      in
                      let inh_params = prepare_param_triples ~loc
-                         ~inh:(fun ~loc _ -> default_inh)
+                         ~inh:(fun ~loc _ -> self#default_inh)
                          ~syn:syn_of_param
                          ~default_syn
                          (List.map ~f:fst tdecl.ptype_params)

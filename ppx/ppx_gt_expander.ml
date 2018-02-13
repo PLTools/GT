@@ -18,13 +18,11 @@ let (@@) = Caml.(@@)
 
 let deriver = "gt"
 
-type supported_derivers = { gt_show: bool; gt_gmap: bool }
+(* type supported_plugins = { ol_show: bool; gt_gmap: bool; gt_fold: bool } *)
 
 let make_interface_class ~loc root_type =
   let params = List.map ~f:fst root_type.ptype_params in
-  (* let sort = root_type *)
   let name = root_type.ptype_name in
-  (* let manifest = root_type.ptype_manifest in *)
 
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (if polyvar)
@@ -196,38 +194,40 @@ let make_heading ~loc tdecl =
     | _ -> []
     )
 
-let do_typ ~loc options is_rec root_type =
-  let intf_class = make_interface_class ~loc root_type in
-  let gcata = make_gcata ~loc root_type in
+let do_typ ~loc plugins is_rec tdecl =
+  let intf_class = make_interface_class ~loc tdecl in
+  let gcata = make_gcata ~loc tdecl in
   List.concat
-    [ make_heading ~loc root_type
+    [ make_heading ~loc tdecl
     ; [intf_class; gcata]
-    ; if options.gt_show
-      then Show.g#do_single ~loc ~is_rec root_type
-      else []
-    ; if options.gt_gmap
-       then Gmap.g#do_single ~loc ~is_rec root_type
-       else []
+    ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
     ]
 
-let do_mutal_types ~loc options tdecls =
+let do_mutal_types ~loc plugins tdecls =
   List.concat_map tdecls ~f:(fun tdecl ->
     make_heading ~loc tdecl @
     [ make_interface_class ~loc tdecl
     ; make_gcata ~loc tdecl ]
   ) @
-  (if options.gt_show
-  then Show.g#do_mutals ~loc ~is_rec:true tdecls
-  else []) @
-  (if options.gt_gmap
-  then Gmap.g#do_mutals ~loc ~is_rec:true tdecls
-  else [])
+  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
 
-let str_type_decl ~loc ~path (rec_flag, tdls) gt_show gt_gmap =
-  let options = {gt_show; gt_gmap} in
+
+let str_type_decl ~loc ~path (rec_flag, tdls)
+    ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false) =
+  let plugins =
+    let wrap f p = if f then List.cons p else id in
+    wrap use_show  Show.g @@
+    wrap use_gmap  Gmap.g @@
+    wrap use_foldl Foldl.g @@
+    []
+  in
+
   match rec_flag, tdls with
   | Recursive, []      -> []
-  | Recursive, [tdecl] -> do_typ ~loc options true tdecl
-  | Recursive, ts      -> do_mutal_types ~loc options ts
+  | Recursive, [tdecl] -> do_typ ~loc plugins true tdecl
+  | Recursive, ts      -> do_mutal_types ~loc plugins ts
   | Nonrecursive, ts ->
-      List.concat_map ~f:(do_typ ~loc options false) tdls
+      List.concat_map ~f:(do_typ ~loc plugins false) tdls
+
+let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
+  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl

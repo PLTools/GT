@@ -10,7 +10,6 @@
 open Ppx_core
 
 module Type_conv = Ppx_type_conv.Std.Type_conv
-(* module Attrs     = Ppx_gt_expander.Attrs *)
 
 module Sexp_of = struct
   module E = Ppx_gt_expander
@@ -18,25 +17,12 @@ module Sexp_of = struct
 
   let str_type_decl : (_, _) Type_conv.Generator.t =
     Type_conv.Generator.make
-      Type_conv.Args.(empty +> flag "show" +> flag "gmap")
-      E.str_type_decl
-      (* ~attributes:[ Attribute.T Attrs.default
-       *             ; Attribute.T Attrs.drop_default
-       *             ; Attribute.T Attrs.drop_if
-       *             ] *)
+      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl")
+      E.str_type_decl_implicit
 
   let deriver =
     Type_conv.add name
       ~str_type_decl
       (* ~sig_type_decl *)
 
-
-  (* let () =
-   *   Ppx_driver.register_transformation name
-   *     ~rules:[ Context_free.Rule.extension
-   *                (Extension.declare name
-   *                   Core_type Ast_pattern.(ptyp __)
-   *                   (fun ~loc:_ ~path:_ ty -> E.type_extension ty))
-   *            ] *)
 end
-
