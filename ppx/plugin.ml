@@ -9,7 +9,7 @@ open Ppx_core.Ast_builder.Default
 
 let self_arg_name = "_fself"
 
-class virtual generator = object(self)
+class virtual ['self] generator = object(self: 'self)
   method virtual plugin_name : string
 
   method virtual default_inh : core_type
@@ -123,5 +123,65 @@ class virtual generator = object(self)
       ) @
     (self#make_trans_functions ~loc ~is_rec:true mut_names tdecls) ::
     (self#make_shortend_class  ~loc ~is_rec:true mut_names tdecls)
+
+
+  method on_record_constr : type_declaration -> constructor_declaration ->
+    label_declaration list -> 'on_record_result = fun _ _ _ -> failwith "not_implemented"
+
+  method virtual on_tuple_constr : type_declaration -> (core_type -> bool) ->
+    constructor_declaration ->
+    core_type list -> 'on_tuple_result
+
+  method on_variant tdecl is_self_rec cds k =
+    k @@ List.map cds ~f:(fun cd ->
+        match cd.pcd_args with
+        | Pcstr_record ls -> self#on_record_constr tdecl cd ls
+        | Pcstr_tuple ts -> self#on_tuple_constr tdecl is_self_rec cd ts
+      )
+
+  (* When we got declaration of type alias via type application *)
+  method virtual got_constr : loc:Location.t -> type_declaration -> (core_type -> bool) ->
+    (loc:Location.t -> ?with_arg:string -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
+    longident Location.loc -> core_type list -> (class_field list -> 'bbb) -> 'bbb
+
+  (* Auxilary function to construct arguements that will be passed when we instantiate
+     the parent class of aliased type *)
+  method virtual do_typ : loc:Location.t -> ?with_arg:string -> (core_type -> bool) ->
+    core_type -> 'do_typ_res
+
+  (* When we met polymnorphic variant on RHS of type declaration *)
+  method virtual got_polyvar: loc:location -> type_declaration ->
+    (loc:Location.t -> ?with_arg:string -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
+    (core_type -> bool) -> row_field list ->
+    (class_field list -> 'pvr) -> 'pvr
+
+  method got_typedecl tdecl is_self_rec ans =
+    let loc = tdecl.ptype_loc in
+    visit_typedecl ~loc tdecl
+    ~onmanifest:(fun typ ->
+        let rec helper typ =
+          match typ.ptyp_desc with
+          | Ptyp_alias (t, aname) ->
+            map_core_type t ~onvar:(fun as_ ->
+              if String.equal as_ aname
+              then Typ.constr (Located.lident ~loc tdecl.ptype_name.txt) @@
+                List.map tdecl.ptype_params ~f:fst
+              else Typ.var ~loc as_
+              ) |> helper
+          | Ptyp_constr (cid, params) ->
+            self#got_constr ~loc tdecl is_self_rec (self#do_typ)
+              cid params (ans ~is_poly:false)
+          | Ptyp_tuple ts ->
+            (* let's say we have predefined aliases for now *)
+            helper @@ constr_of_tuple ~loc ts
+          | Ptyp_variant (rows,_,_) ->
+            self#got_polyvar ~loc tdecl (self#do_typ)
+              is_self_rec rows
+              (ans ~is_poly:true)
+        | _ -> assert false
+        in
+        helper typ
+    )
+    ~onvariant:(fun cds -> self#on_variant tdecl is_self_rec cds (ans ~is_poly:false))
 
 end
