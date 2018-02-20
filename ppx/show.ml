@@ -83,6 +83,25 @@ let g = object(self: 'self)
     (Exp.sprintf ~loc "%s" Plugin.self_arg_name) ::
     (List.concat_map cparams ~f:(do_typ ~loc is_self_rec))
 
+
+  method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
+    match bindings with
+    | [] -> Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
+    | _ ->
+      List.fold_left
+        bindings
+        ~f:(fun acc (name, typ) ->
+          Exp.apply_nolabeled ~loc acc
+            (self#do_typ ~loc is_self_rec ~with_arg:name typ) )
+        ~init:[%expr Format.sprintf [%e
+            let fmt = String.concat ~sep:", " @@ List.map bindings
+                ~f:(fun _ -> "%a")
+            in
+            Exp.constant ~loc @@  const_string @@
+            sprintf "`%s(%s)" constr_name fmt
+          ]]
+
+
   method got_polyvar ~loc tdecl do_typ is_self_rec rows k =
     k @@
     List.map rows ~f:(function
@@ -104,27 +123,56 @@ let g = object(self: 'self)
           let names = make_new_names (List.length args) in
 
           Cf.method_concrete ~loc ("c_" ^ constr_name)
-            [%expr fun () -> [%e
+            [%expr fun inh -> [%e
               Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-              if List.length args = 0
-              then Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
-              else
-                List.fold_left
-                  (List.zip_exn names args)
-                  ~f:(fun acc (name, typ) ->
-                      Exp.apply_nolabeled ~loc acc
-                        (self#do_typ ~loc is_self_rec ~with_arg:name typ) )
-                  ~init:[%expr Format.sprintf [%e
-                      let fmt = String.concat ~sep:", " @@ List.map names
-                          ~f:(fun _ -> "%a")
-                      in
-                      Exp.constant ~loc @@  const_string @@
-                      sprintf "`%s(%s)" constr_name fmt
-                    ]]
+              self#generate_for_polyvar_tag ~loc constr_name (List.zip_exn names args)
+                is_self_rec [%expr inh] (fun x -> x)
 
             ]]
 
       )
+
+
+  (* do_type_gen will return an expression which after being applied to inherited attribute
+   * and subject will return synthetized one
+   *)
+  method do_typ_gen ~loc is_self_rec t =
+    let rec helper t =
+      match t.ptyp_desc with
+      | Ptyp_var s -> Exp.sprintf "f%s" s
+      | Ptyp_tuple params ->
+          Exp.apply_nolabeled
+            (Exp.sprintf "%s_tuple%d" self#plugin_name (List.length params))
+            (List.concat_map params ~f:helper)
+      | Ptyp_constr (_,_) when is_self_rec t -> Exp.ident ~loc self_arg_name
+      | Ptyp_constr ({txt},params) ->
+          (* in this place it will be easier to have all plugin in single value *)
+          Exp.apply_nolabeled
+            (Exp.ident_of_long @@ mknoloc @@
+             map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt)
+            (List.concat_map params ~f:helper)
+        | Ptyp_variant (rows, _, maybe_labels) -> begin
+            let oninherit typs cident varname =
+              Exp.apply_nolabeled ~loc
+                Exp.(ident_of_long ~loc @@ mknoloc @@
+                     map_longident cident ~f:((^)"show_"))
+                ((List.concat_map typs ~f:(self#do_typ ~loc is_self_rec)) @
+                 [[%expr ()]; Exp.ident ~loc varname])
+            in
+            let onrow lab bindings =
+              self#generate_for_polyvar_tag ~loc lab bindings
+                is_self_rec [%expr inh] (fun x -> x)
+            in
+            let k e = [%expr fun inh foo  -> [%e e]] in
+            k @@ prepare_patt_match_poly ~loc
+              (Exp.sprintf ~loc "foo") rows maybe_labels
+              ~onrow
+              ~onlabel:(fun _ _ -> [%expr 1])
+              ~oninherit
+          end
+        | _ -> failwith "Finish it!"
+    in
+    helper t
 
   method do_typ ~loc ?with_arg is_self_rec t =
     let app_arg e =
