@@ -22,50 +22,9 @@ let g = object(self: 'self)
     let loc = tdecl.ptype_loc in
     [%type: string]
 
+  method syn_of_param ~loc _ = [%type: string]
+
   method plugin_class_params tdecl = List.map ~f:fst tdecl.ptype_params
-
-  method make_class ~loc tdecl ~is_rec mutal_names =
-  let cur_name = tdecl.ptype_name.txt in
-
-  let rez_names =  map_type_param_names tdecl.ptype_params ~f:id in
-  let ans ?(is_poly=false) fields =
-    let syn_of_param ~loc _ = self#default_syn tdecl in
-    self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
-      ~inh_params:(let inh_params = prepare_param_triples ~loc
-                       ~inh:(fun ~loc _ -> self#default_inh)
-                       ~syn:syn_of_param
-                       ~default_syn:(self#default_syn tdecl)
-                       (List.map ~f:fst tdecl.ptype_params)
-                   in
-                   if is_poly
-                   then inh_params @
-                        [ Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
-                          List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc) ]
-                   else inh_params
-                  )
-      ~default_syn:(
-        (if is_poly then (cur_name^"_open", "polyvar_extra"::rez_names)
-         else (cur_name,rez_names))
-        |> (fun (name,param_names) ->
-          Typ.constr ~loc (Located.lident ~loc name) @@
-          List.map param_names ~f:(Typ.var ~loc)
-        )
-      )
-  in
-
-  let is_self_rec t =
-    is_rec &&
-    match t.ptyp_desc with
-    | Ptyp_var _ -> false
-    | Ptyp_constr ({txt=Lident s}, params)
-      when String.equal s cur_name &&
-           List.length params = List.length tdecl.ptype_params &&
-           List.for_all2_exn params tdecl.ptype_params
-             ~f:(fun a (b,_) -> 0=compare_core_type a b)
-      -> is_rec
-    | _ -> false
-  in
-  self#got_typedecl tdecl is_self_rec (fun ~is_poly -> ans ~is_poly)
 
   method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
     let ans args =

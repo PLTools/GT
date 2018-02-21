@@ -347,3 +347,15 @@ let constr_of_tuple ?(loc=Location.none) ts =
 
 let make_new_names n =
   List.init n ~f:(fun n ->  Char.to_string @@ Char.of_int_exn (n + Char.to_int 'a'))
+
+let is_polyvariant typ =
+  match typ.ptyp_desc with
+  | Ptyp_variant (_,_,_) -> true
+  | _ -> false
+
+let is_polyvariant_tdecl tdecl =
+  let loc = tdecl.ptype_loc in
+  visit_typedecl ~loc tdecl
+    ~onrecord:(fun _ -> false)
+    ~onvariant:(fun _ -> false)
+    ~onmanifest:(fun typ -> is_polyvariant typ)

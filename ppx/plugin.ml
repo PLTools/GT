@@ -16,8 +16,37 @@ class virtual ['self] generator = object(self: 'self)
 
   (* synthethized attribute for whole type declaration *)
   method virtual default_syn : type_declaration -> core_type
-  (* method virtual _syn : type_declaration -> core_type *)
+  method virtual syn_of_param : loc:location -> string  -> core_type
 
+  method make_class ~loc tdecl ~is_rec mutal_names =
+    let cur_name = self#cur_name tdecl in
+
+    let ans ?(is_poly=false) fields =
+      self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
+        ~inh_params:(let inh_params = prepare_param_triples ~loc
+                         ~inh:(fun ~loc _ -> self#default_inh)
+                         ~syn:self#syn_of_param
+                         ~default_syn:(self#default_syn tdecl)
+                         (List.map ~f:fst tdecl.ptype_params)
+                     in
+                     if is_poly
+                     then inh_params @ [[%type: 'polyvar_extra]]
+                     else inh_params
+                    )
+    in
+
+  let is_self_rec t = is_rec &&
+    match t.ptyp_desc with
+    | Ptyp_var _ -> false
+    | Ptyp_constr ({txt=Lident s}, params)
+      when String.equal s cur_name &&
+           List.length params = List.length tdecl.ptype_params &&
+           List.for_all2_exn params tdecl.ptype_params
+             ~f:(fun a (b,_) -> 0=compare_core_type a b)
+      -> is_rec
+    | _ -> false
+    in
+  self#got_typedecl tdecl is_self_rec (fun ~is_poly -> ans ~is_poly)
 
   method make_trans_functions: loc:location ->
     is_rec:bool -> string list -> type_declaration list -> structure_item
@@ -56,7 +85,7 @@ class virtual ['self] generator = object(self: 'self)
   method cur_name tdecl = tdecl.ptype_name.txt
 
   method wrap_class_definition ?(is_poly=false) ~loc mutal_names tdecl
-      ~(default_syn: core_type) ~inh_params fields
+      ~inh_params fields
     =
     let cur_name = self#cur_name tdecl in
     (* inherit class_t and prepare to put other members *)

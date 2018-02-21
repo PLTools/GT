@@ -12,9 +12,11 @@ open Ast_helper
 open GtHelpers
 open Ppx_core.Ast_builder.Default
 
+let param_name_mangler = sprintf "%s_2"
+
 let hack_params ?(loc=Location.none) ps =
   let param_names = map_type_param_names ps ~f:id in
-  let rez_names = map_type_param_names ps ~f:(sprintf "%s_2") in
+  let rez_names = map_type_param_names ps ~f:param_name_mangler in
   let name_migrations = List.zip_exn param_names rez_names in
   let assoc s =
     try List.Assoc.find_exn ~equal:String.equal name_migrations s
@@ -29,8 +31,6 @@ let hack_params ?(loc=Location.none) ps =
   in
   (param_names, rez_names, assoc, blownup_params)
 
-open Plugin
-
 let g = object(self: 'self)
   inherit ['self] Plugin.generator
 
@@ -39,59 +39,23 @@ let g = object(self: 'self)
   method default_inh = let loc = Location.none in [%type: unit]
   method default_syn tdecl =
     let loc = tdecl.ptype_loc in
-    Typ.constr ~loc (Located.lident ~loc tdecl.ptype_name.txt) @@
-    List.map ~f:fst tdecl.ptype_params
+    let cur_name = self#cur_name tdecl in
+    let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
+    let (ident,args) =
+      if is_polyvariant_tdecl tdecl
+      then
+        (cur_name^"_open", "polyvar_extra"::rez_names)
+      else
+        (cur_name, rez_names)
 
+    in
+    Typ.constr ~loc (Located.lident ~loc ident) @@
+    List.map ~f:(Typ.var ~loc) args
+
+  method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
   method plugin_class_params tdecl =
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
     blownup_params
-
-
-  method make_class ~loc tdecl ~is_rec mutal_names =
-    let cur_name = self#cur_name tdecl in
-    let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
-
-    let ans ?(is_poly=false) fields =
-      let syn_of_param ~loc s = Typ.var ~loc @@ find_param s in
-      self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
-        ~inh_params:(let default_syn =
-                       if is_poly
-                       then Typ.constr ~loc (Located.lident ~loc (cur_name^"_open")) @@
-                              List.map ("polyvar_extra"::rez_names) ~f:(Typ.var ~loc)
-                       else self#default_syn tdecl
-                     in
-                     let inh_params = prepare_param_triples ~loc
-                         ~inh:(fun ~loc _ -> self#default_inh)
-                         ~syn:syn_of_param
-                         ~default_syn
-                         (List.map ~f:fst tdecl.ptype_params)
-                     in
-                     if is_poly
-                     then inh_params @ [[%type: 'polyvar_extra]]
-                     else inh_params
-                    )
-        ~default_syn:(
-          (if is_poly then (cur_name^"_open", "polyvar_extra"::rez_names)
-           else (cur_name,rez_names))
-          |> (fun (name,param_names) ->
-              Typ.constr ~loc (Located.lident ~loc name) @@
-              List.map param_names ~f:(Typ.var ~loc)
-            )
-        )
-    in
-
-  let is_self_rec t = is_rec &&
-    match t.ptyp_desc with
-    | Ptyp_var _ -> false
-    | Ptyp_constr ({txt=Lident s}, params)
-      when String.equal s cur_name &&
-           List.length params = List.length tdecl.ptype_params &&
-           List.for_all2_exn params tdecl.ptype_params
-             ~f:(fun a (b,_) -> 0=compare_core_type a b)
-      -> is_rec
-    | _ -> false
-    in
-  self#got_typedecl tdecl is_self_rec (fun ~is_poly -> ans ~is_poly)
 
   method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
     let _param_names,_rez_names,find_param,_blownup_params =
@@ -113,7 +77,7 @@ let g = object(self: 'self)
        on rhs is self transformer function *)
     (* let self_arg = do_typ typ in *)
     k @@ ans2 @@
-    (Exp.sprintf ~loc "%s" self_arg_name) ::
+    (Exp.sprintf ~loc "%s" Plugin.self_arg_name) ::
     (List.map cparams ~f:(self#do_typ_gen ~loc is_self_rec))
 
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
