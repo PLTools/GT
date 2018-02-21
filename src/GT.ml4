@@ -32,6 +32,7 @@ let apply f a x = f a x
 
 let lift f _ = f
 
+let id x = x
 type comparison = LT | EQ | GT
 
 let chain_compare x f =

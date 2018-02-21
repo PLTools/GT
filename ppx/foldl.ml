@@ -166,7 +166,7 @@ let g = object(self: 'self)
           (* This can be moved to the base class too *)
           app_arg [%expr _fself]
         | Ptyp_constr ({txt}, params) ->
-            (* There we are only interested in the arguments that are type variables*)
+          (* There we are only interested in the arguments that are type variables*)
           app_arg @@
           Exp.apply
             (Exp.ident_of_long @@ mknoloc @@

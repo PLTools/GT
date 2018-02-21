@@ -141,17 +141,17 @@ class virtual ['self] generator = object(self: 'self)
 
   (* When we got declaration of type alias via type application *)
   method virtual got_constr : loc:Location.t -> type_declaration -> (core_type -> bool) ->
-    (loc:Location.t -> ?with_arg:string -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
+    (loc:Location.t -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
     longident Location.loc -> core_type list -> (class_field list -> 'bbb) -> 'bbb
 
   (* Auxilary function to construct arguements that will be passed when we instantiate
      the parent class of aliased type *)
-  method virtual do_typ : loc:Location.t -> ?with_arg:string -> (core_type -> bool) ->
-    core_type -> 'do_typ_res
+  (* method virtual do_typ : loc:Location.t -> ?with_arg:string -> (core_type -> bool) ->
+   *   core_type -> 'do_typ_res *)
 
   (* When we met polymnorphic variant on RHS of type declaration *)
   method virtual got_polyvar: loc:location -> type_declaration ->
-    (loc:Location.t -> ?with_arg:string -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
+    (loc:Location.t -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
     (core_type -> bool) -> row_field list ->
     (class_field list -> 'pvr) -> 'pvr
 
@@ -169,13 +169,13 @@ class virtual ['self] generator = object(self: 'self)
               else Typ.var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
-            self#got_constr ~loc tdecl is_self_rec (self#do_typ)
+            self#got_constr ~loc tdecl is_self_rec self#do_typ_gen
               cid params (ans ~is_poly:false)
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc ts
           | Ptyp_variant (rows,_,_) ->
-            self#got_polyvar ~loc tdecl (self#do_typ)
+            self#got_polyvar ~loc tdecl self#do_typ_gen
               is_self_rec rows
               (ans ~is_poly:true)
         | _ -> assert false
@@ -183,5 +183,54 @@ class virtual ['self] generator = object(self: 'self)
         helper typ
     )
     ~onvariant:(fun cds -> self#on_variant tdecl is_self_rec cds (ans ~is_poly:false))
+
+  method virtual generate_for_polyvar_tag : loc:location -> string ->
+    (string*core_type) list -> (core_type -> bool) -> expression ->
+    (expression -> 'x) -> 'x
+
+  (* do_type_gen will return an expression which after being applied to inherited attribute
+   * and subject will return synthetized one
+   *)
+  method do_typ_gen ~loc is_self_rec t =
+    let rec helper t =
+      match t.ptyp_desc with
+      | Ptyp_var s -> [%expr  [%e Exp.sprintf "f%s" s]]
+      | Ptyp_tuple params ->
+        [%expr fun inh subj -> [%e
+          Exp.apply_nolabeled
+            (Exp.sprintf "%s_tuple%d" self#plugin_name (List.length params))
+            (List.map ~f:helper params @ [[%expr inh]; [%expr subj]])
+        ]]
+      | Ptyp_constr (_,_) when is_self_rec t -> Exp.ident ~loc self_arg_name
+      | Ptyp_constr ({txt},params) ->
+        (* in this place it will be easier to have all plugin in single value *)
+        [%expr fun inh subj -> [%e
+          Exp.apply_nolabeled
+            (Exp.ident_of_long @@ mknoloc @@
+             map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt)
+            (List.map ~f:helper params @ [[%expr inh]; [%expr subj]])
+        ]]
+        | Ptyp_variant (rows, _, maybe_labels) -> begin
+            let oninherit typs cident varname =
+              Exp.apply_nolabeled ~loc
+                Exp.(ident_of_long ~loc @@ mknoloc @@
+                     map_longident cident ~f:(Printf.sprintf "%s_%s" self#plugin_name))
+                (List.map typs ~f:helper @ [[%expr inh]; Exp.ident ~loc varname])
+            in
+            let onrow lab bindings =
+              self#generate_for_polyvar_tag ~loc lab bindings
+                is_self_rec [%expr inh] (fun x -> x)
+            in
+            let k e = [%expr fun inh foo  -> [%e e]] in
+            k @@ prepare_patt_match_poly ~loc
+              (Exp.sprintf ~loc "foo") rows maybe_labels
+              ~onrow
+              ~onlabel:(fun _ _ -> [%expr 1])
+              ~oninherit
+          end
+        | _ -> failwith "Finish it!"
+    in
+    helper t
+
 
 end

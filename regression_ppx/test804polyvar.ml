@@ -1,9 +1,10 @@
 open GT
 
-type 'a maybe = Just of 'a | Nothing [@@deriving gt ~show ~gmap]
+type 'a maybe = Just of 'a | Nothing
+[@@deriving gt ~show ~gmap]
 
-type 'a pv = [ `A of 'a ] [@@deriving gt ~show ~gmap]
-
+type 'a pv = [ `A of 'a ]
+[@@deriving gt ~show ~gmap]
 
 let () =
   let sh x = show_pv (fun () x -> x) () x in

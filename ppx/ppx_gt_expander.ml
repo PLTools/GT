@@ -218,7 +218,7 @@ let str_type_decl ~loc ~path (rec_flag, tdls)
     let wrap f p = if f then List.cons p else id in
     wrap use_show  Show.g @@
     wrap use_gmap  Gmap.g @@
-    wrap use_foldl Foldl.g @@
+    (* wrap use_foldl Foldl.g @@ *)
     []
   in
 
