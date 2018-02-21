@@ -62,6 +62,7 @@ let g = object(self: 'self)
       hack_params tdecl.ptype_params
     in
 
+    (* TODO: abstract out and override only arguments of inherited class *)
     let ans2 args =
       [ let params = List.concat_map cparams ~f:(fun t ->
             [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
