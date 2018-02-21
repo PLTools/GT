@@ -26,13 +26,17 @@ let g = object(self: 'self)
 
   method plugin_class_params tdecl = List.map ~f:fst tdecl.ptype_params
 
+  method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
+    rhs_args
+
   method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
     let ans args =
-      [ Cf.inherit_ ~loc @@ Cl.apply
+      [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
+        Cf.inherit_ ~loc @@ Cl.apply
           (Cl.constr
              ({cid with txt = map_longident cid.txt
                             ~f:(sprintf "%s_%s" self#plugin_name)})
-             cparams)
+             params)
           (nolabelize args)
       ]
     in

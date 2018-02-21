@@ -57,16 +57,21 @@ let g = object(self: 'self)
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
     blownup_params
 
-  method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
+  method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
       hack_params tdecl.ptype_params
     in
+    List.concat_map rhs_args ~f:(fun t ->
+      [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
+    )
 
+  method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
     (* TODO: abstract out and override only arguments of inherited class *)
     let ans2 args =
-      [ let params = List.concat_map cparams ~f:(fun t ->
-            [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
-          ) in
+      [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
+          (* List.concat_map cparams ~f:(fun t ->
+           *   [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
+           * ) in *)
 
         Cf.inherit_ ~loc @@ Cl.apply
           (Cl.constr (Located.map (map_longident ~f:((^)"gmap_")) cid)
