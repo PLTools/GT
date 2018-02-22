@@ -65,27 +65,6 @@ let g = object(self: 'self)
       [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
     )
 
-  method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
-    (* TODO: abstract out and override only arguments of inherited class *)
-    let ans2 args =
-      [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
-          (* List.concat_map cparams ~f:(fun t ->
-           *   [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
-           * ) in *)
-
-        Cf.inherit_ ~loc @@ Cl.apply
-          (Cl.constr (Located.map (map_longident ~f:((^)"gmap_")) cid)
-             params)
-          (nolabelize args)
-      ]
-    in
-    (* for typ aliases we can cheat because first argument of constructor of type
-       on rhs is self transformer function *)
-    (* let self_arg = do_typ typ in *)
-    k @@ ans2 @@
-    (Exp.sprintf ~loc "%s" Plugin.self_arg_name) ::
-    (List.map cparams ~f:(self#do_typ_gen ~loc is_self_rec))
-
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     let ctuple =
       match bindings with

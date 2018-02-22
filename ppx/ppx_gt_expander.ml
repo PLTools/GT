@@ -174,12 +174,13 @@ let make_gcata ~loc root_type =
       do_typ typ
     )
 
-let make_heading ~loc tdecl =
+(* create opened renaming for polymorphc variant *)
+let make_heading_gen ~loc wrap tdecl =
   visit_typedecl ~loc tdecl
     ~onvariant:(fun _ -> [])
     ~onmanifest:(fun typ -> match typ.ptyp_desc with
     | Ptyp_variant (fields,_,labels) ->
-        [ Str.type_ ~loc Nonrecursive
+        [ wrap (* Str.type_ ~loc Nonrecursive *)
             [ let opened_t = Typ.variant ~loc fields Open labels in
               let self_t = [%type: 'self] in
               type_declaration ~loc
@@ -194,11 +195,16 @@ let make_heading ~loc tdecl =
     | _ -> []
     )
 
+let make_heading_str ~loc = make_heading_gen ~loc (Str.type_ ~loc Nonrecursive)
+let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive)
+
+
+(* for structures *)
 let do_typ ~loc plugins is_rec tdecl =
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata ~loc tdecl in
   List.concat
-    [ make_heading ~loc tdecl
+    [ make_heading_str ~loc tdecl
     ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
     ]
@@ -211,6 +217,23 @@ let do_mutal_types ~loc plugins tdecls =
   ) @
   List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
 
+(* for signatures *)
+let do_typ_sig ~loc plugins is_rec tdecl =
+  let intf_class = make_interface_class ~loc tdecl in
+  let gcata = make_gcata ~loc tdecl in
+  List.concat
+    [ make_heading ~loc tdecl
+    ; [intf_class; gcata]
+    ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
+    ]
+
+let do_mutal_types_sig ~loc plugins tdecls =
+  List.concat_map tdecls ~f:(fun tdecl ->
+    make_heading ~loc tdecl @
+    [ make_interface_class ~loc tdecl
+    ; make_gcata ~loc tdecl ]
+  ) @
+  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
 
 let str_type_decl ~loc ~path (rec_flag, tdls)
     ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false) =
@@ -219,6 +242,7 @@ let str_type_decl ~loc ~path (rec_flag, tdls)
     wrap use_show  Show.g @@
     wrap use_gmap  Gmap.g @@
     (* wrap use_foldl Foldl.g @@ *)
+    (* wrap use_foldl Eq.g @@ *)
     []
   in
 
@@ -231,3 +255,6 @@ let str_type_decl ~loc ~path (rec_flag, tdls)
 
 let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
   str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl
+
+let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
+  sig_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl

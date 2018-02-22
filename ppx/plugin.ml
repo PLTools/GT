@@ -169,9 +169,26 @@ class virtual ['self] generator = object(self: 'self)
       )
 
   (* When we got declaration of type alias via type application *)
-  method virtual got_constr : loc:Location.t -> type_declaration -> (core_type -> bool) ->
-    (loc:Location.t -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
-    longident Location.loc -> core_type list -> (class_field list -> 'bbb) -> 'bbb
+  (* method virtual got_constr : loc:Location.t -> type_declaration -> (core_type -> bool) ->
+   *   (loc:Location.t -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
+   *   longident Location.loc -> core_type list -> (class_field list -> 'bbb) -> 'bbb *)
+
+  method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
+    let ans args =
+      [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
+        Cf.inherit_ ~loc @@ Cl.apply
+          (Cl.constr
+             ({cid with txt = map_longident cid.txt
+                            ~f:(sprintf "%s_%s" self#plugin_name)})
+             params)
+          (nolabelize args)
+      ]
+    in
+    (* for typ aliases we can cheat because first argument of constructor of type
+               on rhs is self transformer function *)
+    k @@ ans @@
+    (Exp.sprintf ~loc "%s" self_arg_name) ::
+    (List.map cparams ~f:(do_typ ~loc is_self_rec))
 
   (* Auxilary function to construct arguements that will be passed when we instantiate
      the parent class of aliased type *)

@@ -14,3 +14,9 @@ val str_type_decl_implicit :
   Asttypes.rec_flag * type_declaration list ->
   bool -> bool -> bool ->
   structure
+
+val sig_type_decl_implicit :
+  loc:Location.t -> path:string ->
+  Asttypes.rec_flag * type_declaration list ->
+  bool -> bool -> bool ->
+  signature

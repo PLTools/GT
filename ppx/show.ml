@@ -29,24 +29,6 @@ let g = object(self: 'self)
   method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
     rhs_args
 
-  method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
-    let ans args =
-      [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
-        Cf.inherit_ ~loc @@ Cl.apply
-          (Cl.constr
-             ({cid with txt = map_longident cid.txt
-                            ~f:(sprintf "%s_%s" self#plugin_name)})
-             params)
-          (nolabelize args)
-      ]
-    in
-    (* for typ aliases we can cheat because first argument of constructor of type
-               on rhs is self transformer function *)
-    k @@ ans @@
-    (Exp.sprintf ~loc "%s" Plugin.self_arg_name) ::
-    (List.map cparams ~f:(do_typ ~loc is_self_rec))
-
-
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     match bindings with
     | [] -> k @@ Exp.constant ~loc (Pconst_string ("`"^constr_name, None))

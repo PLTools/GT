@@ -20,9 +20,14 @@ module Sexp_of = struct
       Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl")
       E.str_type_decl_implicit
 
+  let sig_type_decl : (_, _) Type_conv.Generator.t =
+    Type_conv.Generator.make
+      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl")
+      E.sig_type_decl_implicit
+
   let deriver =
     Type_conv.add name
       ~str_type_decl
-      (* ~sig_type_decl *)
+      ~sig_type_decl
 
 end
