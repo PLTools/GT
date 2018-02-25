@@ -128,6 +128,13 @@ module Str = struct
   let class_single = single_class
 end
 
+module Sig = struct
+  open Ast_helper
+  include Sig
+  let class_  ?(loc=Location.none) ?(virt=Asttypes.Virtual) ~name ~params body =
+    psig_class ~loc [Ci.mk ~loc (mknoloc name) ~virt ~params
+                       (Cty.signature (Csig.mk [%type: _] body))]
+end
 module Cf = struct
   let constraint_ ?(loc=Location.none) t1 t2 =
     pcf_constraint ~loc (t1,t2)
@@ -140,8 +147,8 @@ module Cf = struct
 
 end
 module Ctf = struct
-  let method_ ?(loc=Location.none) name priv_flg virt_flg kind =
-    pctf_method ~loc (name, priv_flg, virt_flg, kind)
+  let method_ ?(loc=Location.none) ?(flg=Public) ?(virt_flg=Virtual) name kind =
+    pctf_method ~loc (name, flg, virt_flg, kind)
   let inherit_ ?(loc=Location.none) = pctf_inherit ~loc
 end
 

@@ -9,7 +9,7 @@ open Ppx_core.Ast_builder.Default
 
 let self_arg_name = "_fself"
 
-class virtual ['self] generator = object(self: 'self)
+class virtual ['self] generator_t = object(self: 'self)
   method virtual plugin_name : string
 
   method virtual default_inh : core_type
@@ -17,11 +17,14 @@ class virtual ['self] generator = object(self: 'self)
   (* synthethized attribute for whole type declaration *)
   method virtual default_syn : type_declaration -> core_type
   method virtual syn_of_param : loc:location -> string  -> core_type
+end
+
+class virtual ['self] generator = object(self: 'self)
+  inherit ['self] generator_t
 
   method make_class ~loc tdecl ~is_rec mutal_names =
     let cur_name = self#cur_name tdecl in
-
-    let ans ?(is_poly=false) fields =
+    let ans is_poly fields =
       self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
         ~inh_params:(let inh_params = prepare_param_triples ~loc
                          ~inh:(fun ~loc _ -> self#default_inh)
@@ -35,18 +38,19 @@ class virtual ['self] generator = object(self: 'self)
                     )
     in
 
-  let is_self_rec t = is_rec &&
-    match t.ptyp_desc with
-    | Ptyp_var _ -> false
-    | Ptyp_constr ({txt=Lident s}, params)
-      when String.equal s cur_name &&
-           List.length params = List.length tdecl.ptype_params &&
-           List.for_all2_exn params tdecl.ptype_params
-             ~f:(fun a (b,_) -> 0=compare_core_type a b)
-      -> is_rec
-    | _ -> false
+    let is_self_rec t =
+      is_rec &&
+      match t.ptyp_desc with
+      | Ptyp_var _ -> false
+      | Ptyp_constr ({txt=Lident s}, params)
+        when String.equal s cur_name &&
+             List.length params = List.length tdecl.ptype_params &&
+             List.for_all2_exn params tdecl.ptype_params
+               ~f:(fun a (b,_) -> 0=compare_core_type a b)
+        -> is_rec
+      | _ -> false
     in
-  self#got_typedecl tdecl is_self_rec (fun ~is_poly -> ans ~is_poly)
+    self#got_typedecl tdecl is_self_rec (fun ~is_poly -> ans is_poly)
 
   method make_trans_functions: loc:location ->
     is_rec:bool -> string list -> type_declaration list -> structure_item
@@ -92,11 +96,12 @@ class virtual ['self] generator = object(self: 'self)
     let name = sprintf "%s_%s%s" self#plugin_name cur_name
         (match mutal_names with [] -> "" | _ -> "_stub")
     in
-    let params = invariantize @@ self#plugin_class_params tdecl in
+    let params = self#plugin_class_params tdecl in
     let params =
-      if is_poly then params @ [[%type: 'polyvar_extra],Invariant]
+      if is_poly then params @ [[%type: 'polyvar_extra]]
       else params
     in
+    let params = invariantize params in
     Str.class_single ~loc ~params
       ~name
       ~virt:Concrete
@@ -111,8 +116,7 @@ class virtual ['self] generator = object(self: 'self)
         Cl.fun_list names body
       )
       @@
-      [
-        Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
+      [ Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
       ] @ fields
 
   method virtual make_class : loc:location ->
@@ -134,7 +138,8 @@ class virtual ['self] generator = object(self: 'self)
           ~params:(invariantize new_params)
           [ Cf.inherit_ ~loc @@ Cl.apply
               (Cl.constr ~loc (Located.lident ~loc stub_name) new_params)
-              (List.map ~f:(fun s -> Nolabel, Exp.sprintf ~loc "%s" s) @@ (mut_funcs@real_args))
+              (nolabelize @@
+               List.map ~f:(Exp.sprintf ~loc "%s") (mut_funcs@real_args) )
           ]
       )
 
@@ -155,7 +160,9 @@ class virtual ['self] generator = object(self: 'self)
 
 
   method on_record_constr : type_declaration -> constructor_declaration ->
-    label_declaration list -> 'on_record_result = fun _ _ _ -> failwith "not_implemented"
+    label_declaration list -> 'on_record_result
+    = fun _ _ _ ->
+    failwith "not_implemented"
 
   method virtual on_tuple_constr : type_declaration -> (core_type -> bool) ->
     constructor_declaration ->
@@ -169,10 +176,6 @@ class virtual ['self] generator = object(self: 'self)
       )
 
   (* When we got declaration of type alias via type application *)
-  (* method virtual got_constr : loc:Location.t -> type_declaration -> (core_type -> bool) ->
-   *   (loc:Location.t -> (core_type -> bool) -> core_type -> 'do_typ_res) ->
-   *   longident Location.loc -> core_type list -> (class_field list -> 'bbb) -> 'bbb *)
-
   method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
     let ans args =
       [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in

@@ -18,7 +18,105 @@ let (@@) = Caml.(@@)
 
 let deriver = "gt"
 
-(* type supported_plugins = { ol_show: bool; gt_gmap: bool; gt_fold: bool } *)
+let make_interface_class_sig ~loc tdecl =
+  let loc = tdecl.ptype_loc in
+  let params = List.map ~f:fst tdecl.ptype_params in
+  let name = tdecl.ptype_name in
+
+  let k ?(is_poly=false) fields =
+    let prepare_params is_poly =
+      let middle = if is_poly then [[%type: 'polyvar_extra]] else [] in
+      prepare_param_triples ~loc ~middle params
+    in
+    Sig.class_ ~loc ~virt:Virtual
+      ~name:(sprintf "class_%s" name.txt)
+      ~params:(prepare_params is_poly |> invariantize)
+      fields
+
+  in
+  visit_typedecl ~loc tdecl
+    ~onvariant:(fun cds ->
+      k @@
+      List.map cds ~f:(fun cd ->
+        let methname = sprintf "c_%s" cd.pcd_name.txt in
+        match cd.pcd_args with
+        | Pcstr_record _ -> not_implemented "record constructors"
+        | Pcstr_tuple ts ->
+            Ctf.method_ ~loc methname
+               (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
+                |> (Typ.arrow Nolabel [%type: 'inh])
+               )
+      )
+    )
+    ~onmanifest:(fun typ ->
+
+          let wrap ?(is_poly=false) name params =
+            let inh_params =
+                List.concat_map params ~f:(fun typ ->
+                  [ typ
+                  ; map_core_type typ ~onvar:(fun n -> Typ.var ("i"^n) )
+                  ; map_core_type typ ~onvar:(fun n -> Typ.var ("s"^n) )
+                  ]
+                )
+            in
+            let inh_params = List.concat
+                [ inh_params
+                ; inh_syn_ts ~loc ()
+                ; if is_poly then [[%type: 'polyvar_extra]] else []
+                ]
+            in
+
+            [ Ctf.inherit_ ~loc @@
+              Cty.constr (mknoloc @@ map_longident ~f:(sprintf "class_%s") name)
+                inh_params
+            ]
+          in
+
+          let rec helper typ = match typ with
+          | [%type: string]
+          | [%type: char]
+          | [%type: int]  ->
+            not_implemented "%s " Caml.__FILE__ (* Caml.__LINE__ *)
+          | _ -> match typ.ptyp_desc with
+          | Ptyp_var name -> not_implemented "antiphantom types"
+          | Ptyp_constr ({txt;loc}, params) ->
+            (* a type alias on toplevel *)
+            k @@ wrap txt params
+          | Ptyp_tuple ts ->
+            (* let's say we have predefined aliases for now *)
+            let loc = typ.ptyp_loc in
+            let new_lident = Ldot (Lident "GT", sprintf "tuple%d" @@ List.length ts) in
+            helper @@ Typ.constr ~loc (Located.mk ~loc new_lident) ts
+          | Ptyp_alias (typ, new_name) ->
+              map_core_type typ ~onvar:(fun as_ ->
+                if String.equal as_ new_name
+                then Typ.constr (Located.lident ~loc name.txt) params
+                else Typ.var ~loc as_
+              ) |> helper
+          | Ptyp_variant (rows,_,labels) ->
+              (* rows go to virtual methods. label goes to inherit fields *)
+              let meths =
+                List.concat_map rows ~f:(function
+                | Rtag (lab,_,_,args)  ->
+                  let methname = sprintf "c_%s" lab in
+                  [ Ctf.method_ ~loc methname @@
+                      (List.fold_right args ~init:[%type: 'syn]
+                         ~f:(Typ.arrow Nolabel)
+                       |> (Typ.arrow Nolabel [%type: 'inh])
+                      )
+                  ]
+                | Rinherit typ -> match typ.ptyp_desc with
+                  | Ptyp_constr ({txt;loc}, params) ->
+                     wrap ~is_poly:true txt params
+                  | _ -> assert false
+                )
+              in
+              k ~is_poly:true meths
+          | _ -> failwith "not implemented"
+          in
+          helper typ
+    )
+
 
 let make_interface_class ~loc root_type =
   let params = List.map ~f:fst root_type.ptype_params in
@@ -119,7 +217,9 @@ let make_interface_class ~loc root_type =
     )
 
 
-let make_gcata ~loc root_type =
+let make_gcata_sig ~loc tdecl = []
+
+let make_gcata_str ~loc root_type =
   let gcata_pat =
      Pat.var ~loc (sprintf "gcata_%s" root_type.ptype_name.txt)
   in
@@ -202,7 +302,7 @@ let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive)
 (* for structures *)
 let do_typ ~loc plugins is_rec tdecl =
   let intf_class = make_interface_class ~loc tdecl in
-  let gcata = make_gcata ~loc tdecl in
+  let gcata = make_gcata_str ~loc tdecl in
   List.concat
     [ make_heading_str ~loc tdecl
     ; [intf_class; gcata]
@@ -211,29 +311,48 @@ let do_typ ~loc plugins is_rec tdecl =
 
 let do_mutal_types ~loc plugins tdecls =
   List.concat_map tdecls ~f:(fun tdecl ->
-    make_heading ~loc tdecl @
+    make_heading_str ~loc tdecl @
     [ make_interface_class ~loc tdecl
-    ; make_gcata ~loc tdecl ]
+    ; make_gcata_str ~loc tdecl ]
   ) @
   List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
+
 
 (* for signatures *)
 let do_typ_sig ~loc plugins is_rec tdecl =
-  let intf_class = make_interface_class ~loc tdecl in
-  let gcata = make_gcata ~loc tdecl in
+  let intf_class = make_interface_class_sig ~loc tdecl in
+  let gcata = make_gcata_sig ~loc tdecl in
   List.concat
-    [ make_heading ~loc tdecl
-    ; [intf_class; gcata]
-    ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
+    [ make_heading_sig ~loc tdecl
+    ; [intf_class(* ; gcata *)]
+    ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ]
 
 let do_mutal_types_sig ~loc plugins tdecls =
-  List.concat_map tdecls ~f:(fun tdecl ->
-    make_heading ~loc tdecl @
-    [ make_interface_class ~loc tdecl
-    ; make_gcata ~loc tdecl ]
-  ) @
-  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
+  []
+  (* List.concat_map tdecls ~f:(fun tdecl ->
+   *   make_heading_str ~loc tdecl @
+   *   [ make_interface_class ~loc tdecl
+   *   (\* ; make_gcata_sig ~loc tdecl *\)
+   *   ]
+   * ) @
+   * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
+
+let sig_type_decl ~loc ~path (rec_flag, tdls)
+    ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false) =
+  let plugins =
+    let wrap f p = if f then List.cons p else id in
+    wrap use_show  Show.g @@
+    wrap use_gmap  Gmap.g @@
+    []
+  in
+  match rec_flag, tdls with
+  | Recursive, []      -> []
+  | Recursive, [tdecl] -> do_typ_sig ~loc plugins true tdecl
+  | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
+  | Nonrecursive, ts ->
+      List.concat_map ~f:(do_typ_sig ~loc plugins false) tdls
+
 
 let str_type_decl ~loc ~path (rec_flag, tdls)
     ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false) =
