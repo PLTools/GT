@@ -110,9 +110,20 @@ end
 module Typ = struct
   open Ast_helper
   include Typ
-  let ground ?(loc=Location.none) s = constr (Located.lident ~loc s) []
-  let class_ ?(loc=Location.none) = ptyp_class ~loc
-  let constr ?(loc=Location.none) = ptyp_constr ~loc
+  let ground  ?(loc=Location.none) s = constr (Located.lident ~loc s) []
+  let class_  ?(loc=Location.none) = ptyp_class ~loc
+  let constr  ?(loc=Location.none) = ptyp_constr ~loc
+  let object_ ?(loc=Location.none) flg xs =
+    ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> l,[],r)) flg
+
+  let class_ ?(loc=Location.none) lident args =
+    ptyp_class ~loc (Located.mk ~loc lident) args
+  let chain_arrow ?(loc=Location.none) = function
+    | [] -> failwith "list can't be empty"
+    | xs ->
+      let revxs = List.rev xs in
+      List.fold_left (List.tl_exn revxs) ~init:(List.hd_exn revxs)
+        ~f:(fun acc t -> arrow ~loc Nolabel t acc)
 end
 
 module Str = struct
@@ -134,6 +145,9 @@ module Sig = struct
   let class_  ?(loc=Location.none) ?(virt=Asttypes.Virtual) ~name ~params body =
     psig_class ~loc [Ci.mk ~loc (mknoloc name) ~virt ~params
                        (Cty.signature (Csig.mk [%type: _] body))]
+
+  let value ?(loc=Location.none) ?(prim=[]) ~name ~type_ = psig_value ~loc @@ value_description ~loc ~name:(Located.mk ~loc name) ~type_ ~prim
+
 end
 module Cf = struct
   let constraint_ ?(loc=Location.none) t1 t2 =

@@ -17,10 +17,16 @@ class virtual ['self] generator_t = object(self: 'self)
   (* synthethized attribute for whole type declaration *)
   method virtual default_syn : type_declaration -> core_type
   method virtual syn_of_param : loc:location -> string  -> core_type
+
+  method virtual plugin_class_params: type_declaration -> core_type list
+  method virtual prepare_inherit_args_for_alias: loc:location -> type_declaration -> core_type list -> core_type list
+
 end
 
 class virtual ['self] generator = object(self: 'self)
   inherit ['self] generator_t
+
+  method cur_name tdecl = tdecl.ptype_name.txt
 
   method make_class ~loc tdecl ~is_rec mutal_names =
     let cur_name = self#cur_name tdecl in
@@ -51,6 +57,32 @@ class virtual ['self] generator = object(self: 'self)
       | _ -> false
     in
     self#got_typedecl tdecl is_self_rec (fun ~is_poly -> ans is_poly)
+
+  method make_trans_functions_sig: loc:location ->
+    is_rec:bool -> string list -> type_declaration list -> signature
+    = fun ~loc ~is_rec mutal_names tdecls ->
+
+      List.map tdecls ~f:(fun tdecl ->
+          let type_ = using_type ~typename:tdecl.ptype_name.txt tdecl in
+          let type_ = [%type: [%t self#default_inh] -> [%t type_] ->
+            [%t self#default_syn tdecl]]
+          in
+          let type_ =
+            List.fold_right
+              (map_type_param_names tdecl.ptype_params ~f:id)
+              ~init:type_
+              ~f:(fun name -> Typ.arrow ~loc Nolabel
+                     [%type: [%t self#default_inh] -> [%t Typ.var name] ->
+                       [%t self#syn_of_param ~loc name]]
+                 )
+          in
+
+          Sig.value ~loc
+            ~name:(sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt)
+            ~prim:[]
+            ~type_
+
+        )
 
   method make_trans_functions: loc:location ->
     is_rec:bool -> string list -> type_declaration list -> structure_item
@@ -86,24 +118,21 @@ class virtual ['self] generator = object(self: 'self)
           )
       )
 
-  method cur_name tdecl = tdecl.ptype_name.txt
-
-  method wrap_class_definition ?(is_poly=false) ~loc mutal_names tdecl
-      ~inh_params fields
-    =
+  method wrap_class_definition ?(is_poly=false) ~loc mutal_names tdecl ~inh_params fields =
     let cur_name = self#cur_name tdecl in
     (* inherit class_t and prepare to put other members *)
-    let name = sprintf "%s_%s%s" self#plugin_name cur_name
-        (match mutal_names with [] -> "" | _ -> "_stub")
-    in
-    let params = self#plugin_class_params tdecl in
     let params =
-      if is_poly then params @ [[%type: 'polyvar_extra]]
-      else params
+      let ans = self#plugin_class_params tdecl in
+      let ans =
+        if is_poly then ans @ [[%type: 'polyvar_extra]]
+        else ans
+      in
+      invariantize ans
     in
-    let params = invariantize params in
+
     Str.class_single ~loc ~params
-      ~name
+      ~name:(sprintf "%s_%s%s" self#plugin_name cur_name
+               (match mutal_names with [] -> "" | _ -> "_stub") )
       ~virt:Concrete
       ~wrap:(fun body ->
         (* constructor arguments are *)
@@ -118,11 +147,6 @@ class virtual ['self] generator = object(self: 'self)
       @@
       [ Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
       ] @ fields
-
-  method virtual make_class : loc:location ->
-    type_declaration -> is_rec:bool -> string list -> structure_item
-
-  method virtual plugin_class_params: type_declaration -> core_type list
 
   method make_shortend_class ~loc ~(is_rec: bool) mutal_names tdecls =
     List.map tdecls ~f:(fun tdecl ->
@@ -142,6 +166,12 @@ class virtual ['self] generator = object(self: 'self)
                List.map ~f:(Exp.sprintf ~loc "%s") (mut_funcs@real_args) )
           ]
       )
+
+  method do_single_sig ~(loc:location) ~(is_rec: bool) (tdecl: type_declaration) : signature =
+    List.concat
+    [ (* self#make_class ~loc ~is_rec tdecl [] *)
+    self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
+    ]
 
   method do_single ~loc ~is_rec tdecl =
     [ self#make_class ~loc ~is_rec tdecl []

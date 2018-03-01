@@ -80,13 +80,12 @@ let g = object(self: 'self)
 
       )
 
-
   method on_tuple_constr tdecl is_self_rec cd ts =
     let loc = tdecl.ptype_loc in
-    let names = make_new_names (List.length ts) in
     let constr_name = cd.pcd_name.txt in
-    Cf.method_concrete ~loc ("c_"^cd.pcd_name.txt)
+    Cf.method_concrete ~loc ("c_"^constr_name)
       [%expr fun () -> [%e
+        let names = make_new_names (List.length ts) in
         Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
         if List.length ts = 0
         then Exp.constant ~loc (Pconst_string (constr_name, None))

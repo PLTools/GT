@@ -175,7 +175,7 @@ let make_interface_class ~loc root_type =
           | [%type: string]
           | [%type: char]
           | [%type: int]  ->
-            not_implemented "%s " Caml.__FILE__ (* Caml.__LINE__ *)
+            not_implemented "%s " Caml.__FILE__
           | _ -> match typ.ptyp_desc with
           | Ptyp_var name -> not_implemented "antiphantom types"
           | Ptyp_constr ({txt;loc}, params) ->
@@ -217,7 +217,32 @@ let make_interface_class ~loc root_type =
     )
 
 
-let make_gcata_sig ~loc tdecl = []
+let make_gcata_sig ~loc tdecl =
+  let tr_t = [%type: < .. > ] in
+  let tr_t = visit_typedecl ~loc tdecl
+      ~onvariant:(fun cds ->
+          Typ.object_ ~loc Open @@
+          List.map cds
+            ~f:(fun cd ->
+                match cd.pcd_args with
+                | Pcstr_tuple ts -> cd.pcd_name.txt, Typ.chain_arrow ~loc (ts@[[%type: int]])
+                | Pcstr_record _ -> assert false
+              )
+        )
+      ~onmanifest:(fun typ ->
+          match typ.ptyp_desc with
+          | Ptyp_constr ({txt;loc}, ts) ->
+            (* there we can fuck up extra argument about polymorphic variants *)
+            let args = List.concat_map ts ~f:()
+            Typ.class_ ~loc txt
+        )
+  in
+  let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
+
+
+  let type_ = Typ.chain_arrow ~loc [ tr_t; subj_t; [%type: 'inh]; [%type: 'syn] ] in
+  Sig.value ~loc ~prim:[] ~name:"gcata" ~type_:type_
+
 
 let make_gcata_str ~loc root_type =
   let gcata_pat =
@@ -324,7 +349,7 @@ let do_typ_sig ~loc plugins is_rec tdecl =
   let gcata = make_gcata_sig ~loc tdecl in
   List.concat
     [ make_heading_sig ~loc tdecl
-    ; [intf_class(* ; gcata *)]
+    ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ]
 
