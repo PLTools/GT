@@ -240,32 +240,29 @@ let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
     ?(default_inh=[%type: 'inh])
     ?(middle=[])
     params =
-  let ps = List.concat @@ List.map params ~f:(fun t ->
-    match t.ptyp_desc with
-    | Ptyp_var n -> [normal ~loc n; inh ~loc n; syn ~loc n]
-    | _ -> raise_errorf "param_triples: can't construct"
-    )
+  let ps = List.concat @@ map_type_param_names params ~f:(fun n ->
+    [normal ~loc n; inh ~loc n; syn ~loc n]
+  )
   in
   let tail = [ default_inh; default_syn ] in
   ps @ (extra ()) @ tail @ middle
 
 
-
-let params_obj ?(loc=Location.none)
-    ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
-  (* converts 'a, 'b to
-     < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
-   *)
-  let f (t,_) = arr_of_param ~inh ~syn t in
-  ptyp_object ~loc (List.map ~f root_type.ptype_params) Asttypes.Closed
+(* let params_obj ?(loc=Location.none)
+ *     ?(inh=fun s -> Typ.var @@ "i"^s) ?(syn=fun s -> Typ.var @@ "s"^s) root_type =
+ *   (\* converts 'a, 'b to
+ *      < a: 'ia -> 'a -> 'sa ; b: 'ib -> 'b -> 'sb >
+ *    *\)
+ *   let f (t,_) = arr_of_param ~inh ~syn t in
+ *   ptyp_object ~loc (List.map ~f root_type.ptype_params) Asttypes.Closed *)
 
 let using_type ~(typename: string) root_type =
   let loc = root_type.ptype_loc in
   (* generation type specification by type declaration *)
   ptyp_constr ~loc (Located.lident ~loc typename) (List.map ~f:fst @@ root_type.ptype_params)
 
-let for_me_patt ?(loc=Location.none) () = pvar ~loc "for_me"
-let for_me_expr ?(loc=Location.none) () = pexp_ident ~loc (mknoloc (Lident "for_me"))
+(* let for_me_patt ?(loc=Location.none) () = pvar ~loc "for_me"
+ * let for_me_expr ?(loc=Location.none) () = pexp_ident ~loc (mknoloc (Lident "for_me")) *)
 
 let inh_syn_ts ?(loc=Location.none) () = [ [%type: 'inh]; [%type: 'syn] ]
 (* Used when we need to check that type we working on references himself in

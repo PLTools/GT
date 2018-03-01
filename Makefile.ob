@@ -21,7 +21,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 .DEFAULT_GOAL: all
 
-all: syntax lib plugins ppx bundle
+all: syntax lib ppx bundle
 
 lib:
 	$(OB) -Is src $(BYTE_TARGETS) $(NATIVE_TARGETS)

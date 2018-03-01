@@ -26,7 +26,7 @@ let make_interface_class_sig ~loc tdecl =
   let k ?(is_poly=false) fields =
     let prepare_params is_poly =
       let middle = if is_poly then [[%type: 'polyvar_extra]] else [] in
-      prepare_param_triples ~loc ~middle params
+      prepare_param_triples ~loc ~middle tdecl.ptype_params
     in
     Sig.class_ ~loc ~virt:Virtual
       ~name:(sprintf "class_%s" name.txt)
@@ -117,24 +117,23 @@ let make_interface_class_sig ~loc tdecl =
           helper typ
     )
 
-
-let make_interface_class ~loc root_type =
-  let params = List.map ~f:fst root_type.ptype_params in
-  let name = root_type.ptype_name in
+let make_interface_class ~loc tdecl =
+  let params = List.map ~f:fst tdecl.ptype_params in
+  let name = tdecl.ptype_name in
 
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (if polyvar)
   *)
   let prepare_params is_poly =
     let middle = if is_poly then [[%type: 'polyvar_extra]] else [] in
-    prepare_param_triples ~loc ~middle params
+    prepare_param_triples ~loc ~middle tdecl.ptype_params
   in
 
   let ans ?(is_poly=false) fields =
     Str.class_single ~loc ~name:(sprintf "class_%s" name.txt) fields
       ~params:(prepare_params is_poly |> invariantize)
   in
-  visit_typedecl ~loc root_type
+  visit_typedecl ~loc tdecl
     ~onvariant:(fun cds ->
       ans @@
       List.map cds ~f:(fun cd ->
@@ -218,30 +217,37 @@ let make_interface_class ~loc root_type =
 
 
 let make_gcata_sig ~loc tdecl =
-  let tr_t = [%type: < .. > ] in
   let tr_t = visit_typedecl ~loc tdecl
       ~onvariant:(fun cds ->
           Typ.object_ ~loc Open @@
           List.map cds
             ~f:(fun cd ->
-                match cd.pcd_args with
-                | Pcstr_tuple ts -> cd.pcd_name.txt, Typ.chain_arrow ~loc (ts@[[%type: int]])
-                | Pcstr_record _ -> assert false
-              )
+              match cd.pcd_args with
+              | Pcstr_tuple ts ->
+                  sprintf "c_%s" cd.pcd_name.txt,
+                  Typ.chain_arrow ~loc ([%type: 'inh]::ts@[[%type: 'syn]])
+              | Pcstr_record _ -> assert false
+            )
         )
       ~onmanifest:(fun typ ->
           match typ.ptyp_desc with
           | Ptyp_constr ({txt;loc}, ts) ->
-            (* there we can fuck up extra argument about polymorphic variants *)
-            let args = List.concat_map ts ~f:()
-            Typ.class_ ~loc txt
+              (* there we can fuck up extra argument about polymorphic variants *)
+              let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
+                [ Typ.var ~loc name; Typ.var ~loc @@ "i"^name
+                ; Typ.var ~loc @@ "s"^name ]
+              ) |> List.concat
+            in
+            Typ.class_ ~loc txt args
+          | _ -> assert false
         )
   in
   let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
 
 
-  let type_ = Typ.chain_arrow ~loc [ tr_t; subj_t; [%type: 'inh]; [%type: 'syn] ] in
-  Sig.value ~loc ~prim:[] ~name:"gcata" ~type_:type_
+  let type_ = Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ] in
+  let name = Printf.sprintf "gcata_%s" tdecl.ptype_name.txt in
+  Sig.value ~loc ~prim:[] ~name ~type_:type_
 
 
 let make_gcata_str ~loc root_type =

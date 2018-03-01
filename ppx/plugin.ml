@@ -28,20 +28,118 @@ class virtual ['self] generator = object(self: 'self)
 
   method cur_name tdecl = tdecl.ptype_name.txt
 
+  method wrap_class_definition ?(is_poly=false) ~loc ~inh_params mutal_names
+      tdecl fields =
+    let cur_name = self#cur_name tdecl in
+    (* inherit class_t and prepare to put other members *)
+    let params =
+      let ans = self#plugin_class_params tdecl in
+      let ans =
+        if is_poly then ans @ [[%type: 'polyvar_extra]]
+        else ans
+      in
+      invariantize ans
+    in
+
+    Str.class_single ~loc ~params
+      ~name:(sprintf "%s_%s%s" self#plugin_name cur_name
+               (match mutal_names with [] -> "" | _ -> "_stub") )
+      ~virt:Concrete
+      ~wrap:(fun body ->
+        (* constructor arguments are *)
+        let names =
+          List.map mutal_names
+            ~f:(Pat.sprintf ~loc "%s_%s" self#plugin_name) @
+          [Pat.var ~loc self_arg_name] @
+          map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
+        in
+        Cl.fun_list names body
+      )
+      @@
+      [ Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
+      ] @ fields
+
+  method make_shortend_class ~loc ~(is_rec: bool) mutal_names tdecls =
+    List.map tdecls ~f:(fun tdecl ->
+        let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in
+        let class_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
+        let stub_name = class_name ^ "_stub" in
+        (* maybe it should be called proto *)
+        let mut_funcs = List.map ~f:(sprintf "%s_%s" self#plugin_name) mutal_names in
+        let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
+        let new_params = self#plugin_class_params tdecl in
+        Str.single_class ~loc ~name:class_name
+          ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
+          ~params:(invariantize new_params)
+          [ Cf.inherit_ ~loc @@ Cl.apply
+              (Cl.constr ~loc (Located.lident ~loc stub_name) new_params)
+              (nolabelize @@
+               List.map ~f:(Exp.sprintf ~loc "%s") (mut_funcs@real_args) )
+          ]
+      )
+
+  (* signature for a plugin class *)
+  method make_class_sig ~loc tdecl ~is_rec (mutal_names:string list) =
+    (* let is_poly = is_polyvariant_tdecl tdecl in *)
+
+    let k fields =
+      [ Sig.class_ ~loc
+          ~params:(invariantize @@ self#plugin_class_params tdecl)
+          ~name:(sprintf "%s_%s%s" self#plugin_name (self#cur_name tdecl)
+                   (match mutal_names with [] -> "" | _ -> "_stub") )
+          ~virt:Concrete
+          fields
+      ]
+    in
+    visit_typedecl ~loc tdecl
+    ~onmanifest:(fun typ ->
+        let rec helper typ =
+          match typ.ptyp_desc with
+          | Ptyp_alias (t, aname) ->
+            map_core_type t ~onvar:(fun as_ ->
+              if String.equal as_ aname
+              then Typ.constr (Located.lident ~loc tdecl.ptype_name.txt) @@
+                List.map tdecl.ptype_params ~f:fst
+              else Typ.var ~loc as_
+              ) |> helper
+          | Ptyp_constr (cid, params) ->
+            (* self#got_constr ~loc tdecl is_self_rec self#do_typ_gen
+             *   cid params (ans ~is_poly:false) *)
+            k []
+          | Ptyp_tuple ts ->
+            (* let's say we have predefined aliases for now *)
+            helper @@ constr_of_tuple ~loc ts
+          | Ptyp_variant (rows,_,_) ->
+            k []
+            (* self#got_polyvar ~loc tdecl self#do_typ_gen
+             *   is_self_rec rows
+             *   (ans ~is_poly:true) *)
+        | _ -> assert false
+        in
+        helper typ
+    )
+    ~onvariant:(fun cds ->
+      k []
+      (* self#on_variant tdecl is_self_rec cds (ans ~is_poly:false) *)
+    )
+
   method make_class ~loc tdecl ~is_rec mutal_names =
     let cur_name = self#cur_name tdecl in
     let ans is_poly fields =
+      let inh_params =
+        let inh_params = prepare_param_triples ~loc
+            ~inh:(fun ~loc _ -> self#default_inh)
+            ~syn:self#syn_of_param
+            ~default_syn:(self#default_syn tdecl)
+            tdecl.ptype_params
+        in
+        if is_poly
+        then inh_params @ [[%type: 'polyvar_extra]]
+        else
+          inh_params
+      in
       self#wrap_class_definition ~loc mutal_names tdecl ~is_poly fields
-        ~inh_params:(let inh_params = prepare_param_triples ~loc
-                         ~inh:(fun ~loc _ -> self#default_inh)
-                         ~syn:self#syn_of_param
-                         ~default_syn:(self#default_syn tdecl)
-                         (List.map ~f:fst tdecl.ptype_params)
-                     in
-                     if is_poly
-                     then inh_params @ [[%type: 'polyvar_extra]]
-                     else inh_params
-                    )
+        ~inh_params
     in
 
     let is_self_rec t =
@@ -118,59 +216,11 @@ class virtual ['self] generator = object(self: 'self)
           )
       )
 
-  method wrap_class_definition ?(is_poly=false) ~loc mutal_names tdecl ~inh_params fields =
-    let cur_name = self#cur_name tdecl in
-    (* inherit class_t and prepare to put other members *)
-    let params =
-      let ans = self#plugin_class_params tdecl in
-      let ans =
-        if is_poly then ans @ [[%type: 'polyvar_extra]]
-        else ans
-      in
-      invariantize ans
-    in
-
-    Str.class_single ~loc ~params
-      ~name:(sprintf "%s_%s%s" self#plugin_name cur_name
-               (match mutal_names with [] -> "" | _ -> "_stub") )
-      ~virt:Concrete
-      ~wrap:(fun body ->
-        (* constructor arguments are *)
-        let names =
-          List.map mutal_names
-            ~f:(Pat.sprintf ~loc "%s_%s" self#plugin_name) @
-          [Pat.var ~loc self_arg_name] @
-          map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
-        in
-        Cl.fun_list names body
-      )
-      @@
-      [ Cf.inherit_ (Cl.constr (Located.lident ~loc ("class_"^cur_name)) inh_params)
-      ] @ fields
-
-  method make_shortend_class ~loc ~(is_rec: bool) mutal_names tdecls =
-    List.map tdecls ~f:(fun tdecl ->
-        let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in
-        let class_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
-        let stub_name = class_name ^ "_stub" in
-        (* maybe it should be called proto *)
-        let mut_funcs = List.map ~f:(sprintf "%s_%s" self#plugin_name) mutal_names in
-        let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
-        let new_params = self#plugin_class_params tdecl in
-        Str.single_class ~loc ~name:class_name
-          ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
-          ~params:(invariantize new_params)
-          [ Cf.inherit_ ~loc @@ Cl.apply
-              (Cl.constr ~loc (Located.lident ~loc stub_name) new_params)
-              (nolabelize @@
-               List.map ~f:(Exp.sprintf ~loc "%s") (mut_funcs@real_args) )
-          ]
-      )
 
   method do_single_sig ~(loc:location) ~(is_rec: bool) (tdecl: type_declaration) : signature =
     List.concat
-    [ (* self#make_class ~loc ~is_rec tdecl [] *)
-    self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
+    [ self#make_class_sig ~loc ~is_rec tdecl []
+    ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
     ]
 
   method do_single ~loc ~is_rec tdecl =
@@ -210,7 +260,7 @@ class virtual ['self] generator = object(self: 'self)
     let ans args =
       [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
         Cf.inherit_ ~loc @@ Cl.apply
-          (Cl.constr
+          (Cl.constr ~loc
              ({cid with txt = map_longident cid.txt
                             ~f:(sprintf "%s_%s" self#plugin_name)})
              params)
