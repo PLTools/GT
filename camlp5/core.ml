@@ -375,7 +375,7 @@ let generate t loc =
 			    )
 			| Self _ -> H.E.gt_f (H.E.id env.Plugin.subj)
 			| _ -> invalid_arg "Unsupported type"			    
-			in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
+      in (try Some (inner t) with Invalid_argument "Unsupported type" -> None)
 		      else None
 		   )
                } 

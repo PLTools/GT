@@ -158,7 +158,7 @@ module Helper (L : sig val loc : loc end) =
     let id lid uid s = 
       if String.length s = 0 
       then invalid_arg "Plugin.Helper.id: empty string"
-      else (if s.[0] = Char.uppercase s.[0] then uid else lid) s
+      else (if s.[0] = Char.uppercase_ascii s.[0] then uid else lid) s
 
     let qname acc id = function
     | []    -> invalid_arg "Plugin.Helper.qname: empty string list"
