@@ -142,11 +142,14 @@ end
 module Sig = struct
   open Ast_helper
   include Sig
-  let class_  ?(loc=Location.none) ?(virt=Asttypes.Virtual) ~name ~params body =
-    psig_class ~loc [Ci.mk ~loc (mknoloc name) ~virt ~params
-                       (Cty.signature (Csig.mk [%type: _] body))]
+  let class_ ?(loc=Location.none) ?(virt=Asttypes.Virtual)
+      ?(wrap= (fun x -> x)) ~name ~params body =
+    psig_class ~loc [Ci.mk ~loc (mknoloc name) ~virt ~params @@
+                     wrap (Cty.signature (Csig.mk [%type: _] body))
+                    ]
 
-  let value ?(loc=Location.none) ?(prim=[]) ~name ~type_ = psig_value ~loc @@ value_description ~loc ~name:(Located.mk ~loc name) ~type_ ~prim
+  let value ?(loc=Location.none) ?(prim=[]) ~name ~type_ = psig_value ~loc @@
+    value_description ~loc ~name:(Located.mk ~loc name) ~type_ ~prim
 
 end
 module Cf = struct

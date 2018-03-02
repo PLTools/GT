@@ -232,13 +232,15 @@ let make_gcata_sig ~loc tdecl =
       ~onmanifest:(fun typ ->
           match typ.ptyp_desc with
           | Ptyp_constr ({txt;loc}, ts) ->
-              (* there we can fuck up extra argument about polymorphic variants *)
-              let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
+            (* there we can fuck up extra argument about polymorphic variants *)
+            let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
                 [ Typ.var ~loc name; Typ.var ~loc @@ "i"^name
                 ; Typ.var ~loc @@ "s"^name ]
               ) |> List.concat
             in
-            Typ.class_ ~loc txt args
+            let args = args @ [ [%type: 'inh]; [%type: 'syn]] in
+            (* Typ.class_ ~loc (map_longident txt ~f:(sprintf "class_%s")) args *)
+            Typ.class_ ~loc (Lident(sprintf "class_%s" tdecl.ptype_name.txt)) args
           | _ -> assert false
         )
   in
