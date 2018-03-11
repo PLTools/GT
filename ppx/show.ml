@@ -24,10 +24,12 @@ let g = object(self: 'self)
 
   method syn_of_param ~loc _ = [%type: string]
 
-  method plugin_class_params tdecl = List.map ~f:fst tdecl.ptype_params
+  method plugin_class_params tdecl =
+    let loc = tdecl.ptype_loc in
+    (List.map ~f:fst tdecl.ptype_params) @ [self#extra_param_stub ~loc]
 
   method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
-    rhs_args
+    rhs_args @ [self#extra_param_stub ~loc]
 
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     match bindings with
@@ -59,7 +61,7 @@ let g = object(self: 'self)
             ~ok:(fun cid params ->
                 let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
                 (* gmap has blownup_params here. Maybe we should abstract this *)
-                let inh_params = params @ [[%type: 'polyvar_extra]] in
+                let inh_params = params @ [[%type: 'extra]] in
                 Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"show_")})

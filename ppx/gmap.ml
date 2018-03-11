@@ -39,23 +39,28 @@ let g = object(self: 'self)
   method default_inh = let loc = Location.none in [%type: unit]
   method default_syn tdecl =
     let loc = tdecl.ptype_loc in
-    let cur_name = self#cur_name tdecl in
-    let param_names,rez_names,find_param,blownup_params = hack_params tdecl.ptype_params in
-    let (ident,args) =
-      if is_polyvariant_tdecl tdecl
-      then
-        (cur_name^"_open", "polyvar_extra"::rez_names)
-      else
-        (cur_name, rez_names)
-
+    let param_names,rez_names,find_param,blownup_params =
+      hack_params tdecl.ptype_params
     in
-    Typ.constr ~loc (Located.lident ~loc ident) @@
-    List.map ~f:(Typ.var ~loc) args
+    let ans =
+      let cur_name = self#cur_name tdecl in
+      let (ident,args) =
+          (cur_name, rez_names)
+      in
+      Typ.constr ~loc (Located.lident ~loc ident) @@
+      List.map ~f:(Typ.var ~loc) args
+    in
+    if is_polyvariant_tdecl tdecl
+    then
+      Typ.alias ~loc (openize_poly ans) "extra"
+      (* [%type: ([> [%t ans]] as 'extra)] *)
+    else ans
 
   method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
   method plugin_class_params tdecl =
+    let loc = tdecl.ptype_loc in
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
-    blownup_params
+    blownup_params @ [self#extra_param_stub ~loc]
 
   method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
@@ -63,7 +68,37 @@ let g = object(self: 'self)
     in
     List.concat_map rhs_args ~f:(fun t ->
       [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
-    )
+    ) @ [self#extra_param_stub ~loc]
+
+  method! extra_class_sig_members tdecl =
+    let loc = tdecl.ptype_loc in
+    if is_polyvariant_tdecl tdecl
+    then
+      let _param_names,rez_names,_find_param,_blownup_params =
+        hack_params tdecl.ptype_params
+      in
+      let right = Typ.constr ~loc
+          (Located.map (fun s -> Lident s) tdecl.ptype_name)
+          (List.map ~f:(Typ.var ~loc) rez_names)
+      in
+      let right = openize_poly right in
+      [Ctf.constraint_ ~loc (self#extra_param_stub ~loc) right ]
+    else []
+
+  method! extra_class_str_members tdecl =
+    let loc = tdecl.ptype_loc in
+    if is_polyvariant_tdecl tdecl
+    then
+      let _param_names,rez_names,_find_param,_blownup_params =
+        hack_params tdecl.ptype_params
+      in
+      let right = Typ.constr ~loc
+          (Located.map (fun s -> Lident s) tdecl.ptype_name)
+          (List.map ~f:(Typ.var ~loc) rez_names)
+      in
+      let right = openize_poly right in
+      [Cf.constraint_ ~loc (self#extra_param_stub ~loc) right ]
+    else []
 
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     let ctuple =
@@ -83,7 +118,7 @@ let g = object(self: 'self)
     in
     k @@ Exp.variant ~loc constr_name ctuple
 
-
+  (* RHS of type declaration [tdecl] is a polymorphc variant *)
   method got_polyvar ~loc tdecl do_typ is_self_rec rows k =
     let _param_names,_rez_names,_find_param,blownup_params =
       hack_params tdecl.ptype_params
@@ -95,7 +130,10 @@ let g = object(self: 'self)
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
                 let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
-                let inh_params = blownup_params @ [[%type: 'polyvar_extra]] in
+                (* let inh_params = blownup_params @ [ [%type: 'extra]] in *)
+                let inh_params = self#prepare_inherit_args_for_alias ~loc
+                    tdecl params
+                in
                 Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})

@@ -23,14 +23,14 @@ let make_interface_class_sig ~loc tdecl =
   let params = List.map ~f:fst tdecl.ptype_params in
   let name = tdecl.ptype_name in
 
-  let k ?(is_poly=false) fields =
-    let prepare_params is_poly =
-      let middle = if is_poly then [[%type: 'polyvar_extra]] else [] in
+  let k fields =
+    let prepare_params =
+      let middle = [[%type: 'extra]] in
       prepare_param_triples ~loc ~middle tdecl.ptype_params
     in
     Sig.class_ ~loc ~virt:Virtual
       ~name:(sprintf "class_%s" name.txt)
-      ~params:(prepare_params is_poly |> invariantize)
+      ~params:(prepare_params |> invariantize)
       fields
 
   in
@@ -49,8 +49,7 @@ let make_interface_class_sig ~loc tdecl =
       )
     )
     ~onmanifest:(fun typ ->
-
-          let wrap ?(is_poly=false) name params =
+          let wrap name params =
             let inh_params =
                 List.concat_map params ~f:(fun typ ->
                   [ typ
@@ -62,12 +61,13 @@ let make_interface_class_sig ~loc tdecl =
             let inh_params = List.concat
                 [ inh_params
                 ; inh_syn_ts ~loc ()
-                ; if is_poly then [[%type: 'polyvar_extra]] else []
+                ; [[%type: 'extra]]
                 ]
             in
 
             [ Ctf.inherit_ ~loc @@
-              Cty.constr (mknoloc @@ map_longident ~f:(sprintf "class_%s") name)
+              Cty.constr (Located.mk ~loc @@
+                          map_longident ~f:(sprintf "class_%s") name)
                 inh_params
             ]
           in
@@ -107,11 +107,11 @@ let make_interface_class_sig ~loc tdecl =
                   ]
                 | Rinherit typ -> match typ.ptyp_desc with
                   | Ptyp_constr ({txt;loc}, params) ->
-                     wrap ~is_poly:true txt params
+                     wrap txt params
                   | _ -> assert false
                 )
               in
-              k ~is_poly:true meths
+              k meths
           | _ -> failwith "not implemented"
           in
           helper typ
@@ -124,14 +124,14 @@ let make_interface_class ~loc tdecl =
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (if polyvar)
   *)
-  let prepare_params is_poly =
-    let middle = if is_poly then [[%type: 'polyvar_extra]] else [] in
+  let prepare_params =
+    let middle = [[%type: 'extra]] in
     prepare_param_triples ~loc ~middle tdecl.ptype_params
   in
 
   let ans ?(is_poly=false) fields =
     Str.class_single ~loc ~name:(sprintf "class_%s" name.txt) fields
-      ~params:(prepare_params is_poly |> invariantize)
+      ~params:(prepare_params |> invariantize)
   in
   visit_typedecl ~loc tdecl
     ~onvariant:(fun cds ->
@@ -160,12 +160,13 @@ let make_interface_class ~loc tdecl =
             let inh_params = List.concat
                 [ inh_params
                 ; inh_syn_ts ~loc ()
-                ; if is_poly then [[%type: 'polyvar_extra]] else []
+                ; [[%type: 'extra]]
                 ]
             in
 
             [ Cf.inherit_ ~loc @@
-              Cl.constr (mknoloc @@ map_longident ~f:(sprintf "class_%s") name)
+              Cl.constr (Located.mk ~loc @@
+                         map_longident ~f:(sprintf "class_%s") name)
                 inh_params
             ]
           in
@@ -234,18 +235,34 @@ let make_gcata_sig ~loc tdecl =
           | Ptyp_constr ({txt;loc}, ts) ->
             (* there we can fuck up extra argument about polymorphic variants *)
             let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
-                [ Typ.var ~loc name; Typ.var ~loc @@ "i"^name
+                [ Typ.var ~loc name
+                (* ; Typ.var ~loc @@ "i"^name *)
+                ; Typ.any ~loc ()
                 ; Typ.var ~loc @@ "s"^name ]
               ) |> List.concat
             in
-            let args = args @ [ [%type: 'inh]; [%type: 'syn]] in
+            let args = args @ [ [%type: 'inh]; [%type: 'syn]; [%type: _]] in
             (* Typ.class_ ~loc (map_longident txt ~f:(sprintf "class_%s")) args *)
             Typ.class_ ~loc (Lident(sprintf "class_%s" tdecl.ptype_name.txt)) args
+          | Ptyp_variant (rows,_flg,_) ->
+              let params = map_type_param_names tdecl.ptype_params
+                  ~f:(fun s ->
+                    [Typ.var ~loc s; Typ.any ~loc (); [%type: 'syn]]
+                  )
+              in
+              Typ.class_ ~loc
+                (Lident (sprintf "class_%s" tdecl.ptype_name.txt))
+                (List.concat params @
+                 Typ.[var ~loc "inh"; var ~loc "syn"; any ~loc ()])
           | _ -> assert false
         )
   in
   let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
-
+  (* let subj_t =
+   *   if is_polyvariant_tdecl tdecl
+   *   then Typ.variant ~loc [Rinherit subj_t] Open None
+   *   else subj_t
+   * in *)
 
   let type_ = Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ] in
   let name = Printf.sprintf "gcata_%s" tdecl.ptype_name.txt in
@@ -278,7 +295,8 @@ let make_gcata_str ~loc root_type =
           Str.value ~loc Nonrecursive
             [value_binding ~loc
                ~pat:gcata_pat
-               ~expr:(Exp.ident_of_long ~loc @@ mknoloc @@
+               ~expr:(Exp.ident_of_long ~loc @@
+                      Located.mk ~loc @@
                       map_longident txt ~f:(fun s -> "gcata_"^s) )
             ]
       | Ptyp_tuple ts ->
@@ -307,24 +325,25 @@ let make_gcata_str ~loc root_type =
       do_typ typ
     )
 
-(* create opened renaming for polymorphc variant *)
+(* create opened renaming for polymorphic variant *)
+(* Seems that we don't need it no more *)
 let make_heading_gen ~loc wrap tdecl =
   visit_typedecl ~loc tdecl
     ~onvariant:(fun _ -> [])
     ~onmanifest:(fun typ -> match typ.ptyp_desc with
-    | Ptyp_variant (fields,_,labels) ->
-        [ wrap (* Str.type_ ~loc Nonrecursive *)
-            [ let opened_t = Typ.variant ~loc fields Open labels in
-              let self_t = [%type: 'self] in
-              type_declaration ~loc
-                ~name:(Located.map (sprintf "%s_open") tdecl.ptype_name)
-                ~params:((self_t,Invariant) :: tdecl.ptype_params)
-                ~manifest:(Some self_t)
-                ~private_:Public
-                ~kind:tdecl.ptype_kind
-                ~cstrs:[(self_t,opened_t,loc)]
-            ]
-        ]
+    (* | Ptyp_variant (fields,_,labels) ->
+     *     [ wrap (\* Str.type_ ~loc Nonrecursive *\)
+     *         [ let opened_t = Typ.variant ~loc fields Open labels in
+     *           let self_t = [%type: 'self] in
+     *           type_declaration ~loc
+     *             ~name:(Located.map (sprintf "%s_open") tdecl.ptype_name)
+     *             ~params:((self_t,Invariant) :: tdecl.ptype_params)
+     *             ~manifest:(Some self_t)
+     *             ~private_:Public
+     *             ~kind:tdecl.ptype_kind
+     *             ~cstrs:[(self_t,opened_t,loc)]
+     *         ]
+     *     ] *)
     | _ -> []
     )
 

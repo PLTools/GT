@@ -110,6 +110,7 @@ end
 module Typ = struct
   open Ast_helper
   include Typ
+
   let ground  ?(loc=Location.none) s = constr (Located.lident ~loc s) []
   let class_  ?(loc=Location.none) = ptyp_class ~loc
   let constr  ?(loc=Location.none) = ptyp_constr ~loc
@@ -132,7 +133,7 @@ module Str = struct
 
   let single_class ?(loc=Location.none) ?(virt=Asttypes.Virtual) ?(pat=[%pat? _])
       ?(wrap= (fun x -> x)) ~name ~params body =
-    Str.class_ [Ci.mk ~virt ~params (mknoloc name) @@
+    Str.class_ [Ci.mk ~virt ~params (Located.mk ~loc name) @@
                 wrap (Ast_helper.Cl.structure (Cstr.mk pat body))
   ]
 
@@ -144,7 +145,7 @@ module Sig = struct
   include Sig
   let class_ ?(loc=Location.none) ?(virt=Asttypes.Virtual)
       ?(wrap= (fun x -> x)) ~name ~params body =
-    psig_class ~loc [Ci.mk ~loc (mknoloc name) ~virt ~params @@
+    psig_class ~loc [Ci.mk ~loc (Located.mk ~loc name) ~virt ~params @@
                      wrap (Cty.signature (Csig.mk [%type: _] body))
                     ]
 
@@ -158,7 +159,7 @@ module Cf = struct
   let inherit_ ?(loc=Location.none) ?(flg=Fresh) ?as_ cl_expr =
     pcf_inherit ~loc flg  cl_expr as_
   let method_ ?(loc=Location.none) name ?(flg=Public) kind =
-    pcf_method ~loc (mknoloc name, flg, kind)
+    pcf_method ~loc (Located.mk ~loc name, flg, kind)
   let method_concrete ?(loc=Location.none) name ?(flg=Public) ?(over_flg=Fresh) e =
     method_ ~loc name ~flg (Cfk_concrete (over_flg,e))
 
@@ -167,6 +168,7 @@ module Ctf = struct
   let method_ ?(loc=Location.none) ?(flg=Public) ?(virt_flg=Virtual) name kind =
     pctf_method ~loc (name, flg, virt_flg, kind)
   let inherit_ ?(loc=Location.none) = pctf_inherit ~loc
+  let constraint_ ?(loc=Location.none) l r = pctf_constraint ~loc (l,r)
 end
 
 module Cstr = struct
@@ -174,6 +176,12 @@ module Cstr = struct
 end
 
 open Parsetree
+
+let openize_poly typ =
+  let loc = typ.ptyp_loc in
+  Typ.variant ~loc [Rinherit typ] Open None
+
+
 let map_type_param_names ~f ps =
   List.map ps ~f:(fun (t,_) ->
     match t.ptyp_desc with
@@ -263,9 +271,6 @@ let using_type ~(typename: string) root_type =
   let loc = root_type.ptype_loc in
   (* generation type specification by type declaration *)
   ptyp_constr ~loc (Located.lident ~loc typename) (List.map ~f:fst @@ root_type.ptype_params)
-
-(* let for_me_patt ?(loc=Location.none) () = pvar ~loc "for_me"
- * let for_me_expr ?(loc=Location.none) () = pexp_ident ~loc (mknoloc (Lident "for_me")) *)
 
 let inh_syn_ts ?(loc=Location.none) () = [ [%type: 'inh]; [%type: 'syn] ]
 (* Used when we need to check that type we working on references himself in

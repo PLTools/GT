@@ -58,7 +58,7 @@ let g = object(self: 'self)
                          (List.map ~f:fst tdecl.ptype_params)
                      in
                      if is_poly
-                     then inh_params @ [[%type: 'polyvar_extra]]
+                     then inh_params @ [[%type: 'extra]]
                      else inh_params
                     )
         ~default_syn:(self#default_syn tdecl)
@@ -113,7 +113,7 @@ let g = object(self: 'self)
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
                 let args = List.concat_map params ~f:(self#do_typ ~loc is_self_rec) in
-                let inh_params = blownup_params @ [[%type: 'polyvar_extra]] in
+                let inh_params = blownup_params @ [[%type: 'extra]] in
                 Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
