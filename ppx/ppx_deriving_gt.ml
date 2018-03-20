@@ -15,7 +15,8 @@ module Attrs = struct
   let ignore =
     Attribute.declare "hash.ignore"
       Attribute.Context.label_declaration
-      Ast_pattern.(pstr nil)
+      Ast_pattern.(pstr (pstr_value nonrecursive
+                     (value_binding ~pat:(pstring __) ~expr:__ ^:: nil) )
       ()
 
   (* let no_hashing =
