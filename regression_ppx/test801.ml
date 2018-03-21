@@ -7,7 +7,7 @@ module AL : sig
   type ('a,'b) alist = Nil | Cons of 'a * 'b
   [@@deriving gt ~gmap ~show ~foldl ]
 end = struct
-  type ('a,'b) alist = Nil | Cons of 'a * 'b
+  type[@hash.ignore ] ('a,'b) alist  = Nil | Cons of 'a * ('b ) [@hash.ignore ]
   [@@deriving gt ~gmap ~show  ]
 end
 

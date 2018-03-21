@@ -407,7 +407,9 @@ let sig_type_decl ~loc ~path (rec_flag, tdls)
 
 
 let str_type_decl ~loc ~path (rec_flag, tdls)
-    ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false) =
+    ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false)
+    ~for1arg
+  =
   let plugins =
     let wrap f p = if f then List.cons p else id in
     wrap use_show  Show.g @@
@@ -424,8 +426,8 @@ let str_type_decl ~loc ~path (rec_flag, tdls)
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc plugins false) tdls
 
-let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
-  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl
+let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl for1arg =
+  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~for1arg
 
-let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
+let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl for1arg =
   sig_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl
