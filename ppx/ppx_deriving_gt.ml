@@ -27,30 +27,33 @@ module Sexp_of = struct
   let name = "gt"
 
 
-  let foo : (int,_) Type_conv.Generator.t =
-    let param1 =
-      let open Type_conv.Args in
+  let make_param name =
+    let open Type_conv.Args in
 
-      pexp_apply
-        (pexp_ident (lident (string "show")))
-        ( (pair nolabel (pexp_record  (__) none)) ^:: nil )
-    in
-    Type_conv.Generator.make
-      Type_conv.Args.(empty +> (arg "wtf" param1)
-                     )
-      (fun ~loc ~path _ args -> args)
+    let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
+    arg name @@
+    pexp_apply
+      (pexp_ident (lident (string name)))
+      ( (pair nolabel r) ^:: nil )
+
 
   let str_type_decl : (_, _) Type_conv.Generator.t =
     Type_conv.Generator.make
       (* ~attributes:[ Attribute.T Attrs.ignore ] *)
-      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl"
-                      +> (arg "for1arg" (__))
+      Type_conv.Args.(empty (* +> flag "show" +> flag "gmap" +> flag "foldl" *)
+                      +> (make_param "show") +> (make_param "gmap")
                      )
-      E.str_type_decl_implicit
+      (fun ~loc ~path info show gmap ->
+         let wrap = function Some xs -> xs | None -> [] in
+         let show = wrap show in
+         let gmap = wrap gmap in
+
+         E.str_type_decl_implicit ~loc ~path info show gmap
+      )
 
   let sig_type_decl : (_, _) Type_conv.Generator.t =
     Type_conv.Generator.make
-      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl"
+      Type_conv.Args.(empty +> flag "show" +> flag "gmap"
                      )
       E.sig_type_decl_implicit
 

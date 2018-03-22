@@ -52,6 +52,7 @@ let g = object(self: 'self)
           ]]
 
 
+  (* this is the same for show and gmap *)
   method got_polyvar ~loc tdecl do_typ is_self_rec rows k =
     k @@
     List.map rows ~f:(function
@@ -61,7 +62,10 @@ let g = object(self: 'self)
             ~ok:(fun cid params ->
                 let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
                 (* gmap has blownup_params here. Maybe we should abstract this *)
-                let inh_params = params @ [[%type: 'extra]] in
+                let inh_params = self#prepare_inherit_args_for_alias ~loc
+                    tdecl params
+                in
+
                 Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"show_")})

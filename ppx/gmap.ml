@@ -130,7 +130,6 @@ let g = object(self: 'self)
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
                 let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
-                (* let inh_params = blownup_params @ [ [%type: 'extra]] in *)
                 let inh_params = self#prepare_inherit_args_for_alias ~loc
                     tdecl params
                 in

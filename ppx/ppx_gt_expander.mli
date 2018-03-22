@@ -13,11 +13,14 @@ val str_type_decl :
 val str_type_decl_implicit :
   loc:Location.t -> path:string ->
   Asttypes.rec_flag * type_declaration list ->
-  bool -> bool -> bool -> expression option ->
+  (longident*expression) list ->
+  (longident*expression) list ->
   structure
 
 val sig_type_decl_implicit :
   loc:Location.t -> path:string ->
   Asttypes.rec_flag * type_declaration list ->
-  bool -> bool -> bool -> (* expression option -> *)
+  bool -> bool ->
+  (* (longident*expression) list ->
+   * (longident*expression) list -> *)
   signature
