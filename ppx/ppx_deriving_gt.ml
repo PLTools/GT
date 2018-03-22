@@ -30,9 +30,10 @@ module Sexp_of = struct
   let foo : (int,_) Type_conv.Generator.t =
     let param1 =
       let open Type_conv.Args in
+
       pexp_apply
         (pexp_ident (lident (string "show")))
-        ( (pair nolabel (pexp_record  __ none)) ^:: nil )
+        ( (pair nolabel (pexp_record  (__) none)) ^:: nil )
     in
     Type_conv.Generator.make
       Type_conv.Args.(empty +> (arg "wtf" param1)
