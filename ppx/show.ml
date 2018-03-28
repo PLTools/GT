@@ -13,8 +13,8 @@ open Ast_helper
 open GtHelpers
 open Ppx_core.Ast_builder.Default
 
-let g = object(self: 'self)
-  inherit ['self] Plugin.generator
+let g args = object(self: 'self)
+  inherit ['self] Plugin.generator args
 
   method plugin_name = "show"
   method default_inh = let loc = Location.none in [%type: unit]

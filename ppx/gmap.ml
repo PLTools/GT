@@ -31,8 +31,8 @@ let hack_params ?(loc=Location.none) ps =
   in
   (param_names, rez_names, assoc, blownup_params)
 
-let g = object(self: 'self)
-  inherit ['self] Plugin.generator
+let g args = object(self: 'self)
+  inherit ['self] Plugin.generator args
 
   method plugin_name = "gmap"
 

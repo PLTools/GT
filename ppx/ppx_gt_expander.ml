@@ -18,6 +18,8 @@ let (@@) = Caml.(@@)
 
 let deriver = "gt"
 
+type config_plugin = Skip | Use of (longident * expression) list
+
 let make_interface_class_sig ~loc tdecl =
   let loc = tdecl.ptype_loc in
   let params = List.map ~f:fst tdecl.ptype_params in
@@ -160,7 +162,7 @@ let make_interface_class ~loc tdecl =
             let inh_params = List.concat
                 [ inh_params
                 ; inh_syn_ts ~loc ()
-                ; [[%type: 'extra]]
+                ; [Plugin.construct_extra_param ~loc]
                 ]
             in
 
@@ -236,13 +238,11 @@ let make_gcata_sig ~loc tdecl =
             (* there we can fuck up extra argument about polymorphic variants *)
             let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
                 [ Typ.var ~loc name
-                (* ; Typ.var ~loc @@ "i"^name *)
                 ; Typ.any ~loc ()
                 ; Typ.var ~loc @@ "s"^name ]
               ) |> List.concat
             in
             let args = args @ [ [%type: 'inh]; [%type: 'syn]; [%type: _]] in
-            (* Typ.class_ ~loc (map_longident txt ~f:(sprintf "class_%s")) args *)
             Typ.class_ ~loc (Lident(sprintf "class_%s" tdecl.ptype_name.txt)) args
           | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
@@ -258,15 +258,10 @@ let make_gcata_sig ~loc tdecl =
         )
   in
   let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
-  (* let subj_t =
-   *   if is_polyvariant_tdecl tdecl
-   *   then Typ.variant ~loc [Rinherit subj_t] Open None
-   *   else subj_t
-   * in *)
 
   let type_ = Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ] in
   let name = Printf.sprintf "gcata_%s" tdecl.ptype_name.txt in
-  Sig.value ~loc ~prim:[] ~name ~type_:type_
+  Sig.value ~loc ~prim:[] ~name ~type_
 
 
 let make_gcata_str ~loc root_type =
@@ -330,22 +325,7 @@ let make_gcata_str ~loc root_type =
 let make_heading_gen ~loc wrap tdecl =
   visit_typedecl ~loc tdecl
     ~onvariant:(fun _ -> [])
-    ~onmanifest:(fun typ -> match typ.ptyp_desc with
-    (* | Ptyp_variant (fields,_,labels) ->
-     *     [ wrap (\* Str.type_ ~loc Nonrecursive *\)
-     *         [ let opened_t = Typ.variant ~loc fields Open labels in
-     *           let self_t = [%type: 'self] in
-     *           type_declaration ~loc
-     *             ~name:(Located.map (sprintf "%s_open") tdecl.ptype_name)
-     *             ~params:((self_t,Invariant) :: tdecl.ptype_params)
-     *             ~manifest:(Some self_t)
-     *             ~private_:Public
-     *             ~kind:tdecl.ptype_kind
-     *             ~cstrs:[(self_t,opened_t,loc)]
-     *         ]
-     *     ] *)
-    | _ -> []
-    )
+    ~onmanifest:(fun _ -> [])
 
 let make_heading_str ~loc = make_heading_gen ~loc (Str.type_ ~loc Nonrecursive)
 let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive)
@@ -390,12 +370,18 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * ) @
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
-let sig_type_decl ~loc ~path (rec_flag, tdls)
-    ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false) =
+let sig_type_decl ~loc ~path
+    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip)
+    (rec_flag, tdls) =
   let plugins =
-    let wrap f p = if f then List.cons p else id in
-    wrap use_show  Show.g @@
-    wrap use_gmap  Gmap.g @@
+    let wrap p = function
+    | Skip -> id
+    | Use args -> List.cons (p args)
+    in
+    wrap Show.g  use_show @@
+    wrap Gmap.g  use_gmap @@
+    (* wrap use_foldl Foldl.g @@ *)
+    (* wrap use_foldl Eq.g @@ *)
     []
   in
   match rec_flag, tdls with
@@ -406,14 +392,17 @@ let sig_type_decl ~loc ~path (rec_flag, tdls)
       List.concat_map ~f:(do_typ_sig ~loc plugins false) tdls
 
 
-let str_type_decl ~loc ~path (rec_flag, tdls)
-    ?(use_show=false) ?(use_gmap=false) ?(use_foldl=false)
-    ~for1arg
+let str_type_decl ~loc ~path
+    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip)
+    (rec_flag, tdls)
   =
   let plugins =
-    let wrap f p = if f then List.cons p else id in
-    wrap use_show  Show.g @@
-    wrap use_gmap  Gmap.g @@
+    let wrap p = function
+    | Skip -> id
+    | Use args -> List.cons (p args)
+    in
+    wrap Show.g  use_show @@
+    wrap Gmap.g  use_gmap @@
     (* wrap use_foldl Foldl.g @@ *)
     (* wrap use_foldl Eq.g @@ *)
     []
@@ -426,8 +415,13 @@ let str_type_decl ~loc ~path (rec_flag, tdls)
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc plugins false) tdls
 
-let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl for1arg =
-  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~for1arg
+let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
+  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl
 
-let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl for1arg =
-  sig_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl
+let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
+  let wrap f = if f then Use [] else Skip in
+  sig_type_decl ~loc ~path
+    ~use_show: (wrap use_show)
+    ~use_gmap: (wrap use_gmap)
+    ~use_foldl:(wrap use_foldl)
+    info

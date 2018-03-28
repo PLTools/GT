@@ -8,6 +8,7 @@ open GtHelpers
 open Ppx_core.Ast_builder.Default
 
 let self_arg_name = "_fself"
+let construct_extra_param ~loc = [%type: 'extra]
 
 class virtual ['self] generator_t = object(self: 'self)
   method virtual plugin_name : string
@@ -26,8 +27,27 @@ class virtual ['self] generator_t = object(self: 'self)
   method virtual extra_class_str_members: type_declaration -> class_field list
 end
 
-class virtual ['self] generator = object(self: 'self)
+class virtual ['self] generator initial_args = object(self: 'self)
   inherit ['self] generator_t
+
+  (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
+  val reinterpreted_args =
+    let check_name s =
+      try Caml.Scanf.sscanf "_x"  "_%d" (fun n -> Some n)
+      with Caml.Scanf.Scan_failure _ -> None
+    in
+    List.fold_left initial_args ~init:[]
+      ~f:(fun acc (lident,expr) ->
+        match lident with
+        | Lident s -> Option.value_map (check_name s) ~default:acc
+                        ~f:(fun n -> (n,expr) :: acc)
+        | _ -> acc
+      )
+
+  method make_class_arg_f_sig ~loc ~synt middle_t =
+    [%type: [%t self#default_inh] -> [%t middle_t] -> [%t synt] ]
+
+  method extra_param_stub ~loc = construct_extra_param ~loc
 
   method extra_class_sig_members _ = []
   method extra_class_str_members _ = []
@@ -76,11 +96,6 @@ class virtual ['self] generator = object(self: 'self)
              List.map ~f:(Exp.sprintf ~loc "%s") (mut_funcs@real_args) )
         ]
     )
-
-  method make_class_arg_f_sig ~loc ~synt middle_t =
-    [%type: [%t self#default_inh] -> [%t middle_t] -> [%t synt] ]
-
-  method extra_param_stub ~loc = [%type: 'extra]
 
   (* signature for a plugin class *)
   method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
@@ -218,7 +233,6 @@ class virtual ['self] generator = object(self: 'self)
   method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
     let ans args =
       [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
-        (* let params = [[%type: 'wtf]] in *)
         Cf.inherit_ ~loc @@ Cl.apply
           (Cl.constr ~loc
              ({cid with txt = map_longident cid.txt
@@ -227,11 +241,18 @@ class virtual ['self] generator = object(self: 'self)
           (nolabelize args)
       ]
     in
+
+    let tail_params =
+      List.mapi cparams ~f:(fun i t ->
+        try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal i
+        with Not_found ->
+          do_typ ~loc is_self_rec t
+      )
+    in
     (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
     k @@ ans @@
-    (Exp.sprintf ~loc "%s" self_arg_name) ::
-    (List.map cparams ~f:(do_typ ~loc is_self_rec))
+    (Exp.sprintf ~loc "%s" self_arg_name) :: tail_params
 
   (* When we met polymnorphic variant on RHS of type declaration *)
   method virtual got_polyvar: loc:location -> type_declaration ->

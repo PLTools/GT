@@ -5,10 +5,10 @@ let gmap_int () = GT.gmap GT.int
 
 module AL : sig
   type ('a,'b) alist = Nil | Cons of 'a * 'b
-  [@@deriving gt ~gmap ~show ~foldl ]
+  [@@deriving gt gmap show foldl ]
 end = struct
-  type[@hash.ignore ] ('a,'b) alist  = Nil | Cons of 'a * ('b ) [@hash.ignore ]
-  [@@deriving gt ~gmap ~show  ]
+  type ('a,'b) alist  = Nil | Cons of 'a * 'b
+  [@@deriving gt gmap show foldl]
 end
 
 
@@ -22,11 +22,11 @@ let () =
 
 module L : sig
   type 'a list = ('a, 'a list) AL.alist
-  [@@deriving gt ~gmap ~show ~foldl ]
+  [@@deriving gt gmap show foldl ]
 
 end = struct
   type 'a list = ('a, 'a list) AL.alist
-  [@@deriving gt ~gmap ~show ~foldl ]
+  [@@deriving gt gmap show foldl ]
 end
 
 let () =
