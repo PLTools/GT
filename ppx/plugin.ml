@@ -32,16 +32,28 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
+    (* printf "inital_args length %d\n%!" (List.length initial_args); *)
     let check_name s =
-      try Caml.Scanf.sscanf "_x"  "_%d" (fun n -> Some n)
-      with Caml.Scanf.Scan_failure _ -> None
+      (* printf "checking arg `%s`\n%!" s; *)
+      try Caml.Scanf.sscanf s "_%d" (fun n -> Some n)
+      with Caml.Scanf.Scan_failure _ ->
+        (* printf "can't parse it\n%!"; *) None
     in
-    List.fold_left initial_args ~init:[]
-      ~f:(fun acc (lident,expr) ->
-        match lident with
-        | Lident s -> Option.value_map (check_name s) ~default:acc
-                        ~f:(fun n -> (n,expr) :: acc)
-        | _ -> acc
+    let ans =
+      List.fold_left initial_args ~init:[]
+        ~f:(fun acc (lident,expr) ->
+            match lident with
+            | Lident s -> Option.value_map (check_name s) ~default:acc
+                            ~f:(fun n -> (n,expr) :: acc)
+            | _ -> acc
+          )
+    in
+    (* printf "Total args found for plugin : %d\n%!"  (List.length ans); *)
+    ans
+
+  method show_args =
+    List.iter reinterpreted_args ~f:(fun (k,e) ->
+        Format.printf "%d -> %a\n%!" k Pprintast.expression e
       )
 
   method make_class_arg_f_sig ~loc ~synt middle_t =
@@ -231,6 +243,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
   (* When we got declaration of type alias via type application *)
   method got_constr ~loc tdecl is_self_rec do_typ cid cparams k =
+    (* printf "got a constr\n%!"; *)
+    (* self#show_args; *)
     let ans args =
       [ let params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
         Cf.inherit_ ~loc @@ Cl.apply
@@ -244,9 +258,10 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
     let tail_params =
       List.mapi cparams ~f:(fun i t ->
-        try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal i
-        with Not_found ->
-          do_typ ~loc is_self_rec t
+          (* printf "checking for arg with index (%d+1)\n%!" i; *)
+          try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal (i+1)
+          with Not_found ->
+            do_typ ~loc is_self_rec t
       )
     in
     (* for typ aliases we can cheat because first argument of constructor of type
