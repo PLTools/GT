@@ -219,7 +219,7 @@ let make_interface_class ~loc tdecl =
     )
 
 
-let make_gcata_sig ~loc tdecl =
+let make_gcata_sig ~loc ?(shortname=false) tdecl =
   let tr_t = visit_typedecl ~loc tdecl
       ~onvariant:(fun cds ->
           Typ.object_ ~loc Open @@
@@ -260,8 +260,9 @@ let make_gcata_sig ~loc tdecl =
   let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
 
   let type_ = Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ] in
-  let name = Printf.sprintf "gcata_%s" tdecl.ptype_name.txt in
-  Sig.value ~loc ~prim:[] ~name ~type_
+  let name = if shortname then "gcata" else Printf.sprintf "gcata_%s" tdecl.ptype_name.txt
+  in
+  Sig.value ~loc ~name type_
 
 
 let make_gcata_str ~loc root_type =
@@ -330,15 +331,44 @@ let make_heading_gen ~loc wrap tdecl =
 let make_heading_str ~loc = make_heading_gen ~loc (Str.type_ ~loc Nonrecursive)
 let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive)
 
+let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
+
+let gather_module_str tdecl plugins =
+  let loc = tdecl.ptype_loc in
+
+  let me = Mod.structure ~loc [] in
+  let expr = Exp.pack_with_constraint ~loc me (Located.lident ~loc (name_fcm_mt tdecl))
+  in
+  Str.value ~loc Nonrecursive
+    [value_binding ~loc ~pat:(Pat.sprintf "%s" tdecl.ptype_name.txt) ~expr]
+
+let make_fcm_sig ~loc tdecl plugins =
+  let fields = List.concat_map plugins ~f:(fun p ->
+      let name  = p#plugin_name in
+      let type_ = p#make_trans_function_typ              tdecl in
+      [Sig.value ~loc ~name type_ ]
+    )
+  in
+  Mty.signature ~loc ((make_gcata_sig ~shortname:true ~loc tdecl) :: fields )
 
 (* for structures *)
 let do_typ ~loc plugins is_rec tdecl =
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata_str ~loc tdecl in
+
+  let prepare_mt tdecl plugins =
+    let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
+
+
+    let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
+    Str.modtype ~loc (module_type_declaration ~loc ~name ~type_)
+  in
+
   List.concat
     [ make_heading_str ~loc tdecl
     ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
+    ; [prepare_mt tdecl plugins; gather_module_str tdecl plugins]
     ]
 
 let do_mutal_types ~loc plugins tdecls =

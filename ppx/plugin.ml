@@ -317,6 +317,9 @@ class virtual ['self] generator initial_args = object(self: 'self)
              (Typ.var name)
          )
 
+  method make_trans_function_name tdecl =
+    sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt
+
   method make_trans_functions_sig: loc:location ->
     is_rec:bool -> string list -> type_declaration list -> signature
     = fun ~loc ~is_rec mutal_names tdecls ->
@@ -324,9 +327,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
       List.map tdecls ~f:(fun tdecl ->
           let type_ = self#make_trans_function_typ tdecl in
           Sig.value ~loc
-            ~name:(sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt)
-            ~prim:[]
-            ~type_
+            ~name:(self#make_trans_function_name tdecl)
+            type_
         )
 
   method make_trans_functions: loc:location ->
@@ -342,7 +344,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
           List.filter mutal_names ~f:(String.(<>) cur_name)
         in
         value_binding ~loc
-          ~pat:(Pat.sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt)
+          ~pat:(Pat.sprintf ~loc "%s" @@ self#make_trans_function_name tdecl)
           ~expr:(
             let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
             let fixe = [%expr GT.fix0 ] in

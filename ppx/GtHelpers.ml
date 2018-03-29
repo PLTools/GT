@@ -85,6 +85,10 @@ module Exp = struct
         ~init:e
         ~f:(fun arg acc -> pexp_fun ~loc Nolabel None arg acc)
   let send ?(loc=Location.none) = pexp_send ~loc
+  let letmodule ?(loc=Location.none) = pexp_letmodule ~loc
+  let pack_with_constraint ?(loc=Location.none) me typname =
+    pexp_constraint ~loc (pexp_pack ~loc me) @@
+    ptyp_package ~loc (typname, [])
 end
 
 module Cl = struct
@@ -149,7 +153,7 @@ module Sig = struct
                      wrap (Cty.signature (Csig.mk [%type: _] body))
                     ]
 
-  let value ?(loc=Location.none) ?(prim=[]) ~name ~type_ = psig_value ~loc @@
+  let value ?(loc=Location.none) ?(prim=[]) ~name type_ = psig_value ~loc @@
     value_description ~loc ~name:(Located.mk ~loc name) ~type_ ~prim
 
 end
