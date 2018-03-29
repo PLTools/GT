@@ -10,25 +10,9 @@ open Ppx_core.Ast_builder.Default
 let self_arg_name = "_fself"
 let construct_extra_param ~loc = [%type: 'extra]
 
-class virtual ['self] generator_t = object(self: 'self)
-  method virtual plugin_name : string
-
-  method virtual default_inh : core_type
-
-  (* synthethized attribute for whole type declaration *)
-  method virtual default_syn : type_declaration -> core_type
-  method virtual syn_of_param : loc:location -> string  -> core_type
-
-  method virtual plugin_class_params: type_declaration -> core_type list
-  method virtual prepare_inherit_args_for_alias: loc:location -> type_declaration ->
-    core_type list -> core_type list
-
-  method virtual extra_class_sig_members: type_declaration -> class_type_field list
-  method virtual extra_class_str_members: type_declaration -> class_field list
-end
 
 class virtual ['self] generator initial_args = object(self: 'self)
-  inherit ['self] generator_t
+  inherit Plugin_intf.t
 
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
@@ -347,10 +331,10 @@ class virtual ['self] generator initial_args = object(self: 'self)
           ~pat:(Pat.sprintf ~loc "%s" @@ self#make_trans_function_name tdecl)
           ~expr:(
             let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
-            let fixe = [%expr GT.fix0 ] in
+            (* let fixe = [%expr GT.fix0 ] in *)
             Exp.fun_list ~loc
               ~args:(List.map arg_transfrs ~f:(Pat.sprintf ~loc "%s"))
-              [%expr fun () t -> [%e fixe] (fun self ->
+              [%expr fun the_init t -> GT.fix0 (fun self ->
                 [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" cur_name) @@
                   Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc @@
                                   make_class_name cur_name) @@
@@ -360,7 +344,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
                    @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
                   )
                 ]
-              ) () t
+              ) the_init t
               ]
           )
       )

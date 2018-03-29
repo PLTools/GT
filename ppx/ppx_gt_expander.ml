@@ -336,8 +336,22 @@ let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
 let gather_module_str tdecl plugins =
   let loc = tdecl.ptype_loc in
 
-  let me = Mod.structure ~loc [] in
-  let expr = Exp.pack_with_constraint ~loc me (Located.lident ~loc (name_fcm_mt tdecl))
+  let body = [%stri let gcata =
+                      [%e Exp.sprintf "gcata_%s" tdecl.ptype_name.txt]] ::[]
+  in
+  let body = List.fold_left ~init:body plugins
+      ~f:(fun acc p ->
+        let expr = Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl in
+        Str.value ~loc Nonrecursive [value_binding ~loc
+                                       ~pat:(Pat.of_string ~loc p#plugin_name)
+                                       ~expr
+                                    ]
+        :: acc
+      )
+  in
+  let expr = Exp.pack_with_constraint ~loc
+      (Mod.structure ~loc @@ List.rev body)
+      (Located.lident ~loc (name_fcm_mt tdecl))
   in
   Str.value ~loc Nonrecursive
     [value_binding ~loc ~pat:(Pat.sprintf "%s" tdecl.ptype_name.txt) ~expr]
@@ -358,8 +372,6 @@ let do_typ ~loc plugins is_rec tdecl =
 
   let prepare_mt tdecl plugins =
     let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
-
-
     let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
     Str.modtype ~loc (module_type_declaration ~loc ~name ~type_)
   in
@@ -384,10 +396,18 @@ let do_mutal_types ~loc plugins tdecls =
 let do_typ_sig ~loc plugins is_rec tdecl =
   let intf_class = make_interface_class_sig ~loc tdecl in
   let gcata = make_gcata_sig ~loc tdecl in
+
+  let prepare_mt tdecl plugins =
+    let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
+    let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
+    Sig.modtype ~loc (module_type_declaration ~loc ~name ~type_)
+  in
+
   List.concat
     [ make_heading_sig ~loc tdecl
     ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
+    ; [prepare_mt tdecl plugins]
     ]
 
 let do_mutal_types_sig ~loc plugins tdecls =
@@ -408,9 +428,9 @@ let sig_type_decl ~loc ~path
     | Skip -> id
     | Use args -> List.cons (p args)
     in
-    wrap Show.g  use_show @@
-    wrap Gmap.g  use_gmap @@
-    (* wrap use_foldl Foldl.g @@ *)
+    wrap Show.g  use_show  @@
+    wrap Gmap.g  use_gmap  @@
+    wrap Foldl.g use_foldl @@
     (* wrap use_foldl Eq.g @@ *)
     []
   in
@@ -433,6 +453,7 @@ let str_type_decl ~loc ~path
     in
     wrap Show.g  use_show @@
     wrap Gmap.g  use_gmap @@
+    wrap Foldl.g use_foldl @@
     (* wrap use_foldl Foldl.g @@ *)
     (* wrap use_foldl Eq.g @@ *)
     []

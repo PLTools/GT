@@ -141,6 +141,7 @@ module Str = struct
                 wrap (Ast_helper.Cl.structure (Cstr.mk pat body))
   ]
 
+  (* make value have a default re4cursive flag *)
   let class_single = single_class
 end
 
