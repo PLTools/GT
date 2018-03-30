@@ -26,6 +26,8 @@ let hack_params ?(loc=Location.none) ps =
 
 open Plugin
 
+(* TODO: we want easily get foldr from foldl *)
+
 let g initial_args = object(self: 'self)
   inherit ['self] Plugin.generator initial_args
 
@@ -42,14 +44,25 @@ let g initial_args = object(self: 'self)
     (* There we should have all parameters on the LHS of definition and 'syn one *)
     List.map ~f:fst tdecl.ptype_params @ [self#default_syn tdecl]
 
-
   method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
-    let _param_names,_rez_names,find_param,_blownup_params =
-      hack_params tdecl.ptype_params
-    in
-    List.concat_map rhs_args ~f:(fun t ->
-      [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
-    ) @ [self#extra_param_stub ~loc]
+    rhs_args @ [ self#default_syn tdecl ]
+               (* TODO: add 'extra ? *)
+
+  method on_tuple_constr tdecl is_self_rec cd args =
+    let loc = tdecl.ptype_loc in
+    let names = make_new_names (List.length args) in
+
+    Cf.method_concrete ~loc ("c_"^cd.pcd_name.txt)
+      [%expr fun inh -> [%e
+        Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
+        List.fold_left ~f:(fun acc (name,typ) ->
+          [%expr [%e self#do_typ_gen ~loc is_self_rec typ] [%e acc]
+              [%e Exp.sprintf ~loc "%s" name]]
+        )
+        ~init:[%expr inh]
+        (List.zip_exn names args)
+      ]]
+
 
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     (* TODO: rewrite *)
@@ -110,22 +123,5 @@ let g initial_args = object(self: 'self)
            *   ]] *)
 
       )
-
-
-
-  method on_tuple_constr tdecl is_self_rec cd args =
-    let loc = tdecl.ptype_loc in
-    let names = make_new_names (List.length args) in
-
-    Cf.method_concrete ~loc ("c_"^cd.pcd_name.txt)
-      [%expr fun inh -> [%e
-        Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-        List.fold_left ~f:(fun acc (name,typ) ->
-          [%expr [%e self#do_typ_gen ~loc is_self_rec typ] [%e acc]
-              [%e Exp.sprintf ~loc "%s" name]]
-        )
-        ~init:[%expr inh]
-        (List.zip_exn names args)
-      ]]
 
 end

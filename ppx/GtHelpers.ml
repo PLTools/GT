@@ -210,7 +210,16 @@ let map_core_type ~onvar t =
     | Ptyp_any -> t
     | Ptyp_var name -> onvar name
     | Ptyp_constr (name, args) ->
-        {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
+      {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
+    | Ptyp_variant (rows,flg,opt) ->
+      let rows = List.map rows ~f:(function
+          | Rinherit t -> Rinherit (helper t)
+          | Rtag (name,attrs, flg, params) ->
+            let params = List.map params ~f:helper in
+            Rtag (name,attrs,flg, params)
+        )
+      in
+      {t with ptyp_desc= Ptyp_variant (rows,flg,opt) }
     | _ -> t
   in
   helper t
