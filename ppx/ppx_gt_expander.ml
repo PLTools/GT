@@ -270,11 +270,9 @@ let make_gcata_str ~loc root_type =
      Pat.var ~loc (sprintf "gcata_%s" root_type.ptype_name.txt)
   in
   let ans k =
-    Str.value ~loc Nonrecursive
-      [value_binding ~loc
-         ~pat:gcata_pat
-         ~expr:[%expr fun tr inh t -> [%e k] ]
-      ]
+    Str.single_value ~loc
+         gcata_pat
+         [%expr fun tr inh t -> [%e k] ]
   in
   visit_typedecl ~loc root_type
     ~onvariant:(fun cds ->
@@ -288,13 +286,11 @@ let make_gcata_str ~loc root_type =
       let rec do_typ t = match t.ptyp_desc with
       | Ptyp_alias (t,_) -> do_typ t
       | Ptyp_constr ({txt},_) ->
-          Str.value ~loc Nonrecursive
-            [value_binding ~loc
-               ~pat:gcata_pat
-               ~expr:(Exp.ident_of_long ~loc @@
+          Str.single_value ~loc
+               gcata_pat
+               (Exp.ident_of_long ~loc @@
                       Located.mk ~loc @@
                       map_longident txt ~f:(fun s -> "gcata_"^s) )
-            ]
       | Ptyp_tuple ts ->
         (* let's say we have predefined aliases for now *)
         do_typ @@ constr_of_tuple ~loc ts
@@ -337,15 +333,12 @@ let gather_module_str tdecl plugins =
   let loc = tdecl.ptype_loc in
 
   let body = [%stri let gcata =
-                      [%e Exp.sprintf "gcata_%s" tdecl.ptype_name.txt]] ::[]
+                      [%e Exp.sprintf "gcata_%s" tdecl.ptype_name.txt] ] ::[]
   in
   let body = List.fold_left ~init:body plugins
       ~f:(fun acc p ->
         let expr = Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl in
-        Str.value ~loc Nonrecursive [value_binding ~loc
-                                       ~pat:(Pat.of_string ~loc p#plugin_name)
-                                       ~expr
-                                    ]
+        Str.single_value ~loc (Pat.of_string ~loc p#plugin_name) expr
         :: acc
       )
   in
@@ -353,8 +346,7 @@ let gather_module_str tdecl plugins =
       (Mod.structure ~loc @@ List.rev body)
       (Located.lident ~loc (name_fcm_mt tdecl))
   in
-  Str.value ~loc Nonrecursive
-    [value_binding ~loc ~pat:(Pat.sprintf "%s" tdecl.ptype_name.txt) ~expr]
+  Str.single_value ~loc (Pat.sprintf "%s" tdecl.ptype_name.txt) expr
 
 let make_fcm_sig ~loc tdecl plugins =
   let fields = List.concat_map plugins ~f:(fun p ->
@@ -397,17 +389,21 @@ let do_typ_sig ~loc plugins is_rec tdecl =
   let intf_class = make_interface_class_sig ~loc tdecl in
   let gcata = make_gcata_sig ~loc tdecl in
 
+  let mt_name = sprintf "MT_%s" tdecl.ptype_name.txt in
   let prepare_mt tdecl plugins =
-    let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
+    let name = Located.mk ~loc mt_name in
     let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
     Sig.modtype ~loc (module_type_declaration ~loc ~name ~type_)
   in
-
+  let module_itself =
+    Sig.value ~loc ~name:tdecl.ptype_name.txt @@
+      Typ.package ~loc (Located.lident ~loc mt_name)
+  in
   List.concat
     [ make_heading_sig ~loc tdecl
     ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
-    ; [prepare_mt tdecl plugins]
+    ; [prepare_mt tdecl plugins; module_itself]
     ]
 
 let do_mutal_types_sig ~loc plugins tdecls =
@@ -421,16 +417,17 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
 let sig_type_decl ~loc ~path
-    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip)
+    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
     (rec_flag, tdls) =
   let plugins =
     let wrap p = function
     | Skip -> id
     | Use args -> List.cons (p args)
     in
-    wrap Show.g  use_show  @@
-    wrap Gmap.g  use_gmap  @@
-    wrap Foldl.g use_foldl @@
+    wrap Show.g       use_show  @@
+    wrap Gmap.g       use_gmap  @@
+    wrap Foldl.g      use_foldl @@
+    wrap Show_typed.g use_show_type @@
     (* wrap use_foldl Eq.g @@ *)
     []
   in
@@ -443,7 +440,7 @@ let sig_type_decl ~loc ~path
 
 
 let str_type_decl ~loc ~path
-    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip)
+    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
     (rec_flag, tdls)
   =
   let plugins =
@@ -451,9 +448,10 @@ let str_type_decl ~loc ~path
     | Skip -> id
     | Use args -> List.cons (p args)
     in
-    wrap Show.g  use_show @@
-    wrap Gmap.g  use_gmap @@
-    wrap Foldl.g use_foldl @@
+    wrap Show.g       use_show @@
+    wrap Gmap.g       use_gmap @@
+    wrap Foldl.g      use_foldl @@
+    wrap Show_typed.g use_show_type @@
     (* wrap use_foldl Foldl.g @@ *)
     (* wrap use_foldl Eq.g @@ *)
     []
@@ -466,13 +464,14 @@ let str_type_decl ~loc ~path
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc plugins false) tdls
 
-let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
-  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl
+let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl use_show_type =
+  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~use_show_type
 
-let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl =
+let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl use_show_type =
   let wrap f = if f then Use [] else Skip in
   sig_type_decl ~loc ~path
     ~use_show: (wrap use_show)
     ~use_gmap: (wrap use_gmap)
     ~use_foldl:(wrap use_foldl)
+    ~use_show_type:(wrap use_show_type)
     info

@@ -11,18 +11,6 @@ open Ppx_core
 
 module Type_conv = Ppx_type_conv.Std.Type_conv
 
-(* module Attrs = struct
- *   let ignore =
- *     Attribute.declare "hash.ignore"
- *       Attribute.Context.type_declaration
- *       Ast_pattern.(pstr ((pstr_value nonrecursive
- *                            (value_binding ~pat:(pstring __) ~expr:__ ^:: nil) ) ^:: nil)
- *                   )
- *       (fun (s: string) (e:expression) -> assert false; 1)
- *
- * end *)
-
-module Sexp_of = struct
   module E = Ppx_gt_expander
   let name = "gt"
 
@@ -100,8 +88,9 @@ module Sexp_of = struct
                       |> (bothp "show")
                       |> (bothp "gmap")
                       |> (bothp "foldl")
+                      |> (bothp "show_typed")
                      )
-      (fun ~loc ~path info show showA gmap gmapA foldl foldlA ->
+      (fun ~loc ~path info show showA gmap gmapA foldl foldlA show_type show_typeA ->
          let wrap = function
          | _,Some xs -> E.Use xs
          | true,None -> E.Use []
@@ -110,12 +99,13 @@ module Sexp_of = struct
          let show  = wrap (show,showA) in
          let gmap  = wrap (gmap,gmapA) in
          let foldl = wrap (foldl,foldlA) in
-         E.str_type_decl_implicit ~loc ~path info show gmap foldl
+         let show_type = wrap (show_type,show_typeA) in
+         E.str_type_decl_implicit ~loc ~path info show gmap foldl show_type
       )
 
   let sig_type_decl : (_, _) Type_conv.Generator.t =
     Type_conv.Generator.make
-      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl"
+      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl" +> flag "show_typed"
                      )
       E.sig_type_decl_implicit
 
@@ -124,4 +114,3 @@ module Sexp_of = struct
       ~str_type_decl
       ~sig_type_decl
 
-end

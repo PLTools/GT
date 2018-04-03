@@ -2,7 +2,6 @@
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
- *   Evgeniy Moiseenko aka eucpp
  * St.Petersburg State University, JetBrains Research
  *
  *)
@@ -13,34 +12,31 @@ open Ast_helper
 open GtHelpers
 open Ppx_core.Ast_builder.Default
 
-class ['self] g args = object(self: 'self)
-  inherit ['self] Plugin.generator args
+let g args = object(self: 'self)
+  inherit ['self] Show.g args as super
 
-  method plugin_name = "show"
-  method default_inh = let loc = Location.none in [%type: unit]
-  method default_syn tdecl =
+  method plugin_name = "show_typed"
+
+  (* method! make_trans_function_typ tdecl =
+   *   let loc = tdecl.ptype_loc in
+   *   [%type: (string * [%t super#make_trans_function_typ tdecl]) ] *)
+
+  method! make_RHS_typ_of_transformation ?subj_t ?syn_t tdecl =
     let loc = tdecl.ptype_loc in
-    [%type: string]
+    let subj_t = Option.value subj_t
+        ~default:(using_type ~typename:tdecl.ptype_name.txt tdecl) in
+    let syn_t  = Option.value syn_t  ~default:(self#default_syn tdecl) in
+    let r = super#make_RHS_typ_of_transformation ~syn_t ~subj_t tdecl in
+    [%type: (string * [%t r ]) ]
 
-  method syn_of_param ~loc _ = [%type: string]
+  method! generate_for_variable ~loc name =
+    [%expr snd [%e super#generate_for_variable ~loc name ]]
 
-  method plugin_class_params tdecl =
-    let loc = tdecl.ptype_loc in
-    (List.map ~f:fst tdecl.ptype_params) @ [self#extra_param_stub ~loc]
-
-  method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
-    rhs_args @ [self#extra_param_stub ~loc]
-
-  (* We are constrainting extra type parameter using separate member of the class.
-   * The alternative will be to use `()` everywhere instead of `inh` identifier *)
-  method! extra_class_str_members tdecl =
-    let loc = tdecl.ptype_loc in
-    [ Cf.constraint_  ~loc [%type: 'inh] [%type: unit] ]
-
-  method! extra_class_sig_members tdecl =
-    let loc = tdecl.ptype_loc in
-    [ Ctf.constraint_  ~loc [%type: 'inh] [%type: unit] ]
-
+  (* method! make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
+   *   Exp.tuple ~loc
+   *     [ Exp.constant ~loc @@ const_string "asdf"
+   *     ; super#make_trans_function_body ~loc ~rec_typenames class_name tdecl
+   *     ] *)
 
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     match bindings with
@@ -51,7 +47,7 @@ class ['self] g args = object(self: 'self)
         ~f:(fun acc (name, typ) -> Exp.apply1 ~loc acc
                [%expr
                  [%e self#do_typ_gen ~loc is_self_rec typ]
-                 [%e einh ]
+                 ([%e einh ]: unit)
                  [%e Exp.ident ~loc name ]
                ])
         ~init:[%expr Format.sprintf [%e
@@ -128,5 +124,3 @@ class ['self] g args = object(self: 'self)
 
 
 end
-
-let g = new g

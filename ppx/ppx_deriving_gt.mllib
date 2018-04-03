@@ -4,5 +4,6 @@ GtHelpers
 Plugin_intf
 Plugin
 Show
+Show_type
 Gmap
 Foldl

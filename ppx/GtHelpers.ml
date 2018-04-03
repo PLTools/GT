@@ -120,6 +120,8 @@ module Typ = struct
   let constr  ?(loc=Location.none) = ptyp_constr ~loc
   let object_ ?(loc=Location.none) flg xs =
     ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> l,[],r)) flg
+  let package ?(loc=Location.none) lident =
+    ptyp_package ~loc (lident, [])
 
   let class_ ?(loc=Location.none) lident args =
     ptyp_class ~loc (Located.mk ~loc lident) args
@@ -143,6 +145,11 @@ module Str = struct
 
   (* make value have a default re4cursive flag *)
   let class_single = single_class
+
+  let value ?(loc=Location.none) ?(flag=Nonrecursive) decls =
+    pstr_value ~loc flag decls
+  let single_value ?(loc=Location.none) ?(flag=Nonrecursive) pat expr =
+    pstr_value ~loc flag [value_binding ~loc ~pat ~expr]
 end
 
 module Sig = struct
