@@ -47,7 +47,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #$(shell seq -s \  -w 1 024) $(shell seq -s \  -w 26 028)
 REGRES_CASES := #795intoption #799 798 798gen 796scheme_gen 794camlp5 790showF 791showT #705
-REGRES_CASES := 801 802 803 804 806 #807 #805
+REGRES_CASES := 801 802 803 804 806 808 #807 #805
 #$(warning $(REGRES_CASES) )
 
 define TESTRULES
@@ -62,13 +62,13 @@ TEST$(1)_NAME := $$(ML_FILE_$(1):regression_ppx/test$(1)%.ml=%)
 #$$(info $$(NATIVE_TEST_EXECUTABLES)) 
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
-test$(1).native: plugins ppx bundle regression/test$(1).native
-test$(1).byte:   plugins ppx bundle regression/test$(1).byte
+test$(1).native: plugins ppx bundle regression_ppx/test$(1).native
+test$(1).byte:   plugins ppx bundle regression_ppx/test$(1).byte
 
 #regression/test$(1).byte: regression/test$(1).ml 
 #	$(OB) -Is src $$@
 
-regression/$$(NATIVE_$(1)): $$(ML_FILE_$(1))
+regression_ppx/$$(NATIVE_$(1)): $$(ML_FILE_$(1))
 	OCAMLPATH=`pwd`/bundle \
 	$(OB) $$@
 
