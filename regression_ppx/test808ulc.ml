@@ -8,6 +8,16 @@ type lam =
   | Lam   of string* lam
 [@@deriving gt ~show ]
 
+let subst ctx name new_ old =
+  let rec helper = function
+    | Var s when s=name -> new_
+    | App (l,r) -> App (helper l, helper r)
+    | Lam (s, body) as term when s = name -> term
+    | Lam (s, body) -> Lam (s, helper body)
+    | term -> term
+  in
+  helper old
+
 type context = string -> string
 type mtype = context -> lam -> lam
 
@@ -22,10 +32,13 @@ class virtual reducer fself = object (self: 'self)
   method virtual subst_arg : mtype
   method head : mtype = fun ctx lam -> fself ctx lam
   method c_Var ctx name = fself ctx (Var name)
-  method c_App c left right = assert false
-    (* match this#head c left with
-     * | Lam (x,l') -> s.f c (subst c x (this#subst arg c m) l')
-     * | l' -> let l'' = s.f c l'  in App(l'', this#arg c m) *)
+  method c_App ctx left right =
+    (* assert false *)
+    match self#head ctx left with
+    | Lam (name, l') -> fself ctx (subst ctx name (self#subst_arg ctx right) l')
+    | term ->
+      let l'' = fself ctx term  in
+      App(l'', self#arg ctx right)
 end
 
 class virtual strict fself = object
