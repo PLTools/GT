@@ -7,12 +7,12 @@
  *
  *)
 
-open Ppx_core
+open Ppxlib
 
-module Type_conv = Ppx_type_conv.Std.Type_conv
+module Type_conv = Ppxlib.Deriving
 
-  module E = Ppx_gt_expander
-  let name = "gt"
+module E = Ppx_gt_expander
+let name = "gt"
 
   (* (\* This doesn't works because there is no place for pexp_apply *\)
    * let gt_param name =
@@ -31,18 +31,18 @@ module Type_conv = Ppx_type_conv.Std.Type_conv
    *     (pexp_ident (lident (string name)))
    *     ( (pair nolabel r) ^:: nil ) *)
 
-  let gt_paramA name =
-    let open Type_conv.Args in
-    let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
-    (* let b = alt none (some r) in *)
-    (* make_param name (assert false) (Ast_pattern.Packed.create b (fun x -> x)) *)
-    arg (name^"A") r
-    (* alt none (some r) *)
+let gt_paramA name =
+  let open Type_conv.Args in
+  let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
+  (* let b = alt none (some r) in *)
+  (* make_param name (assert false) (Ast_pattern.Packed.create b (fun x -> x)) *)
+  arg (name^"A") r
+  (* alt none (some r) *)
 
   (* without arguments *)
-  let gt_param name =
-    let open Type_conv.Args in
-    flag name
+let gt_param name =
+  let open Type_conv.Args in
+  flag name
 
 
   (* let make_param name =

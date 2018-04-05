@@ -7,8 +7,9 @@
  *
  *)
 
-open Ppx_core
-open Ppx_core.Ast_builder.Default
+open Base
+open Ppxlib
+open Ppxlib.Ast_builder.Default
 open Printf
 open Longident
 open Asttypes
@@ -227,7 +228,7 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
             ~f:(fun cd ->
               match cd.pcd_args with
               | Pcstr_tuple ts ->
-                  sprintf "c_%s" cd.pcd_name.txt,
+                  Located.mk ~loc @@ sprintf "c_%s" cd.pcd_name.txt,
                   Typ.chain_arrow ~loc ([%type: 'inh]::ts@[[%type: 'syn]])
               | Pcstr_record _ -> assert false
             )
@@ -278,7 +279,7 @@ let make_gcata_str ~loc root_type =
     ~onvariant:(fun cds ->
       ans @@ prepare_patt_match ~loc [%expr t] (`Algebraic cds) (fun cd names ->
           List.fold_left ("inh"::names)
-            ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cd.pcd_name.txt))
+            ~init:(Exp.send ~loc [%expr tr] (Located.mk ~loc @@ "c_" ^ cd.pcd_name.txt))
             ~f:(fun acc arg -> Exp.apply ~loc acc [Nolabel, Exp.ident arg])
         )
       )
@@ -299,7 +300,7 @@ let make_gcata_str ~loc root_type =
           ans @@ prepare_patt_match_poly ~loc [%expr t] rows maybe_labels
             ~onrow:(fun cname  names ->
               List.fold_left ("inh"::(List.map ~f:fst names))
-                ~init:(Exp.send ~loc [%expr tr] ("c_" ^ cname))
+                ~init:(Exp.send ~loc [%expr tr] (Located.mk ~loc @@ "c_" ^ cname))
                 ~f:(fun acc arg ->
                        Exp.apply ~loc acc [Nolabel, Exp.ident arg]
                    )

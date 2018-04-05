@@ -1,8 +1,9 @@
-open Ppx_core
+open Base
+open Ppxlib
 open Printf
 open Ast_helper
 open GtHelpers
-open Ppx_core.Ast_builder.Default
+open Ppxlib.Ast_builder.Default
 
 let make_dest_param_names ?(loc=Location.none) ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
@@ -13,7 +14,7 @@ let hack_params ?(loc=Location.none) ps =
   let name_migrations = List.zip_exn param_names rez_names in
   let assoc s =
     try List.Assoc.find_exn ~equal:String.equal name_migrations s
-    with Not_found ->
+    with Caml.Not_found ->
       raise_errorf "can't find new typ for param `%s" s
   in
   let blownup_params =

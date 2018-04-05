@@ -7,11 +7,12 @@
  *
  *)
 
-open Ppx_core
+open Base
+open Ppxlib
 open Printf
 open Ast_helper
 open GtHelpers
-open Ppx_core.Ast_builder.Default
+open Ppxlib.Ast_builder.Default
 
 class ['self] g args = object(self: 'self)
   inherit ['self] Plugin.generator args

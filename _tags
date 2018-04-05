@@ -1,3 +1,4 @@
+
 true: debug, rectypes, bin_annot, short_paths
 #, strict_sequence
 
@@ -9,9 +10,11 @@ true: debug, rectypes, bin_annot, short_paths
 <plugins/*.ml>: link_pa_gt
 <plugins/*.cmo>: pp(camlp5o), package(camlp5)
 
-<ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
+#<ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
+<ppx/*>: package(ppxlib,ppxlib.metaquot)
+<ppx/pp_*>: package(ppxlib.runner)
 <ppx/ppx_deriving_gt.cm*>: linkall
-<ppx/pp_gt.*>: package(ppx_driver), make_pp_gt
+#<ppx/pp_gt.*>: package(ppx_driver), make_pp_gt
 
 <regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
 

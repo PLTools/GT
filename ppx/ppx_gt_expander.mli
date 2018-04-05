@@ -1,4 +1,4 @@
-open Ppx_core
+open Ppxlib
 
 type config_plugin = Skip | Use of (longident * expression) list
 

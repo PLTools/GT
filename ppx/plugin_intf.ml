@@ -1,4 +1,4 @@
-open Ppx_core
+open Ppxlib
 
 class virtual t = object
   method virtual plugin_name : string

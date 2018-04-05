@@ -6,7 +6,7 @@ archive(native) = "GT.cmxa"
 package "ppx" (
   description = "PPX syntax extensionon top of ppx_core"
 
-  requires(ppx_driver)        = "ppx_type_conv"
+  requires(ppx_driver)        = "ppxlib"
 
   archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
   archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa"

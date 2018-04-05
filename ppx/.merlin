@@ -2,5 +2,5 @@ S .
 B ../_build/ppx
 
 FLG -short-paths
-PKG ppx_metaquot ppx_core ppx_driver ppx_type_conv
+PKG ppxlib ppxlib.metaquot
 FLG -rectypes

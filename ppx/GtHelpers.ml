@@ -4,7 +4,7 @@ let not_implemented ?loc fmt =
   Printf.ksprintf (raise_errorf ~loc "%s are not yet implemented") fmt
 
 module List = struct
-  include Ppx_core.List
+  include Base.List
   let split3 xs =
     List.fold_right (fun (a,b,c) (ac,bc,cc) -> (a::ac,b::bc,c::cc))
       xs ([],[],[])
@@ -23,8 +23,8 @@ module List = struct
   let empty = function [] -> true | _ -> false
 end
 
-open Ppx_core
-open Ppx_core.Ast_builder.Default
+open Ppxlib
+open Ppxlib.Ast_builder.Default
 let (@@) = Caml.(@@)
 
 let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel,x) xs
@@ -178,7 +178,7 @@ module Cf = struct
 end
 module Ctf = struct
   let method_ ?(loc=Location.none) ?(flg=Public) ?(virt_flg=Virtual) name kind =
-    pctf_method ~loc (name, flg, virt_flg, kind)
+    pctf_method ~loc (Located.mk ~loc name, flg, virt_flg, kind)
   let inherit_ ?(loc=Location.none) = pctf_inherit ~loc
   let constraint_ ?(loc=Location.none) l r = pctf_constraint ~loc (l,r)
 end
@@ -320,15 +320,15 @@ let visit_typedecl ~loc
       | None -> failwith "abstract types without manifest can't be supported"
       | Some typ -> onmanifest typ
 
+let make_new_names n =
+  List.init n ~f:(fun n -> Base.Char.(to_string @@ of_int_exn (n + to_int 'a')) )
+
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
     List.map rows ~f:(function
         | Rtag (lab, _, _, args) ->
-            let names = List.mapi args
-                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
-                       (n + Char.to_int 'a'))
-            in
+            let names = make_new_names (List.length  args) in
             let lhs = Pat.variant ~loc  lab @@ match args with
               | [] -> None
               | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
@@ -363,14 +363,11 @@ let prepare_patt_match ~loc what constructors make_rhs =
     k @@ List.map cdts ~f:(fun cd ->
         match cd.pcd_args with
         | Pcstr_record _ -> not_implemented "wtf"
-        | Pcstr_tuple ts ->
-            let names = List.mapi ts
-                ~f:(fun n _ -> Char.to_string @@ Char.of_int_exn
-                       (n + Char.to_int 'a'))
-            in
+        | Pcstr_tuple args ->
+            let names = make_new_names (List.length args) in
             case ~guard:None
               ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
-                    Some (Pat.tuple (List.map ~f:(Pat.var ~loc) names)
+                    Some (Pat.tuple ~loc (Base.List.map ~f:(Pat.var ~loc) names)
                          ))
               ~rhs:(make_rhs cd names)
 
@@ -391,9 +388,6 @@ let with_constr_typ typ ~ok ~fail =
 let constr_of_tuple ?(loc=Location.none) ts =
   let new_lident = Ldot (Lident "GT", Printf.sprintf "tuple%d" @@ List.length ts) in
   Typ.constr ~loc (Located.mk ~loc new_lident) ts
-
-let make_new_names n =
-  List.init n ~f:(fun n ->  Char.to_string @@ Char.of_int_exn (n + Char.to_int 'a'))
 
 let is_polyvariant typ =
   match typ.ptyp_desc with

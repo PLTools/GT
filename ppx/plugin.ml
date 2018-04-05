@@ -1,24 +1,22 @@
-open Ppx_core
+open Base
+open Ppxlib
 open Printf
 open Asttypes
 open Parsetree
 open Ast_helper
 open Location
 open GtHelpers
-open Ppx_core.Ast_builder.Default
+open Ppxlib.Ast_builder.Default
 
 let self_arg_name = "_fself"
 let construct_extra_param ~loc = [%type: 'extra]
-
 
 class virtual ['self] generator initial_args = object(self: 'self)
   inherit Plugin_intf.t
 
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
-    (* printf "inital_args length %d\n%!" (List.length initial_args); *)
     let check_name s =
-      (* printf "checking arg `%s`\n%!" s; *)
       try Caml.Scanf.sscanf s "_%d" (fun n -> Some n)
       with Caml.Scanf.Scan_failure _ ->
         (* printf "can't parse it\n%!"; *) None
