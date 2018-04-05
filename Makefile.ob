@@ -32,7 +32,7 @@ syntax:
 ppx:
 	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
 		ppx/ppx_gt_expander.cma ppx/ppx_gt_expander.cmxa \
-		ppx/pp_gt.native
+		rewriter/pp_gt.native
 
 PLUGINS=compare eq foldl foldr html gmap show typename
 plugins: syntax
@@ -120,7 +120,7 @@ INSTALL_TARGETS=META \
 	_build/ppx/ppx_deriving_gt.cmxa \
 	_build/ppx/ppx_deriving_gt.cmxs \
 	_build/ppx/ppx_deriving_gt.cmi \
-	_build/ppx/pp_gt.native \
+	_build/rewriter/pp_gt.native \
 	_build/ppx/ppx_gt_expander.cma \
 	_build/ppx/ppx_gt_expander.cmxa \
 	_build/ppx/ppx_gt_expander.cmi \
