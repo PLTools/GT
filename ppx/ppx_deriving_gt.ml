@@ -12,7 +12,6 @@ open Ppxlib
 module Type_conv = Ppxlib.Deriving
 
 module E = Ppx_gt_expander
-let name = "gt"
 
   (* (\* This doesn't works because there is no place for pexp_apply *\)
    * let gt_param name =
@@ -110,7 +109,7 @@ let gt_param name =
       E.sig_type_decl_implicit
 
   let deriver =
-    Type_conv.add name
+    Type_conv.add
       ~str_type_decl
       ~sig_type_decl
-
+      "gt"

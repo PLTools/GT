@@ -43,6 +43,11 @@ class ['self] g args = object(self: 'self)
     [ Ctf.constraint_  ~loc [%type: 'inh] [%type: unit] ]
 
 
+  method! wrap_tr_function_str tied_knot =
+    let loc = tied_knot.pexp_loc in
+    (* we don't need inherited attribute for show *)
+    [%expr fun subj -> [%e tied_knot] () subj]
+
   method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
     match bindings with
     | [] -> k @@ Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
@@ -112,11 +117,11 @@ class ['self] g args = object(self: 'self)
             (List.zip_exn names ts)
             ~f:(fun acc (name, typ) ->
                 Exp.apply1 ~loc acc
-                  [%expr
-                    [%e self#do_typ_gen ~loc  is_self_rec typ ]
-                    ()
-                    [%e Exp.ident ~loc name]
-                  ]
+                  (self#app_transformation_expr
+                     (self#do_typ_gen ~loc  is_self_rec typ)
+                     [%expr assert false]
+                     (Exp.ident ~loc name)
+                  )
               )
             ~init:[%expr Format.sprintf [%e
                 let fmt = String.concat ~sep:", " @@ List.map names

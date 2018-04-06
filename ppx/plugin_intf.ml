@@ -21,3 +21,15 @@ class virtual t = object
   method virtual extra_class_sig_members: type_declaration -> class_type_field list
   method virtual extra_class_str_members: type_declaration -> class_field list
 end
+
+
+
+class virtual no_inh_attr = object(self)
+  method wrap_tr_function_str expr =
+    let loc = expr.pexp_loc in
+    [%expr fun subj -> [%e expr] () subj]
+
+  method wrap_tr_function_typ (typ: core_type) =
+    typ
+
+end

@@ -1,0 +1,4 @@
+SRC .
+B _build 
+
+PKG GT, GT.ppx

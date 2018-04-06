@@ -1,0 +1,3 @@
+true: rectypes, debug, package(GT)
+
+<*.*>: predicate(custom_ppx), omp-driver(GT.ppx)

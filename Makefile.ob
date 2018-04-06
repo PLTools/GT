@@ -15,7 +15,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 .DEFAULT_GOAL :=  all
 
-.PHONY: all syntax lib plugins ppx bundle
+.PHONY: all syntax lib plugins ppx bundle samples
 .PHONY: celan clean clean_tests install uninstall
 .PHONY: tests test regression promote
 
@@ -144,6 +144,9 @@ $(BUNDLEDIR):
 	@$(MKDIR) $@
 
 bundle: rmbundledir $(BUNDLEDIR) $(MAKE_BUNDLE_TARGETS)
+
+samples: bundle
+	$(MAKE) -C sample
 
 install: bundle
 	ocamlfind install $(PKGNAME) $(BUNDLEDIR)/*

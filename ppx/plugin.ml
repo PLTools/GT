@@ -240,7 +240,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
       List.mapi cparams ~f:(fun i t ->
           (* printf "checking for arg with index (%d+1)\n%!" i; *)
           try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal (i+1)
-          with Not_found ->
+          with Caml.Not_found ->
             do_typ ~loc is_self_rec t
       )
     in
@@ -285,6 +285,14 @@ class virtual ['self] generator initial_args = object(self: 'self)
     )
     ~onvariant:(fun cds -> self#on_variant tdecl is_self_rec cds k)
 
+
+  (* val name: <this> -> <this> -> <and that> -> <this function result> *)
+  method make_typ_of_class_argument ~loc name =
+    let subj_t = Typ.var ~loc name in
+    let syn_t = self#syn_of_param ~loc name in
+    (* let inh_t = self#default_inh in *)
+    [%type: [%t subj_t] -> [%t syn_t] ]
+
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
                      <this type we are generating here>
   *)
@@ -294,28 +302,34 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let subj_t = Option.value subj_t
         ~default:(using_type ~typename:tdecl.ptype_name.txt tdecl) in
     let syn_t  = Option.value syn_t  ~default:(self#default_syn tdecl) in
-    [%type: [%t self#default_inh] -> [%t subj_t] -> [%t syn_t] ]
+    [%type: [%t subj_t] -> [%t syn_t] ]
 
-  method chain_inh_syn ~loc ~syn_t subj_t =
-    [%type: [%t self#default_inh] -> [%t subj_t] -> [%t syn_t] ]
+  method chain_inh_syn ~loc ?(inh_t=self#default_inh) ~syn_t subj_t =
+    [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ]
 
+  method wrap_tr_function_typ (typ: core_type) =
+    (* let loc = typ.ptyp_loc in *)
+    typ
+    (* [%type:  [%t self#default_inh] -> [%t typ] ] *)
 
   method make_trans_function_typ tdecl =
     let loc = tdecl.ptype_loc in
-    let type_ = self#chain_inh_syn ~loc
-        ~syn_t:(self#default_syn tdecl)
-        (using_type ~typename:tdecl.ptype_name.txt tdecl)
-    in
+    let type_ = self#make_RHS_typ_of_transformation tdecl in
+
     List.fold_right
       (map_type_param_names tdecl.ptype_params ~f:id)
       ~init:type_
-      ~f:(fun name -> Typ.arrow ~loc Nolabel @@
-           self#make_RHS_typ_of_transformation ~subj_t:(Typ.var name)
-             ~syn_t:(self#syn_of_param ~loc name) tdecl
+      ~f:(fun name ->
+          Typ.arrow ~loc Nolabel @@
+          self#make_typ_of_class_argument ~loc name
+          (* Typ.arrow ~loc Nolabel @@
+           *  self#make_RHS_typ_of_transformation ~subj_t:(Typ.var name)
+           *    ~syn_t:(self) tdecl *)
          )
 
   method make_trans_function_name tdecl =
     sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt
+
 
   method make_trans_functions_sig: loc:location ->
     is_rec:bool -> string list -> type_declaration list -> signature
@@ -332,10 +346,15 @@ class virtual ['self] generator initial_args = object(self: 'self)
     sprintf "%s_%s%s" self#plugin_name tdecl.ptype_name.txt
       (if is_mutal then "_stub" else "")
 
+  method wrap_tr_function_str expr =
+    let loc = expr.pexp_loc in
+    [%expr fun the_init subj -> [%e expr] the_init subj]
+
   (* let <plugin-name> fa ... fz = <this body> *)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
     let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
-    [%expr fun the_init t -> GT.fix0 (fun self ->
+    self#wrap_tr_function_str
+    [%expr GT.fix0 (fun self ->
         [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt) @@
           Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc class_name) @@
           (nolabelize @@
@@ -344,7 +363,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
            @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
           )
         ]
-      ) the_init t
+      )
     ]
 
   method make_trans_functions: loc:location ->
@@ -420,6 +439,15 @@ class virtual ['self] generator initial_args = object(self: 'self)
   method generate_for_variable ~loc varname =
     Exp.sprintf "f%s" varname
 
+  method app_transformation_expr trf inh subj =
+    let loc = trf.pexp_loc in
+    [%expr [%e trf ] [%e subj]]
+
+  method abstract_trf ~loc k =
+    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+    [%expr fun subj -> [%e k [%expr assert false ] [%expr subj]]]
+
+
   (* do_type_gen will return an expression which after being applied to inherited attribute
    * and subject will return synthetized one
    *)
@@ -428,21 +456,31 @@ class virtual ['self] generator initial_args = object(self: 'self)
       match t.ptyp_desc with
       | Ptyp_var s -> self#generate_for_variable ~loc s
       | Ptyp_tuple params ->
-        [%expr fun inh subj -> [%e
-          Exp.apply_nolabeled
-            (Exp.sprintf "%s_tuple%d" self#plugin_name (List.length params))
-            (List.map ~f:helper params @ [[%expr inh]; [%expr subj]])
-        ]]
+        self#abstract_trf ~loc (fun einh esubj ->
+            self#app_transformation_expr
+              (Exp.apply_nolabeled ~loc
+                 (Exp.sprintf "%s_tuple%d" self#plugin_name (List.length params))
+                 (List.map ~f:helper params)
+              )
+              einh esubj
+          )
       | Ptyp_constr (_,_) when is_self_rec t -> Exp.ident ~loc self_arg_name
       | Ptyp_constr ({txt},params) ->
         (* in this place it will be easier to have all plugin in single value *)
-        [%expr fun inh subj -> [%e
-          Exp.apply_nolabeled
-            (Exp.ident_of_long @@
-             Located.mk ~loc @@
-             map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt)
-            (List.map ~f:helper params @ [[%expr inh]; [%expr subj]])
-        ]]
+        self#abstract_trf ~loc (fun einh esubj ->
+            self#app_transformation_expr
+              (Exp.apply_nolabeled
+                 (* (Exp.ident_of_long @@
+                  *  Located.mk ~loc @@
+                  *  map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt) *)
+                 [%expr let (module Op) = [%e Exp.ident_of_long @@ Located.mk ~loc txt] in
+                   [%e Exp.ident_of_long ~loc @@
+                     Located.mk ~loc (Ldot (Lident "Op", self#plugin_name)) ]
+                 ]
+                 (List.map ~f:helper params)
+              )
+              einh esubj
+          )
         | Ptyp_variant (rows, _, maybe_labels) -> begin
             let oninherit typs cident varname =
               Exp.apply_nolabeled ~loc

@@ -1,5 +1,18 @@
 open GT
 
+(* Set/map of strings *)
+module S = Set.Make(String)
+module M = Map.Make(String)
+
+(* Name generator for alpha-conversion *)
+let generator s =
+  let s = ref s in
+  let rec gen x =
+    let n = x ^ "'" in
+    if S.mem n !s then gen n else (s := S.add n !s; n)
+  in
+  gen
+
 let show_string () s = Printf.sprintf "\"%s\"" s
 
 type lam =

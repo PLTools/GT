@@ -167,11 +167,10 @@ let g args = object(self: 'self)
           else Some (Exp.tuple ~loc @@
                      List.map (List.zip_exn names ts)
                        ~f:(fun (name, typ) ->
-                             [%expr
-                               [%e self#do_typ_gen ~loc  is_self_rec typ ]
-                               ()
-                               [%e Exp.ident ~loc name]
-                             ]
+                           self#app_transformation_expr
+                             (self#do_typ_gen ~loc  is_self_rec typ)
+                             [%expr assert false]
+                             (Exp.ident ~loc name)
                          )
                     )
         in

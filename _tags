@@ -1,11 +1,11 @@
 
-true: debug, rectypes, bin_annot, short_paths
+true: debug, bin_annot, short_paths
 #, strict_sequence
 
 <camlp5/*.ml>: syntax(camlp5o), package(camlp5), for-pack(Pa_gt)
 
-<src/GT.ml4>: use_m4
-<src/GT.ml>:  use_pa_gt
+#<src/GT.ml4>: use_m4
+<src/GT.ml>:  use_pa_gt, use_m4
 
 <plugins/*.ml>: link_pa_gt
 <plugins/*.cmo>: pp(camlp5o), package(camlp5)
@@ -23,3 +23,4 @@ true: debug, rectypes, bin_annot, short_paths
 <regression/test0*.*>: use_pa_gt, use_plugins
 
 <regression_ppx/test*.*>:  predicate(custom_ppx), omp-driver(GT.ppx), package(GT)
+<regression_ppx/test*>: rectypes
