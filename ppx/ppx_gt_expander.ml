@@ -290,8 +290,7 @@ let make_gcata_str ~loc root_type =
           Str.single_value ~loc
                gcata_pat
                (Exp.ident_of_long ~loc @@
-                      Located.mk ~loc @@
-                      map_longident txt ~f:(fun s -> "gcata_"^s) )
+                map_longident txt ~f:(fun s -> "gcata_"^s) )
       | Ptyp_tuple ts ->
         (* let's say we have predefined aliases for now *)
         do_typ @@ constr_of_tuple ~loc ts
@@ -309,7 +308,7 @@ let make_gcata_str ~loc root_type =
             ~oninherit:(fun params cident patname ->
                 Exp.apply_nolabeled
                   (Exp.ident_of_long ~loc  @@
-                   Located.mk ~loc@@map_longident cident ~f:(sprintf "gcata_%s"))
+                   map_longident cident ~f:(sprintf "gcata_%s"))
                   (List.map ["tr";"inh";patname] ~f:(Exp.sprintf ~loc "%s"))
 
               )

@@ -39,7 +39,8 @@ let g args = object(self: 'self)
    *     ; super#make_trans_function_body ~loc ~rec_typenames class_name tdecl
    *     ] *)
 
-  method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
+  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+      constr_name bindings  einh k =
     match bindings with
     | [] -> k @@ Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
     | _ ->
@@ -47,7 +48,7 @@ let g args = object(self: 'self)
         bindings
         ~f:(fun acc (name, typ) -> Exp.apply1 ~loc acc
                [%expr
-                 [%e self#do_typ_gen ~loc is_self_rec typ]
+                 [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ]
                  ([%e einh ]: unit)
                  [%e Exp.ident ~loc name ]
                ])
@@ -61,14 +62,15 @@ let g args = object(self: 'self)
 
 
   (* this is the same for show and gmap *)
-  method got_polyvar ~loc tdecl do_typ is_self_rec rows k =
+  method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ rows k =
     k @@
     List.map rows ~f:(function
         | Rinherit typ ->
           with_constr_typ typ
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
-                let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
+              let args = List.map params
+                  ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_names) in
                 (* gmap has blownup_params here. Maybe we should abstract this *)
                 let inh_params = self#prepare_inherit_args_for_alias ~loc
                     tdecl params
@@ -87,14 +89,15 @@ let g args = object(self: 'self)
           Cf.method_concrete ~loc ("c_" ^ constr_name)
             [%expr fun inh -> [%e
               Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-              self#generate_for_polyvar_tag ~loc constr_name (List.zip_exn names args)
-                is_self_rec [%expr inh] (fun x -> x)
+              self#generate_for_polyvar_tag ~loc
+                constr_name (List.zip_exn names args)
+                ~is_self_rec ~mutal_names [%expr inh] (fun x -> x)
 
             ]]
 
       )
 
-  method on_tuple_constr tdecl is_self_rec cd ts =
+  method on_tuple_constr ~is_self_rec ~mutal_names tdecl  cd ts =
     let loc = tdecl.ptype_loc in
     let constr_name = cd.pcd_name.txt in
     Cf.method_concrete ~loc ("c_"^constr_name)
@@ -109,7 +112,7 @@ let g args = object(self: 'self)
             ~f:(fun acc (name, typ) ->
                 Exp.apply1 ~loc acc
                   [%expr
-                    [%e self#do_typ_gen ~loc  is_self_rec typ ]
+                    [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ ]
                     ()
                     [%e Exp.ident ~loc name]
                   ]

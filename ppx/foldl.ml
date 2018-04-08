@@ -30,7 +30,7 @@ open Plugin
 (* TODO: we want easily get foldr from foldl *)
 
 let g initial_args = object(self: 'self)
-  inherit ['self] Plugin.generator initial_args
+  inherit ['self] Plugin.generator initial_args as super
 
   method plugin_name = "foldl"
 
@@ -49,7 +49,33 @@ let g initial_args = object(self: 'self)
     rhs_args @ [ self#default_syn tdecl ]
                (* TODO: add 'extra ? *)
 
-  method on_tuple_constr tdecl is_self_rec cd args =
+  method! make_typ_of_self_trf ~loc tdecl =
+    [%type: [%t self#default_inh] ->
+      [%t super#make_typ_of_self_trf ~loc tdecl] ]
+
+  method make_typ_of_class_argument ~loc name =
+    [%type: [%t self#default_inh] ->
+      [%t super#make_typ_of_class_argument ~loc name] ]
+
+  method! make_RHS_typ_of_transformation ?subj_t ?syn_t tdecl =
+    let loc = tdecl.ptype_loc in
+    let subj_t = Option.value subj_t
+        ~default:(using_type ~typename:tdecl.ptype_name.txt tdecl) in
+    let syn_t  = Option.value syn_t  ~default:(self#default_syn tdecl) in
+    [%type: [%t self#default_inh] ->
+      [%t super#make_RHS_typ_of_transformation ~subj_t ~syn_t tdecl] ]
+
+  (* method wrap_tr_function_typ (typ: core_type) =
+   *   let loc = typ.ptyp_loc in
+   *   typ
+   *   [%type: [%t self#syn_of_param] -> [%t self#default_inh] -> [%t typ] ] *)
+
+  method wrap_tr_function_str expr =
+    let loc = expr.pexp_loc in
+    (* [%expr fun subj -> [%e expr] () subj] *)
+    [%expr fun the_init subj -> [%e expr] the_init subj]
+
+  method on_tuple_constr ~is_self_rec ~mutal_names tdecl  cd args =
     let loc = tdecl.ptype_loc in
     let names = make_new_names (List.length args) in
 
@@ -57,7 +83,7 @@ let g initial_args = object(self: 'self)
       [%expr fun inh -> [%e
         Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
         List.fold_left ~f:(fun acc (name,typ) ->
-          [%expr [%e self#do_typ_gen ~loc is_self_rec typ] [%e acc]
+          [%expr [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ] [%e acc]
               [%e Exp.sprintf ~loc "%s" name]]
         )
         ~init:[%expr inh]
@@ -65,7 +91,8 @@ let g initial_args = object(self: 'self)
       ]]
 
 
-  method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
+  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+      constr_name bindings einh k =
     (* TODO: rewrite *)
     let ctuple =
       match bindings with
@@ -75,7 +102,7 @@ let g initial_args = object(self: 'self)
               List.map bindings
                 ~f:(fun (name, typ) ->
                     [%expr
-                      [%e self#do_typ_gen ~loc is_self_rec typ ]
+                      [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ ]
                       [%e einh]
                       [%e Exp.ident ~loc name ]
                     ]
@@ -85,7 +112,7 @@ let g initial_args = object(self: 'self)
     k @@ Exp.variant ~loc constr_name ctuple
 
 
-  method got_polyvar ~loc tdecl do_typ is_self_rec rows k =
+  method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ rows k =
         (* TODO: rewrite *)
     let _param_names,_rez_names,_find_param,blownup_params =
       hack_params tdecl.ptype_params
@@ -96,7 +123,8 @@ let g initial_args = object(self: 'self)
           with_constr_typ typ
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
-                let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
+              let args = List.map params
+                  ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_names) in
                 let inh_params = blownup_params @ [[%type: 'extra]] in
                 Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr

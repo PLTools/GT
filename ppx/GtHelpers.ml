@@ -66,7 +66,7 @@ module Exp = struct
     pexp_field ~loc
 
   let ident ?(loc=Location.none) s = pexp_ident ~loc @@ Located.lident ~loc s
-  let ident_of_long ?(loc=Location.none) l = pexp_ident ~loc l
+  let ident_of_long ?(loc=Location.none) l = pexp_ident ~loc (Located.mk ~loc l)
   let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (ident ~loc) fmt
   let make_list ?(loc=Location.none) xs =
     List.fold_right xs
@@ -320,8 +320,9 @@ let visit_typedecl ~loc
       | None -> failwith "abstract types without manifest can't be supported"
       | Some typ -> onmanifest typ
 
-let make_new_names n =
-  List.init n ~f:(fun n -> Base.Char.(to_string @@ of_int_exn (n + to_int 'a')) )
+let make_new_names ?(prefix="") n =
+  List.init n ~f:(fun n -> Printf.sprintf "%s_%c" prefix
+    Base.Char.(of_int_exn (n + to_int 'a')) )
 
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in

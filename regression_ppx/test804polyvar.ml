@@ -7,9 +7,8 @@ type 'a pv = [ `A of 'a ]
 [@@deriving gt ~show ~gmap]
 
 
-
 let () =
-  let sh x = show_pv (fun () x -> x) () x in
+  let sh x = show_pv (fun x -> x) x in
   Printf.printf "%s\n%!" (sh @@ `A "aaa")
 
 
@@ -23,5 +22,5 @@ end : sig
 end)
 
 let () =
-  let sh x = show_wtf (fun () x -> x) () x in
+  let sh x = show_wtf (fun x -> x) x in
   Printf.printf "%s\t%s\n%!" (sh @@ Just(`A "a")) (sh @@ Just (`C "ccc"))

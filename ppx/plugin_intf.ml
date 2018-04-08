@@ -24,12 +24,12 @@ end
 
 
 
-class virtual no_inh_attr = object(self)
-  method wrap_tr_function_str expr =
-    let loc = expr.pexp_loc in
-    [%expr fun subj -> [%e expr] () subj]
-
-  method wrap_tr_function_typ (typ: core_type) =
-    typ
-
-end
+(* class virtual no_inh_attr = object(self)
+ *   method wrap_tr_function_str expr =
+ *     let loc = expr.pexp_loc in
+ *     [%expr fun subj -> [%e expr] () subj]
+ *
+ *   method wrap_tr_function_typ (typ: core_type) =
+ *     typ
+ *
+ * end *)

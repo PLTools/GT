@@ -43,12 +43,8 @@ class ['self] g args = object(self: 'self)
     [ Ctf.constraint_  ~loc [%type: 'inh] [%type: unit] ]
 
 
-  method! wrap_tr_function_str tied_knot =
-    let loc = tied_knot.pexp_loc in
-    (* we don't need inherited attribute for show *)
-    [%expr fun subj -> [%e tied_knot] () subj]
-
-  method generate_for_polyvar_tag ~loc constr_name bindings is_self_rec einh k =
+  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+      constr_name bindings einh k =
     match bindings with
     | [] -> k @@ Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
     | _ ->
@@ -56,8 +52,7 @@ class ['self] g args = object(self: 'self)
         bindings
         ~f:(fun acc (name, typ) -> Exp.apply1 ~loc acc
                [%expr
-                 [%e self#do_typ_gen ~loc is_self_rec typ]
-                 [%e einh ]
+                 [%e self#do_typ_gen ~loc ~mutal_names ~is_self_rec typ]
                  [%e Exp.ident ~loc name ]
                ])
         ~init:[%expr Format.sprintf [%e
@@ -70,20 +65,21 @@ class ['self] g args = object(self: 'self)
 
 
   (* this is the same for show and gmap *)
-  method got_polyvar ~loc tdecl do_typ is_self_rec rows k =
+  method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ  rows k =
     k @@
     List.map rows ~f:(function
         | Rinherit typ ->
           with_constr_typ typ
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
-                let args = List.map params ~f:(self#do_typ_gen ~loc is_self_rec) in
-                (* gmap has blownup_params here. Maybe we should abstract this *)
-                let inh_params = self#prepare_inherit_args_for_alias ~loc
-                    tdecl params
-                in
+              let args = List.map params
+                  ~f:(self#do_typ_gen ~loc ~mutal_names ~is_self_rec) in
+              (* gmap has blownup_params here. Maybe we should abstract this *)
+              let inh_params = self#prepare_inherit_args_for_alias ~loc
+                  tdecl params
+              in
 
-                Cf.inherit_ ~loc @@ Cl.apply
+              Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
                      ({cid with txt = map_longident cid.txt ~f:((^)"show_")})
                      inh_params
@@ -96,14 +92,15 @@ class ['self] g args = object(self: 'self)
           Cf.method_concrete ~loc ("c_" ^ constr_name)
             [%expr fun inh -> [%e
               Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-              self#generate_for_polyvar_tag ~loc constr_name (List.zip_exn names args)
-                is_self_rec [%expr inh] (fun x -> x)
+              self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+                constr_name (List.zip_exn names args)
+                [%expr inh] (fun x -> x)
 
             ]]
 
       )
 
-  method on_tuple_constr tdecl is_self_rec cd ts =
+  method on_tuple_constr ~is_self_rec ~mutal_names tdecl cd ts =
     let loc = tdecl.ptype_loc in
     let constr_name = cd.pcd_name.txt in
     Cf.method_concrete ~loc ("c_"^constr_name)
@@ -118,7 +115,7 @@ class ['self] g args = object(self: 'self)
             ~f:(fun acc (name, typ) ->
                 Exp.apply1 ~loc acc
                   (self#app_transformation_expr
-                     (self#do_typ_gen ~loc  is_self_rec typ)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
                      [%expr assert false]
                      (Exp.ident ~loc name)
                   )
