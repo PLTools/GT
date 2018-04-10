@@ -101,11 +101,6 @@ let g args = object(self: 'self)
       [Cf.constraint_ ~loc (self#extra_param_stub ~loc) right ]
     else []
 
-  method! wrap_tr_function_str tied_knot =
-    let loc = tied_knot.pexp_loc in
-    (* we don't need inherited attribute for show *)
-    [%expr fun subj -> [%e tied_knot] () subj]
-
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings  einh k =
     let ctuple =

@@ -357,26 +357,26 @@ class virtual ['self] generator initial_args = object(self: 'self)
    *   typ
    *   (\* [%type:  [%t self#default_inh] -> [%t typ] ] *\) *)
 
-  method wrap_tr_function_str expr =
-    let loc = expr.pexp_loc in
-    [%expr fun subj -> [%e expr] () subj]
+  method wrap_tr_function_str ~loc gcata_on_new_expr =
+    let body = gcata_on_new_expr [%expr self] in
+    [%expr fun subj -> GT.fix0 (fun self ->
+        [%e body] ()) subj
+    ]
     (* [%expr fun the_init subj -> [%e expr] the_init subj] *)
 
   (* let <plugin-name> fa ... fz = <this body> *)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
     let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
-    self#wrap_tr_function_str
-    [%expr GT.fix0 (fun self ->
-        [%e Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt) @@
-          Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc class_name) @@
-          (nolabelize @@
-           List.map rec_typenames ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name)
-           @ [[%expr self] ]
-           @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
-          )
-        ]
+    self#wrap_tr_function_str ~loc
+      (fun eself ->
+         Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt) @@
+         Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc class_name) @@
+         (nolabelize @@
+          List.map rec_typenames ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name)
+          @ [eself]
+          @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
+         )
       )
-    ]
 
   method make_trans_functions: loc:location ->
     is_rec:bool -> string list -> type_declaration list -> structure_item
