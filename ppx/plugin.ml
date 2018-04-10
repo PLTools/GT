@@ -75,6 +75,9 @@ class virtual ['self] generator initial_args = object(self: 'self)
     in
     self#got_typedecl tdecl ~is_self_rec ~mutal_names k
 
+  method extra_class_lets tdecl k =
+    k
+
   method wrap_class_definition ~loc ~inh_params mutal_names tdecl fields =
     let cur_name = self#cur_name tdecl in
     (* inherit class_t and prepare to put other members *)
@@ -84,7 +87,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
       ~name:(sprintf "%s_%s%s" self#plugin_name cur_name
                (match mutal_names with [] -> "" | _ -> "_stub") )
       ~virt:Concrete
-      ~wrap:(fun body ->
+      ~wrap:(self#extra_class_lets tdecl @@ fun body ->
         (* constructor arguments are *)
         let names =
           List.map mutal_names
@@ -401,7 +404,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     sprintf "%s_%s%s" self#plugin_name tdecl.ptype_name.txt
       (if is_mutal then "_stub" else "")
 
-  method wrap_tr_function_str ~loc gcata_on_new_expr =
+  method wrap_tr_function_str ~loc tdecl gcata_on_new_expr =
     let body = gcata_on_new_expr [%expr self] in
     [%expr fun subj -> GT.fix0 (fun self ->
         [%e body] ()) subj
@@ -410,7 +413,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
   (* let <plugin-name> fa ... fz = <this body> *)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
     let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
-    self#wrap_tr_function_str ~loc
+    self#wrap_tr_function_str ~loc tdecl
       (fun eself ->
          Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt) @@
          Exp.apply ~loc (Exp.new_ ~loc @@ Located.lident ~loc class_name) @@
@@ -528,8 +531,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
               einh esubj
           )
       | Ptyp_constr (_,_) when is_self_rec t ->
-        self#generate_for_variable ~loc "self"
-        (* Exp.ident ~loc self_arg_name *)
+        (* self#generate_for_variable ~loc "self" *)
+        Exp.ident ~loc self_arg_name
       | Ptyp_constr ({txt},params) ->
           (* in this place it will be easier to have all plugin in single value *)
           let trf_expr =

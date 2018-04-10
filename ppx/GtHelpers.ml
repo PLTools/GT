@@ -109,6 +109,7 @@ module Cl = struct
   let constr ?(loc=Location.none) (lid: longident) ts =
     pcl_constr ~loc (Located.mk ~loc lid) ts
   let structure ?(loc=Location.none) = pcl_structure ~loc
+  let let_ ?(loc=Location.none) ?(flg=Nonrecursive) = Cl.let_ ~loc flg
 end
 
 

@@ -70,7 +70,7 @@ let g initial_args = object(self: 'self)
    *   typ
    *   [%type: [%t self#syn_of_param] -> [%t self#default_inh] -> [%t typ] ] *)
 
-  method wrap_tr_function_str ~loc make_gcata_of_class =
+  method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
     let body = make_gcata_of_class [%expr self] in
     (* [%expr fun subj -> [%e expr] () subj] *)
     [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj]

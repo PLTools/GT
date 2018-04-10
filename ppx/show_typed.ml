@@ -3,7 +3,6 @@
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
- *
  *)
 
 open Base
@@ -18,9 +17,6 @@ let g args = object(self: 'self)
 
   method plugin_name = "show_typed"
 
-  (* method! make_trans_function_typ tdecl =
-   *   let loc = tdecl.ptype_loc in
-   *   [%type: (string * [%t super#make_trans_function_typ tdecl]) ] *)
 
   method! make_RHS_typ_of_transformation ?subj_t ?syn_t tdecl =
     let loc = tdecl.ptype_loc in
@@ -34,14 +30,66 @@ let g args = object(self: 'self)
     [%type: (string * [%t super#make_typ_of_class_argument ~loc name ])]
 
   method! make_typ_of_self_trf ~loc tdecl =
-    [%type: (string * [%t super#make_typ_of_self_trf ~loc tdecl ])]
+    (* If we change this in the manner similar to tranformations for arguments
+       then we need to affect definition of transformation function (generate a
+       string there) *)
+    super#make_typ_of_self_trf ~loc tdecl
+    (* [%type: (string * [%t super#make_typ_of_self_trf ~loc tdecl ])] *)
 
-  method! wrap_tr_function_str ~loc gcata_on_new_expr =
+  method! wrap_tr_function_str ~loc tdecl gcata_on_new_expr =
     (* TODO: pass tdecl here*)
-    [%expr ("wtf", [%e super#wrap_tr_function_str ~loc gcata_on_new_expr ])]
+    let str_e = self#string_of_typ ~loc (* ~is_self_rec *) @@
+      using_type ~typename: tdecl.ptype_name.txt tdecl
+    in
+    [%expr ("wtf", [%e super#wrap_tr_function_str ~loc tdecl gcata_on_new_expr ])]
 
   method! generate_for_variable ~loc name =
     [%expr snd [%e super#generate_for_variable ~loc name ]]
+
+
+  (* method extra_class_lets tdecl k = fun cl ->
+   *   let loc = tdecl.ptype_loc in
+   *
+   *   k @@ Cl.let_ ~loc
+   *     [ let pat = Pat.sprintf ~loc "%s" Plugin.self_arg_name in
+   *       let str_expr =
+   *         match map_type_param_names ~f:id tdecl.ptype_params with
+   *         | [] -> Exp.constant ~loc @@ const_string tdecl.ptype_name.txt
+   *         | ns ->
+   *             Exp.apply_nolabeled ~loc
+   *               [%expr Format.sprintf [%e
+   *                   let fmt = String.concat ~sep:", " @@
+   *                     List.map ns ~f:(fun _ -> "%s")
+   *                   in
+   *                   Exp.constant ~loc @@ const_string @@
+   *                   sprintf "`(%s)%s"  fmt tdecl.ptype_name.txt
+   *                 ]]
+   *               (List.map ns ~f:(fun n -> [%expr fst [%e Exp.sprintf ~loc "f%s" n]]))
+   *       in
+   *       value_binding ~loc ~pat ~expr:[%expr ([%e str_expr], fself)]
+   *     ]
+   *     cl *)
+
+  method private string_of_typ ~loc (* ~is_self_rec *) typ =
+      let rec string_of_longident = function
+      | Lident s -> s
+      | Ldot (l, s) ->  string_of_longident l ^ "." ^ s
+      | Lapply (_,_) -> assert false
+      in
+
+      let rec helper typ =
+        match typ.ptyp_desc with
+        | Ptyp_var s -> [%expr fst [%e Exp.sprintf ~loc "f%s" s]]
+        | Ptyp_constr ({txt}, []) ->
+            Exp.constant ~loc @@ const_string @@ string_of_longident txt
+        | Ptyp_constr ({txt},ts) ->
+            List.map ~f:helper ts
+            |> List.fold_right
+              ~f:(fun e acc -> [%expr [%e e] ^ [%e acc]])
+              ~init:(Exp.constant ~loc @@ const_string @@ string_of_longident txt)
+        |  _ -> assert false
+      in
+      helper typ
 
   method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
     let trfs = super#make_inherit_args_for_alias ~loc ~is_self_rec
@@ -49,9 +97,21 @@ let g args = object(self: 'self)
     in
     assert (List.length trfs = 1 + (List.length cparams));
     (* basically we need to convert every expression to a pair where fst is a string*)
-
-    let f e = [%expr ("asdf", [%e e])] in
-    List.map ~f trfs
+    (* let trf_self = List.hd_exn trfs in *)
+    let trf_others = List.tl_exn trfs in
+    (* let f e = [%expr ("asdf", [%e e])] in *)
+    (* TODO: fix hack *)
+    let xs = List.map2_exn trf_others cparams
+        ~f:(fun rez typ ->
+          match typ.ptyp_desc with
+          | Ptyp_var s -> Exp.sprintf ~loc "f%s" s
+          (* | _ when is_self_rec typ ->
+           *     rez *)
+          | _ -> [%expr ([%e self#string_of_typ ~loc typ],
+                         [%e rez] ) ]
+        )
+    in
+    [%expr fself] :: xs
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings  einh k =
