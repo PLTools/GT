@@ -75,11 +75,12 @@ let g initial_args = object(self: 'self)
     (* [%expr fun subj -> [%e expr] () subj] *)
     [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj]
 
-  method on_tuple_constr ~is_self_rec ~mutal_names tdecl  cd args =
-    let loc = tdecl.ptype_loc in
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
     let names = make_new_names (List.length args) in
-
-    Cf.method_concrete ~loc ("c_"^cd.pcd_name.txt)
+    let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
+    k [
+      (* TODO: inh syn stuff *)
+    Cf.method_concrete ~loc methname
       [%expr fun inh -> [%e
         Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
         List.fold_left ~f:(fun acc (name,typ) ->
@@ -89,7 +90,7 @@ let g initial_args = object(self: 'self)
         ~init:[%expr inh]
         (List.zip_exn names args)
       ]]
-
+  ]
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings einh k =
@@ -128,7 +129,7 @@ let g initial_args = object(self: 'self)
                 let inh_params = blownup_params @ [[%type: 'extra]] in
                 Cf.inherit_ ~loc @@ Cl.apply
                   (Cl.constr
-                     ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
+                     (map_longident cid.txt ~f:(sprintf "%s_%s" self#plugin_name))
                      inh_params
                   )
                   (nolabelize ([%expr _fself]::args))

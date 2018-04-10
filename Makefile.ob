@@ -47,7 +47,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #$(shell seq -s \  -w 1 024) $(shell seq -s \  -w 26 028)
 REGRES_CASES := #795intoption #799 798 798gen 796scheme_gen 794camlp5 790showF 791showT #705
-REGRES_CASES := 801 802 803 804 806 #808 #807 #805
+REGRES_CASES := 801 802 803 804 806 807 #805
 #$(warning $(REGRES_CASES) )
 
 define TESTRULES

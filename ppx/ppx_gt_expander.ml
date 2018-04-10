@@ -168,8 +168,7 @@ let make_interface_class ~loc tdecl =
             in
 
             [ Cf.inherit_ ~loc @@
-              Cl.constr (Located.mk ~loc @@
-                         map_longident ~f:(sprintf "class_%s") name)
+              Cl.constr ~loc (map_longident ~f:(sprintf "class_%s") name)
                 inh_params
             ]
           in

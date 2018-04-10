@@ -59,7 +59,8 @@ module Exp = struct
   let apply1 ?(loc=Location.none) ?(label=Nolabel) f arg = apply ~loc f [label,arg]
   let case ?guard lhs rhs = case ~lhs ~rhs ~guard
   let constant ?(loc=Location.none) = pexp_constant ~loc
-  let construct ?(loc=Location.none) = pexp_construct ~loc
+  let construct ?(loc=Location.none) lident =
+    pexp_construct ~loc (Located.mk ~loc lident)
   let variant ?(loc=Location.none) e ts = pexp_variant ~loc e ts
 
   let field ?(loc=Location.none) =
@@ -71,9 +72,9 @@ module Exp = struct
   let make_list ?(loc=Location.none) xs =
     List.fold_right xs
       ~f:(fun e acc ->
-          construct ~loc (lid @@ lident "::")
+          construct ~loc (lident "::")
             (Some (pexp_pair ~loc e acc)) )
-      ~init:(construct ~loc (lid @@ lident "[]") None)
+      ~init:(construct ~loc (lident "[]") None)
   let match_ ?(loc=Location.none) = pexp_match ~loc
   let new_ ?(loc=Location.none) = pexp_new ~loc
   let object_ ?(loc=Location.none) = pexp_object ~loc
@@ -105,8 +106,8 @@ module Cl = struct
 
   let fun_ ?(loc=Location.none) = pcl_fun ~loc
 
-  let constr ?(loc=Location.none) (lid: longident_loc) ts =
-    pcl_constr ~loc lid ts
+  let constr ?(loc=Location.none) (lid: longident) ts =
+    pcl_constr ~loc (Located.mk ~loc lid) ts
   let structure ?(loc=Location.none) = pcl_structure ~loc
 end
 

@@ -119,65 +119,65 @@ let g args = object(self: 'self)
     in
     k @@ Exp.variant ~loc constr_name ctuple
 
-  (* RHS of type declaration [tdecl] is a polymorphc variant *)
-  method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ rows k =
-    let _param_names,_rez_names,_find_param,blownup_params =
-      hack_params tdecl.ptype_params
-    in
-    k @@
-    List.map rows ~f:(function
-    | Rinherit typ ->
-        with_constr_typ typ
-            ~fail:(fun () -> failwith "type is not a constructor")
-            ~ok:(fun cid params ->
-                let args = List.map params ~f:(do_typ ~loc) in
-                let inh_params = self#prepare_inherit_args_for_alias ~loc
-                    tdecl params
-                in
-                Cf.inherit_ ~loc @@ Cl.apply
-                  (Cl.constr
-                     ({cid with txt = map_longident cid.txt ~f:((^)"gmap_")})
-                     inh_params
-                  )
-                  (nolabelize ([%expr _fself]::args))
-              )
-    | Rtag (constr_name,_,_,args) ->
-        let names = make_new_names ~prefix:"_arg" (List.length args) in
+  (* (\* RHS of type declaration [tdecl] is a polymorphc variant *\)
+   * method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ rows k =
+   *   let _param_names,_rez_names,_find_param,blownup_params =
+   *     hack_params tdecl.ptype_params
+   *   in
+   *   k @@
+   *   List.map rows ~f:(function
+   *   | Rinherit typ ->
+   *       with_constr_typ typ
+   *           ~fail:(fun () -> failwith "type is not a constructor")
+   *           ~ok:(fun cid params ->
+   *               let args = List.map params ~f:(do_typ ~loc) in
+   *               let inh_params = self#prepare_inherit_args_for_alias ~loc
+   *                   tdecl params
+   *               in
+   *               Cf.inherit_ ~loc @@ Cl.apply
+   *                 (Cl.constr
+   *                    (map_longident cid.txt ~f:(sprintf "gmap_%s"))
+   *                    inh_params
+   *                 )
+   *                 (nolabelize ((Exp.sprintf ~loc "%s" Plugin.self_arg_name)::args))
+   *             )
+   *   | Rtag (constr_name,_,_,args) ->
+   *       let names = make_new_names ~prefix:"_arg" (List.length args) in
+   *
+   *       Cf.method_concrete ~loc ("c_" ^ constr_name) @@
+   *       [%expr fun () -> [%e
+   *         Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
+   *         self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+   *           constr_name (List.zip_exn names args)
+   *           [%expr assert false ] (fun x -> x)
+   *
+   *           (\* self#app_transformation_expr
+   *            *   (Exp.apply_nolabeled
+   *            *      (\\* (Exp.ident_of_long @@
+   *            *       *  Located.mk ~loc @@
+   *            *       *  map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt) *\\)
+   *            *      trf_expr
+   *            *      (List.map ~f:helper params)
+   *            *   )
+   *            *   einh esubj *\)
+   *       ]]
+   *
+   *           (\* [%expr fun inh -> [%e
+   *            *   Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
+   *            *   self#generate_for_polyvar_tag ~loc
+   *            *     ~is_self_rec ~mutal_names
+   *            *     constr_name (List.zip_exn names args)
+   *            *     [%expr inh] (fun x -> x)
+   *            * ]] *\)
+   *   ) *)
 
-        Cf.method_concrete ~loc ("c_" ^ constr_name) @@
-        [%expr fun () -> [%e
-          Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-          self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-            constr_name (List.zip_exn names args)
-            [%expr assert false ] (fun x -> x)
-
-            (* self#app_transformation_expr
-             *   (Exp.apply_nolabeled
-             *      (\* (Exp.ident_of_long @@
-             *       *  Located.mk ~loc @@
-             *       *  map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt) *\)
-             *      trf_expr
-             *      (List.map ~f:helper params)
-             *   )
-             *   einh esubj *)
-        ]]
-
-            (* [%expr fun inh -> [%e
-             *   Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-             *   self#generate_for_polyvar_tag ~loc
-             *     ~is_self_rec ~mutal_names
-             *     constr_name (List.zip_exn names args)
-             *     [%expr inh] (fun x -> x)
-             * ]] *)
-    )
 
 
-
-  method on_tuple_constr ~is_self_rec ~mutal_names tdecl  cd ts =
-    let loc = tdecl.ptype_loc in
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
     let names = make_new_names (List.length ts) in
-    let constr_name = cd.pcd_name.txt in
-    Cf.method_concrete ~loc ("c_"^cd.pcd_name.txt)
+    let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
+    k [
+    Cf.method_concrete ~loc methname
       [%expr fun () -> [%e
         Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
         let ctuple =
@@ -193,7 +193,10 @@ let g args = object(self: 'self)
                          )
                     )
         in
-        Exp.construct ~loc (Located.mk ~loc (Lident constr_name)) ctuple
+        (match constr_info with `Normal s -> Exp.construct ~loc (lident s)
+                              | `Poly s   -> Exp.variant ~loc s
+        )
+          ctuple
       ]]
-
+  ]
 end
