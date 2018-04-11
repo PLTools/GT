@@ -64,43 +64,6 @@ class ['self] g args = object(self: 'self)
           ]]
 
 
-  (* (\* this is the same for show and gmap *\)
-   * method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ  rows k =
-   *   k @@
-   *   List.map rows ~f:(function
-   *       | Rinherit typ ->
-   *         with_constr_typ typ
-   *           ~fail:(fun () -> failwith "type is not a constructor")
-   *           ~ok:(fun cid params ->
-   *             let args = List.map params
-   *                 ~f:(self#do_typ_gen ~loc ~mutal_names ~is_self_rec) in
-   *             (\* gmap has blownup_params here. Maybe we should abstract this *\)
-   *             let inh_params = self#prepare_inherit_args_for_alias ~loc
-   *                 tdecl params
-   *             in
-   *
-   *             Cf.inherit_ ~loc @@ Cl.apply
-   *                 (Cl.constr ~loc
-   *                    (map_longident cid.txt ~f:(sprintf "show_%s"))
-   *                    inh_params
-   *                 )
-   *                 (\* TODO: maybe we should augment arguemnts here *\)
-   *                 (nolabelize ((Exp.sprintf ~loc "%s" Plugin.self_arg_name)::args))
-   *             )
-   *       | Rtag (constr_name,_,_,args) ->
-   *         let names = make_new_names (List.length args) in
-   *
-   *         Cf.method_concrete ~loc ("c_" ^ constr_name)
-   *           [%expr fun inh -> [%e
-   *             Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-   *             self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-   *               constr_name (List.zip_exn names args)
-   *               [%expr inh] (fun x -> x)
-   *
-   *           ]]
-   *
-   *     ) *)
-
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
     k @@
     [ let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in

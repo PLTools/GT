@@ -43,32 +43,34 @@ let g args = object(self: 'self)
     in
     [%expr ("wtf", [%e super#wrap_tr_function_str ~loc tdecl gcata_on_new_expr ])]
 
-  method! generate_for_variable ~loc name =
-    [%expr snd [%e super#generate_for_variable ~loc name ]]
+  (* method! generate_for_variable ~loc name =
+   *   [%expr snd [%e super#generate_for_variable ~loc name ]] *)
 
+  method! extract_transformation ~loc etrf =
+    [%expr snd [%e super#extract_transformation ~loc etrf ]]
 
-  (* method extra_class_lets tdecl k = fun cl ->
-   *   let loc = tdecl.ptype_loc in
-   *
-   *   k @@ Cl.let_ ~loc
-   *     [ let pat = Pat.sprintf ~loc "%s" Plugin.self_arg_name in
-   *       let str_expr =
-   *         match map_type_param_names ~f:id tdecl.ptype_params with
-   *         | [] -> Exp.constant ~loc @@ const_string tdecl.ptype_name.txt
-   *         | ns ->
-   *             Exp.apply_nolabeled ~loc
-   *               [%expr Format.sprintf [%e
-   *                   let fmt = String.concat ~sep:", " @@
-   *                     List.map ns ~f:(fun _ -> "%s")
-   *                   in
-   *                   Exp.constant ~loc @@ const_string @@
-   *                   sprintf "`(%s)%s"  fmt tdecl.ptype_name.txt
-   *                 ]]
-   *               (List.map ns ~f:(fun n -> [%expr fst [%e Exp.sprintf ~loc "f%s" n]]))
-   *       in
-   *       value_binding ~loc ~pat ~expr:[%expr ([%e str_expr], fself)]
-   *     ]
-   *     cl *)
+  method extra_class_lets tdecl k = fun cl ->
+    let loc = tdecl.ptype_loc in
+
+    k @@ Cl.let_ ~loc
+      [ let pat = Pat.sprintf ~loc "%s" Plugin.self_arg_name in
+        let str_expr =
+          match map_type_param_names ~f:id tdecl.ptype_params with
+          | [] -> Exp.constant ~loc @@ const_string tdecl.ptype_name.txt
+          | ns ->
+              Exp.apply_nolabeled ~loc
+                [%expr Format.sprintf [%e
+                    let fmt = String.concat ~sep:", " @@
+                      List.map ns ~f:(fun _ -> "%s")
+                    in
+                    Exp.constant ~loc @@ const_string @@
+                    sprintf "`(%s)%s"  fmt tdecl.ptype_name.txt
+                  ]]
+                (List.map ns ~f:(fun n -> [%expr fst [%e Exp.sprintf ~loc "f%s" n]]))
+        in
+        value_binding ~loc ~pat ~expr:[%expr ([%e str_expr], fself)]
+      ]
+      cl
 
   method private string_of_typ ~loc (* ~is_self_rec *) typ =
       let rec string_of_longident = function
@@ -105,13 +107,14 @@ let g args = object(self: 'self)
         ~f:(fun rez typ ->
           match typ.ptyp_desc with
           | Ptyp_var s -> Exp.sprintf ~loc "f%s" s
-          (* | _ when is_self_rec typ ->
-           *     rez *)
+          | _ when is_self_rec typ ->
+            (* [%expr ([%e self#string_of_typ ~loc typ], fself ) ] *)
+                        [%expr fself ]
           | _ -> [%expr ([%e self#string_of_typ ~loc typ],
                          [%e rez] ) ]
         )
     in
-    [%expr fself] :: xs
+    [%expr snd fself] :: xs
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings  einh k =

@@ -513,14 +513,17 @@ class virtual ['self] generator initial_args = object(self: 'self)
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
     [%expr fun subj -> [%e k [%expr assert false ] [%expr subj]]]
 
+  method extract_transformation ~loc etrf = etrf
 
+
+  (* TODO: decide expression of which type should be returned here *)
   (* do_type_gen will return an expression which after being applied
    * to inherited attribute and subject will return synthetized one
    *)
   method do_typ_gen ~loc ~mutal_names ~is_self_rec t =
     let rec helper t =
       match t.ptyp_desc with
-      | Ptyp_var s -> self#generate_for_variable ~loc s
+      | Ptyp_var s -> self#extract_transformation ~loc @@ self#generate_for_variable ~loc s
       | Ptyp_tuple params ->
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr
@@ -532,28 +535,27 @@ class virtual ['self] generator initial_args = object(self: 'self)
           )
       | Ptyp_constr (_,_) when is_self_rec t ->
         (* self#generate_for_variable ~loc "self" *)
-        Exp.ident ~loc self_arg_name
+        self#extract_transformation ~loc @@ Exp.ident ~loc self_arg_name
       | Ptyp_constr ({txt},params) ->
           (* in this place it will be easier to have all plugin in single value *)
           let trf_expr =
             match txt with
             | Lident s when List.mem mutal_names s ~equal:String.equal ->
-                (* we should use local trf function *)
-                (Exp.ident_of_long ~loc @@
-                 map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt)
+              (* we should use local trf function *)
+              Exp.ident_of_long ~loc @@
+              map_longident ~f:(sprintf "%s_2%s" self#plugin_name) txt
             | _ ->
                 [%expr let (module Op) =
                          [%e Exp.ident_of_long txt] in
-                  [%e Exp.ident_of_long ~loc @@
+                  [%e
+                    Exp.ident_of_long ~loc @@
                     Ldot (Lident "Op", self#plugin_name) ]
                 ]
           in
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr
-              (Exp.apply_nolabeled
-                 (* (Exp.ident_of_long @@
-                  *  Located.mk ~loc @@
-                  *  map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt) *)
+              (self#extract_transformation ~loc  @@
+               Exp.apply_nolabeled ~loc
                  trf_expr
                  (List.map ~f:helper params)
               )
@@ -565,7 +567,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
               (Exp.apply_nolabeled ~loc
                 Exp.(ident_of_long ~loc @@
                      map_longident cident
-                       ~f:(Printf.sprintf "%s_%s" self#plugin_name))
+                       ~f:(Printf.sprintf "%s_3%s" self#plugin_name))
                 (List.map typs ~f:helper)
               )
               einh esubj
