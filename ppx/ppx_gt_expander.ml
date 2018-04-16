@@ -198,19 +198,28 @@ let make_interface_class ~loc tdecl =
               (* rows go to virtual methods. label goes to inherit fields *)
               let meths =
                 List.concat_map rows ~f:(function
-                | Rtag (lab,_,_,args)  ->
-                  let methname = sprintf "c_%s" lab in
-                  [ Cf.method_ ~loc methname @@ Cfk_virtual
-                      (List.fold_right args ~init:[%type: 'syn]
-                         ~f:(Typ.arrow Nolabel)
-                       |> (Typ.arrow Nolabel [%type: 'inh])
-                      )
-                  ]
-                | Rinherit typ -> match typ.ptyp_desc with
-                  | Ptyp_constr ({txt;loc}, params) ->
-                     wrap ~is_poly:true txt params
-                  | _ -> assert false
-                )
+                    (* | Rtag (lab,_,_,args) when Int.(>) (List.length args) 1 -> *)
+                    | Rtag (lab,_,_,[typ]) ->
+                      (* print_endline "HERE"; *)
+                      let args = match typ.ptyp_desc with
+                        | Ptyp_tuple ts -> ts
+                        | _ -> [typ]
+                      in
+                      let methname = sprintf "c_%s" lab in
+                      [ Cf.method_ ~loc methname @@ Cfk_virtual
+                          (List.fold_right args ~init:[%type: 'syn]
+                             ~f:(Typ.arrow Nolabel)
+                           |> (Typ.arrow Nolabel [%type: 'inh])
+                          )
+                      ]
+                    | Rtag (_,_,_,_args) ->
+                      failwith "Can't deal with conjunctive types"
+
+                    | Rinherit typ -> match typ.ptyp_desc with
+                      | Ptyp_constr ({txt;loc}, params) ->
+                        wrap ~is_poly:true txt params
+                      | _ -> assert false
+                  )
               in
               ans ~is_poly:true meths
           | _ -> failwith "not implemented"

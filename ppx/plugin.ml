@@ -543,7 +543,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             | Lident s when List.mem mutal_names s ~equal:String.equal ->
               (* we should use local trf function *)
               Exp.ident_of_long ~loc @@
-              map_longident ~f:(sprintf "%s_2%s" self#plugin_name) txt
+              map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt
             | _ ->
                 [%expr let (module Op) =
                          [%e Exp.ident_of_long txt] in
@@ -567,7 +567,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
               (Exp.apply_nolabeled ~loc
                 Exp.(ident_of_long ~loc @@
                      map_longident cident
-                       ~f:(Printf.sprintf "%s_3%s" self#plugin_name))
+                       ~f:(Printf.sprintf "%s_%s" self#plugin_name))
                 (List.map typs ~f:helper)
               )
               einh esubj
