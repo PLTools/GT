@@ -326,18 +326,28 @@ let make_new_names ?(prefix="") n =
   List.init n ~f:(fun n -> Printf.sprintf "%s_%c" prefix
     Base.Char.(of_int_exn (n + to_int 'a')) )
 
+let unfold_tuple t =
+  match t.ptyp_desc with
+  | Ptyp_tuple ts -> ts
+  | _ -> [t]
+
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
     List.map rows ~f:(function
         | Rtag (lab, _, _, args) ->
-            let names = make_new_names (List.length  args) in
-            let lhs = Pat.variant ~loc  lab @@ match args with
-              | [] -> None
-              | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
-            in
-            case ~guard:None ~lhs
-              ~rhs:(onrow lab @@ List.zip_exn names args)
+          let args = match args with
+            | [t] -> unfold_tuple t
+            | [] -> []
+            | _ -> failwith "we don't support conjunction types"
+          in
+          let names = make_new_names (List.length  args) in
+          let lhs = Pat.variant ~loc  lab @@ match args with
+            | [] -> None
+            | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
+          in
+          case ~guard:None ~lhs
+            ~rhs:(onrow lab @@ List.zip_exn names args)
         | Rinherit typ ->
           match typ.ptyp_desc with
           | Ptyp_constr({txt;loc},ts) ->

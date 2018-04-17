@@ -305,7 +305,7 @@ let make_gcata_str ~loc root_type =
 
       | Ptyp_variant (rows,_,maybe_labels) ->
           ans @@ prepare_patt_match_poly ~loc [%expr t] rows maybe_labels
-            ~onrow:(fun cname  names ->
+            ~onrow:(fun cname names ->
               List.fold_left ("inh"::(List.map ~f:fst names))
                 ~init:(Exp.send ~loc [%expr tr] (Located.mk ~loc @@ "c_" ^ cname))
                 ~f:(fun acc arg ->
