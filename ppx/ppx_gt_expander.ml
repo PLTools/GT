@@ -38,6 +38,10 @@ let make_interface_class_sig ~loc tdecl =
 
   in
   visit_typedecl ~loc tdecl
+    ~onrecord:(fun _labels ->
+        k []
+        (*[%expr tr#do_wtf inh t]*)
+      )
     ~onvariant:(fun cds ->
       k @@
       List.map cds ~f:(fun cd ->
@@ -137,6 +141,15 @@ let make_interface_class ~loc tdecl =
       ~params:(prepare_params |> invariantize)
   in
   visit_typedecl ~loc tdecl
+    ~onrecord:(fun _ ->
+        ans
+          [ Cf.method_ ~loc (sprintf "do_%s" tdecl.ptype_name.txt) @@ Cfk_virtual
+              [%type: 'inh ->
+                [%t using_type ~typename:tdecl.ptype_name.txt tdecl]
+                -> 'syn
+              ]
+          ]
+      )
     ~onvariant:(fun cds ->
       ans @@
       List.map cds ~f:(fun cd ->
@@ -230,13 +243,19 @@ let make_interface_class ~loc tdecl =
 
 let make_gcata_sig ~loc ?(shortname=false) tdecl =
   let tr_t = visit_typedecl ~loc tdecl
+      ~onrecord:(fun _ ->
+          Typ.object_ ~loc Open @@
+          [ sprintf "do_%s" tdecl.ptype_name.txt,
+            [%type: 'inh -> [%t core_type_of_type_declaration tdecl] -> 'syn]
+          ]
+        )
       ~onvariant:(fun cds ->
           Typ.object_ ~loc Open @@
           List.map cds
             ~f:(fun cd ->
               match cd.pcd_args with
               | Pcstr_tuple ts ->
-                  Located.mk ~loc @@ sprintf "c_%s" cd.pcd_name.txt,
+                  sprintf "c_%s" cd.pcd_name.txt,
                   Typ.chain_arrow ~loc ([%type: 'inh]::ts@[[%type: 'syn]])
               | Pcstr_record _ -> assert false
             )
@@ -274,16 +293,16 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
   Sig.value ~loc ~name type_
 
 
-let make_gcata_str ~loc root_type =
+let make_gcata_str ~loc tdecl =
   let gcata_pat =
-     Pat.var ~loc (sprintf "gcata_%s" root_type.ptype_name.txt)
+     Pat.var ~loc (sprintf "gcata_%s" tdecl.ptype_name.txt)
   in
   let ans k =
     Str.single_value ~loc
          gcata_pat
          [%expr fun tr inh t -> [%e k] ]
   in
-  visit_typedecl ~loc root_type
+  visit_typedecl ~loc tdecl
     ~onvariant:(fun cds ->
       ans @@ prepare_patt_match ~loc [%expr t] (`Algebraic cds) (fun cd names ->
           List.fold_left ("inh"::names)
@@ -323,7 +342,11 @@ let make_gcata_str ~loc root_type =
       | _ -> failwith "not implemented"
       in
       do_typ typ
-    )
+      )
+    ~onrecord:(fun _labels ->
+        let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+        ans [%expr [%e Exp.send (Exp.ident "tr") (Located.mk ~loc methname) ] inh t]
+      )
 
 (* create opened renaming for polymorphic variant *)
 (* Seems that we don't need it no more *)
@@ -331,6 +354,7 @@ let make_heading_gen ~loc wrap tdecl =
   visit_typedecl ~loc tdecl
     ~onvariant:(fun _ -> [])
     ~onmanifest:(fun _ -> [])
+    ~onrecord:(fun  _ -> [])
 
 let make_heading_str ~loc = make_heading_gen ~loc (Str.type_ ~loc Nonrecursive)
 let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive)

@@ -251,14 +251,6 @@ class virtual ['self] generator initial_args = object(self: 'self)
     k @@ ans class_args
 
 
-  (* When we met polymnorphic variant on RHS of type declaration *)
-  (* method virtual got_polyvar: loc:location ->
-   *   is_self_rec:(core_type -> bool) -> mutal_names:(string list) ->
-   *   type_declaration ->
-   *   (loc:Location.t -> core_type -> 'do_typ_res) ->
-   *   row_field list ->
-   *   (class_field list -> 'pvr) -> 'pvr *)
-
   method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ rows k =
     List.concat_map rows ~f:(function
     | Rinherit typ ->
@@ -267,40 +259,14 @@ class virtual ['self] generator initial_args = object(self: 'self)
             ~ok:(fun cid params ->
                 (* Hypothesis: it's almost an type alias *)
                 self#got_constr ~loc ~is_self_rec tdecl do_typ cid params k
-                (* let args = List.map params ~f:(do_typ ~loc) in
-               *   let inh_params = self#prepare_inherit_args_for_alias ~loc
-               *       tdecl params
-               *   in
-               *   Cf.inherit_ ~loc @@ Cl.apply
-               *     (Cl.constr
-               *        (map_longident cid.txt ~f:(sprintf "gmap_%s"))
-               *        inh_params
-               *     )
-               *     (nolabelize ((Exp.sprintf ~loc "%s" self_arg_name)::args))
-                 * ) *)
-              )
+            )
     | Rtag (constr_name,_,_,args) ->
       (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
       self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name) args
         k
-
-
-        (* let names = make_new_names ~prefix:"_arg" (List.length args) in
-         *
-         * [
-         * Cf.method_concrete ~loc ("c_" ^ constr_name) @@
-         * [%expr fun () -> [%e
-         *   Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-         *   self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-         *     constr_name (List.zip_exn names args)
-         *     [%expr assert false ] (fun x -> x)
-         *
-         * ]]
-         * ] *)
     )
 
   method got_typedecl tdecl ~is_self_rec ~mutal_names (k: class_field list -> _) : _ =
-
     let loc = tdecl.ptype_loc in
     k @@
     visit_typedecl ~loc tdecl
@@ -330,7 +296,16 @@ class virtual ['self] generator initial_args = object(self: 'self)
         helper typ
     )
     ~onvariant:(fun cds -> self#on_variant ~mutal_names ~is_self_rec tdecl cds (fun x -> x))
+    ~onrecord:(fun labls ->
+        self#on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labls
+      )
 
+  method virtual on_record_declaration: loc:Location.t ->
+    is_self_rec:(core_type -> bool) ->
+    mutal_names:(string list) ->
+    type_declaration ->
+    label_declaration list ->
+    class_field list
 
   (* almost the same as `make_typ_of_class_argument` *)
   method make_typ_of_self_trf ~loc tdecl =

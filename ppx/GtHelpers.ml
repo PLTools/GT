@@ -51,6 +51,8 @@ module Pat = struct
   let alias ?(loc=Location.none) p s   = ppat_alias ~loc p (lid ~loc s)
   let variant ?(loc=Location.none) l p = ppat_variant ~loc l p
   let type_ ?(loc=Location.none) lident = ppat_type ~loc lident
+  let record ?(loc=Location.none) ?(flag=Closed) ps =
+      ppat_record ~loc ps flag
 end
 
 module Exp = struct
@@ -121,7 +123,7 @@ module Typ = struct
   let class_  ?(loc=Location.none) = ptyp_class ~loc
   let constr  ?(loc=Location.none) = ptyp_constr ~loc
   let object_ ?(loc=Location.none) flg xs =
-    ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> l,[],r)) flg
+    ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> Located.mk ~loc l,[],r)) flg
   let package ?(loc=Location.none) lident =
     ptyp_package ~loc (lident, [])
 
@@ -290,7 +292,7 @@ let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
  *   let f (t,_) = arr_of_param ~inh ~syn t in
  *   ptyp_object ~loc (List.map ~f root_type.ptype_params) Asttypes.Closed *)
 
-let using_type ~(typename: string) root_type =
+let using_type ~typename root_type =
   let loc = root_type.ptype_loc in
   (* generation type specification by type declaration *)
   ptyp_constr ~loc (Located.lident ~loc typename) (List.map ~f:fst @@ root_type.ptype_params)

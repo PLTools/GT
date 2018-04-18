@@ -153,5 +153,17 @@ let g initial_args = object(self: 'self)
            *   ]] *)
 
       )
+  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+    let pat = Pat.record ~loc ~flag:Closed @@
+      List.map labs ~f:(fun l ->
+          (Located.lident ~loc:l.pld_name.loc l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+        )
+    in
+    let methname = "asdf" in
+    [ Cf.method_concrete ~loc methname
+        [%expr fun () -> fun [%pat? pat ] -> [%e
+          Exp.constant (const_string "asdf")
+        ]]
+    ]
 
 end
