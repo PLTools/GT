@@ -484,6 +484,7 @@ let do_mutal_types_sig ~loc plugins tdecls =
 
 let sig_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
+    ?(use_compare=Skip)
     (rec_flag, tdls) =
   let plugins =
     let wrap p = function
@@ -494,6 +495,7 @@ let sig_type_decl ~loc ~path
     wrap Gmap.g       use_gmap  @@
     wrap Foldl.g      use_foldl @@
     wrap Show_typed.g use_show_type @@
+    wrap Compare.g    use_compare @@
     (* wrap use_foldl Eq.g @@ *)
     []
   in
@@ -507,6 +509,7 @@ let sig_type_decl ~loc ~path
 
 let str_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
+    ?(use_compare=Skip)
     (rec_flag, tdls)
   =
   let plugins =
@@ -518,7 +521,7 @@ let str_type_decl ~loc ~path
     wrap Gmap.g       use_gmap @@
     wrap Foldl.g      use_foldl @@
     wrap Show_typed.g use_show_type @@
-    (* wrap use_foldl Foldl.g @@ *)
+    wrap Compare.g    use_compare @@
     (* wrap use_foldl Eq.g @@ *)
     []
   in
@@ -530,14 +533,18 @@ let str_type_decl ~loc ~path
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc plugins false) tdls
 
-let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl use_show_type =
+let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
+    use_compare use_show_type =
   str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~use_show_type
+    ~use_compare
 
-let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl use_show_type =
+let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
+    use_compare use_show_type =
   let wrap f = if f then Use [] else Skip in
   sig_type_decl ~loc ~path
     ~use_show: (wrap use_show)
     ~use_gmap: (wrap use_gmap)
     ~use_foldl:(wrap use_foldl)
+    ~use_compare:(wrap use_compare)
     ~use_show_type:(wrap use_show_type)
     info

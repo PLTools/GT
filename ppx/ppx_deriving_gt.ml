@@ -2,7 +2,6 @@
  * Generic Transformers PPX syntax extension.
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
- *   Evgeniy Moiseenko aka eucpp
  * St.Petersburg State University, JetBrains Research
  *
  *)
@@ -31,12 +30,9 @@ module E = Ppx_gt_expander
 let gt_paramA name =
   let open Deriving.Args in
   let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
-  (* let b = alt none (some r) in *)
-  (* make_param name (assert false) (Ast_pattern.Packed.create b (fun x -> x)) *)
   arg (name^"A") r
-  (* alt none (some r) *)
 
-  (* without arguments *)
+(* without arguments *)
 let gt_param name =
   let open Deriving.Args in
   flag name
@@ -72,41 +68,44 @@ let gt_param name =
    *     (\* (fun ~loc ~path info x  -> x) *\) *)
 
 
-  let str_type_decl : (_, _) Deriving.Generator.t =
-    let bothp name rest =
-      Deriving.Args.(rest +> (gt_param name) +> (gt_paramA name))
-    in
-    Deriving.Generator.make
-      (* ~attributes:[ Attribute.T Attrs.ignore ] *)
-      Deriving.Args.(empty
-                      (* +> (arg "show"  (pexp_record __ none))
-                       * +> (arg "gmap"  (pexp_record __ none))
-                       * +> (arg "foldl" (pexp_record __ none)) *)
-                      |> (bothp "show")
-                      |> (bothp "gmap")
-                      |> (bothp "foldl")
-                      |> (bothp "show_typed")
-                     )
-      (fun ~loc ~path info show showA gmap gmapA foldl foldlA show_type show_typeA ->
-         let wrap = function
-         | _,Some xs -> E.Use xs
-         | true,None -> E.Use []
-         | false,None -> E.Skip
-         in
-         let show  = wrap (show,showA) in
-         let gmap  = wrap (gmap,gmapA) in
-         let foldl = wrap (foldl,foldlA) in
-         let show_type = wrap (show_type,show_typeA) in
-         E.str_type_decl_implicit ~loc ~path info show gmap foldl show_type
-      )
+let str_type_decl : (_, _) Deriving.Generator.t =
+  let bothp name rest =
+    Deriving.Args.(rest +> (gt_param name) +> (gt_paramA name))
+  in
+  Deriving.Generator.make
+    (* ~attributes:[ Attribute.T Attrs.ignore ] *)
+    Deriving.Args.(empty
+                   |> (bothp "show")
+                   |> (bothp "gmap")
+                   |> (bothp "foldl")
+                   |> (bothp "show_typed")
+                   |> (bothp "compare")
+                  )
+    (fun ~loc ~path info show showA gmap gmapA foldl foldlA show_type show_typeA
+      compare compareA ->
+      let wrap = function
+      | _,Some xs -> E.Use xs
+      | true,None -> E.Use []
+      | false,None -> E.Skip
+      in
+      let show  = wrap (show,showA) in
+      let gmap  = wrap (gmap,gmapA) in
+      let foldl = wrap (foldl,foldlA) in
+      let show_type = wrap (show_type,show_typeA) in
+      let compare   = wrap (compare,compareA) in
+      E.str_type_decl_implicit ~loc ~path
+        info show gmap foldl compare show_type
+    )
 
-  let sig_type_decl : (_, _) Deriving.Generator.t =
-    Deriving.Generator.make
-      Deriving.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl" +> flag "show_typed"
-                     )
-      E.sig_type_decl_implicit
+let sig_type_decl : (_, _) Deriving.Generator.t =
+  Deriving.Generator.make
+    Deriving.Args.(empty
+                   +> flag "show" +> flag "gmap" +> flag "foldl"
+                   +> flag "compare" +> flag "show_typed"
+                  )
+    E.sig_type_decl_implicit
 
-let deriver =
+let () =
   (* Sys.command "notify-send 'Registering deriver' wtf" |> ignore; *)
   Deriving.add
     ~str_type_decl
