@@ -41,6 +41,7 @@ let () = dispatch (fun hook ->
                                       ]);
      flag ["compile"; "short_paths"] & S [A "-short-paths"];
 
-   ()
+     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"];
+     ()
  | _ -> ()
 )
