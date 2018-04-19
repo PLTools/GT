@@ -1,4 +1,4 @@
-open GT
+let id x = x
 
 module PV : sig
   type ('a, 'b) pv = [ `A of 'a | `B of 'b ]

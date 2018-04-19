@@ -16,7 +16,7 @@ TESTS_ENVIRONMENT=./test.sh
 .DEFAULT_GOAL :=  all
 
 .PHONY: all syntax lib plugins ppx bundle samples
-.PHONY: celan clean clean_tests install uninstall
+.PHONY: celan clean rebuild clean_tests install uninstall
 .PHONY: tests test regression promote
 
 .DEFAULT_GOAL: all
@@ -153,3 +153,7 @@ install: bundle
 
 uninstall:
 	ocamlfind remove $(PKGNAME)
+
+rebuild: clean
+	$(MAKE) all tests
+

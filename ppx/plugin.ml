@@ -520,12 +520,15 @@ class virtual ['self] generator initial_args = object(self: 'self)
               Exp.ident_of_long ~loc @@
               map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt
             | _ ->
-                [%expr let (module Op) =
-                         [%e Exp.ident_of_long txt] in
-                  [%e
-                    Exp.ident_of_long ~loc @@
-                    Ldot (Lident "Op", self#plugin_name) ]
-                ]
+                (* [%expr let (module Op) =
+                 *          [%e Exp.ident_of_long txt] in
+                 *   [%e
+                 *     Exp.ident_of_long ~loc @@
+                 *     Ldot (Lident "Op", self#plugin_name) ]
+                 * ] *)
+                Exp.send ~loc
+                  [%expr let open GT in [%e Exp.ident_of_long txt].plugins]
+                  (Located.mk ~loc self#plugin_name)
           in
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr

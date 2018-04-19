@@ -120,35 +120,15 @@ class compare_$1_t =
     initializer (:=) self (this :> compare_$1_t)
   end
 
-module type MT_$1 = sig
-  val gcata: ('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn
-  val show    : $1 -> string
-  val gmap    : $1 -> $1
-  val foldl   : 'a -> $1 -> 'a
-(*  val foldr   : 'a -> $1 -> 'a
-  val html    : $1 -> HTML.viewer
-  val compare : $1 -> $1 -> comparison
-  val eq      : $1 -> $1 -> bool *)
-end
-
-(*
- let _ : 'a -> $1 -> 'a =
-   let gcata t inh x = t#t_$1 inh x in
-   gcata (new @$1[foldl])
-*)
-
-let $1 = ((module struct
-  let gcata t inh x = t#t_$1 inh x
-  let show  = gcata (new @$1[show]) ()
-  let gmap  = gcata (new @$1[gmap]) ()
-  (* for foldl we need manual eta-expansion *)
-  let foldl s = gcata (new @$1[foldl]) s
-end) : (module MT_$1))
-
-(*
-let $1 : (,
-          <  >) t =
-  let $1_gcata
+let $1 : (('inh, 'syn) # $1_tt -> 'inh -> $1 -> 'syn,
+          < show    : $1 -> string;
+            html    : $1 -> HTML.viewer;
+            compare : $1 -> $1 -> comparison;
+            eq      : $1 -> $1 -> bool;
+            gmap    : $1 -> $1;
+            foldl   : 'a -> $1 -> 'a;
+            foldr   : 'a -> $1 -> 'a >) t =
+  let $1_gcata t inh x = t#t_$1 inh x in
   {gcata = $1_gcata;
    plugins =
       object
@@ -161,5 +141,4 @@ let $1 : (,
         method foldr   = $1_gcata (new @$1[foldr])
       end
   }
-  *)
 ]])

@@ -241,7 +241,7 @@ let make_interface_class ~loc tdecl =
     )
 
 
-let make_gcata_sig ~loc ?(shortname=false) tdecl =
+let make_gcata_typ ~loc tdecl =
   let tr_t = visit_typedecl ~loc tdecl
       ~onrecord:(fun _ ->
           Typ.object_ ~loc Open @@
@@ -286,9 +286,12 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
         )
   in
   let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
+  Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ]
 
-  let type_ = Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ] in
-  let name = if shortname then "gcata" else Printf.sprintf "gcata_%s" tdecl.ptype_name.txt
+let make_gcata_sig ~loc ?(shortname=false) tdecl =
+  let type_ = make_gcata_typ ~loc tdecl in
+  let name = if shortname then "gcata"
+    else Printf.sprintf "gcata_%s" tdecl.ptype_name.txt
   in
   Sig.value ~loc ~name type_
 
@@ -361,6 +364,9 @@ let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive)
 
 let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
 
+(* Part of old implementation where we are trying to collect all values in t
+ * first-class module. But we decided to roll back because we can't write
+ * generic function to access it *)
 (* let gather_module_str tdecl plugins =
  *   let loc = tdecl.ptype_loc in
  *
@@ -380,42 +386,51 @@ let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
  *   in
  *   Str.single_value ~loc (Pat.sprintf "%s" tdecl.ptype_name.txt) expr *)
 
+(* let make_fcm_sig ~loc tdecl plugins =
+ *   let fields = List.concat_map plugins ~f:(fun p ->
+ *       let name  = p#plugin_name in
+ *       let type_ = p#make_trans_function_typ tdecl in
+ *       [Sig.value ~loc ~name type_ ]
+ *     )
+ *   in
+ *   Mty.signature ~loc ((make_gcata_sig ~shortname:true ~loc tdecl) :: fields )
+ *
+ * let prepare_mt ~loc tdecl plugins =
+ *     let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
+ *     let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
+ *     Str.modtype ~loc (module_type_declaration ~loc ~name ~type_) *)
+
+
 let collect_plugins_str tdecl plugins =
   let loc = tdecl.ptype_loc in
+
+  let plugin_fields =
+    List.map plugins ~f:(fun p ->
+      Cf.method_concrete ~loc p#plugin_name @@
+      Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl)
+  in
 
   Str.single_value ~loc (Pat.sprintf "%s" tdecl.ptype_name.txt) @@
   Exp.record ~loc
     [ Ldot (lident "GT", "gcata"), Exp.sprintf "gcata_%s" tdecl.ptype_name.txt
-    ; Ldot (lident "GT", "plugins"), Exp.object_ @@ class_structure ~self:(Pat.any ()) ~fields:[]
+    ; Ldot (lident "GT", "plugins"), Exp.object_ @@ class_structure
+        ~self:(Pat.any ()) ~fields:plugin_fields
     ]
 
 let collect_plugins_sig tdecl plugins =
   let loc = tdecl.ptype_loc in
   Sig.value ~name:tdecl.ptype_name.txt @@
   Typ.constr ~loc (Located.mk ~loc (Ldot (lident "GT", "t")) )
-    [ Typ.var "int"
-    ; Typ.object_ Closed []
+    [ make_gcata_typ ~loc tdecl
+    ; Typ.object_ Closed @@ List.map plugins ~f:(fun p ->
+        (p#plugin_name, p#make_trans_function_typ tdecl)
+      )
     ]
-
-let make_fcm_sig ~loc tdecl plugins =
-  let fields = List.concat_map plugins ~f:(fun p ->
-      let name  = p#plugin_name in
-      let type_ = p#make_trans_function_typ              tdecl in
-      [Sig.value ~loc ~name type_ ]
-    )
-  in
-  Mty.signature ~loc ((make_gcata_sig ~shortname:true ~loc tdecl) :: fields )
 
 (* for structures *)
 let do_typ ~loc plugins is_rec tdecl =
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata_str ~loc tdecl in
-
-  (* let prepare_mt tdecl plugins =
-   *   let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
-   *   let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
-   *   Str.modtype ~loc (module_type_declaration ~loc ~name ~type_)
-   * in *)
 
   List.concat
     [ make_heading_str ~loc tdecl
