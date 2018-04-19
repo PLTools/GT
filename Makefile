@@ -21,7 +21,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 .DEFAULT_GOAL: all
 
-all: syntax lib plugins ppx bundle
+all: syntax lib plugins ppx ppx_plugin standalone_rewriter bundle
 
 lib:
 	$(OB) -Is src $(BYTE_TARGETS) $(NATIVE_TARGETS)
@@ -29,10 +29,13 @@ lib:
 syntax:
 	$(OB) camlp5/pa_gt.cmo
 
-ppx:
+ppx: ppx_plugin standalone_rewriter
+ppx_plugin:
 	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
 		ppx/ppx_gt_expander.cma ppx/ppx_gt_expander.cmxa \
-		rewriter/pp_gt.native
+
+standalone_rewriter: bundle ppx_plugin
+	OCAMLPATH=`pwd`/_build/bundle $(OB) rewriter/pp_gt.native
 
 PLUGINS=compare eq foldl foldr html gmap show typename
 plugins: syntax
@@ -66,7 +69,7 @@ test$(1).native: all $$(NATIVE_$(1))
 test$(1).byte:   all
 
 $$(NATIVE_$(1)):
-	OCAMLPATH=`pwd`/bundle \
+	OCAMLPATH=`pwd`/_build/bundle \
 	$(OB) -classic-display $$@
 
 run_tests: test_$(1)
@@ -117,11 +120,11 @@ INSTALL_TARGETS=META \
 	_build/ppx/ppx_deriving_gt.cmxa \
 	_build/ppx/ppx_deriving_gt.cmxs \
 	_build/ppx/ppx_deriving_gt.cmi \
-	_build/rewriter/pp_gt.native \
 	_build/ppx/ppx_gt_expander.cma \
 	_build/ppx/ppx_gt_expander.cmxa \
 	_build/ppx/ppx_gt_expander.cmi \
 	_build/ppx/ppx_gt_expander.a \
+	$(wildcard _build/rewriter/pp_gt.native) \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .cmo,$(PLUGINS))) ) \
 
 BUNDLEDIR=_build/bundle/$(PKGNAME)

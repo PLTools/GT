@@ -105,10 +105,26 @@ class ['self] g args = object(self: 'self)
         )
     in
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    let fmt = List.fold_left labs ~init:""
+        ~f:(fun acc x ->
+            sprintf "%s %s=%%s;" acc x.pld_name.txt
+          )
+    in
     [ Cf.method_concrete ~loc methname
         [%expr fun () -> [%e
           Exp.fun_ ~loc Nolabel None pat @@
-          Exp.constant (const_string "asdf")
+          List.fold_left labs
+            ~f:(fun acc {pld_name; pld_type} ->
+                Exp.apply1 ~loc acc
+                  (self#app_transformation_expr
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+                     [%expr assert false]
+                     (Exp.ident ~loc pld_name.txt)
+                  )
+              )
+            ~init:[%expr Format.sprintf [%e
+                Exp.constant ~loc @@ const_string @@ sprintf "{ %s }" fmt
+              ]]
         ]]
     ]
 

@@ -64,6 +64,8 @@ module Exp = struct
   let construct ?(loc=Location.none) lident =
     pexp_construct ~loc (Located.mk ~loc lident)
   let variant ?(loc=Location.none) e ts = pexp_variant ~loc e ts
+  let record ?(loc=Location.none) ?with_what ts =
+    pexp_record ~loc (List.map ts ~f:(fun (l,r) -> (Located.mk ~loc l, r))) with_what
 
   let field ?(loc=Location.none) =
     pexp_field ~loc

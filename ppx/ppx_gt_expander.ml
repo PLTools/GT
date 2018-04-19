@@ -303,6 +303,10 @@ let make_gcata_str ~loc tdecl =
          [%expr fun tr inh t -> [%e k] ]
   in
   visit_typedecl ~loc tdecl
+    ~onrecord:(fun _labels ->
+        let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+        ans [%expr [%e Exp.send (Exp.ident "tr") (Located.mk ~loc methname) ] inh t]
+      )
     ~onvariant:(fun cds ->
       ans @@ prepare_patt_match ~loc [%expr t] (`Algebraic cds) (fun cd names ->
           List.fold_left ("inh"::names)
@@ -342,10 +346,6 @@ let make_gcata_str ~loc tdecl =
       | _ -> failwith "not implemented"
       in
       do_typ typ
-      )
-    ~onrecord:(fun _labels ->
-        let methname = sprintf "do_%s" tdecl.ptype_name.txt in
-        ans [%expr [%e Exp.send (Exp.ident "tr") (Located.mk ~loc methname) ] inh t]
       )
 
 (* create opened renaming for polymorphic variant *)

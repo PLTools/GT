@@ -14,8 +14,8 @@ true: debug, bin_annot, short_paths
 <ppx/*>: package(ppxlib,ppxlib.metaquot)
 <ppx/ppx_deriving_gt.cm*>: linkall
 
-<rewriter/pp_gt.*>: package(ppxlib,ppxlib.runner), make_pp_gt
-#<ppx/pp_gt.*>: package(ppx_driver), make_pp_gt
+<rewriter/pp_gt.cm*>: package(ppxlib.runner)
+<rewriter/pp_gt.native>: make_pp_gt
 
 <regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
 

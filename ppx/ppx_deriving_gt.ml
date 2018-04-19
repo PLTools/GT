@@ -9,8 +9,6 @@
 
 open Ppxlib
 
-module Type_conv = Ppxlib.Deriving
-
 module E = Ppx_gt_expander
 
   (* (\* This doesn't works because there is no place for pexp_apply *\)
@@ -31,7 +29,7 @@ module E = Ppx_gt_expander
    *     ( (pair nolabel r) ^:: nil ) *)
 
 let gt_paramA name =
-  let open Type_conv.Args in
+  let open Deriving.Args in
   let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
   (* let b = alt none (some r) in *)
   (* make_param name (assert false) (Ast_pattern.Packed.create b (fun x -> x)) *)
@@ -40,7 +38,7 @@ let gt_paramA name =
 
   (* without arguments *)
 let gt_param name =
-  let open Type_conv.Args in
+  let open Deriving.Args in
   flag name
 
 
@@ -74,13 +72,13 @@ let gt_param name =
    *     (\* (fun ~loc ~path info x  -> x) *\) *)
 
 
-  let str_type_decl : (_, _) Type_conv.Generator.t =
+  let str_type_decl : (_, _) Deriving.Generator.t =
     let bothp name rest =
-      Type_conv.Args.(rest +> (gt_param name) +> (gt_paramA name))
+      Deriving.Args.(rest +> (gt_param name) +> (gt_paramA name))
     in
-    Type_conv.Generator.make
+    Deriving.Generator.make
       (* ~attributes:[ Attribute.T Attrs.ignore ] *)
-      Type_conv.Args.(empty
+      Deriving.Args.(empty
                       (* +> (arg "show"  (pexp_record __ none))
                        * +> (arg "gmap"  (pexp_record __ none))
                        * +> (arg "foldl" (pexp_record __ none)) *)
@@ -102,14 +100,16 @@ let gt_param name =
          E.str_type_decl_implicit ~loc ~path info show gmap foldl show_type
       )
 
-  let sig_type_decl : (_, _) Type_conv.Generator.t =
-    Type_conv.Generator.make
-      Type_conv.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl" +> flag "show_typed"
+  let sig_type_decl : (_, _) Deriving.Generator.t =
+    Deriving.Generator.make
+      Deriving.Args.(empty +> flag "show" +> flag "gmap" +> flag "foldl" +> flag "show_typed"
                      )
       E.sig_type_decl_implicit
 
-  let deriver =
-    Type_conv.add
-      ~str_type_decl
-      ~sig_type_decl
-      "gt"
+let deriver =
+  (* Sys.command "notify-send 'Registering deriver' wtf" |> ignore; *)
+  Deriving.add
+    ~str_type_decl
+    ~sig_type_decl
+    "gt"
+  |> Deriving.ignore

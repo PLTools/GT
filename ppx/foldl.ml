@@ -159,9 +159,9 @@ let g initial_args = object(self: 'self)
           (Located.lident ~loc:l.pld_name.loc l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         )
     in
-    let methname = "asdf" in
+    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
     [ Cf.method_concrete ~loc methname
-        [%expr fun () -> fun [%pat? pat ] -> [%e
+        [%expr fun () -> fun [%p pat ] -> [%e
           Exp.constant (const_string "asdf")
         ]]
     ]
