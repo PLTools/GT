@@ -50,18 +50,22 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #$(shell seq -s \  -w 1 024) $(shell seq -s \  -w 26 028)
 REGRES_CASES := #795intoption #799 798 798gen 796scheme_gen 794camlp5 790showF 791showT #705
-REGRES_CASES := 809 808 801 802 803 804 806 #807 #805
+REGRES_CASES := 000 809 808 801 802 803 804 806 #807 #805
 #$(warning $(REGRES_CASES) )
 
 define TESTRULES
 ML_FILE_$(1) = $(wildcard regression_ppx/test$(1)*.ml)
-
+TEST_DIR_$(1) = regression_ppx
+# ifeq ($$(ML_FILE_$(1)),)
+# ML_FILE_$(1) = $(wildcard regression/test$(1)*.ml)
+# TEST_DIR_$(1) = regression
+# endif
 NATIVE_$(1) := $$(patsubst %.ml,%.native,$$(ML_FILE_$(1)) )
 #BYTE_TEST_EXECUTABLES += BYTE_$(1)
 NATIVE_TEST_EXECUTABLES += $$(NATIVE_$(1))
 
-TEST$(1)_NAME := $$(ML_FILE_$(1):regression_ppx/test$(1)%.ml=%)
-#$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
+TEST$(1)_NAME := $$(ML_FILE_$(1):$$(TEST_DIR_$(1))/test$(1)%.ml=%)
+$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
 #$$(info $$(NATIVE_TEST_EXECUTABLES)) 
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
@@ -74,7 +78,7 @@ $$(NATIVE_$(1)):
 
 run_tests: test_$(1)
 test_$(1):
-	@cd regression_ppx && $(TESTS_ENVIRONMENT) ../$$(notdir $$(NATIVE_$(1))); \
+	@cd $$(TEST_DIR_$(1)) && $(TESTS_ENVIRONMENT) ../$$(notdir $$(NATIVE_$(1))); \
 	if [ $$$$? -ne 0 ] ; then echo "$(1) FAILED"; else echo "$(1) PASSED"; fi
 
 promote_all: promote_$(1)
