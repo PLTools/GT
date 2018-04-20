@@ -50,9 +50,10 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let k fields =
       let inh_params =
         let inh_params = prepare_param_triples ~loc
-            ~inh:(fun ~loc _ -> self#default_inh)
+            ~inh:(fun ~loc -> self#inh_of_param tdecl)
             ~syn:self#syn_of_param
             ~default_syn:(self#default_syn tdecl)
+            ~default_inh:(self#default_inh tdecl)
             tdecl.ptype_params
         in
         inh_params @ [self#extra_param_stub ~loc]
@@ -84,8 +85,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
     Str.class_single ~loc
       ~params:(invariantize @@ self#plugin_class_params tdecl )
-      ~name:(sprintf "%s_%s%s" self#plugin_name cur_name
-               (match mutal_names with [] -> "" | _ -> "_stub") )
+      ~name:(self#make_class_name ~is_mutal:(not (List.is_empty mutal_names)) tdecl )
       ~virt:Concrete
       ~wrap:(self#extra_class_lets tdecl @@ fun body ->
         (* constructor arguments are *)
@@ -131,14 +131,6 @@ class virtual ['self] generator initial_args = object(self: 'self)
                    (match mutal_decls with [] -> "" | _ -> "_stub") )
           ~virt:Concrete
           ~wrap:(fun init ->
-              let from_mutals =
-                List.map mutal_decls
-                  ~f:(fun tdecl ->
-                      self#chain_inh_syn ~loc
-                          ~syn_t:[%type: int]
-                          (using_type ~typename:tdecl.ptype_name.txt tdecl)
-                    )
-              in
               let for_self = self#make_typ_of_self_trf ~loc tdecl in
               let funcs_for_args = map_type_param_names tdecl.ptype_params
                   ~f:(fun name ->
@@ -148,8 +140,13 @@ class virtual ['self] generator initial_args = object(self: 'self)
                         tdecl
                     )
               in
-              List.fold_right ~init (from_mutals@[for_self]@funcs_for_args)
-                ~f:(Cty.arrow ~loc Nolabel)
+
+              List.fold_right mutal_decls
+                ~init:(List.fold_right ~init (for_self :: funcs_for_args)
+                         ~f:(Cty.arrow ~loc))
+                ~f:(fun mut_decl acc ->
+                    self#make_typ_of_mutal_trf ~loc mut_decl (fun t -> Cty.arrow ~loc t acc)
+                  )
             )
           ((self#extra_class_sig_members tdecl) @ fields)
       ]
@@ -194,7 +191,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
                   Ctf.method_ ~loc (sprintf "c_%s" lab)
                     ~virt_flg:Concrete
                     (Typ.chain_arrow ~loc
-                       ([self#default_inh] @ typs @ [self#default_syn tdecl]))
+                       ([self#default_inh tdecl] @ typs @ [self#default_syn tdecl]))
               )
               in
               k @@  rr
@@ -210,8 +207,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
               | Pcstr_tuple ts ->
                 Ctf.method_ ~loc ~virt_flg:Concrete ("c_"^cd.pcd_name.txt) @@
                 List.fold_right ~init:(self#default_syn tdecl)
-                  (self#default_inh :: ts)
-                  ~f:(Typ.arrow ~loc Nolabel)
+                  (self#default_inh tdecl :: ts)
+                  ~f:(Typ.arrow ~loc)
 
           )
     )
@@ -321,8 +318,14 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let syn_t  = self#default_syn tdecl in
     [%type: [%t subj_t] -> [%t syn_t] ]
 
-  (* val name: <this> -> <this> -> <and that> -> <_not_ this> *)
-  method make_typ_of_class_argument ~loc name =
+  method make_typ_of_mutal_trf ~loc mutal_tdecl k =
+    let subj_t = core_type_of_type_declaration mutal_tdecl in
+    k [%type: ([%t subj_t] -> [%t self#default_syn mutal_tdecl]) ]
+
+  (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
+   *   fot a type ('a,'b,....'z) being generated
+  **)
+  method make_typ_of_class_argument ~loc tdecl name =
     let subj_t = Typ.var ~loc name in
     let syn_t = self#syn_of_param ~loc name in
     [%type: [%t subj_t] -> [%t syn_t] ]
@@ -338,7 +341,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let syn_t  = Option.value syn_t  ~default:(self#default_syn tdecl) in
     [%type: [%t subj_t] -> [%t syn_t] ]
 
-  method chain_inh_syn ~loc ?(inh_t=self#default_inh) ~syn_t subj_t =
+  method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
     [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ]
 
   method wrap_tr_function_typ (typ: core_type) =
@@ -354,8 +357,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
       (map_type_param_names tdecl.ptype_params ~f:id)
       ~init:type_
       ~f:(fun name ->
-          Typ.arrow ~loc Nolabel @@
-          self#make_typ_of_class_argument ~loc name
+          Typ.arrow ~loc @@
+          self#make_typ_of_class_argument ~loc tdecl name
           (* Typ.arrow ~loc Nolabel @@
            *  self#make_RHS_typ_of_transformation ~subj_t:(Typ.var name)
            *    ~syn_t:(self) tdecl *)
@@ -482,10 +485,12 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
   method app_transformation_expr trf inh subj =
     let loc = trf.pexp_loc in
+    (* we ignore inherited argument by default *)
     [%expr [%e trf ] [%e subj]]
 
   method abstract_trf ~loc k =
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+    (* ignore inh attribute here too *)
     [%expr fun subj -> [%e k [%expr assert false ] [%expr subj]]]
 
   method extract_transformation ~loc etrf = etrf

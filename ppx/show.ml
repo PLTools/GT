@@ -18,12 +18,11 @@ class ['self] g args = object(self: 'self)
   inherit ['self] Plugin.generator args
 
   method plugin_name = "show"
-  method default_inh = let loc = Location.none in [%type: unit]
-  method default_syn tdecl =
-    let loc = tdecl.ptype_loc in
-    [%type: string]
+  method default_inh tdecl = let loc = tdecl.ptype_loc in [%type: unit]
+  method default_syn tdecl = let loc = tdecl.ptype_loc in [%type: string]
 
   method syn_of_param ~loc _ = [%type: string]
+  method inh_of_param tdecl _name = self#default_inh tdecl
 
   method plugin_class_params tdecl =
     let loc = tdecl.ptype_loc in

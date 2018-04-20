@@ -37,7 +37,7 @@ let g args = object(self: 'self)
 
   method plugin_name = "gmap"
 
-  method default_inh = let loc = Location.none in [%type: unit]
+  method default_inh _ = let loc = Location.none in [%type: unit]
   method default_syn tdecl =
     let loc = tdecl.ptype_loc in
     let param_names,rez_names,find_param,blownup_params =
@@ -58,6 +58,8 @@ let g args = object(self: 'self)
     else ans
 
   method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
+  method inh_of_param tdecl _name = self#default_inh tdecl
+
   method plugin_class_params tdecl =
     let loc = tdecl.ptype_loc in
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in

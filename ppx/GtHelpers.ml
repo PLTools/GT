@@ -40,6 +40,7 @@ module Pat = struct
   let any ?(loc=Location.none) () = ppat_any ~loc
   let constraint_ ?(loc=Location.none) = ppat_constraint ~loc
   let construct   ?(loc=Location.none) lident pat =
+    let lident = Located.mk ~loc lident in
     match pat with
     | Some {ppat_desc=Ppat_tuple [] } -> ppat_construct ~loc lident None
     | _ -> ppat_construct ~loc lident pat
@@ -128,6 +129,8 @@ module Typ = struct
     ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> Located.mk ~loc l,[],r)) flg
   let package ?(loc=Location.none) lident =
     ptyp_package ~loc (lident, [])
+  let arrow ?(loc=Location.none) ?(label=Nolabel) l r =
+    ptyp_arrow ~loc label l r
 
   let class_ ?(loc=Location.none) lident args =
     ptyp_class ~loc (Located.mk ~loc lident) args
@@ -136,7 +139,7 @@ module Typ = struct
     | xs ->
       let revxs = List.rev xs in
       List.fold_left (List.tl_exn revxs) ~init:(List.hd_exn revxs)
-        ~f:(fun acc t -> arrow ~loc Nolabel t acc)
+        ~f:(fun acc t -> arrow ~loc t acc)
 end
 
 module Str = struct
@@ -187,6 +190,11 @@ module Ctf = struct
     pctf_method ~loc (Located.mk ~loc name, flg, virt_flg, kind)
   let inherit_ ?(loc=Location.none) = pctf_inherit ~loc
   let constraint_ ?(loc=Location.none) l r = pctf_constraint ~loc (l,r)
+end
+module Cty = struct
+  include Ast_helper.Cty
+  let arrow ?(loc=Location.none) ?(label=Nolabel) l r =
+    Ast_helper.Cty.arrow ~loc label l r
 end
 
 module Cstr = struct
@@ -383,7 +391,7 @@ let prepare_patt_match ~loc what constructors make_rhs =
         | Pcstr_tuple args ->
             let names = make_new_names (List.length args) in
             case ~guard:None
-              ~lhs:(Pat.construct ~loc (Located.lident ~loc cd.pcd_name.txt) @@
+              ~lhs:(Pat.construct ~loc (lident cd.pcd_name.txt) @@
                     Some (Pat.tuple ~loc (Base.List.map ~f:(Pat.var ~loc) names)
                          ))
               ~rhs:(make_rhs cd names)

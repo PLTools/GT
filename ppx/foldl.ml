@@ -34,12 +34,13 @@ let g initial_args = object(self: 'self)
 
   method plugin_name = "foldl"
 
-  method default_inh = let loc = Location.none in [%type: 'syn]
+  method default_inh tdecl = self#default_syn tdecl
   method default_syn tdecl =
     let loc = tdecl.ptype_loc in
     [%type: 'syn]
 
   method syn_of_param ~loc s = [%type: 'syn]
+  method inh_of_param tdecl _name = self#default_syn tdecl
 
   method plugin_class_params tdecl =
     (* There we should have all parameters on the LHS of definition and 'syn one *)
@@ -50,19 +51,19 @@ let g initial_args = object(self: 'self)
                (* TODO: add 'extra ? *)
 
   method! make_typ_of_self_trf ~loc tdecl =
-    [%type: [%t self#default_inh] ->
+    [%type: [%t self#default_inh tdecl] ->
       [%t super#make_typ_of_self_trf ~loc tdecl] ]
 
-  method make_typ_of_class_argument ~loc name =
-    [%type: [%t self#default_inh] ->
-      [%t super#make_typ_of_class_argument ~loc name] ]
+  method make_typ_of_class_argument ~loc tdecl name =
+    [%type: [%t self#default_inh tdecl] ->
+      [%t super#make_typ_of_class_argument ~loc tdecl name] ]
 
   method! make_RHS_typ_of_transformation ?subj_t ?syn_t tdecl =
     let loc = tdecl.ptype_loc in
     let subj_t = Option.value subj_t
         ~default:(using_type ~typename:tdecl.ptype_name.txt tdecl) in
     let syn_t  = Option.value syn_t  ~default:(self#default_syn tdecl) in
-    [%type: [%t self#default_inh] ->
+    [%type: [%t self#default_inh tdecl] ->
       [%t super#make_RHS_typ_of_transformation ~subj_t ~syn_t tdecl] ]
 
   (* method wrap_tr_function_typ (typ: core_type) =

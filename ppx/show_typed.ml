@@ -26,8 +26,8 @@ let g args = object(self: 'self)
     let r = super#make_RHS_typ_of_transformation ~syn_t ~subj_t tdecl in
     [%type: (string * [%t r ]) ]
 
-  method! make_typ_of_class_argument ~loc name =
-    [%type: (string * [%t super#make_typ_of_class_argument ~loc name ])]
+  method! make_typ_of_class_argument ~loc tdecl name =
+    [%type: (string * [%t super#make_typ_of_class_argument ~loc tdecl name ])]
 
   method! make_typ_of_self_trf ~loc tdecl =
     (* If we change this in the manner similar to tranformations for arguments

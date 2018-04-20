@@ -50,8 +50,8 @@ let make_interface_class_sig ~loc tdecl =
         | Pcstr_record _ -> not_implemented "record constructors"
         | Pcstr_tuple ts ->
             Ctf.method_ ~loc methname
-               (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
-                |> (Typ.arrow Nolabel [%type: 'inh])
+               (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow ~loc)
+                |> (Typ.arrow ~loc [%type: 'inh])
                )
       )
     )
@@ -108,8 +108,8 @@ let make_interface_class_sig ~loc tdecl =
                   let methname = sprintf "c_%s" lab in
                   [ Ctf.method_ ~loc methname @@
                       (List.fold_right args ~init:[%type: 'syn]
-                         ~f:(Typ.arrow Nolabel)
-                       |> (Typ.arrow Nolabel [%type: 'inh])
+                         ~f:(Typ.arrow ~loc)
+                       |> (Typ.arrow ~loc [%type: 'inh])
                       )
                   ]
                 | Rinherit typ -> match typ.ptyp_desc with
@@ -158,8 +158,8 @@ let make_interface_class ~loc tdecl =
         | Pcstr_record _ -> not_implemented "record constructors"
         | Pcstr_tuple ts ->
             Cf.method_ ~loc methname ~flg:Public @@ Cfk_virtual
-               (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow Nolabel)
-                |> (Typ.arrow Nolabel [%type: 'inh])
+               (List.fold_right ts ~init:[%type: 'syn] ~f:(Typ.arrow ~loc)
+                |> (Typ.arrow ~loc [%type: 'inh])
                )
       )
     )
@@ -221,8 +221,8 @@ let make_interface_class ~loc tdecl =
                       let methname = sprintf "c_%s" lab in
                       [ Cf.method_ ~loc methname @@ Cfk_virtual
                           (List.fold_right args ~init:[%type: 'syn]
-                             ~f:(Typ.arrow Nolabel)
-                           |> (Typ.arrow Nolabel [%type: 'inh])
+                             ~f:(Typ.arrow ~loc)
+                           |> (Typ.arrow ~loc [%type: 'inh])
                           )
                       ]
                     | Rtag (_,_,_,_args) ->
