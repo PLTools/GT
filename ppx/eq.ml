@@ -6,7 +6,7 @@ open Ppxlib.Ast_builder.Default
 open GtHelpers
 
 (* Compare plugin where we pass another value of the same type as 'inh
- * and return GT.comparison as 'syn
+ * and return true or false
 *)
 
 open Plugin
@@ -14,13 +14,13 @@ open Plugin
 let g initial_args = object(self: 'self)
   inherit ['self] Plugin.generator initial_args as super
 
-  method plugin_name = "compare"
+  method plugin_name = "eq"
 
   method default_inh = core_type_of_type_declaration
-  method syn_of_param ~loc s = [%type: GT.comparison]
+  method syn_of_param ~loc s = [%type: bool]
   method default_syn tdecl =
     let loc = tdecl.ptype_loc in
-    [%type: GT.comparison]
+    [%type: bool]
 
   method inh_of_param tdecl name =
     let loc = tdecl.ptype_loc in
@@ -54,8 +54,6 @@ let g initial_args = object(self: 'self)
     [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
-    (* let names = make_new_names (List.length args) in *)
-    (* let names     = List.map args ~f:(fun _ -> gen_symbol ()) in *)
     let is_poly,cname =
       match constr_info with
       | `Normal s -> false,  s
@@ -68,7 +66,6 @@ let g initial_args = object(self: 'self)
     Cf.method_concrete ~loc methname
       [%expr fun inh -> [%e
         let main_case =
-          (* let names     = List.map args ~f:(fun _ -> gen_symbol ()) in *)
           let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
           let lhs =
             let arg_pats =
@@ -101,18 +98,7 @@ let g initial_args = object(self: 'self)
 
         let other_case =
           let lhs = Pat.var ~loc "other" in
-          let rhs =
-            [%expr GT.compare_vari other
-                [%e
-                  (if is_poly then Exp.variant ~loc cname
-                  else Exp.construct ~loc (lident cname)) @@
-                  Exp.maybe_tuple ~loc @@
-                  List.map args ~f:(fun _ -> [%expr Obj.magic ()])
-                  (* It's annoying to use magic here but need to do this first:
-                     https://caml.inria.fr/mantis/print_bug_page.php?bug_id=4751
-                  *)
-                ]]
-          in
+          let rhs = [%expr false ] in
           case ~lhs ~guard:None ~rhs
         in
 
@@ -130,8 +116,6 @@ let g initial_args = object(self: 'self)
     [%expr [%e trf ] [%e inh] [%e subj]]
 
   method abstract_trf ~loc k =
-    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
-    (* ignore inh attribute here too *)
     [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]]
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
@@ -162,17 +146,8 @@ let g initial_args = object(self: 'self)
     in
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
     [ Cf.method_concrete ~loc methname
-        [%expr fun inh -> fun [%p pat ] -> [%e
-          let wrap lab =
-            self#app_transformation_expr
-              (self#do_typ_gen ~loc ~is_self_rec ~mutal_names lab.pld_type)
-              (Exp.field ~loc [%expr inh] (Located.lident ~loc lab.pld_name.txt))
-              (Exp.ident ~loc lab.pld_name.txt )
-          in
-          let init = wrap @@ List.hd_exn labs in
-          List.fold_left ~init (List.tl_exn labs)
-            ~f:(fun acc lab -> [%expr [%e acc ] && [%e wrap lab]])
-
+        [%expr fun () -> fun [%p pat ] -> [%e
+          Exp.constant (const_string "asdf")
         ]]
     ]
 

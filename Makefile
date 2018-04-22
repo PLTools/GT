@@ -65,7 +65,7 @@ NATIVE_$(1) := $$(patsubst %.ml,%.native,$$(ML_FILE_$(1)) )
 NATIVE_TEST_EXECUTABLES += $$(NATIVE_$(1))
 
 TEST$(1)_NAME := $$(ML_FILE_$(1):$$(TEST_DIR_$(1))/test$(1)%.ml=%)
-$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
+#$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
 #$$(info $$(NATIVE_TEST_EXECUTABLES)) 
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
