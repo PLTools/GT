@@ -5,6 +5,9 @@ open Ast_helper
 open GtHelpers
 open Ppxlib.Ast_builder.Default
 
+
+(* TODO: we want easily get foldr from foldl *)
+
 let make_dest_param_names ?(loc=Location.none) ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
@@ -26,8 +29,6 @@ let hack_params ?(loc=Location.none) ps =
   (param_names, rez_names, assoc, blownup_params)
 
 open Plugin
-
-(* TODO: we want easily get foldr from foldl *)
 
 let g initial_args = object(self: 'self)
   inherit ['self] Plugin.generator initial_args as super
@@ -76,6 +77,19 @@ let g initial_args = object(self: 'self)
     (* [%expr fun subj -> [%e expr] () subj] *)
     [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj]
 
+  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+      constr_name bindings einh k =
+    k @@ Exp.variant ~loc constr_name @@
+    Exp.maybe_tuple ~loc @@
+    List.map bindings
+      ~f:(fun (name, typ) ->
+        [%expr
+          [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ ]
+            [%e einh]
+            [%e Exp.ident ~loc name ]
+        ]
+      )
+
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
     let names = make_new_names (List.length args) in
     let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
@@ -93,67 +107,6 @@ let g initial_args = object(self: 'self)
       ]]
   ]
 
-  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-      constr_name bindings einh k =
-    (* TODO: rewrite *)
-    let ctuple =
-      match bindings with
-      | [] -> None
-      | _  ->
-        Some (Exp.tuple ~loc @@
-              List.map bindings
-                ~f:(fun (name, typ) ->
-                    [%expr
-                      [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ ]
-                      [%e einh]
-                      [%e Exp.ident ~loc name ]
-                    ]
-                  )
-             )
-    in
-    k @@ Exp.variant ~loc constr_name ctuple
-
-
-  method got_polyvar ~loc ~is_self_rec ~mutal_names tdecl do_typ rows k =
-        (* TODO: rewrite *)
-    let _param_names,_rez_names,_find_param,blownup_params =
-      hack_params tdecl.ptype_params
-    in
-    k @@
-    List.map rows ~f:(function
-        | Rinherit typ ->
-          with_constr_typ typ
-            ~fail:(fun () -> failwith "type is not a constructor")
-            ~ok:(fun cid params ->
-              let args = List.map params
-                  ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_names) in
-                let inh_params = blownup_params @ [[%type: 'extra]] in
-                Cf.inherit_ ~loc @@ Cl.apply
-                  (Cl.constr
-                     (map_longident cid.txt ~f:(sprintf "%s_%s" self#plugin_name))
-                     inh_params
-                  )
-                  (nolabelize ([%expr _fself]::args))
-              )
-        | Rtag (constr_name,_,_,args) ->
-            assert false
-          (* let names = make_new_names (List.length ts) in
-           *
-           * Cf.method_concrete ~loc ("c_" ^ constr_name)
-           *   [%expr fun () -> [%e
-           *     Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-           *     let ctuple =
-           *       if List.length ts = 0
-           *       then None
-           *       else Some (Exp.tuple ~loc @@
-           *                  List.concat_map (List.zip_exn names ts)
-           *                    ~f:(fun (name, typ) -> self#do_typ_gen ~loc is_self_rec  typ)
-           *                 )
-           *     in
-           *     Exp.variant ~loc constr_name ctuple
-           *   ]] *)
-
-      )
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     let pat = Pat.record ~loc ~flag:Closed @@
       List.map labs ~f:(fun l ->

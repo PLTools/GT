@@ -211,8 +211,12 @@ let make_interface_class ~loc tdecl =
               (* rows go to virtual methods. label goes to inherit fields *)
               let meths =
                 List.concat_map rows ~f:(function
-                    (* | Rtag (lab,_,_,args) when Int.(>) (List.length args) 1 -> *)
-                    | Rtag (lab,_,_,[typ]) ->
+                | Rtag (lab,_,_,[]) ->
+                    let methname = sprintf "c_%s" lab in
+                    [ Cf.method_ ~loc methname @@ Cfk_virtual
+                      [%type: 'inh -> 'syn]
+                    ]
+                | Rtag (lab,_,_,[typ]) ->
                       (* print_endline "HERE"; *)
                       let args = match typ.ptyp_desc with
                         | Ptyp_tuple ts -> ts

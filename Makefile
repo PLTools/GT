@@ -69,7 +69,7 @@ $$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
 #$$(info $$(NATIVE_TEST_EXECUTABLES)) 
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
-test$(1).native: all $$(NATIVE_$(1))
+test$(1).native: $$(ML_FILE_$(1)) all $$(NATIVE_$(1))
 test$(1).byte:   all
 
 $$(NATIVE_$(1)):

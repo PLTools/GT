@@ -517,6 +517,73 @@ let pair : (('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('a, 'ia, 'sa, 'b, 'ib, 
              end
   }
 
+type ('a,'b,'c) triple = 'a * 'b * 'c
+class virtual ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn] triple_t = object
+  method virtual c_Triple : 'inh -> 'a -> 'b -> 'c -> 'syn
+end
+class ['a, 'b, 'c, 'extra] show_triple _ fa fb fc =
+  object
+    inherit [ 'a, unit, string
+            , 'b, unit, string
+            , 'c, unit, string
+            , unit, string] @triple
+    method c_Triple () x y z = Printf.sprintf "(%s, %s, %s)"
+      (fa x) (fb y) (fc z)
+end
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'extra] gmap_triple _ fa fb fc =
+  object
+    inherit [ 'a, unit, 'a2
+            , 'b, unit, 'b2
+            , 'c, unit, 'c2
+            , unit, ('a2,'b2,'c2) triple ] @triple
+    method c_Triple () x y z = ( (fa x), (fb y), (fc z) )
+end
+class ['a, 'b, 'c, 'extra] compare_triple _ fa fb fc =
+  object
+    inherit [ 'a, 'a, 'syn
+            , 'b, 'b, 'syn
+            , 'c, 'c, 'syn
+            , 'inh, 'syn ] @triple
+    constraint 'inh = ('a, 'b, 'c) triple
+    constraint 'syn = comparison
+    method c_Triple (a,b,c) x y z =
+      chain_compare (fa a x) @@ fun _ ->
+      chain_compare (fb b y) @@ fun _ ->
+       (fc c z)
+
+end
+let triple_gcata tr inh (a,b,c) = tr#c_Triple inh a b c
+
+let triple :
+    ( (* ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('ic -> 'c -> 'sc) -> *)
+             ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn) #triple_t ->
+             'inh -> ('a, 'b, 'c) triple -> 'syn
+    , < show    : ('a -> string) -> ('b -> string) ->  ('c -> string) ->
+                       ('a, 'b, 'c) triple  -> string;
+        gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
+                       ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
+        compare : ('a -> 'a -> comparison) ->
+                  ('b -> 'b -> comparison) ->
+                  ('c -> 'c -> comparison) ->
+                  ('a, 'b, 'c) triple ->
+                  ('a, 'b, 'c) triple ->
+                  comparison
+      >) t =
+  {gcata   = triple_gcata;
+   plugins = object
+     method show    fa fb fc =
+       triple_gcata (new show_triple    (fun _ -> assert false) fa fb fc) ()
+     method gmap    fa fb fc =
+       triple_gcata (new gmap_triple    (fun _ -> assert false) fa fb fc) ()
+     method compare fa fb fc inh =
+       triple_gcata (new compare_triple (fun _ -> assert false) fa fb fc) inh
+  end
+}
+
+let tuple2 = pair
+let tuple3 = triple
+
+(****************************************************************************)
 let show    t = t.plugins#show
 let html    t = t.plugins#html
 let gmap    t = t.plugins#gmap

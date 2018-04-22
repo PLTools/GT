@@ -187,11 +187,19 @@ class virtual ['self] generator initial_args = object(self: 'self)
                      )
                      ~fail:(fun () -> assert false)
                   )
-              | Rtag (lab,_,_, typs) ->
-                  Ctf.method_ ~loc (sprintf "c_%s" lab)
-                    ~virt_flg:Concrete
-                    (Typ.chain_arrow ~loc
-                       ([self#default_inh tdecl] @ typs @ [self#default_syn tdecl]))
+              | Rtag (lab,_,_, typs) -> begin
+                  Ctf.method_ ~loc (sprintf "c_%s" lab) ~virt_flg:Concrete @@
+                  match typs with
+                  | [] -> Typ.chain_arrow ~loc
+                            [self#default_inh tdecl; self#default_syn tdecl]
+                  | [t] ->
+                      Typ.chain_arrow ~loc
+                        ([self#default_inh tdecl] @ (unfold_tuple t) @
+                         [self#default_syn tdecl])
+                  | typs ->
+                      Typ.chain_arrow ~loc
+                        ([self#default_inh tdecl] @ typs @ [self#default_syn tdecl])
+                end
               )
               in
               k @@  rr
@@ -257,10 +265,17 @@ class virtual ['self] generator initial_args = object(self: 'self)
                 (* Hypothesis: it's almost an type alias *)
                 self#got_constr ~loc ~is_self_rec tdecl do_typ cid params k
             )
+
+    (* tag by default have 1 argument which is a tuple instead of many arguments *)
+    | Rtag (constr_name,_,_, []) ->
+        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name)
+          [] k
+    | Rtag (constr_name,_,_, [arg]) ->
+        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name)
+          (unfold_tuple arg) k
     | Rtag (constr_name,_,_,args) ->
       (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
-      self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name) args
-        k
+      failwith "conjunction types are not supported but"
     )
 
   method got_typedecl tdecl ~is_self_rec ~mutal_names (k: class_field list -> _) : _ =
@@ -508,7 +523,11 @@ class virtual ['self] generator initial_args = object(self: 'self)
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr
               (Exp.apply_nolabeled ~loc
-                 (Exp.sprintf "%s_tuple%d" self#plugin_name (List.length params))
+                 (Exp.send ~loc
+                    [%expr let open GT in
+                      [%e Exp.sprintf "tuple%d" (List.length params)].GT.plugins ]
+                    (Located.mk ~loc self#plugin_name )
+                 )
                  (List.map ~f:helper params)
               )
               einh esubj
@@ -532,7 +551,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
                  *     Ldot (Lident "Op", self#plugin_name) ]
                  * ] *)
                 Exp.send ~loc
-                  [%expr let open GT in [%e Exp.ident_of_long txt].plugins]
+                  [%expr let open GT in [%e Exp.ident_of_long txt].GT.plugins]
                   (Located.mk ~loc self#plugin_name)
           in
         self#abstract_trf ~loc (fun einh esubj ->

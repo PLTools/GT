@@ -2,9 +2,7 @@
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
- *   Evgeniy Moiseenko aka eucpp
  * St.Petersburg State University, JetBrains Research
- *
  *)
 
 open Base

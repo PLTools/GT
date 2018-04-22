@@ -41,16 +41,21 @@ module Pat = struct
   let constraint_ ?(loc=Location.none) = ppat_constraint ~loc
   let construct   ?(loc=Location.none) lident pat =
     let lident = Located.mk ~loc lident in
+    ppat_construct ~loc lident @@
     match pat with
-    | Some {ppat_desc=Ppat_tuple [] } -> ppat_construct ~loc lident None
-    | _ -> ppat_construct ~loc lident pat
+    | Some {ppat_desc=Ppat_tuple [] } -> None
+    | _ -> pat
+  let variant ?(loc=Location.none) l pat =
+    ppat_variant ~loc l @@
+    match pat with
+    | Some {ppat_desc=Ppat_tuple [] } -> None
+    | _ -> pat
 
   let tuple ?(loc=Location.none) = ppat_tuple ~loc
   let var ?(loc=Location.none) s = ppat_var ~loc (Located.mk ~loc s)
   let of_string ?(loc=Location.none) s = var ~loc s
   let sprintf ?(loc=Location.none) fmt = Printf.ksprintf (of_string ~loc) fmt
   let alias ?(loc=Location.none) p s   = ppat_alias ~loc p (lid ~loc s)
-  let variant ?(loc=Location.none) l p = ppat_variant ~loc l p
   let type_ ?(loc=Location.none) lident = ppat_type ~loc lident
   let record ?(loc=Location.none) ?(flag=Closed) ps =
       ppat_record ~loc ps flag
@@ -84,6 +89,12 @@ module Exp = struct
   let new_ ?(loc=Location.none) = pexp_new ~loc
   let object_ ?(loc=Location.none) = pexp_object ~loc
   let tuple ?(loc=Location.none) = pexp_tuple ~loc
+  let maybe_tuple ?(loc=Location.none) xs =
+    match xs with
+    | [] -> None
+    | [x] -> Some x
+    | _   -> Some (tuple ~loc xs)
+
   let fun_ ?(loc=Location.none) = pexp_fun ~loc
   let fun_list ?(loc=Location.none) ~args e =
     if List.is_empty args then e
@@ -353,7 +364,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
             | [] -> []
             | _ -> failwith "we don't support conjunction types"
           in
-          let names = make_new_names (List.length  args) in
+          let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
           let lhs = Pat.variant ~loc  lab @@ match args with
             | [] -> None
             | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
