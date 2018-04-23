@@ -488,19 +488,19 @@ let do_mutal_types_sig ~loc plugins tdecls =
 
 let sig_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
-    ?(use_compare=Skip)
+    ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls) =
   let plugins =
     let wrap p = function
-    | Skip -> id
-    | Use args -> List.cons (p args)
+      | Skip -> id
+      | Use args -> List.cons (p args :> Plugin_intf.t)
     in
+    wrap Compare.g    use_compare @@
     wrap Show.g       use_show  @@
     wrap Gmap.g       use_gmap  @@
     wrap Foldl.g      use_foldl @@
     wrap Show_typed.g use_show_type @@
-    wrap Compare.g    use_compare @@
-    (* wrap use_foldl Eq.g @@ *)
+    wrap Eq.g         use_eq @@
     []
   in
   match rec_flag, tdls with
@@ -513,20 +513,20 @@ let sig_type_decl ~loc ~path
 
 let str_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
-    ?(use_compare=Skip)
+    ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls)
   =
   let plugins =
     let wrap p = function
-    | Skip -> id
-    | Use args -> List.cons (p args)
+      | Skip -> id
+      | Use args -> List.cons (p args :> Plugin_intf.t)
     in
     wrap Show.g       use_show @@
     wrap Gmap.g       use_gmap @@
     wrap Foldl.g      use_foldl @@
     wrap Show_typed.g use_show_type @@
     wrap Compare.g    use_compare @@
-    (* wrap use_foldl Eq.g @@ *)
+    wrap Eq.g         use_eq @@
     []
   in
 
@@ -538,12 +538,12 @@ let str_type_decl ~loc ~path
       List.concat_map ~f:(do_typ ~loc plugins false) tdls
 
 let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
-    use_compare use_show_type =
+    use_compare use_eq use_show_type =
   str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~use_show_type
-    ~use_compare
+    ~use_compare ~use_eq
 
 let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
-    use_compare use_show_type =
+    use_compare use_eq use_show_type =
   let wrap f = if f then Use [] else Skip in
   sig_type_decl ~loc ~path
     ~use_show: (wrap use_show)
@@ -551,4 +551,5 @@ let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     ~use_foldl:(wrap use_foldl)
     ~use_compare:(wrap use_compare)
     ~use_show_type:(wrap use_show_type)
+    ~use_eq:(wrap use_eq)
     info

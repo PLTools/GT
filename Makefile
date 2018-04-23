@@ -21,7 +21,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 .DEFAULT_GOAL: all
 
-all: syntax lib plugins ppx ppx_plugin standalone_rewriter bundle
+all: syntax lib plugins ppx ppx_plugin bundle #standalone_rewriter bundle
 
 lib:
 	$(OB) -Is src $(BYTE_TARGETS) $(NATIVE_TARGETS)
@@ -29,13 +29,14 @@ lib:
 syntax:
 	$(OB) camlp5/pa_gt.cmo
 
-ppx: ppx_plugin standalone_rewriter
+ppx: ppx_plugin #standalone_rewriter
 ppx_plugin:
 	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
 		ppx/ppx_gt_expander.cma ppx/ppx_gt_expander.cmxa \
+		rewriter/pp_gt.native
 
-standalone_rewriter: bundle ppx_plugin
-	OCAMLPATH=`pwd`/_build/bundle $(OB) rewriter/pp_gt.native
+# standalone_rewriter: bundle ppx_plugin
+# 	OCAMLPATH=`pwd`/_build/bundle $(OB) rewriter/pp_gt.native
 
 PLUGINS=compare eq foldl foldr html gmap show typename
 plugins: syntax

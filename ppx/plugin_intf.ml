@@ -21,5 +21,25 @@ class virtual t = object
 
   method virtual extra_class_sig_members: type_declaration -> class_type_field list
   method virtual extra_class_str_members: type_declaration -> class_field list
-end
 
+
+  (* These methods will be implemented in plugin.ml *)
+  method virtual do_single_sig :
+    loc:location ->
+    is_rec:bool ->
+    type_declaration ->
+    signature_item list
+  method virtual do_single :
+    loc:location ->
+    is_rec:bool ->
+    type_declaration ->
+    structure_item list
+
+  method virtual make_trans_function_name: type_declaration -> string
+  method virtual make_trans_function_typ : type_declaration -> core_type
+
+  method virtual do_mutals :
+    loc:location ->
+    is_rec:bool ->
+    type_declaration list -> structure_item list
+end

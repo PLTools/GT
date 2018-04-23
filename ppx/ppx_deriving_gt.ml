@@ -80,9 +80,10 @@ let str_type_decl : (_, _) Deriving.Generator.t =
                    |> (bothp "foldl")
                    |> (bothp "show_typed")
                    |> (bothp "compare")
+                   |> (bothp "eq")
                   )
     (fun ~loc ~path info show showA gmap gmapA foldl foldlA show_type show_typeA
-      compare compareA ->
+      compare compareA  eq eqA ->
       let wrap = function
       | _,Some xs -> E.Use xs
       | true,None -> E.Use []
@@ -93,15 +94,16 @@ let str_type_decl : (_, _) Deriving.Generator.t =
       let foldl = wrap (foldl,foldlA) in
       let show_type = wrap (show_type,show_typeA) in
       let compare   = wrap (compare,compareA) in
+      let eq        = wrap (eq,eqA) in
       E.str_type_decl_implicit ~loc ~path
-        info show gmap foldl compare show_type
+        info show gmap foldl compare eq show_type
     )
 
 let sig_type_decl : (_, _) Deriving.Generator.t =
   Deriving.Generator.make
     Deriving.Args.(empty
                    +> flag "show" +> flag "gmap" +> flag "foldl"
-                   +> flag "compare" +> flag "show_typed"
+                   +> flag "compare" +> flag "eq" +> flag "show_typed"
                   )
     E.sig_type_decl_implicit
 

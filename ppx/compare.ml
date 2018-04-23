@@ -11,7 +11,7 @@ open GtHelpers
 
 open Plugin
 
-let g initial_args = object(self: 'self)
+class ['self] g initial_args = object(self: 'self)
   inherit ['self] Plugin.generator initial_args as super
 
   method plugin_name = "compare"
@@ -53,9 +53,12 @@ let g initial_args = object(self: 'self)
     let body = make_gcata_of_class [%expr self] in
     [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj]
 
+  method chain_exprs ~loc e1 e2 =
+    [%expr GT.chain_compare [%e e1] (fun () -> [%e e2]) ]
+  method chain_init ~loc =
+    [%expr GT.EQ ]
+
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
-    (* let names = make_new_names (List.length args) in *)
-    (* let names     = List.map args ~f:(fun _ -> gen_symbol ()) in *)
     let is_poly,cname =
       match constr_info with
       | `Normal s -> false,  s
@@ -68,7 +71,6 @@ let g initial_args = object(self: 'self)
     Cf.method_concrete ~loc methname
       [%expr fun inh -> [%e
         let main_case =
-          (* let names     = List.map args ~f:(fun _ -> gen_symbol ()) in *)
           let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
           let lhs =
             let arg_pats =
@@ -83,18 +85,17 @@ let g initial_args = object(self: 'self)
             else Pat.construct ~loc (lident cname) arg_pats
           in
           let rhs =
-            List.fold_left  ~init:[%expr GT.EQ]
+            List.fold_left  ~init:(self#chain_init ~loc)
               (List.map3_exn pat_names names args ~f:(fun a b c -> (a,b,c)))
               ~f:(fun acc (pname, name, typ) ->
-                [%expr GT.chain_compare [%e acc] (fun () ->
-                  [%e
-                    self#app_transformation_expr
-                      (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                      (Exp.ident ~loc pname)
-                      (Exp.ident ~loc name)
-                  ])]
+                self#chain_exprs ~loc
+                  acc
+                  (self#app_transformation_expr
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                     (Exp.ident ~loc pname)
+                     (Exp.ident ~loc name)
+                  )
               )
-
           in
           case ~lhs ~guard:None ~rhs
         in
@@ -117,21 +118,15 @@ let g initial_args = object(self: 'self)
         in
 
         Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-        Exp.match_ ~loc [%expr inh]
-          [ main_case
-          ; other_case
-          ]
+        Exp.match_ ~loc [%expr inh] [ main_case; other_case ]
       ]]
   ]
-
 
   method app_transformation_expr trf inh subj =
     let loc = trf.pexp_loc in
     [%expr [%e trf ] [%e inh] [%e subj]]
 
   method abstract_trf ~loc k =
-    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
-    (* ignore inh attribute here too *)
     [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]]
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
@@ -155,13 +150,15 @@ let g initial_args = object(self: 'self)
     k @@ Exp.variant ~loc constr_name ctuple
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+    assert Int.(List.length labs > 0);
     let pat = Pat.record ~loc ~flag:Closed @@
-      List.map labs ~f:(fun l ->
-          (Located.lident ~loc:l.pld_name.loc l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+      List.map labs ~f:(fun {pld_name} ->
+          (Located.lident ~loc:pld_name.loc pld_name.txt, Pat.var ~loc pld_name.txt)
         )
     in
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
     [ Cf.method_concrete ~loc methname
+        (* TODO: maybe use abstract_transformation_expr here *)
         [%expr fun inh -> fun [%p pat ] -> [%e
           let wrap lab =
             self#app_transformation_expr
@@ -169,11 +166,12 @@ let g initial_args = object(self: 'self)
               (Exp.field ~loc [%expr inh] (Located.lident ~loc lab.pld_name.txt))
               (Exp.ident ~loc lab.pld_name.txt )
           in
-          let init = wrap @@ List.hd_exn labs in
-          List.fold_left ~init (List.tl_exn labs)
-            ~f:(fun acc lab -> [%expr [%e acc ] && [%e wrap lab]])
-
+          let init = self#chain_init ~loc in
+          List.fold_left ~init labs
+            ~f:(fun acc lab -> self#chain_exprs ~loc acc (wrap lab))
         ]]
     ]
 
 end
+
+let g = new g
