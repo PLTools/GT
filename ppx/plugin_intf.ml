@@ -16,8 +16,8 @@ class virtual t = object
 
   (* Arguments of inherit class field that will be generated using the types
    * applied in the RHS of type definition *)
-  method virtual prepare_inherit_args_for_alias: loc:location -> type_declaration ->
-    core_type list -> core_type list
+  method virtual prepare_inherit_typ_params_for_alias: loc:location ->
+    type_declaration -> core_type list -> core_type list
 
   method virtual extra_class_sig_members: type_declaration -> class_type_field list
   method virtual extra_class_str_members: type_declaration -> class_field list

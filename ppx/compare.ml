@@ -27,11 +27,11 @@ class ['self] g initial_args = object(self: 'self)
     Typ.var ~loc name
 
   method plugin_class_params tdecl =
-    List.map ~f:fst tdecl.ptype_params
+    let loc = tdecl.ptype_loc in
+    List.map ~f:fst tdecl.ptype_params @ [self#extra_param_stub ~loc]
 
-  method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
-    rhs_args (* @ [ self#default_syn tdecl ] *)
-               (* TODO: add 'extra ? *)
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+    rhs_args @ [self#extra_param_stub ~loc]
 
   method! make_typ_of_self_trf ~loc tdecl =
     [%type: [%t self#default_inh tdecl] ->

@@ -26,7 +26,7 @@ class ['self] g args = object(self: 'self)
     let loc = tdecl.ptype_loc in
     (List.map ~f:fst tdecl.ptype_params) @ [self#extra_param_stub ~loc]
 
-  method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     rhs_args @ [self#extra_param_stub ~loc]
 
   (* We are constrainting extra type parameter using separate member of the class.

@@ -447,10 +447,10 @@ class ['a, 'b, 'extra] show_pair _ fa fb =
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
   end
 
-class ['a, 'sa, 'b, 'sb, 'extra] gmap_pair _ fa fb =
+class ['a, 'sa, 'b, 'sb, 'extra] gmap_pair _ (fa: 'a -> 'sa) fb =
   object
     inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair, 'extra] class_pair
-    method c_Pair _ x y = (fa x, fb y)
+    method c_Pair () x y = (fa x, fb y)
   end
 
 class ['a, 'b, 'syn, 'extra] foldl_pair _ fa fb  =
@@ -507,9 +507,9 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> (
    plugins = object
        method show    fa fb = pair_gcata (new show_pair (fun _ -> assert false) fa fb) ()
        method gmap    fa fb = pair_gcata (new gmap_pair (fun _ -> assert false) fa fb) ()
-       method eq      fa fb = pair_gcata (new eq_pair     (fun _ -> assert false) fa fb) ()
-       method compare fa fb = pair_gcata (new compare_pair(fun _ -> assert false) fa fb) ()
-       method fold    fa fb = pair_gcata (new foldl_pair  (fun _ -> assert false) fa fb) ()
+       method eq      fa fb = pair_gcata (new eq_pair     (fun _ -> assert false) fa fb)
+       method compare fa fb = pair_gcata (new compare_pair(fun _ -> assert false) fa fb)
+       method foldl   fa fb = pair_gcata (new foldl_pair  (fun _ -> assert false) fa fb)
 
 (*
                method html    fa fb = pair_gcata (lift fa) (lift fb) (new @pair[html]) ()
@@ -519,15 +519,21 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> (
   }
 
 class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_tuple2 = object
-  inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t
+  inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_pair
 end
 let gcata_tuple2 = pair.gcata
-class ['a, 'b, 'extra] show_tuple2 _ fa fb  =
-  object
-    inherit [ 'a, unit, string
-            , 'b, unit, string
-            , unit, string, 'extra] @pair
-    method c_Pair () x y = Printf.sprintf "(%s, %s)" (fa x) (fb y)
+
+class ['a, 'b, 'extra] show_tuple2 fself fa fb = object
+  inherit [ 'a, 'b, 'extra] show_pair fself fa fb
+end
+class ['a, 'a2, 'b, 'b2, 'extra] gmap_tuple2 fself fa fb = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'extra] gmap_pair fself fa fb
+end
+class ['a, 'b, 'extra] compare_tuple2 fself fa fb = object
+  inherit [ 'a, 'b, 'extra] compare_pair fself fa fb
+end
+class ['a, 'b, 'extra] eq_tuple2 fself fa fb = object
+  inherit [ 'a, 'b, 'extra] eq_pair fself fa fb
 end
 
 type ('a,'b,'c) triple = 'a * 'b * 'c

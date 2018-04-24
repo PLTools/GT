@@ -65,7 +65,7 @@ let g args = object(self: 'self)
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
     blownup_params @ [self#extra_param_stub ~loc]
 
-  method prepare_inherit_args_for_alias ~loc tdecl rhs_args =
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
       hack_params tdecl.ptype_params
     in

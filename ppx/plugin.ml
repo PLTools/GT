@@ -170,7 +170,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             k [Ctf.inherit_ ~loc @@ Cty.constr ~loc
                  (Located.mk ~loc @@ map_longident cid.txt
                     ~f:(sprintf "%s_%s" self#plugin_name))
-                 (self#prepare_inherit_args_for_alias ~loc tdecl params)
+                 (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
               ]
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
@@ -183,7 +183,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
                        Ctf.inherit_ ~loc @@ Cty.constr ~loc
                          (Located.map (map_longident
                                          ~f:(sprintf "%s_%s" self#plugin_name)) cid)
-                         (self#prepare_inherit_args_for_alias ~loc tdecl params)
+                         (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
                      )
                      ~fail:(fun () -> assert false)
                   )
@@ -241,7 +241,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     (* printf "got a constr\n%!"; *)
     (* self#show_args; *)
     let ans args : class_field list =
-      [ let typ_params = self#prepare_inherit_args_for_alias ~loc tdecl cparams in
+      [ let typ_params = self#prepare_inherit_typ_params_for_alias ~loc tdecl cparams in
         Cf.inherit_ ~loc @@ Cl.apply
           (Cl.constr ~loc
              (map_longident cid.txt ~f:(sprintf "%s_%s" self#plugin_name))
