@@ -23,6 +23,7 @@ let () = dispatch (fun hook ->
 
   | After_rules ->
      ocaml_lib "src/GT";
+     flag ["compile"; "short_paths"] & S [A "-short-paths"];
 
      m4_rules ();
      dep ["use_m4"] ["src/macro.m4"];
@@ -40,19 +41,6 @@ let () = dispatch (fun hook ->
      flag ["make_pp_gt"; "link"] (S[A"ppx/ppx_deriving_gt.cmxa"
                                    ;A"-package"; A"ppxlib"
                                    ]);
-
-     (* flag ["make_pp_gt"; "link"]
-      *   (S [ (\* A"-package"; A"GT.ppx"
-      *                                   * ; *\) (\* A"rewriter/pp_gt.cmx"
-      *                                     * ; *\)
-      *                                  (\* A"-package"; A"ppxlib.runner"
-      *                                     ; *\)  A"-predicates"; A"ppx_driver"
-      *                                  (\* ; A"-package"; A"GT.ppx" *\)
-      * (\* ; A"rewriter/pp_gt.cmx" *\)
-      *
-      *                                  ]); *)
-
-     flag ["compile"; "short_paths"] & S [A "-short-paths"];
 
      dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
      ()

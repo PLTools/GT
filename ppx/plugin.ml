@@ -525,7 +525,10 @@ class virtual ['self] generator initial_args = object(self: 'self)
               (Exp.apply_nolabeled ~loc
                  (Exp.send ~loc
                     [%expr let open GT in
-                      [%e Exp.sprintf "tuple%d" (List.length params)].GT.plugins ]
+                      [%e if List.length params = 2
+                        then Exp.sprintf "pair"
+                        else Exp.sprintf "tuple%d" (List.length params)
+                      ].GT.plugins ]
                     (Located.mk ~loc self#plugin_name )
                  )
                  (List.map ~f:helper params)

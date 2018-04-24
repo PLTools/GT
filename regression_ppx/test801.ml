@@ -1,7 +1,4 @@
 let id x = x
-(* let show_int () = GT.show GT.int
- * let gmap_int () = GT.gmap GT.int
- * let foldl_int x = GT.foldl GT.int x *)
 
 module AL : sig
   type ('a,'b) alist = Nil | Cons of 'a * 'b
