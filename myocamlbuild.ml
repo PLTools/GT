@@ -38,6 +38,11 @@ let () = dispatch (fun hook ->
      flag ["ocamldep"; "link_pa_gt"]   (S [ A"-pp"; A"camlp5o camlp5/pa_gt.cmo" ]);
      flag ["compile";  "link_pa_gt"]   (S [ A"-I";A"camlp5"; Sh"camlp5/pa_gt.cmo" ]);
 
+     flag ["compile"; "native"; "use_gt"]   (S [ A"-I";A"src" ]);
+     flag ["compile"; "byte";   "use_gt"]   (S [ A"-I";A"src" ]);
+     flag ["link";    "byte";   "use_gt"]   (S [ A"-I";A"src"; A"GT.cma" ]);
+     flag ["link";    "native"; "use_gt"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
+
      flag ["make_pp_gt"; "link"] (S[A"ppx/ppx_deriving_gt.cmxa"
                                    ;A"-package"; A"ppxlib"
                                    ]);

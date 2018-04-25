@@ -34,19 +34,14 @@ let () =
 
 module GT = struct
   include GT
-  module type MT_int2 = sig
-    include MT_int
-    val gcata: ('inh, 'syn) # GT.int_tt -> 'inh -> int -> 'syn
-    val show    : int -> string
-    val gmap    : int -> int
-    val show_typed   : string * (int -> string)
-  end
-
-  let int : (module MT_int2) =
-    (module struct
-      include (val GT.int : GT.MT_int)
-      let show_typed = ("int", string_of_int )
-    end)
+  let int =
+    {gcata = int.gcata;
+     plugins = object
+       method show_typed x = ("int", id)
+       method show = int.plugins#show
+       method gmap = int.plugins#gmap
+     end
+    }
 end
 
 module Lo : sig

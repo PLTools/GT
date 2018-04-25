@@ -1,6 +1,6 @@
 open GT
 
-type ('a, 'b) t = int * (string * ('a * 'b)) (* with show, gmap, eq, compare, foldl, foldr *)
+type ('a, 'b) t = int * (string * ('a * 'b))
 [@@deriving gt ~show ~gmap ~eq ~compare]
 
 

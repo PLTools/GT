@@ -15,32 +15,34 @@ TESTS_ENVIRONMENT=./test.sh
 
 .DEFAULT_GOAL :=  all
 
-.PHONY: all syntax lib plugins ppx bundle samples
+.PHONY: all syntax lib camlp5_plugins ppx bundle samples
 .PHONY: celan clean rebuild clean_tests install uninstall
 .PHONY: tests test regression promote
 
 .DEFAULT_GOAL: all
 
-all: syntax lib plugins ppx ppx_plugin bundle #standalone_rewriter bundle
+OBTARGETS=
+all: syntax lib camlp5_plugins ppx do_compile bundle #standalone_rewriter bundle
+
+do_compile:
+	$(OB) $(OBTARGETS)
 
 lib:
-	$(OB) -Is src $(BYTE_TARGETS) $(NATIVE_TARGETS)
+	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
 
 syntax:
-	$(OB) camlp5/pa_gt.cmo
+	$(eval OBTARGETS += camlp5/pa_gt.cmo)
 
-ppx: ppx_plugin #standalone_rewriter
-ppx_plugin:
-	$(OB) -Is src ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
+ppx:
+	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
 		ppx/ppx_gt_expander.cma ppx/ppx_gt_expander.cmxa \
-		rewriter/pp_gt.native
+		rewriter/pp_gt.native)
 
-# standalone_rewriter: bundle ppx_plugin
-# 	OCAMLPATH=`pwd`/_build/bundle $(OB) rewriter/pp_gt.native
 
 PLUGINS=compare eq foldl foldr html gmap show typename
-plugins: syntax
-	$(OB) $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS)))
+plugins:
+	$(eval OBTARGETS += camlp5/pa_gt.cmo \
+							$(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) )
 
 celan: clean
 
@@ -92,9 +94,8 @@ $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
 
 .PHONY: compile_tests_native compile_tests_byte compile_tests run_tests
 
-compile_tests_native: all $(TEST_MLS)
-	OCAMLPATH=`pwd`/_build/bundle \
-	$(OB) $(NATIVE_TEST_EXECUTABLES)
+compile_tests_native: $(TEST_MLS)
+	$(eval OBTARGETS += $(NATIVE_TEST_EXECUTABLES))
 
 compile_tests_byte: all $(TEST_MLS)
 	$(OB) -plugin-tag "package(ppx_driver.ocamlbuild)" $(BYTE_TEST_EXECUTABLES)
@@ -106,7 +107,7 @@ clean_tests:
 
 promote: promote_all
 
-tests: all compile_tests run_tests
+tests: syntax lib camlp5_plugins ppx compile_tests do_compile run_tests
 regression: tests
 test: tests
 
