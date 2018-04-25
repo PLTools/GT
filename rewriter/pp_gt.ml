@@ -1,2 +1,3 @@
+(* TODO: make -pretty option to be a default *)
+
 let () = Ppxlib.Driver.standalone ()
-(* let () = Ppxlib.Driver.run_as_ppx_rewriter () *)

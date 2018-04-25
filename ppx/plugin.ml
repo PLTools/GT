@@ -79,6 +79,10 @@ class virtual ['self] generator initial_args = object(self: 'self)
   method extra_class_lets tdecl k =
     k
 
+  method prepare_fa_args tdecl =
+    let loc = tdecl.ptype_loc in
+    map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
+
   method wrap_class_definition ~loc ~inh_params mutal_names tdecl fields =
     let cur_name = self#cur_name tdecl in
     (* inherit class_t and prepare to put other members *)
@@ -93,7 +97,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
           List.map mutal_names
             ~f:(Pat.sprintf ~loc "%s_%s" self#plugin_name) @
           [Pat.var ~loc self_arg_name] @
-          map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
+          (self#prepare_fa_args tdecl)
         in
         Cl.fun_list names body
       )
@@ -122,6 +126,17 @@ class virtual ['self] generator initial_args = object(self: 'self)
         ]
     )
 
+  (* next method should be synchronized with prepare_fa_args *)
+  method prepare_fa_arg_types tdecl =
+    let loc = tdecl.ptype_loc in
+    map_type_param_names tdecl.ptype_params
+      ~f:(fun name ->
+        self#make_RHS_typ_of_transformation
+          ~syn_t:(self#syn_of_param ~loc name)
+          ~subj_t:(Typ.var ~loc name)
+          tdecl
+      )
+
   (* signature for a plugin class *)
   method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
     let k fields =
@@ -132,21 +147,15 @@ class virtual ['self] generator initial_args = object(self: 'self)
           ~virt:Concrete
           ~wrap:(fun init ->
               let for_self = self#make_typ_of_self_trf ~loc tdecl in
-              let funcs_for_args = map_type_param_names tdecl.ptype_params
-                  ~f:(fun name ->
-                      self#make_RHS_typ_of_transformation
-                        ~syn_t:(self#syn_of_param ~loc name)
-                        ~subj_t:(Typ.var ~loc name)
-                        tdecl
-                    )
-              in
+              let funcs_for_args = self#prepare_fa_arg_types tdecl in
 
               List.fold_right mutal_decls
                 ~init:(List.fold_right ~init (for_self :: funcs_for_args)
                          ~f:(Cty.arrow ~loc))
                 ~f:(fun mut_decl acc ->
-                    self#make_typ_of_mutal_trf ~loc mut_decl (fun t -> Cty.arrow ~loc t acc)
-                  )
+                  self#make_typ_of_mutal_trf ~loc mut_decl
+                    (fun t -> Cty.arrow ~loc t acc)
+                )
             )
           ((self#extra_class_sig_members tdecl) @ fields)
       ]
@@ -241,7 +250,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
     (* printf "got a constr\n%!"; *)
     (* self#show_args; *)
     let ans args : class_field list =
-      [ let typ_params = self#prepare_inherit_typ_params_for_alias ~loc tdecl cparams in
+      [ let typ_params = self#prepare_inherit_typ_params_for_alias ~loc tdecl cparams
+        in
         Cf.inherit_ ~loc @@ Cl.apply
           (Cl.constr ~loc
              (map_longident cid.txt ~f:(sprintf "%s_%s" self#plugin_name))
@@ -251,6 +261,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     in
 
     let class_args =
+      (* TODO: maybe we should hardcode fself here and skip it in plugins *)
       self#make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams
     in
     k @@ ans class_args
@@ -278,7 +289,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
       failwith "conjunction types are not supported but"
     )
 
-  method got_typedecl tdecl ~is_self_rec ~mutal_names (k: class_field list -> _) : _ =
+  method got_typedecl tdecl ~is_self_rec ~mutal_names (k: class_field list -> _) =
     let loc = tdecl.ptype_loc in
     k @@
     visit_typedecl ~loc tdecl
@@ -307,10 +318,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
         in
         helper typ
     )
-    ~onvariant:(fun cds -> self#on_variant ~mutal_names ~is_self_rec tdecl cds (fun x -> x))
-    ~onrecord:(fun labls ->
-        self#on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labls
-      )
+    ~onvariant:(fun cds -> self#on_variant ~mutal_names ~is_self_rec tdecl cds id)
+    ~onrecord:(self#on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl)
 
   method virtual on_record_declaration: loc:Location.t ->
     is_self_rec:(core_type -> bool) ->
@@ -403,9 +412,14 @@ class virtual ['self] generator initial_args = object(self: 'self)
         [%e body] ()) subj
     ]
 
+  method apply_fas_in_new_object tdecl =
+    let loc = tdecl.ptype_loc in
+    (* very similar to self#make_inherit_args_for_alias but the latter
+     * applies `fself` by default. Need to refactor and remove this function *)
+    map_type_param_names tdecl.ptype_params ~f:(Exp.sprintf ~loc "f%s")
+
   (* let <plugin-name> fa ... fz = <this body> *)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
-    let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
     self#wrap_tr_function_str ~loc tdecl
       (fun eself ->
          Exp.apply1 ~loc (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt) @@
@@ -413,7 +427,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
          (nolabelize @@
           List.map rec_typenames ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name)
           @ [eself]
-          @ List.map arg_transfrs ~f:(Exp.sprintf ~loc "%s")
+          @ (self#apply_fas_in_new_object tdecl)
          )
       )
 
@@ -429,14 +443,17 @@ class virtual ['self] generator initial_args = object(self: 'self)
         value_binding ~loc
           ~pat:(Pat.sprintf ~loc "%s" @@ self#make_trans_function_name tdecl)
           ~expr:(
-            let class_name = self#make_class_name ~is_mutal:(not (List.is_empty mutal_names))
+            let class_name = self#make_class_name
+                ~is_mutal:(not (List.is_empty mutal_names))
                 tdecl
             in
-            let arg_transfrs = map_type_param_names tdecl.ptype_params ~f:((^)"f") in
+            (* let arg_transfrs =
+             *   map_type_param_names tdecl.ptype_params ~f:((^)"f")
+             * in *)
             Exp.fun_list ~loc
-              ~args:(List.map arg_transfrs ~f:(Pat.sprintf ~loc "%s"))
-              (self#make_trans_function_body ~loc ~rec_typenames:others class_name tdecl)
-
+              ~args:(self#prepare_fa_args tdecl)
+              (self#make_trans_function_body ~loc ~rec_typenames:others
+                 class_name tdecl)
           )
       in
       let flag = if List.length mutal_names = 1 then Nonrecursive else Recursive in
@@ -559,10 +576,12 @@ class virtual ['self] generator initial_args = object(self: 'self)
           in
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr
-              (self#extract_transformation ~loc  @@
-               Exp.apply_nolabeled ~loc
-                 trf_expr
-                 (List.map ~f:helper params)
+              (self#extract_transformation ~loc @@
+               List.fold_left params (* (List.map ~f:helper params) *)
+                 ~init:trf_expr
+                 ~f:(fun left typ ->
+                   self#compose_apply_transformations ~loc ~left (helper typ) typ
+                 )
               )
               einh esubj
           )
@@ -595,4 +614,6 @@ class virtual ['self] generator initial_args = object(self: 'self)
     helper t
 
 
+  method compose_apply_transformations ~loc ~left right typ =
+    Exp.apply1 ~loc left right
 end
