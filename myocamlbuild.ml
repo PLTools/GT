@@ -17,7 +17,9 @@ let m4_rules ext =
 open Command;;
 
 let () = dispatch (fun hook ->
+        (*
   Migrate_parsetree_ocamlbuild.dispatch hook;
+  *)
   match hook with
   | Before_rules -> ()
 
