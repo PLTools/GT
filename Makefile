@@ -2,7 +2,7 @@ PKGNAME=GT
 MKDIR ?= mkdir -vp
 CP    ?= cp
 
-OB=ocamlbuild -use-ocamlfind #-plugin-tag "package(ocaml-migrate-parsetree-ocamlbuild)" #-classic-display -ignore Test025
+OB=ocamlbuild -use-ocamlfind -classic-display #-plugin-tag "package(ocaml-migrate-parsetree-ocamlbuild)" #-classic-display -ignore Test025
 ifdef OBV
 OB += -verbose 6
 endif
@@ -40,7 +40,7 @@ ppx:
 
 
 PLUGINS=compare eq foldl foldr html gmap show typename
-plugins:
+camlp5_plugins:
 	$(eval OBTARGETS += camlp5/pa_gt.cmo \
 							$(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) )
 

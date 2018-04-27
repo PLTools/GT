@@ -135,6 +135,15 @@ let g args = object(self: 'self)
     let typ_str = [%expr "asdf" ] in
     Exp.apply_nolabeled left [ typ_str; right ]
 
+  method make_typ_of_mutal_trf ~loc mutal_tdecl k =
+    super#make_typ_of_mutal_trf ~loc mutal_tdecl (fun typ ->
+        Cty.arrow ~loc [%type: string ] (k typ)
+      )
+
+  method make_typ_of_class_argument ~loc tdecl name k =
+    super#make_typ_of_class_argument ~loc tdecl name
+      (fun t -> [%type:  string -> [%t k t] ] )
+
   (* is the same as for base class *)
   (* method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
    *   let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in

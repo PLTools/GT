@@ -114,15 +114,20 @@ class virtual ['self] generator initial_args = object(self: 'self)
       let stub_name = class_name ^ "_stub" in
       (* maybe it should be called proto *)
       let mut_funcs = List.map ~f:(sprintf "%s_%s" self#plugin_name) mutal_names in
-      let real_args = "fself" :: (List.map ~f:((^)"f") @@ make_new_names (List.length tdecl.ptype_params)) in
+
       let new_params = self#plugin_class_params tdecl in
       Str.single_class ~loc ~name:class_name
-        ~wrap:(Cl.fun_list @@ List.map ~f:(Pat.sprintf ~loc "%s") @@ real_args)
+        ~wrap:(fun cl ->
+            Cl.fun_ ~loc Nolabel None (Pat.sprintf ~loc "%s" self_arg_name) @@
+            Cl.fun_list (self#prepare_fa_args tdecl) cl
+          )
         ~params:(invariantize new_params)
         [ Cf.inherit_ ~loc @@ Cl.apply
             (Cl.constr ~loc (Lident stub_name) new_params)
             (nolabelize @@
-             List.map ~f:(Exp.sprintf ~loc "%s") (mut_funcs@real_args) )
+             List.map ~f:(Exp.sprintf ~loc "%s") mut_funcs @
+             [Exp.sprintf ~loc "%s" self_arg_name] @
+             (self#apply_fas_in_new_object tdecl))
         ]
     )
 
@@ -342,17 +347,17 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let syn_t  = self#default_syn tdecl in
     [%type: [%t subj_t] -> [%t syn_t] ]
 
-  method make_typ_of_mutal_trf ~loc mutal_tdecl k =
+  method make_typ_of_mutal_trf ~loc mutal_tdecl (k: core_type -> _)  =
     let subj_t = core_type_of_type_declaration mutal_tdecl in
     k [%type: ([%t subj_t] -> [%t self#default_syn mutal_tdecl]) ]
 
   (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
    *   fot a type ('a,'b,....'z) being generated
   **)
-  method make_typ_of_class_argument ~loc tdecl name =
+  method make_typ_of_class_argument ~loc tdecl name k =
     let subj_t = Typ.var ~loc name in
     let syn_t = self#syn_of_param ~loc name in
-    [%type: [%t subj_t] -> [%t syn_t] ]
+    k [%type: [%t subj_t] -> [%t syn_t] ]
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
                      <this type we are generating here>
@@ -380,12 +385,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
     List.fold_right
       (map_type_param_names tdecl.ptype_params ~f:id)
       ~init:type_
-      ~f:(fun name ->
-          Typ.arrow ~loc @@
-          self#make_typ_of_class_argument ~loc tdecl name
-          (* Typ.arrow ~loc Nolabel @@
-           *  self#make_RHS_typ_of_transformation ~subj_t:(Typ.var name)
-           *    ~syn_t:(self) tdecl *)
+      ~f:(fun name acc ->
+          self#make_typ_of_class_argument ~loc tdecl name (fun t -> Typ.arrow ~loc t acc)
          )
 
   method make_trans_function_name tdecl =
@@ -525,9 +526,6 @@ class virtual ['self] generator initial_args = object(self: 'self)
     (* ignore inh attribute here too *)
     [%expr fun subj -> [%e k [%expr assert false ] [%expr subj]]]
 
-  method extract_transformation ~loc etrf = etrf
-
-
   (* TODO: decide expression of which type should be returned here *)
   (* do_type_gen will return an expression which after being applied
    * to inherited attribute and subject will return synthetized one
@@ -535,7 +533,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
   method do_typ_gen ~loc ~mutal_names ~is_self_rec t =
     let rec helper t =
       match t.ptyp_desc with
-      | Ptyp_var s -> self#extract_transformation ~loc @@ self#generate_for_variable ~loc s
+      | Ptyp_var s -> self#generate_for_variable ~loc s
       | Ptyp_tuple params ->
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr
@@ -553,8 +551,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
               einh esubj
           )
       | Ptyp_constr (_,_) when is_self_rec t ->
-        (* self#generate_for_variable ~loc "self" *)
-        self#extract_transformation ~loc @@ Exp.ident ~loc self_arg_name
+        Exp.ident ~loc self_arg_name
       | Ptyp_constr ({txt},params) ->
           (* in this place it will be easier to have all plugin in single value *)
           let trf_expr =
@@ -576,8 +573,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
           in
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr
-              (self#extract_transformation ~loc @@
-               List.fold_left params (* (List.map ~f:helper params) *)
+              (List.fold_left params (* (List.map ~f:helper params) *)
                  ~init:trf_expr
                  ~f:(fun left typ ->
                    self#compose_apply_transformations ~loc ~left (helper typ) typ

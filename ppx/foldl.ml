@@ -56,9 +56,9 @@ let g initial_args = object(self: 'self)
     [%type: [%t self#default_inh tdecl] ->
       [%t super#make_typ_of_self_trf ~loc tdecl] ]
 
-  method make_typ_of_class_argument ~loc tdecl name =
-    [%type: [%t self#default_inh tdecl] ->
-      [%t super#make_typ_of_class_argument ~loc tdecl name] ]
+  method make_typ_of_class_argument ~loc tdecl name k =
+    super#make_typ_of_class_argument ~loc tdecl name (fun t ->
+        k [%type: [%t self#default_inh tdecl] -> [%t t] ])
 
   method! make_RHS_typ_of_transformation ?subj_t ?syn_t tdecl =
     let loc = tdecl.ptype_loc in
