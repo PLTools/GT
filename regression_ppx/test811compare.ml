@@ -43,3 +43,24 @@ module T3 = struct
     assert (not(eq1 a b));
     ()
 end
+
+
+module T4 = struct
+  type 'a t = ('a * 'a) T3.t   [@@deriving gt ~show ~compare ~eq]
+
+  let ()  =
+    let a = { T3.q=5; w="asd"; e= ["",""] } in
+    let b = { T3.q=6; w="asd"; e= ["",""] } in
+    let c = { T3.q=6; w="ase"; e= ["",""] } in
+
+    let cmp1 x y = compare_t (GT.compare GT.string)  x y in
+    assert (GT.EQ  = cmp1 a a);
+    assert (GT.LT  = cmp1 a b);
+    assert (GT.LT  = cmp1 b c);
+    let eq1  x y = eq_t      (GT.eq      GT.string) x y in
+    assert (   eq1 a a );
+    assert (not(eq1 a b));
+    assert (not(eq1 b c));
+    ()
+
+end
