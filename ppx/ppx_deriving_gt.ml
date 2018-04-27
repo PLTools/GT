@@ -10,67 +10,13 @@ open Ppxlib
 
 module E = Ppx_gt_expander
 
-  (* (\* This doesn't works because there is no place for pexp_apply *\)
-   * let gt_param name =
-   *   let open Type_conv.Args in
-   *   let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
-   *   arg name @@
-   *   pexp_apply
-   *     (pexp_ident (lident (string name)))
-   *     ( (pair nolabel r) ^:: nil )
-   *
-   * let gt_param name =
-   *   let open Type_conv.Args in
-   *   let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
-   *   arg name @@
-   *   pexp_apply
-   *     (pexp_ident (lident (string name)))
-   *     ( (pair nolabel r) ^:: nil ) *)
-
-let gt_paramA name =
-  let open Deriving.Args in
-  let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
-  arg (name^"A") r
-
-(* without arguments *)
 let gt_param name =
   let open Deriving.Args in
-  flag name
-
-
-  (* let make_param name =
-   *   let open Type_conv.Args in
-   *
-   *   (\* let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in *\)
-   *   let pattern = pexp_ident (lident (string name)) in
-   *   Type_conv.Args.make_param
-   *     name
-   *     (let loc = Location.none in [%expr { wtf=1 } ])
-   *     @@
-   *     Ast_pattern.Packed.create pattern (fun x -> x) *)
-
-
-
-  (* let make_param name : (int,_) Type_conv.Generator.t  =
-   *   let open Type_conv.Args in
-   *
-   *   let r = pexp_record (many (map1 ~f:(fun (l,e) -> (l.txt,e) ) __)) none in
-   *
-   *   Type_conv.Generator.make
-   *     (arg name
-   *        (\* (many *\)
-   *           (pexp_apply
-   *              (pexp_ident (lident (string "name")) )
-   *              ( (pair nolabel r) ^:: nil )
-   *           )
-   *        (\* ) *\)
-   *     )
-   *     (\* (fun ~loc ~path info x  -> x) *\) *)
-
+  arg name __
 
 let str_type_decl : (_, _) Deriving.Generator.t =
   let bothp name rest =
-    Deriving.Args.(rest +> (gt_param name) +> (gt_paramA name))
+    Deriving.Args.(rest +> (gt_param name) )
   in
   Deriving.Generator.make
     (* ~attributes:[ Attribute.T Attrs.ignore ] *)
@@ -82,21 +28,24 @@ let str_type_decl : (_, _) Deriving.Generator.t =
                    |> (bothp "compare")
                    |> (bothp "eq")
                   )
-    (fun ~loc ~path info show showA gmap gmapA foldl foldlA show_type show_typeA
-      compare compareA  eq eqA ->
-      let wrap = function
-      | _,Some xs -> E.Use xs
-      | true,None -> E.Use []
-      | false,None -> E.Skip
+    (fun ~loc ~path info show gmap foldl show_typed  compare eq  ->
+      let wrap name = function
+        | None -> E.Skip
+        | Some e -> match e.pexp_desc with
+          | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> E.Use []
+          | Pexp_record (ls, _) -> E.Use (List.map (fun (l,r) -> (l.txt,r)) ls)
+          | _ -> GtHelpers.raise_errorf
+                   "This kind of arguments is not supported. Bad expression %s"
+                   (Pprintast.string_of_expression e)
       in
-      let show  = wrap (show,showA) in
-      let gmap  = wrap (gmap,gmapA) in
-      let foldl = wrap (foldl,foldlA) in
-      let show_type = wrap (show_type,show_typeA) in
-      let compare   = wrap (compare,compareA) in
-      let eq        = wrap (eq,eqA) in
+      let show       = wrap "show"       show in
+      let gmap       = wrap "gmap"       gmap in
+      let foldl      = wrap "foldl"      foldl in
+      let show_typed = wrap "show_typed" show_typed in
+      let compare    = wrap "compare"    compare in
+      let eq         = wrap "eq"         eq in
       E.str_type_decl_implicit ~loc ~path
-        info show gmap foldl compare eq show_type
+        info show gmap foldl compare eq show_typed
     )
 
 let sig_type_decl : (_, _) Deriving.Generator.t =
