@@ -12,6 +12,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 module Plugin = Plugin.Make(AstHelpers)
 open Plugin
 
+let plugin_name = "foldl"
 let make_dest_param_names ?(loc=Location.none) ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 

@@ -2,6 +2,8 @@ open Ppxlib
 
 type config_plugin = Skip | Use of (longident * expression) list
 
+module Make : functor (X: GTHELPERS_sig.S) -> sig
+
 (* TODO: wtf is the path *)
 val str_type_decl :
   loc:Location.t -> path:string ->
@@ -38,3 +40,5 @@ val sig_type_decl_implicit :
   bool ->
   bool ->
   signature
+
+end

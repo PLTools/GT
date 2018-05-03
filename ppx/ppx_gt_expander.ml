@@ -17,13 +17,14 @@ open Ast_helper
 open HelpersBase
 let (@@) = Caml.(@@)
 
+type config_plugin = Skip | Use of Plugin_intf.plugin_args
+
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 module Plugin = Plugin.Make(AstHelpers)
 
 open AstHelpers
 
-type config_plugin = Skip | Use of (longident * expression) list
 
 let make_interface_class_sig ~loc tdecl =
   let loc = tdecl.ptype_loc in
@@ -490,36 +491,40 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * ) @
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
-let registerd_plugins : (string * _ ) list =
-  [ let module M = Compare.Make(GtHelpers) in
-     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-  ; let module M = Show   .Make(GtHelpers) in
-     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-  ; let module M = Gmap   .Make(GtHelpers) in
-     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-  ; let module M = Foldl  .Make(GtHelpers) in
-     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-  ; let module M = Show_typed.Make(GtHelpers) in
-     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-  ; let module M = Eq     .Make(GtHelpers) in
-     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+let registered_plugins : (string * _ ) list =
+  [ (let module M = Compare.Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; (let module M = Show   .Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; (let module M = Gmap   .Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; (let module M = Foldl  .Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; (let module M = Show_typed.Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; (let module M = Eq     .Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
   ]
+
+let wrap_plugin name = function
+| Skip -> id
+| Use args ->
+    match List.Assoc.find registered_plugins name ~equal:String.equal with
+    | Some p -> List.cons (p args :> Plugin_intf.t)
+    | None -> failwithf "Plugin '%s' is not registered" name ()
+;;
 
 let sig_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
     ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls) =
   let plugins =
-    let wrap name = function
-      | Skip -> id
-      | Use args -> List.cons (p args :> Plugin_intf.t)
-    in
-    wrap "compare"     use_compare @@
-    wrap "show"        use_show  @@
-    wrap "gmap"        use_gmap  @@
-    wrap "foldl"       use_foldl @@
-    wrap "show_typed"  use_show_type @@
-    wrap "eq"          use_eq @@
+    wrap_plugin "compare"     use_compare @@
+    wrap_plugin "show"        use_show  @@
+    wrap_plugin "gmap"        use_gmap  @@
+    wrap_plugin "foldl"       use_foldl @@
+    wrap_plugin "show_typed"  use_show_type @@
+    wrap_plugin "eq"          use_eq @@
     []
   in
   match rec_flag, tdls with
@@ -536,16 +541,12 @@ let str_type_decl ~loc ~path
     (rec_flag, tdls)
   =
   let plugins =
-    let wrap p = function
-      | Skip -> id
-      | Use args -> List.cons (p args :> Plugin_intf.t)
-    in
-    wrap Show.g       use_show @@
-    wrap Gmap.g       use_gmap @@
-    wrap Foldl.g      use_foldl @@
-    wrap Show_typed.g use_show_type @@
-    wrap Compare.g    use_compare @@
-    wrap Eq.g         use_eq @@
+    wrap_plugin "compare"     use_compare @@
+    wrap_plugin "show"        use_show  @@
+    wrap_plugin "gmap"        use_gmap  @@
+    wrap_plugin "foldl"       use_foldl @@
+    wrap_plugin "show_typed"  use_show_type @@
+    wrap_plugin "eq"          use_eq @@
     []
   in
 

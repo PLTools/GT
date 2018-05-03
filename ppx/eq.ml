@@ -11,8 +11,8 @@ open GtHelpers
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-
 module Compare = Compare.Make(AstHelpers)
+let plugin_name = "eq"
 
 let g initial_args = object(self: 'self)
   inherit ['self] Compare.g initial_args as super

@@ -34,13 +34,14 @@ let hack_params ?(loc=Location.none) ps =
   (param_names, rez_names, assoc, blownup_params)
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
+let plugin_name = "gmap"
 module Plugin = Plugin.Make(AstHelpers)
 open Plugin
 
 let g args = object(self: 'self)
   inherit ['self] Plugin.generator args
 
-  method plugin_name = "gmap"
+  method plugin_name = plugin_name
 
   method default_inh _ = let loc = Location.none in [%type: unit]
   method default_syn tdecl =

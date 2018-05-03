@@ -8,7 +8,8 @@
 
 open Ppxlib
 
-module E = Ppx_gt_expander
+open Ppx_gt_expander
+module E = Ppx_gt_expander.Make(GtHelpers)
 
 let gt_param name =
   let open Deriving.Args in
@@ -30,10 +31,10 @@ let str_type_decl : (_, _) Deriving.Generator.t =
                   )
     (fun ~loc ~path info show gmap foldl show_typed  compare eq  ->
       let wrap name = function
-        | None -> E.Skip
+        | None -> Skip
         | Some e -> match e.pexp_desc with
-          | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> E.Use []
-          | Pexp_record (ls, _) -> E.Use (List.map (fun (l,r) -> (l.txt,r)) ls)
+          | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> Use []
+          | Pexp_record (ls, _) -> Use (List.map (fun (l,r) -> (l.txt,r)) ls)
           | _ -> HelpersBase.raise_errorf
                    "This kind of arguments is not supported. Bad expression %s"
                    (Pprintast.string_of_expression e)

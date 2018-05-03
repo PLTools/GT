@@ -17,6 +17,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
  * open Plugin *)
 module Show = Show.Make(AstHelpers)
 
+let plugin_name = "show_typed"
 let g args = object(self: 'self)
   inherit ['self] Show.g args as super
 
