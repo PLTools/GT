@@ -495,7 +495,14 @@ let registerd_plugins : (string * _ ) list =
      (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
   ; let module M = Show   .Make(GtHelpers) in
      (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-  ;
+  ; let module M = Gmap   .Make(GtHelpers) in
+     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; let module M = Foldl  .Make(GtHelpers) in
+     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; let module M = Show_typed.Make(GtHelpers) in
+     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; let module M = Eq     .Make(GtHelpers) in
+     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
   ]
 
 let sig_type_decl ~loc ~path
@@ -503,7 +510,7 @@ let sig_type_decl ~loc ~path
     ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls) =
   let plugins =
-    let wrap p = function
+    let wrap name = function
       | Skip -> id
       | Use args -> List.cons (p args :> Plugin_intf.t)
     in
