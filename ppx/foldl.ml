@@ -1,4 +1,5 @@
 open Base
+open HelpersBase
 open Ppxlib
 open Printf
 open Ast_helper
@@ -7,6 +8,9 @@ open Ppxlib.Ast_builder.Default
 
 
 (* TODO: we want easily get foldr from foldl *)
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+module Plugin = Plugin.Make(AstHelpers)
+open Plugin
 
 let make_dest_param_names ?(loc=Location.none) ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
@@ -120,5 +124,7 @@ let g initial_args = object(self: 'self)
           Exp.constant (const_string "asdf")
         ]]
     ]
+
+end
 
 end

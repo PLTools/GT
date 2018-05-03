@@ -1,5 +1,7 @@
 open Ppxlib
 
+type plugin_args = (longident * expression) list
+
 class virtual t = object
   method virtual plugin_name : string
 

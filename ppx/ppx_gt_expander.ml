@@ -14,10 +14,14 @@ open Printf
 open Longident
 open Asttypes
 open Ast_helper
-open GtHelpers
+open HelpersBase
 let (@@) = Caml.(@@)
 
-let deriver = "gt"
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
+module Plugin = Plugin.Make(AstHelpers)
+
+open AstHelpers
 
 type config_plugin = Skip | Use of (longident * expression) list
 
@@ -486,6 +490,14 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * ) @
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
+let registerd_plugins : (string * _ ) list =
+  [ let module M = Compare.Make(GtHelpers) in
+     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ; let module M = Show   .Make(GtHelpers) in
+     (M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  ;
+  ]
+
 let sig_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
     ?(use_compare=Skip) ?(use_eq=Skip)
@@ -495,12 +507,12 @@ let sig_type_decl ~loc ~path
       | Skip -> id
       | Use args -> List.cons (p args :> Plugin_intf.t)
     in
-    wrap Compare.g    use_compare @@
-    wrap Show.g       use_show  @@
-    wrap Gmap.g       use_gmap  @@
-    wrap Foldl.g      use_foldl @@
-    wrap Show_typed.g use_show_type @@
-    wrap Eq.g         use_eq @@
+    wrap "compare"     use_compare @@
+    wrap "show"        use_show  @@
+    wrap "gmap"        use_gmap  @@
+    wrap "foldl"       use_foldl @@
+    wrap "show_typed"  use_show_type @@
+    wrap "eq"          use_eq @@
     []
   in
   match rec_flag, tdls with
@@ -553,3 +565,5 @@ let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     ~use_show_type:(wrap use_show_type)
     ~use_eq:(wrap use_eq)
     info
+
+end

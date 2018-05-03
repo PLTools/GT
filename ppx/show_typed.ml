@@ -12,6 +12,11 @@ open Ast_helper
 open GtHelpers
 open Ppxlib.Ast_builder.Default
 
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+(* module Plugin = Plugin.Make(AstHelpers)
+ * open Plugin *)
+module Show = Show.Make(AstHelpers)
+
 let g args = object(self: 'self)
   inherit ['self] Show.g args as super
 
@@ -179,5 +184,7 @@ let g args = object(self: 'self)
    *             ]]
    *     ]]
    *   ] *)
+
+end
 
 end

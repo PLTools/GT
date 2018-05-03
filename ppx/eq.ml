@@ -9,7 +9,10 @@ open GtHelpers
  * and return true or false
 *)
 
-open Plugin
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
+
+module Compare = Compare.Make(AstHelpers)
 
 let g initial_args = object(self: 'self)
   inherit ['self] Compare.g initial_args as super
@@ -156,5 +159,7 @@ let g initial_args = object(self: 'self)
    *         Exp.constant (const_string "asdf")
    *       ]]
    *   ] *)
+
+end
 
 end

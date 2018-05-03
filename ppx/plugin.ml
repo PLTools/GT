@@ -5,8 +5,12 @@ open Asttypes
 open Parsetree
 open Ast_helper
 open Location
-open GtHelpers
 open Ppxlib.Ast_builder.Default
+open HelpersBase
+
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
+open AstHelpers
 
 let self_arg_name = "fself"
 let construct_extra_param ~loc = [%type: 'extra]
@@ -612,4 +616,6 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
   method compose_apply_transformations ~loc ~left right typ =
     Exp.apply1 ~loc left right
+end
+
 end

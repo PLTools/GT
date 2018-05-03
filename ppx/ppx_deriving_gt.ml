@@ -34,7 +34,7 @@ let str_type_decl : (_, _) Deriving.Generator.t =
         | Some e -> match e.pexp_desc with
           | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> E.Use []
           | Pexp_record (ls, _) -> E.Use (List.map (fun (l,r) -> (l.txt,r)) ls)
-          | _ -> GtHelpers.raise_errorf
+          | _ -> HelpersBase.raise_errorf
                    "This kind of arguments is not supported. Bad expression %s"
                    (Pprintast.string_of_expression e)
       in

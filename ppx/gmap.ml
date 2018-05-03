@@ -7,6 +7,7 @@
  *)
 
 open Base
+open HelpersBase
 open Ppxlib
 open Printf
 open Ast_helper
@@ -31,6 +32,10 @@ let hack_params ?(loc=Location.none) ps =
          )
   in
   (param_names, rez_names, assoc, blownup_params)
+
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+module Plugin = Plugin.Make(AstHelpers)
+open Plugin
 
 let g args = object(self: 'self)
   inherit ['self] Plugin.generator args
@@ -169,5 +174,7 @@ let g args = object(self: 'self)
               )
         ]]
     ]
+
+end
 
 end

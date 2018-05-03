@@ -8,13 +8,16 @@ open GtHelpers
 (* Compare plugin where we pass another value of the same type as 'inh
  * and return GT.comparison as 'syn
 *)
-
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+module Plugin = Plugin.Make(AstHelpers)
 open Plugin
+
+let plugin_name = "compare"
 
 class ['self] g initial_args = object(self: 'self)
   inherit ['self] Plugin.generator initial_args as super
 
-  method plugin_name = "compare"
+  method plugin_name = plugin_name
 
   method default_inh = core_type_of_type_declaration
   method syn_of_param ~loc s = [%type: GT.comparison]
@@ -176,3 +179,5 @@ class ['self] g initial_args = object(self: 'self)
 end
 
 let g = new g
+
+end

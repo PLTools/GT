@@ -12,10 +12,16 @@ open Ast_helper
 open GtHelpers
 open Ppxlib.Ast_builder.Default
 
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
+let plugin_name = "show"
+module Plugin = Plugin.Make(AstHelpers)
+open Plugin
+
 class ['self] g args = object(self: 'self)
   inherit ['self] Plugin.generator args
 
-  method plugin_name = "show"
+  method plugin_name = plugin_name
   method default_inh tdecl = let loc = tdecl.ptype_loc in [%type: unit]
   method default_syn tdecl = let loc = tdecl.ptype_loc in [%type: string]
 
@@ -128,3 +134,4 @@ class ['self] g args = object(self: 'self)
 end
 
 let g = new g
+end
