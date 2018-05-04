@@ -2,5 +2,5 @@ S .
 B ../_build/ppx
 
 FLG -short-paths
-PKG ppxlib ppxlib.metaquot
+PKG ppxlib,ppxlib.metaquot
 FLG -rectypes

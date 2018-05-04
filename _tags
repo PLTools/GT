@@ -3,6 +3,10 @@ true: debug, bin_annot, short_paths
 #, strict_sequence
 
 <camlp5/*.ml>: syntax(camlp5o), package(camlp5), for-pack(Pa_gt)
+<camlp5/hack_expander.*>: package(base,ppxlib)
+<camlp5/*>: package(ppxlib)
+<camlp5/pa_gt.cm*>: package(ppxlib,base)
+<camlp5/pp5gt.cma>: linkpkg, link_pagtcmo, package(ppxlib)
 
 #<src/GT.ml4>: use_m4
 <src/GT.ml>:  use_pa_gt, use_m4

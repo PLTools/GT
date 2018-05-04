@@ -22,16 +22,18 @@ TESTS_ENVIRONMENT=./test.sh
 .DEFAULT_GOAL: all
 
 OBTARGETS=
-all: syntax lib camlp5_plugins ppx do_compile bundle #standalone_rewriter bundle
+OBPARAMS=
+all: syntax lib ppx do_compile bundle #standalone_rewriter bundle
 
 do_compile:
-	$(OB) $(OBTARGETS)
+	$(OB) $(OBPARAMS) $(OBTARGETS)
 
 lib:
 	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
 
 syntax:
-	$(eval OBTARGETS += camlp5/pa_gt.cmo)
+	$(eval OBTARGETS += camlp5/pa_gt.cmo camlp5/pp5gt.cma)
+	$(eval OBPARAMS  += -Is ppx)
 
 ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \

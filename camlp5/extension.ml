@@ -36,11 +36,11 @@ let tdecl_to_descr loc t =
   let name = get_val loc (snd (get_val loc t.tdNam)) in
   let args = 
     map (fun (x, _) -> 
-           match get_val loc x with 
+     match get_val loc x with
 	   | Some y -> y
 	   | None   -> oops loc "wildcard type parameters not supported"
-        ) 
-        (get_val loc t.tdPrm) 
+    )
+    (get_val loc t.tdPrm)
   in
   let convert = 
     let convert_concrete typ = 
@@ -50,61 +50,61 @@ let tdecl_to_descr loc t =
       | <:ctyp< $t$ $a$ >> as typ -> 
           (match inner t, inner a with
            | _, Arbitrary _ -> Arbitrary typ
-	   | Instance (_, targs, tname), a -> Instance (typ, targs@[a], tname)
-	   | _ -> Arbitrary typ
+           | Instance (_, targs, tname), a -> Instance (typ, targs@[a], tname)
+           | _ -> Arbitrary typ
           )
       | <:ctyp< $q$ . $t$ >> as typ -> 
-	  (match inner q, inner t with
-	   | Instance (_, [], q), Instance (_, [], t) -> Instance (typ, [], q@t)
-	   | _ -> Arbitrary typ
-	  )
+          (match inner q, inner t with
+          | Instance (_, [], q), Instance (_, [], t) -> Instance (typ, [], q@t)
+          | _ -> Arbitrary typ
+          )
       | (<:ctyp< $uid:n$ >> | <:ctyp< $lid:n$ >>) as typ -> Instance (typ, [], [n])
       | t -> Arbitrary t      
       in
       let rec replace = function
       | Tuple (t, typs) -> Tuple (t, map replace typs)
       | Instance (t, args', qname) as orig when qname = [name] ->
-	 (try
-	   let args' = 
+         (try
+           let args' =
              map (function 
-	          | Variable (_, a) -> a
-		  | _ -> invalid_arg "Not a variable"
-		 ) 
-	         args' 
-	   in
-	   if args' = args then Self (t, args, qname) else orig
-	  with Invalid_argument "Not a variable" -> orig
-	 )				      
+	               | Variable (_, a) -> a
+                 | _ -> invalid_arg "Not a variable"
+                 )
+             args'
+           in
+           if args' = args then Self (t, args, qname) else orig
+         with Invalid_argument "Not a variable" -> orig
+         )
       | x -> x
       in
       replace (inner typ)
     in
     function
     | <:ctyp< [ $list:const$ ] >> | <:ctyp< $_$ == $priv:_$ [ $list:const$ ] >> -> 
-	let const = map (fun (loc, name, args, d) -> 
-	                   match d with 
+       let const = map (fun (loc, name, args, d) ->
+	       match d with
 			   | None -> `Con (get_val loc name, map convert_concrete (get_val loc args))
 			   | _    -> oops loc "unsupported constructor declaration"
-			) 
-	            const 
-	in
-	`Vari const
+         )
+         const
+    	in
+      `Vari const
 
     | <:ctyp< { $list:fields$ } >> | <:ctyp< $_$ == $priv:_$ { $list:fields$ } >> ->
-	let fields = map (fun (_, name, mut, typ) -> name, mut, convert_concrete typ) fields in
-	`Struct fields
+      let fields = map (fun (_, name, mut, typ) -> name, mut, convert_concrete typ) fields in
+      `Struct fields
 
     | <:ctyp< ( $list:typs$ ) >> -> `Tuple (map convert_concrete typs)
 
     | <:ctyp< [ = $list:variants$ ] >> -> 
-	let wow ()   = oops loc "unsupported polymorphic variant type constructor declaration" in
-	let variants = 
-	  map (function
+      let wow () = oops loc "unsupported polymorphic variant type constructor declaration" in
+      let variants =
+        map (function
 	       | <:poly_variant< $typ$ >> -> 
-		  (match convert_concrete typ with 
-		   | Arbitrary _ -> wow ()
-		   | typ -> `Type typ
-		  )
+            (match convert_concrete typ with
+            | Arbitrary _ -> wow ()
+            | typ -> `Type typ
+            )
 	       | <:poly_variant< ` $c$ >> -> `Con (c, [])
 	       | <:poly_variant< ` $c$ of $list:typs$ >> -> 
 		   let typs = 
@@ -130,6 +130,8 @@ let tdecl_to_descr loc t =
 	)
   in
   (args, name, convert t.tdDef)
+
+(* let _ : int = Core.generate *)
 
 EXTEND
   GLOBAL: sig_item str_item class_expr class_sig_item expr ctyp type_decl; 
@@ -209,11 +211,11 @@ EXTEND
   trait: [[ "["; id=LIDENT; "]" -> id ]];
 
   str_item: LEVEL "top" [[
-    "@"; "type"; t=LIST1 t_decl SEP "and" -> fst (generate t loc) 
+    "@"; "type"; t=LIST1 t_decl SEP "and" -> Core2.generate_str t loc
   ]];
 
   sig_item: LEVEL "top" [[
-    "@"; "type"; t=LIST1 t_decl SEP "and" -> snd (generate t loc)
+    "@"; "type"; t=LIST1 t_decl SEP "and" -> Core2.generate_sig t loc
   ]];
 
   t_decl: [[

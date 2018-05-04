@@ -29,7 +29,8 @@ let () = dispatch (fun hook ->
 
      m4_rules ();
      dep ["use_m4"] ["src/macro.m4"];
-     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"camlp5o camlp5/pa_gt.cmo" ]);
+     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"../camlp5o_pp.sh" ]);
+     flag ["ocaml"; "link"; "link_pagtcmo"] (S [ A"camlp5/pa_gt.cmo" ]);
 
      flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
                                             ; A"show.cmo";  A"gmap.cmo"
@@ -37,8 +38,8 @@ let () = dispatch (fun hook ->
                                             ; A"compare.cmo"; A"eq.cmo"
                                             ]);
 
-     flag ["ocamldep"; "link_pa_gt"]   (S [ A"-pp"; A"camlp5o camlp5/pa_gt.cmo" ]);
-     flag ["compile";  "link_pa_gt"]   (S [ A"-I";A"camlp5"; Sh"camlp5/pa_gt.cmo" ]);
+     (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
+      * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
 
      flag ["compile"; "native"; "use_gt"]   (S [ A"-I";A"src" ]);
      flag ["compile"; "byte";   "use_gt"]   (S [ A"-I";A"src" ]);

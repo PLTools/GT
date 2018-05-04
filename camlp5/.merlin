@@ -1,0 +1,5 @@
+PKG camlp5
+PKG base ppxlib
+
+SRC .
+B ../_build/camlp5

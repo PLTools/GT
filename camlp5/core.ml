@@ -636,16 +636,16 @@ let generate t loc =
   let open_type td =   
     match td.tdDef with
     | <:ctyp< [ = $list:lcons$ ] >> ->
-	let get_val x = get_val loc x in
+        let get_val x = get_val loc x in
         let name      = type_open_t (get_val (snd (get_val td.tdNam))) in
-	let args      = map (function (VaVal (Some name), _) -> name | _ -> oops loc "unsupported case (internal error)") (get_val td.tdPrm) in
-	let gen       = name_generator args in
+        let args      = map (function (VaVal (Some name), _) -> name | _ -> oops loc "unsupported case (internal error)") (get_val td.tdPrm) in
+        let gen       = name_generator args in
         let self      = gen#generate "self" in
-	[{td with tdNam = VaVal (loc, VaVal name);
-	          tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::args));
-	          tdDef = H.T.var self;
+        [{td with tdNam = VaVal (loc, VaVal name);
+                  tdPrm = VaVal (map (fun name -> VaVal (Some name), None) (self::args));
+                  tdDef = H.T.var self;
                   tdCon = VaVal [H.T.var self, <:ctyp< [> $list:lcons$ ]>>]
-	 }
+         }
         ]
     | _ -> []
   in
