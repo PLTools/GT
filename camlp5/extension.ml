@@ -30,7 +30,7 @@ open Pcaml
 open MLast
 open Ploc
 open Plugin
-open Core
+open Core2
 
 let tdecl_to_descr loc t =
   let name = get_val loc (snd (get_val loc t.tdNam)) in

@@ -139,7 +139,7 @@ let make_interface_class ~loc ((tparam,tname,tinfo) as tdecl) =
      2 + 3*params_count + 1 extra
   *)
   let prepare_params =
-    let extra = [Typ.var ~loc "extra"] in
+    let extra = [ "extra"] in
     prepare_param_triples ~loc ~extra tparam
   in
 
@@ -147,6 +147,22 @@ let make_interface_class ~loc ((tparam,tname,tinfo) as tdecl) =
     Str.class_single ~loc ~name:(sprintf "class_%s" tname) fields
       ~params:(prepare_params |> invariantize)
   in
+
+  match tinfo with
+  | `Vari xs ->
+      ans @@
+      List.map xs ~f:(function
+      | `Con (name, xs) ->
+          let methname = sprintf "c_%s" name in
+          let xs = List.map xs ~f:MidiAst.ctyp_of in
+          Cf.method_virtual ~loc methname
+            (Typ.chain_arrow ~loc @@
+               (Typ.var loc "inh") :: xs @ [Typ.var ~loc "syn"]
+            )
+      | _ -> assert false
+      )
+  | _ -> assert false
+  (*
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _ ->
         ans
@@ -253,7 +269,7 @@ let make_interface_class ~loc ((tparam,tname,tinfo) as tdecl) =
           in
           helper typ
     )
-
+  *)
 
 let make_gcata_typ ~loc tdecl =
   assert false
@@ -311,20 +327,41 @@ let make_gcata_sig ~loc ?(shortname=false) ((params,tname,tinfo) as tdecl) =
   Sig.value ~loc ~name type_
 
 
-let make_gcata_str ~loc tdecl =
-  assert false
-  (* let gcata_pat =
-   *    Pat.var ~loc (sprintf "gcata_%s" tdecl.ptype_name.txt)
-   * in
-   * let ans k =
-   *   Str.single_value ~loc
-   *        gcata_pat
-   *        [%expr fun tr inh t -> [%e k] ]
-   * in
-   * visit_typedecl ~loc tdecl
+let make_gcata_str ~loc ((tparams,tname,tinfo) as tdecl) =
+  let gcata_pat =
+     Pat.var ~loc (sprintf "gcata_%s" tname)
+  in
+  let ans k =
+    Str.single_value ~loc
+      gcata_pat
+      (Exp.fun_list ~loc [Pat.var ~loc "tr"; Pat.var ~loc "inh"; Pat.var ~loc "subj"]
+         k)
+  in
+  match tinfo with
+  | `Vari xs ->
+      ans @@
+      Exp.match_ ~loc (Exp.ident ~loc "subj") @@
+      List.map xs ~f:(function
+        | `Con (name, xs) ->
+            let argnames = List.map xs ~f:(fun _ -> gen_symbol ()) in
+            let pat = Pat.constr ~loc name (List.map ~f:(Pat.var ~loc) argnames) in
+
+            let rhs =
+              Exp.app_list ~loc
+                (Exp.(send ~loc (ident ~loc "tr") (Printf.sprintf "c_%s" name)))
+                (List.map ~f:(Exp.ident ~loc) argnames)
+            in
+            (pat,None,rhs)
+      | _ -> assert false
+      )
+  | _ -> assert false
+
+  (* visit_typedecl ~loc tdecl
    *   ~onrecord:(fun _labels ->
    *       let methname = sprintf "do_%s" tdecl.ptype_name.txt in
-   *       ans [%expr [%e Exp.send (Exp.ident "tr") (Located.mk ~loc methname) ] inh t]
+   *       ans @@ Exp.apply_list ~loc
+   *         (Exp.send ~loc (Exp.ident ~loc "tr") (Located.mk ~loc methname))
+   *         (Exp.ident ~loc "inh"; Exp.ident ~loc "t"]
    *     )
    *   ~onvariant:(fun cds ->
    *     ans @@ prepare_patt_match ~loc [%expr t] (`Algebraic cds) (fun cd names ->
@@ -437,12 +474,18 @@ let collect_plugins_sig ~loc ((tparams,name,tinfo) as tdecl) plugins =
     ]
 
 (* for structures *)
-let do_typ ~loc plugins is_rec tdecl : MLast.str_item list =
+let do_typ ~loc plugins is_rec ((params,name,tinfo) as tdecl) =
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata_str ~loc tdecl in
 
+  let decls = [] in
+  (* let decls = match Str.tdecl ~loc ~name ~params (MidiAst.ctyp_of tinfo) with
+   * | Some si -> [si]
+   * | None -> []
+   * in *)
   List.concat
-    [ [intf_class; gcata]
+    [ decls
+    ; [intf_class; gcata]
     (* ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl) *)
     ; [ collect_plugins_str ~loc tdecl plugins ]
     ]

@@ -115,6 +115,7 @@ let tdecl_to_descr loc t =
   in
   (args, name, convert t.tdDef)
 
+
 let generate_str tdecls loc =
   let _ : (type_decl * 'a) list = tdecls in
   let decls = List.map fst tdecls in
@@ -123,6 +124,7 @@ let generate_str tdecls loc =
    List.flatten @@
    List.map (fun (t,info) ->
      let (argnames, typname, descr) = tdecl_to_descr loc t in
+     (* let (_:int) = descr in *)
      Hack_expander.str_type_decl ~loc ~path:1 (Recursive, [(argnames,typname,descr)])
      (* <:str_item< type $list:[t]$ >> *)
    ) tdecls
