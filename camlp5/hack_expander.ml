@@ -20,7 +20,7 @@ let (@@) = Caml.(@@)
 
 type config_plugin = Skip | Use of int list (* Plugin_intf.plugin_args *)
 
-(* module Make(AstHelpers : GTHELPERS_sig.S) = struct *)
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 (* module Plugin = Plugin.Make(AstHelpers) *)
 
@@ -450,7 +450,7 @@ let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
  *     Str.modtype ~loc (module_type_declaration ~loc ~name ~type_) *)
 
 
-let collect_plugins_str ~loc ((tparams,tname,tinfo) as tdecl) plugins : MLast.str_item =
+let collect_plugins_str ~loc ((tparams,tname,tinfo) as tdecl) plugins : Str.t =
   let plugin_fields =
     List.map plugins ~f:(fun p ->
       Cf.method_concrete ~loc p#plugin_name @@
@@ -474,17 +474,17 @@ let collect_plugins_sig ~loc ((tparams,name,tinfo) as tdecl) plugins =
     ]
 
 (* for structures *)
-let do_typ ~loc plugins is_rec ((params,name,tinfo) as tdecl) =
+let do_typ ~loc sis plugins is_rec ((params,name,tinfo) as tdecl) =
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata_str ~loc tdecl in
 
-  let decls = [] in
+  (* let decls = [] in *)
   (* let decls = match Str.tdecl ~loc ~name ~params (MidiAst.ctyp_of tinfo) with
    * | Some si -> [si]
    * | None -> []
    * in *)
   List.concat
-    [ decls
+    [ sis
     ; [intf_class; gcata]
     (* ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl) *)
     ; [ collect_plugins_str ~loc tdecl plugins ]
@@ -534,28 +534,28 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * ) @
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
-(* let registered_plugins : (string * _ ) list =
- *   [ (let module M = Compare.Make(GtHelpers) in
- *      M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
- *   ; (let module M = Show   .Make(GtHelpers) in
- *      M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
- *   ; (let module M = Gmap   .Make(GtHelpers) in
- *      M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
- *   ; (let module M = Foldl  .Make(GtHelpers) in
- *      M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
- *   ; (let module M = Show_typed.Make(GtHelpers) in
- *      M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
- *   ; (let module M = Eq     .Make(GtHelpers) in
- *      M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
- *   ]
- *
- * let wrap_plugin name = function
- * | Skip -> id
- * | Use args ->
- *     match List.Assoc.find registered_plugins name ~equal:String.equal with
- *     | Some p -> List.cons (p args :> Plugin_intf.t)
- *     | None -> failwithf "Plugin '%s' is not registered" name ()
- * ;; *)
+let registered_plugins : (string * _ ) list =
+  [ (let module M = Show   .Make(GtHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+  (* ; (let module M = Compare.Make(GtHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+   * ;  (let module M = Gmap   .Make(GtHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+   * ; (let module M = Foldl  .Make(GtHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+   * ; (let module M = Show_typed.Make(GtHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
+   * ; (let module M = Eq     .Make(GtHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) ) *)
+  ]
+
+let wrap_plugin name = function
+| Skip -> id
+| Use args ->
+    match List.Assoc.find registered_plugins name ~equal:String.equal with
+    | Some p -> List.cons (p args :> Plugin_intf.t)
+    | None -> failwithf "Plugin '%s' is not registered" name ()
+;;
 
 let sig_type_decl ~loc ~path
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
@@ -578,7 +578,7 @@ let sig_type_decl ~loc ~path
       List.concat_map ~f:(do_typ_sig ~loc plugins false) tdls
 
 
-let str_type_decl ~loc ~path
+let str_type_decl ~loc ~path si
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
     ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls)
@@ -595,10 +595,10 @@ let str_type_decl ~loc ~path
 
   match rec_flag, tdls with
   | Recursive, []      -> []
-  | Recursive, [tdecl] -> do_typ ~loc plugins true tdecl
+  | Recursive, [tdecl] -> do_typ ~loc si plugins true tdecl
   | Recursive, ts      -> do_mutal_types ~loc plugins ts
   | Nonrecursive, ts ->
-      List.concat_map ~f:(do_typ ~loc plugins false) tdls
+      List.concat_map ~f:(do_typ ~loc si plugins false) tdls
 
 let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     use_compare use_eq use_show_type =
@@ -617,4 +617,4 @@ let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     ~use_eq:(wrap use_eq)
     info
 
-(* end *)
+end

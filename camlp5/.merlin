@@ -2,4 +2,6 @@ PKG camlp5
 PKG base ppxlib
 
 SRC .
+SRC ../ppx
 B ../_build/camlp5
+B ../_build/ppx

@@ -1,0 +1,4 @@
+SRC .
+B ../_build/ext
+
+PKG base,ppxlib

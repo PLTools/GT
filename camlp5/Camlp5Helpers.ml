@@ -3,9 +3,15 @@ open Ploc
 open MLast
 
 module Located = struct
+  type t = Ploc.t
   let mk ~loc lident = lident
 end
+type loc = Located.t
+
+type type_var = MLast.type_var
+
 module Pat = struct
+  type t = MLast.patt
   let any ~loc () = <:patt< _ >>
   let var ~loc s  = <:patt< $lid:s$ >>
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt
@@ -36,6 +42,7 @@ end
 let class_structure ~self ~fields = (self, fields)
 
 module Exp = struct
+  type t = MLast.expr
   let ident ~loc s = <:expr< $lid:s$ >>
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:expr< $lid:s$ >>) fmt
@@ -61,6 +68,7 @@ module Exp = struct
 end
 
 module Typ = struct
+  type t = MLast.ctyp
   let of_longident ~loc lid =
     let open Ppxlib.Longident in
     let wrap s =
@@ -94,6 +102,8 @@ module Typ = struct
 end
 
 module Str = struct
+  type t = MLast.str_item
+  let of_tdecls ~loc ts = <:str_item< type $list:ts$ >>
   let single_value ~loc pat body =
     StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body ])
 
@@ -118,6 +128,7 @@ module Str = struct
 end
 
 module Sig = struct
+  type t = MLast.sig_item
   let value ~loc ~name typ =
     SgVal (loc, Ploc.VaVal name, typ)
   (* let type_ ~loc recflg *)
@@ -125,6 +136,7 @@ end
 
 
 module Cf = struct
+  type t = MLast.class_str_item
   let method_concrete ~loc name body_expr =
     <:class_str_item< method $lid:name$ = $body_expr$ >>
 
@@ -158,7 +170,7 @@ let prepare_param_triples ~loc ?(extra=[]) names =
   in
   ans
 
-let invariantize xs =
+let invariantize xs : type_var list =
   List.map (fun p -> (Ploc.VaVal p,None)) xs
 
 

@@ -15,7 +15,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 .DEFAULT_GOAL :=  all
 
-.PHONY: all syntax lib camlp5_plugins ppx bundle samples
+.PHONY: all ext syntax lib camlp5_plugins ppx bundle samples
 .PHONY: celan clean rebuild clean_tests install uninstall
 .PHONY: tests test regression promote
 
@@ -23,7 +23,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 OBTARGETS=
 OBPARAMS=
-all: syntax lib ppx do_compile bundle #standalone_rewriter bundle
+all: syntax do_compile bundle #standalone_rewriter bundle
 
 do_compile:
 	$(OB) $(OBPARAMS) $(OBTARGETS)
@@ -33,7 +33,7 @@ lib:
 
 syntax:
 	$(eval OBTARGETS += camlp5/pa_gt.cmo camlp5/pp5gt.cma)
-	$(eval OBPARAMS  += -Is ppx)
+	$(eval OBPARAMS  += -Is ext)
 
 ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \

@@ -11,6 +11,17 @@ let get_val loc = function
 | VaVal x -> x
 | _       -> failwith "could not get VaVal _ (should not happen)"
 
+type descr_t =
+           [ `Poly of
+              [ `Con of string * ctyp typ list | `Type of ctyp typ ] list
+          | `Struct of (string * bool * ctyp typ) list
+          | `Tuple of ctyp typ list
+          | `Vari of
+              [ `Con of string * ctyp typ list
+               | `Tuple of ctyp typ list
+               | `Type of ctyp typ ]
+              list ]
+
 let tdecl_to_descr loc t =
   let name = get_val loc (snd (get_val loc t.tdNam)) in
   let args =
@@ -124,8 +135,9 @@ let generate_str tdecls loc =
    List.flatten @@
    List.map (fun (t,info) ->
      let (argnames, typname, descr) = tdecl_to_descr loc t in
-     (* let (_:int) = descr in *)
-     Hack_expander.str_type_decl ~loc ~path:1 (Recursive, [(argnames,typname,descr)])
+     let (_:int) = descr in
+     let sis = Camlp5Helpers.Str.of_tdecls ~loc decls :: [] in
+     Hack_expander.str_type_decl ~loc ~path:1 sis (Recursive, [(argnames,typname,descr)])
      (* <:str_item< type $list:[t]$ >> *)
    ) tdecls
   in
