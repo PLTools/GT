@@ -8,7 +8,8 @@ module Located = struct
 end
 type loc = Located.t
 
-type type_var = MLast.type_var
+type type_arg = MLast.type_var
+let named_type_arg s = (Some s, None)
 
 module Pat = struct
   type t = MLast.patt
@@ -155,12 +156,17 @@ end
  *       names
  *   in
  *   ps @ [ default_inh; default_syn] @ extra *)
-let prepare_param_triples ~loc ?(extra=[]) names =
-  let default_inh = "inh" in
-  let default_syn = "syn" in
+let prepare_param_triples ~loc ?(extra=[])
+    ?(inh=fun ~loc s -> "i"^s)
+    ?(syn=fun ~loc s -> "s"^s)
+    ?(default_syn= "inh")
+    ?(default_inh= "syn")
+    names : type_arg list =
+  (* let default_inh = "inh" in
+   * let default_syn = "syn" in *)
 
-  let inh = fun ~loc s -> "i"^s in
-  let syn = fun ~loc s -> "s"^s in
+  (* let inh = fun ~loc s -> "i"^s in
+   * let syn = fun ~loc s -> "s"^s in *)
   let ps = List.concat @@ List.map (fun s ->
       [s; inh ~loc s; syn ~loc s])
       names
@@ -168,13 +174,13 @@ let prepare_param_triples ~loc ?(extra=[]) names =
   let ans = List.map (fun s -> Some s)
       (ps @ [ default_inh; default_syn] @ extra)
   in
-  ans
-
-let invariantize xs : type_var list =
-  List.map (fun p -> (Ploc.VaVal p,None)) xs
+  List.map (fun p -> (Ploc.VaVal p, None)) ans
 
 
-let () = ()
+(* let invariantize xs : type_var list =
+ *   List.map (fun p -> (Ploc.VaVal p,None)) xs *)
+
+
 
 (* let make_new_names ?(prefix="") n =
  *   List.init n ~f:(fun n ->

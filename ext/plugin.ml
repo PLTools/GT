@@ -2,21 +2,22 @@ open Base
 open Ppxlib
 open Printf
 open Asttypes
-open Parsetree
+(* open Parsetree *)
 open Ast_helper
 open Location
-open Ppxlib.Ast_builder.Default
+(* open Ppxlib.Ast_builder.Default *)
 open HelpersBase
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 open AstHelpers
+module Intf = Plugin_intf.Make(AstHelpers)
 
 let self_arg_name = "fself"
-let construct_extra_param ~loc = Typ.var ~loc "extra"
+let construct_extra_param ~loc = named_type_arg "extra"
 
 class virtual ['self] generator initial_args = object(self: 'self)
-  inherit Plugin_intf.t
+  inherit [_] Intf.t
 
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
@@ -46,19 +47,19 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
   method extra_class_sig_members _ = []
   method extra_class_str_members _ = []
-  method cur_name tdecl = tdecl.ptype_name.txt
+  method cur_name (_,tname,_) = tname
 
   (* preparing class of transformation for [tdecl] *)
-  method make_class ~loc tdecl ~is_rec mutal_names =
+  method make_class ~loc ((tnames,tname,tinfo) as tdecl) ~is_rec mutal_names =
     let cur_name = self#cur_name tdecl in
     let k fields =
       let inh_params =
         let inh_params = prepare_param_triples ~loc
             ~inh:(fun ~loc -> self#inh_of_param tdecl)
             ~syn:self#syn_of_param
-            ~default_syn:(self#default_syn tdecl)
-            ~default_inh:(self#default_inh tdecl)
-            tdecl.ptype_params
+            ~default_syn:(self#default_syn ~loc tdecl)
+            ~default_inh:(self#default_inh ~loc tdecl)
+            tnames
         in
         inh_params @ [self#extra_param_stub ~loc]
       in
@@ -72,7 +73,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
       | Ptyp_var _ -> false
       | Ptyp_constr ({txt=Lident s}, params)
         when String.equal s cur_name &&
-             List.length params = List.length tdecl.ptype_params &&
+             List.length params = List.length tnames &&
              List.for_all2_exn params tdecl.ptype_params
                ~f:(fun a (b,_) -> 0=compare_core_type a b)
         -> is_rec
@@ -465,7 +466,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
       Str.value ~loc ~flag @@ List.map tdecls ~f:on_tdecl
 
 
-  method do_single_sig ~(loc:location) ~(is_rec: bool) (tdecl: type_declaration) : signature =
+  method do_single_sig ~loc ~is_rec tdecl  =
     List.concat
     [ self#make_class_sig ~loc ~is_rec tdecl []
     ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
@@ -476,7 +477,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     ; self#make_trans_functions ~loc ~is_rec [] [tdecl]
     ]
 
-  method do_mutals ~(loc: Location.t) ~(is_rec: bool) tdecls : structure_item list =
+  method do_mutals ~loc ~(is_rec: bool) tdecls : Str.t list =
     (* for mutal recursion we need to generate two classes and one function *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
     List.map tdecls ~f:(fun tdecl ->

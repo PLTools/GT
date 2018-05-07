@@ -1,47 +1,54 @@
-open Ppxlib
+(* open Ppxlib *)
 
-type plugin_args = (longident * expression) list
+type plugin_args = (Ppxlib.longident * Ppxlib.expression) list
 
-class virtual t = object
+type 'a decl_info = string list * string * 'a MidiAst.typ
+
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+open AstHelpers
+
+class virtual ['a] t = object
   method virtual plugin_name : string
 
-  method virtual default_inh : type_declaration -> core_type
+  method virtual default_inh : loc:loc -> 'a decl_info -> Typ.t
 
   (* synthethized attribute for whole type declaration *)
-  method virtual default_syn : type_declaration -> core_type
-  method virtual syn_of_param : loc:location -> string  -> core_type
-  method virtual inh_of_param : type_declaration -> string -> core_type
+  method virtual default_syn  : loc:loc -> 'a decl_info -> Typ.t
+  method virtual syn_of_param : loc:loc -> string -> Typ.t
+  method virtual inh_of_param : 'a decl_info -> string -> Typ.t
 
   (* The parameters that the plugin class will have in its definition.
    * Add ['extra] manually if needed *)
-  method virtual plugin_class_params: type_declaration -> core_type list
+  method virtual plugin_class_params: 'a decl_info -> Typ.t list
 
   (* Arguments of inherit class field that will be generated using the types
    * applied in the RHS of type definition *)
-  method virtual prepare_inherit_typ_params_for_alias: loc:location ->
-    type_declaration -> core_type list -> core_type list
+  method virtual prepare_inherit_typ_params_for_alias: loc:loc ->
+    'a decl_info -> Typ.t list -> Typ.t list
 
-  method virtual extra_class_sig_members: type_declaration -> class_type_field list
-  method virtual extra_class_str_members: type_declaration -> class_field list
+  method virtual extra_class_sig_members: 'a decl_info -> Ctf.t list
+  method virtual extra_class_str_members: 'a decl_info -> Cf.t list
 
 
   (* These methods will be implemented in plugin.ml *)
   method virtual do_single_sig :
-    loc:location ->
+    loc:loc ->
     is_rec:bool ->
-    type_declaration ->
-    signature_item list
+    'a decl_info ->
+    Sig.t list
   method virtual do_single :
-    loc:location ->
+    loc:loc ->
     is_rec:bool ->
-    type_declaration ->
-    structure_item list
+    'a decl_info ->
+    Str.t list
 
-  method virtual make_trans_function_name: type_declaration -> string
-  method virtual make_trans_function_typ : type_declaration -> core_type
+  method virtual make_trans_function_name: 'a decl_info -> string
+  method virtual make_trans_function_typ : 'a decl_info -> Typ.t
 
   method virtual do_mutals :
-    loc:location ->
+    loc:loc ->
     is_rec:bool ->
-    type_declaration list -> structure_item list
+    'a decl_info list -> Str.t list
+end
+
 end

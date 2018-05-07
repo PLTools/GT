@@ -11,3 +11,17 @@ let ctyp_of = function
   | Self     (t, _, _)
   | Instance (t, _, _)
   | Tuple    (t, _) -> t
+
+
+
+module X = struct
+  (* type tdecl_manifest = *)
+  type typ = TVar of string
+           | TApp of Ppxlib.longident * typ list
+           | TRecord of (string * typ) list
+           | TAlias of string * typ
+           | TAdt of string * typ list
+
+
+
+end

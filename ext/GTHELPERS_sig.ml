@@ -5,7 +5,10 @@ module Located :
     val mk : loc:'a -> 'b -> 'b
   end
 type loc = Located.t
-type type_var
+
+type type_arg
+val named_type_arg : string -> type_arg
+
 module Pat :
   sig
     type t
@@ -46,6 +49,10 @@ and Cf :
     val method_concrete : loc:loc -> string -> Exp.t -> t
     val method_virtual : loc:loc -> string -> Typ.t -> t
   end
+and Ctf :
+  sig
+    type t
+  end
 module Str :
   sig
     type t
@@ -54,7 +61,7 @@ module Str :
     val class_single :
       loc:loc ->
       name:string ->
-      params:type_var list -> Cf.t list -> t
+      params:type_arg list -> Cf.t list -> t
     val tdecl : loc:loc -> name:string -> params:string list -> Typ.t -> t
   end
 module Sig :
@@ -63,9 +70,15 @@ module Sig :
     val value : loc:loc -> name:string -> Typ.t -> t
   end
 
-val prepare_param_triples :
-  loc:'a -> ?extra:string list -> string list -> string option list
 
-val invariantize : string option list -> type_var list
+val prepare_param_triples :
+  loc:loc -> ?extra:string list ->
+  ?inh:(loc:loc -> string -> Typ.t) ->
+  ?syn:(loc:loc -> string -> Typ.t) ->
+  ?default_inh: Typ.t ->
+  ?default_syn: Typ.t ->
+  string list -> Typ.t list
+
+(* val invariantize : string option list -> type_var list *)
 
 end
