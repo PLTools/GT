@@ -137,6 +137,8 @@ let generate_str tdecls loc =
      let (argnames, typname, descr) = tdecl_to_descr loc t in
      let (_:int) = descr in
      let sis = Camlp5Helpers.Str.of_tdecls ~loc decls :: [] in
+     let caml_ast = Ast2pt.implem "asdf" sis in
+     assert (List.length caml_ast  =  1);
      Hack_expander.str_type_decl ~loc ~path:1 sis (Recursive, [(argnames,typname,descr)])
      (* <:str_item< type $list:[t]$ >> *)
    ) tdecls

@@ -3,3 +3,4 @@ B ../_build/ext
 
 PKG base
 PKG ppxlib
+PKG ppxlib.metaquot

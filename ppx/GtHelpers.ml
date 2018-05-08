@@ -201,62 +201,6 @@ let map_type_param_names ~f ps =
     | Ptyp_var name -> f name
     | _ -> failwith "bad argument of map_type_param_names")
 
-open Longident
-let affect_longident ~f = function
-  | Lident x -> Lident (f x)
-  | (Ldot _) as l -> l
-  | (Lapply (_,_)) as l -> l
-
-let rec map_longident ~f = function
-  | Lident x -> Lident (f x)
-  | Ldot (l,s) -> Ldot(l, f s)
-  | Lapply (l,r) -> Lapply (l, map_longident ~f r)
-
-let map_core_type ~onvar t =
-  let rec helper t =
-    match t.ptyp_desc with
-    | Ptyp_any -> t
-    | Ptyp_var name -> onvar name
-    | Ptyp_constr (name, args) ->
-      {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
-    | Ptyp_tuple args ->
-      {t with ptyp_desc= Ptyp_tuple (List.map ~f:helper args) }
-    | Ptyp_variant (rows,flg,opt) ->
-      let rows = List.map rows ~f:(function
-          | Rinherit t -> Rinherit (helper t)
-          | Rtag (name,attrs, flg, params) ->
-            let params = List.map params ~f:helper in
-            Rtag (name,attrs,flg, params)
-        )
-      in
-      {t with ptyp_desc= Ptyp_variant (rows,flg,opt) }
-    | _ -> t
-  in
-  helper t
-
-let compare_core_type a b =
-  String.compare
-    (Format.easy_string Pprintast.core_type a)
-    (Format.easy_string Pprintast.core_type b)
-
-let make_gt_a_typ ?(loc=Location.none)
-    ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself])
-    ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
-  (* TODO: maybe add extra string argument to concat it with type variables to get
-              ('a_inh, 'a, 'a_syn, 'heck) GT.a
-  *)
-  [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
-
-let arr_of_param ?(loc=Location.none)
-    ?(loc=Location.none) ?(inh=fun s -> Typ.var @@ "i"^s)
-    ?(syn=fun s -> Typ.var @@ "s"^s) t =
-  (* does from 'a the 'ia -> 'a -> 'sa *)
-  match t.ptyp_desc with
-  | Ptyp_var n ->
-      (n, [],
-        [%type: [%t inh n] -> [%t Typ.var n] -> [%t syn n]] )
-  | _ ->
-      failwith "arr_of_param: not all type params are supported"
 
 let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
     ?(normal=fun ~loc s -> Typ.var ~loc @@ s)
@@ -282,11 +226,6 @@ let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
  *   let f (t,_) = arr_of_param ~inh ~syn t in
  *   ptyp_object ~loc (List.map ~f root_type.ptype_params) Asttypes.Closed *)
 
-let using_type ~typename root_type =
-  let loc = root_type.ptype_loc in
-  (* generation type specification by type declaration *)
-  ptyp_constr ~loc (Located.lident ~loc typename) (List.map ~f:fst @@ root_type.ptype_params)
-
 let inh_syn_ts ?(loc=Location.none) () = [ [%type: 'inh]; [%type: 'syn] ]
 (* Used when we need to check that type we working on references himself in
   it's body *)
@@ -300,28 +239,9 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
   )
 
 
-let visit_typedecl ~loc
-  ?(onrecord  =fun _ -> not_implemented ~loc "record types")
-  ?(onmanifest=fun _ -> not_implemented ~loc "manifest")
-  ?(onvariant =fun _ -> not_implemented ~loc "vairant types")
-    tdecl =
-  match tdecl.ptype_kind with
-  | Ptype_record r -> onrecord r
-  | Ptype_open     -> not_implemented ~loc "open types"
-  | Ptype_variant cds -> onvariant cds
-  | Ptype_abstract ->
-      match tdecl.ptype_manifest with
-      | None -> failwith "abstract types without manifest can't be supported"
-      | Some typ -> onmanifest typ
-
 let make_new_names ?(prefix="") n =
   List.init n ~f:(fun n -> Printf.sprintf "%s_%c" prefix
     Base.Char.(of_int_exn (n + to_int 'a')) )
-
-let unfold_tuple t =
-  match t.ptyp_desc with
-  | Ptyp_tuple ts -> ts
-  | _ -> [t]
 
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
@@ -385,23 +305,3 @@ let prepare_patt_match ~loc what constructors make_rhs =
   | `Algebraic cdts -> on_alg cdts
   | `PolyVar cs -> on_poly cs
 
-let with_constr_typ typ ~ok ~fail =
-  match typ.ptyp_desc with
-  | Ptyp_constr (cid,params) -> ok cid params
-  | _ -> fail ()
-
-let constr_of_tuple ?(loc=Location.none) ts =
-  let new_lident = Ldot (Lident "GT", Printf.sprintf "tuple%d" @@ List.length ts) in
-  Typ.constr ~loc (Located.mk ~loc new_lident) ts
-
-let is_polyvariant typ =
-  match typ.ptyp_desc with
-  | Ptyp_variant (_,_,_) -> true
-  | _ -> false
-
-let is_polyvariant_tdecl tdecl =
-  let loc = tdecl.ptype_loc in
-  visit_typedecl ~loc tdecl
-    ~onrecord:(fun _ -> false)
-    ~onvariant:(fun _ -> false)
-    ~onmanifest:(fun typ -> is_polyvariant typ)
