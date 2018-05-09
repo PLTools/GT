@@ -24,7 +24,7 @@ class virtual ['a] t = object
   (* Arguments of inherit class field that will be generated using the types
    * applied in the RHS of type definition *)
   method virtual prepare_inherit_typ_params_for_alias: loc:loc ->
-    Ppxlib.type_declaration -> Ppxlib.core_type list -> type_arg list
+    Ppxlib.type_declaration -> Ppxlib.core_type list -> Typ.t list
 
   method virtual extra_class_sig_members: Ppxlib.type_declaration -> Ctf.t list
   method virtual extra_class_str_members: Ppxlib.type_declaration -> Cf.t list

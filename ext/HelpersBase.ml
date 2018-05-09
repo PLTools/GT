@@ -119,6 +119,57 @@ let unfold_tuple t =
   | Ptyp_tuple ts -> ts
   | _ -> [t]
 
+let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
+  let open Ppxlib.Ast_builder.Default in
+  let k cs = pexp_match ~loc what cs in
+  let rs =
+    List.map rows ~f:(function
+        | Rtag (lab, _, _, args) ->
+          let args = match args with
+            | [t] -> unfold_tuple t
+            | [] -> []
+            | _ -> failwith "we don't support conjunction types"
+          in
+          let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
+          let lhs = ppat_variant ~loc  lab @@ match args with
+            | [] -> None
+            | _  -> Some (ppat_tuple ~loc @@
+                          List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s))
+                            names)
+          in
+          case ~guard:None ~lhs
+            ~rhs:(onrow lab @@ List.zip_exn names args)
+        | Rinherit typ ->
+          match typ.ptyp_desc with
+          | Ptyp_constr({txt;loc},ts) ->
+            let newname = "subj" in
+            let lhs = ppat_alias ~loc (ppat_type ~loc (Located.mk ~loc txt))
+                (Located.mk ~loc newname)
+            in
+            case ~guard:None ~lhs ~rhs:(oninherit ts txt newname)
+          | _ -> failwith "this inherit field isn't supported"
+
+      )
+  in
+  let ls = match labels with
+    | None -> []
+    | Some ls -> List.map ls ~f:(fun lab ->
+        let newname = "subj" in
+        let lhs = ppat_alias ~loc (ppat_type ~loc (Located.mk ~loc (Lident lab)) )
+            (Located.mk ~loc newname)
+        in
+        case ~guard:None ~lhs ~rhs:(onlabel lab newname)
+      )
+  in
+  k @@ rs@ls
+
+let map_type_param_names ~f ps =
+  List.map ps ~f:(fun (t,_) ->
+    match t.ptyp_desc with
+    | Ptyp_var name -> f name
+    | _ -> failwith "bad argument of map_type_param_names")
+
+
 
 (* let make_gt_a_typ ?(loc=Location.none)
  *     ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself])

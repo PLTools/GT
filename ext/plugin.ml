@@ -2,26 +2,53 @@ open Base
 open Ppxlib
 open Printf
 open Asttypes
-(* open Parsetree *)
-open Ast_helper
-open Location
-(* open Ppxlib.Ast_builder.Default *)
 open HelpersBase
+
+let self_arg_name = "fself"
+let extra_param_name = "extra"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 open AstHelpers
 module Intf = Plugin_intf.Make(AstHelpers)
 
-let self_arg_name = "fself"
-let extra_param_name = "extra"
-(* let construct_extra_param ~loc = named_type_arg "extra" *)
+let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
+  let k cs = Exp.match_ ~loc what cs in
+  let rs =
+    List.map rows ~f:(function
+        | Rtag (lab, _, _, args) ->
+          let args = match args with
+            | [t] -> unfold_tuple t
+            | [] -> []
+            | _ -> failwith "we don't support conjunction types"
+          in
+          let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
+          let lhs = Pat.variant ~loc  lab @@ match args with
+            | [] -> None
+            | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
+          in
+          case ~lhs ~rhs:(onrow lab @@ List.zip_exn names args)
+        | Rinherit typ ->
+          match typ.ptyp_desc with
+          | Ptyp_constr({txt;_},ts) ->
+            let newname = "subj" in
+            let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc txt)) newname
+            in
+            case ~lhs ~rhs:(oninherit ts txt newname)
+          | _ -> failwith "this inherit field isn't supported"
 
-let map_type_param_names ~f ps =
-  List.map ps ~f:(fun (t,_) ->
-    match t.ptyp_desc with
-    | Ptyp_var name -> f name
-    | _ -> failwith "bad argument of map_type_param_names")
+      )
+  in
+  let ls = match labels with
+    | None -> []
+    | Some ls -> List.map ls ~f:(fun lab ->
+        let newname = "subj" in
+        let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc (Lident lab)) ) newname
+        in
+        case ~lhs ~rhs:(onlabel lab newname)
+      )
+  in
+  k @@ rs@ls
 
 class virtual ['self] generator initial_args = object(self: 'self)
   inherit [_] Intf.t
@@ -70,7 +97,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             ~default_inh:(self#default_inh ~loc tdecl)
             tnames
         in
-        inh_params @ [named_type_arg extra_param_name]
+        inh_params @ [named_type_arg ~loc extra_param_name]
       in
       self#wrap_class_definition ~loc mutal_names tdecl ~inh_params
         ((self#extra_class_str_members tdecl) @ fields)
@@ -115,7 +142,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
         Cl.fun_list ~loc names body
       )
       @@
-      [ Cf.inherit_ ~loc (Cl.constr ~loc (Lident ("class_"^cur_name)) inh_params)
+      [ Cf.inherit_ ~loc (Cl.constr ~loc (Lident ("class_"^cur_name))
+                            (List.map ~f:(Typ.of_type_arg ~loc) inh_params))
       ] @ fields
 
   (* shortened class only used for mutally recursive declarations *)
@@ -136,9 +164,9 @@ class virtual ['self] generator initial_args = object(self: 'self)
           )
         ~params:(new_params)
         [ Cf.inherit_ ~loc @@ Cl.apply ~loc
-            (Cl.constr ~loc (Lident stub_name) new_params)
-            (
-             List.map ~f:(Exp.sprintf ~loc "%s") mut_funcs @
+            (Cl.constr ~loc (Lident stub_name) @@
+             List.map ~f:(Typ.of_type_arg ~loc) new_params)
+            (List.map ~f:(Exp.sprintf ~loc "%s") mut_funcs @
              [Exp.sprintf ~loc "%s" self_arg_name] @
              (self#apply_fas_in_new_object ~loc tdecl))
         ]
@@ -218,20 +246,20 @@ class virtual ['self] generator initial_args = object(self: 'self)
                   Ctf.method_ ~loc (sprintf "c_%s" lab) ~virt:false @@
                   match typs with
                   | [] -> Typ.(chain_arrow ~loc
-                                 [ of_type_arg @@ self#default_inh ~loc tdecl
-                                 ; of_type_arg @@ self#default_syn ~loc tdecl]
+                                 [ of_type_arg ~loc @@ self#default_inh ~loc tdecl
+                                 ; of_type_arg ~loc @@ self#default_syn ~loc tdecl]
                               )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
-                             [of_type_arg @@ self#default_inh ~loc tdecl] @
+                             [of_type_arg ~loc @@ self#default_inh ~loc tdecl] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
-                             [of_type_arg @@ self#default_syn ~loc tdecl]
+                             [of_type_arg ~loc @@ self#default_syn ~loc tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
-                             [of_type_arg @@ self#default_inh ~loc tdecl] @
+                             [of_type_arg ~loc @@ self#default_inh ~loc tdecl] @
                              (List.map ~f:Typ.from_caml typs) @
-                             [of_type_arg @@ self#default_syn ~loc tdecl]
+                             [of_type_arg ~loc @@ self#default_syn ~loc tdecl]
                           )
                 end
               )
@@ -256,22 +284,23 @@ class virtual ['self] generator initial_args = object(self: 'self)
      * ) *)
 
 
-  method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
+  method make_inherit_args_for_alias ~loc ~is_self_rec tdecl (do_typ: loc:loc -> core_type -> Exp.t)  cid cparams =
     let args =
       List.mapi cparams ~f:(fun i t ->
           (* printf "checking for arg with index (%d+1)\n%!" i; *)
           try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal (i+1)
+            |> Exp.from_caml
           with Caml.Not_found -> do_typ ~loc t
         )
     in
     (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
     (* TODO: make consistent with self_arg_name *)
-    (self#generate_for_variable ~loc "self") :: (List.map ~f:Exp.from_caml args)
+    (self#generate_for_variable ~loc "self") :: args
 
 
   (* When we got declaration of type alias via type application *)
-  method got_constr ~loc ~is_self_rec tdecl do_typ cid cparams k =
+  method got_constr ~loc ~is_self_rec tdecl (do_typ: loc:loc -> core_type -> Exp.t) cid cparams k =
     (* printf "got a constr\n%!"; *)
     (* self#show_args; *)
     let ans args : Cf.t list =
@@ -365,11 +394,11 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
     let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
     let syn_t  = self#default_syn ~loc tdecl in
-    Typ.(arrow ~loc subj_t @@ of_type_arg syn_t)
+    Typ.(arrow ~loc subj_t @@ of_type_arg ~loc syn_t)
 
   method make_typ_of_mutal_trf ~loc mutal_tdecl (k: Typ.t -> _)  =
     let subj_t = Typ.use_tdecl mutal_tdecl in
-    k Typ.(arrow ~loc subj_t (of_type_arg @@ self#default_syn ~loc mutal_tdecl))
+    k Typ.(arrow ~loc subj_t (of_type_arg ~loc @@ self#default_syn ~loc mutal_tdecl))
 
     (* k @@ Typ.from_caml [%type: ([%t subj_t] -> [%t self#default_syn ~loc mutal_tdecl]) ] *)
 
@@ -378,7 +407,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
   **)
   method make_typ_of_class_argument ~loc tdecl name k =
     let subj_t = Typ.var ~loc name in
-    let syn_t = Typ.of_type_arg @@self#syn_of_param ~loc name in
+    let syn_t = Typ.of_type_arg ~loc @@ self#syn_of_param ~loc name in
     k @@ Typ.arrow ~loc subj_t syn_t
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
@@ -388,7 +417,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let subj_t = Option.value subj_t
         ~default:(Typ.use_tdecl tdecl) in
     let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
-    Typ.arrow ~loc subj_t (Typ.of_type_arg syn_t)
+    Typ.arrow ~loc subj_t (Typ.of_type_arg ~loc syn_t)
 
   method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
     [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ]
@@ -486,7 +515,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
       Str.values ~loc @@ List.map tdecls ~f:on_tdecl
 
 
-  method do_single_sig ~loc ~is_rec tdecl  =
+  method do_single_sig ~loc ~is_rec tdecl =
     List.concat
     [ self#make_class_sig ~loc ~is_rec tdecl []
     ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
@@ -556,7 +585,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
   (* do_type_gen will return an expression which after being applied
    * to inherited attribute and subject will return synthetized one
    *)
-  method do_typ_gen ~loc ~mutal_names ~is_self_rec t =
+  method do_typ_gen ~loc ~mutal_names ~is_self_rec t : Exp.t =
     let access_plugins ~loc e =
       Exp.(acc_list ~loc e
              [ uid ~loc "GT"
@@ -637,7 +666,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
               prepare_patt_match_poly ~loc esubj rows maybe_labels
                 ~onrow
                 ~onlabel:(fun _ _ -> Exp.int_const ~loc 1)
-                ~oninherit:(oninherit einh esubj)
+                ~oninherit:(oninherit ~loc einh esubj)
             )
           end
         | _ -> failwith "Finish it!"
@@ -646,7 +675,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
 
   method compose_apply_transformations ~loc ~left right typ =
-    Exp.apply1 ~loc left right
+    Exp.app ~loc left right
 end
 
 end
