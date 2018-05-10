@@ -1,6 +1,8 @@
 Extension
 Core2
 Plugin
+Plugin_intf
+Show
 Hack_expander
 HelpersBase
 Camlp5Helpers

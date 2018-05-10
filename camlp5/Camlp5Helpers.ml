@@ -1,4 +1,5 @@
 #load "q_MLast.cmo";;
+(* open HelpersBase *)
 open Ploc
 open MLast
 
@@ -145,12 +146,26 @@ module Typ = struct
 
   let ident ~loc s = <:ctyp< $lid:s$ >>
   let var ~loc s = <:ctyp< '$s$ >>
+  let app ~loc l r = <:ctyp< $l$ $r$ >>
+  let any ~loc  = <:ctyp< _ >>
+
   let constr ~loc lident =
     let init = of_longident ~loc lident in
     function
     | []    -> init
-    | x::xs -> List.fold_left (fun l r -> <:ctyp< $l$ . $r$ >>) init xs
-  let app ~loc l r = <:ctyp< $l$ $r$ >>
+    | [r]   -> <:ctyp< $init$ $r$ >>
+    | lt ->
+      List.fold_left (app ~loc) init lt
+      (* let r = <:ctyp< ( $list:lt$ ) >> in
+       * <:ctyp< $init$ $r$ >> *)
+
+  let class_ ~loc lident  =
+    let init = <:ctyp< # $list:Longident.flatten lident$ >> in
+    function
+    | []    -> init
+    (* | [r]   -> <:ctyp< $init$ $r$ >> *)
+    | lt ->
+      List.fold_left (app ~loc) init lt
 
   let of_type_arg ~loc (s,_) = match s with
     | VaVal (Some s) -> ident ~loc s
@@ -167,8 +182,17 @@ module Typ = struct
     let init = List.hd r in
     List.fold_left (fun acc x -> arrow ~loc x acc) init (List.tl r)
 
-  let from_caml _ = assert false
-
+  let from_caml root_typ =
+    let rec helper typ =
+      let loc = loc_from_caml typ.Ppxlib.ptyp_loc in
+      match typ.ptyp_desc with
+      | Ptyp_any   -> <:ctyp< _ >>
+      | Ptyp_var s -> <:ctyp< '$s$ >>
+      | Ptyp_arrow (lab, l, r) -> arrow ~loc (helper l) (helper r)
+      | Ptyp_constr ({txt;_}, ts) -> constr ~loc txt (List.map helper ts)
+      | _ -> assert false
+    in
+    helper root_typ
   (* this might need to be changed *)
   let variant ~loc ?(is_open=false) fs =
     let vs = fs |> List.map (function
@@ -195,10 +219,38 @@ type type_declaration = MLast.type_decl
 
 module Str = struct
   type t = MLast.str_item
-  let of_tdecls ~loc ts =
-    (* <:str_item< type $list:ts$ >> *)
+  let of_tdecls ~loc td =
+    let open Ppxlib in
+    let tdPrm = HelpersBase.map_type_param_names td.ptype_params
+        ~f:(fun s -> named_type_arg ~loc s)
+    in
+    let tdDef =
+      match td.ptype_kind with
+      | Ptype_variant cds ->
+        let llslt = List.map (fun cd ->
+            let args =
+              match cd.pcd_args with
+              | Pcstr_record _ -> assert false
+              | Pcstr_tuple ts ->  List.map Typ.from_caml ts
+            in
+            (loc, VaVal cd.pcd_name.txt, VaVal args, None)
+          ) cds
+        in
+        MLast.TySum (loc, Ploc.VaVal llslt)
+      | _ -> assert false
+
+    in
+    let t =
+      { tdNam = VaVal (loc, VaVal td.ptype_name.txt);
+        tdPrm = VaVal tdPrm;
+        tdPrv = VaVal false;
+        tdDef;
+        tdCon = VaVal []
+      }
+    in
+    <:str_item< type $list:[t]$ >>
     (* TODO *)
-    assert false
+    (* assert false *)
   let single_value ~loc pat body =
     StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body ])
 
@@ -228,7 +280,17 @@ module Sig = struct
   type t = MLast.sig_item
   let value ~loc ~name typ =
     SgVal (loc, Ploc.VaVal name, typ)
-  (* let type_ ~loc recflg *)
+    (* let type_ ~loc recflg *)
+
+  let class_ ~loc ~name ~params ?(virt=false) ?(wrap=(fun x -> x)) fields =
+    (* TODO: wrap *)
+    let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
+              ciPrm = (loc, Ploc.VaVal params);
+              ciNam = Ploc.VaVal name;
+              ciExp = wrap @@ CtSig (loc, Ploc.VaVal None, Ploc.VaVal fields)
+            }
+    in
+    <:sig_item< class $list:[c]$ >>
 end
 
 module Vb = struct
@@ -268,12 +330,16 @@ module Cty = struct
 end
 module Cl = struct
   type t = class_expr
-  (* let apply ~loc l xs =
-   *   List.fold_left (fun acc r -> <:class_expr< $acc$ $r$ >>) l  xs
-   *
-   *
-   * let constr ~loc lident args =
-   *   <:class_expr< [ $list:lt$ ] $list:ls$ >> *)
+  let constr ~loc lident args =
+    let ls = Longident.flatten lident in
+    <:class_expr< [ $list:args$ ] $list:ls$ >>
+  let apply ~loc l xs =
+    List.fold_left (fun acc r -> <:class_expr< $acc$ $r$ >>) l  xs
+  let fun_ ~loc p ce = <:class_expr< fun $p$ -> $ce$ >>
+  let fun_list ~loc ps ce =
+    List.fold_right (fun_ ~loc) ps ce
+
+
 end
 module Ctf = struct
   type t = class_sig_item
@@ -294,11 +360,11 @@ end
  *       names
  *   in
  *   ps @ [ default_inh; default_syn] @ extra *)
-let prepare_param_triples ~loc ?(extra=[])
-    ?(inh=fun ~loc s -> "i"^s)
-    ?(syn=fun ~loc s -> "s"^s)
-    ?(default_syn= "inh")
-    ?(default_inh= "syn")
+let prepare_param_triples ~loc:loc ?(extra=[])
+    ?(inh=fun ~loc:loc s -> named_type_arg ~loc @@ "i"^s)
+    ?(syn=fun ~loc:loc s -> named_type_arg ~loc @@ "s"^s)
+    ?(default_inh=  named_type_arg ~loc @@ "syn")
+    ?(default_syn=  named_type_arg ~loc @@ "inh")
     names : type_arg list =
   (* let default_inh = "inh" in
    * let default_syn = "syn" in *)
@@ -306,13 +372,15 @@ let prepare_param_triples ~loc ?(extra=[])
   (* let inh = fun ~loc s -> "i"^s in
    * let syn = fun ~loc s -> "s"^s in *)
   let ps = List.concat @@ List.map (fun s ->
-      [s; inh ~loc s; syn ~loc s])
+      [ named_type_arg ~loc s; inh ~loc s; syn ~loc s])
       names
   in
-  let ans = List.map (fun s -> Some s)
-      (ps @ [ default_inh; default_syn] @ extra)
-  in
-  List.map (fun p -> (Ploc.VaVal p, None)) ans
+  ps @ [ default_inh; default_syn] @ (List.map (named_type_arg ~loc) extra)
+  (* let ans = List.map (fun s -> Some s)
+   *     (ps @ [ default_inh; default_syn] @ extra)
+   * in
+   * ans *)
+  (* List.map (fun p -> (Ploc.VaVal p, None)) ans *)
 
 
 (* let invariantize xs : type_var list =

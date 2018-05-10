@@ -67,8 +67,10 @@ and Typ :
     val of_type_arg: loc:loc -> type_arg -> t
     val of_longident : loc:loc -> Ppxlib.longident -> t
     val var : loc:loc -> string -> t
+    val any : loc:loc -> t
     val ident : loc:loc -> string -> t
     val constr : loc:loc -> Ppxlib.longident -> t list -> t
+    val class_ : loc:loc -> Ppxlib.longident -> t list -> t
     val object_ : loc:loc -> Ppxlib.closed_flag -> (string * t) list -> t
     val arrow : loc:loc -> t -> t -> t
     val chain_arrow : loc:loc -> t list -> t

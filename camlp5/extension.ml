@@ -32,104 +32,110 @@ open Ploc
 open Plugin
 open Core2
 
-let tdecl_to_descr loc t =
-  let name = get_val loc (snd (get_val loc t.tdNam)) in
-  let args = 
-    map (fun (x, _) -> 
-     match get_val loc x with
-	   | Some y -> y
-	   | None   -> oops loc "wildcard type parameters not supported"
-    )
-    (get_val loc t.tdPrm)
-  in
-  let convert = 
-    let convert_concrete typ = 
-      let rec inner = function
-      | <:ctyp< ( $list:typs$ ) >> as typ -> Tuple (typ, map inner typs)
-      | <:ctyp< ' $a$ >> as typ -> Variable (typ, a)
-      | <:ctyp< $t$ $a$ >> as typ -> 
-          (match inner t, inner a with
-           | _, Arbitrary _ -> Arbitrary typ
-           | Instance (_, targs, tname), a -> Instance (typ, targs@[a], tname)
-           | _ -> Arbitrary typ
-          )
-      | <:ctyp< $q$ . $t$ >> as typ -> 
-          (match inner q, inner t with
-          | Instance (_, [], q), Instance (_, [], t) -> Instance (typ, [], q@t)
-          | _ -> Arbitrary typ
-          )
-      | (<:ctyp< $uid:n$ >> | <:ctyp< $lid:n$ >>) as typ -> Instance (typ, [], [n])
-      | t -> Arbitrary t      
-      in
-      let rec replace = function
-      | Tuple (t, typs) -> Tuple (t, map replace typs)
-      | Instance (t, args', qname) as orig when qname = [name] ->
-         (try
-           let args' =
-             map (function 
-	               | Variable (_, a) -> a
-                 | _ -> invalid_arg "Not a variable"
-                 )
-             args'
-           in
-           if args' = args then Self (t, args, qname) else orig
-         with Invalid_argument "Not a variable" -> orig
-         )
-      | x -> x
-      in
-      replace (inner typ)
-    in
-    function
-    | <:ctyp< [ $list:const$ ] >> | <:ctyp< $_$ == $priv:_$ [ $list:const$ ] >> -> 
-       let const = map (fun (loc, name, args, d) ->
-	       match d with
-			   | None -> `Con (get_val loc name, map convert_concrete (get_val loc args))
-			   | _    -> oops loc "unsupported constructor declaration"
-         )
-         const
-    	in
-      `Vari const
 
-    | <:ctyp< { $list:fields$ } >> | <:ctyp< $_$ == $priv:_$ { $list:fields$ } >> ->
-      let fields = map (fun (_, name, mut, typ) -> name, mut, convert_concrete typ) fields in
-      `Struct fields
+let hdtl loc xs = (List.hd xs, List.tl xs)
+let trait_proto_t typ trait = Printf.sprintf "%s_proto_%s" trait typ
+let class_t name = name ^ "_t"
+let trait_t typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
 
-    | <:ctyp< ( $list:typs$ ) >> -> `Tuple (map convert_concrete typs)
-
-    | <:ctyp< [ = $list:variants$ ] >> -> 
-      let wow () = oops loc "unsupported polymorphic variant type constructor declaration" in
-      let variants =
-        map (function
-	       | <:poly_variant< $typ$ >> -> 
-            (match convert_concrete typ with
-            | Arbitrary _ -> wow ()
-            | typ -> `Type typ
-            )
-	       | <:poly_variant< ` $c$ >> -> `Con (c, [])
-	       | <:poly_variant< ` $c$ of $list:typs$ >> -> 
-		   let typs = 
-		     flatten (
-		       map (function 
-			    | <:ctyp< ( $list:typs$ ) >> -> map convert_concrete typs 
-			    | typ -> [convert_concrete typ]
-			   ) 
-		           typs
-		     ) 
-		   in
-		   `Con (c, typs)
-	       | _ -> wow ()
-	      ) 
-	    variants 
-	in
-        `Poly variants
-
-    | typ -> 
-	(match convert_concrete typ with
-	 | Arbitrary _ -> oops loc "unsupported type"
-	 | typ         -> `Vari [match typ with Variable (t, _) -> `Tuple [Tuple (<:ctyp< ($list:[t]$) >>, [typ])] | _ -> `Type typ]
-	)
-  in
-  (args, name, convert t.tdDef)
+(* let tdecl_to_descr loc t =
+ *   let name = get_val loc (snd (get_val loc t.tdNam)) in
+ *   let args =
+ *     map (fun (x, _) ->
+ *      match get_val loc x with
+ * 	   | Some y -> y
+ * 	   | None   -> oops loc "wildcard type parameters not supported"
+ *     )
+ *     (get_val loc t.tdPrm)
+ *   in
+ *   let convert =
+ *     let convert_concrete typ =
+ *       let rec inner = function
+ *       | <:ctyp< ( $list:typs$ ) >> as typ -> Tuple (typ, map inner typs)
+ *       | <:ctyp< ' $a$ >> as typ -> Variable (typ, a)
+ *       | <:ctyp< $t$ $a$ >> as typ ->
+ *           (match inner t, inner a with
+ *            | _, Arbitrary _ -> Arbitrary typ
+ *            | Instance (_, targs, tname), a -> Instance (typ, targs@[a], tname)
+ *            | _ -> Arbitrary typ
+ *           )
+ *       | <:ctyp< $q$ . $t$ >> as typ ->
+ *           (match inner q, inner t with
+ *           | Instance (_, [], q), Instance (_, [], t) -> Instance (typ, [], q@t)
+ *           | _ -> Arbitrary typ
+ *           )
+ *       | (<:ctyp< $uid:n$ >> | <:ctyp< $lid:n$ >>) as typ -> Instance (typ, [], [n])
+ *       | t -> Arbitrary t
+ *       in
+ *       let rec replace = function
+ *       | Tuple (t, typs) -> Tuple (t, map replace typs)
+ *       | Instance (t, args', qname) as orig when qname = [name] ->
+ *          (try
+ *            let args' =
+ *              map (function
+ * 	               | Variable (_, a) -> a
+ *                  | _ -> invalid_arg "Not a variable"
+ *                  )
+ *              args'
+ *            in
+ *            if args' = args then Self (t, args, qname) else orig
+ *          with Invalid_argument "Not a variable" -> orig
+ *          )
+ *       | x -> x
+ *       in
+ *       replace (inner typ)
+ *     in
+ *     function
+ *     | <:ctyp< [ $list:const$ ] >> | <:ctyp< $_$ == $priv:_$ [ $list:const$ ] >> ->
+ *        let const = map (fun (loc, name, args, d) ->
+ * 	       match d with
+ * 			   | None -> `Con (get_val loc name, map convert_concrete (get_val loc args))
+ * 			   | _    -> oops loc "unsupported constructor declaration"
+ *          )
+ *          const
+ *     	in
+ *       `Vari const
+ *
+ *     | <:ctyp< { $list:fields$ } >> | <:ctyp< $_$ == $priv:_$ { $list:fields$ } >> ->
+ *       let fields = map (fun (_, name, mut, typ) -> name, mut, convert_concrete typ) fields in
+ *       `Struct fields
+ *
+ *     | <:ctyp< ( $list:typs$ ) >> -> `Tuple (map convert_concrete typs)
+ *
+ *     | <:ctyp< [ = $list:variants$ ] >> ->
+ *       let wow () = oops loc "unsupported polymorphic variant type constructor declaration" in
+ *       let variants =
+ *         map (function
+ * 	       | <:poly_variant< $typ$ >> ->
+ *             (match convert_concrete typ with
+ *             | Arbitrary _ -> wow ()
+ *             | typ -> `Type typ
+ *             )
+ * 	       | <:poly_variant< ` $c$ >> -> `Con (c, [])
+ * 	       | <:poly_variant< ` $c$ of $list:typs$ >> ->
+ * 		   let typs =
+ * 		     flatten (
+ * 		       map (function
+ * 			    | <:ctyp< ( $list:typs$ ) >> -> map convert_concrete typs
+ * 			    | typ -> [convert_concrete typ]
+ * 			   )
+ * 		           typs
+ * 		     )
+ * 		   in
+ * 		   `Con (c, typs)
+ * 	       | _ -> wow ()
+ * 	      )
+ * 	    variants
+ * 	in
+ *         `Poly variants
+ *
+ *     | typ ->
+ * 	(match convert_concrete typ with
+ * 	 | Arbitrary _ -> oops loc "unsupported type"
+ * 	 | typ         -> `Vari [match typ with Variable (t, _) -> `Tuple [Tuple (<:ctyp< ($list:[t]$) >>, [typ])] | _ -> `Type typ]
+ * 	)
+ *   in
+ *   (args, name, convert t.tdDef) *)
 
 (* let _ : int = Core.generate *)
 
@@ -220,7 +226,9 @@ EXTEND
 
   t_decl: [[
     "["; t=type_decl; "]" -> t, []
-  | t=type_decl; d=OPT deriving -> t, [tdecl_to_descr loc t, match d with None -> [] | Some d -> d]
+  | t=type_decl; d=OPT deriving ->
+    (* t, [tdecl_to_descr loc t, match d with None -> [] | Some d -> d] *)
+    t, (match d with None -> [] | Some d -> d)
   ]];
 
   deriving: [["with"; s=LIST1 LIDENT SEP "," -> s]];

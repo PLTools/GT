@@ -91,106 +91,108 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
 let inh_syn_ts ~loc = [ Typ.var ~loc "inh"; Typ.var ~loc "syn" ]
 
 let make_interface_class_sig ~loc tdecl =
-  assert false
-  (* let params = List.map ~f:fst tdecl.ptype_params in
-   * let name = tdecl.ptype_name in
-   *
-   * let k fields =
-   *   let prepare_params =
-   *     let middle = [Typ.var ~loc extra_var_name] in
-   *     prepare_param_triples ~loc ~middle tdecl.ptype_params
-   *   in
-   *   Sig.class_ ~loc ~virt:Virtual
-   *     ~name:(sprintf "class_%s" name.txt)
-   *     ~params:(prepare_params |> invariantize)
-   *     fields
-   *
-   * in
-   * visit_typedecl ~loc tdecl
-   *   ~onrecord:(fun _labels ->
-   *       k []
-   *     )
-   *   ~onvariant:(fun cds ->
-   *     k @@
-   *     List.map cds ~f:(fun cd ->
-   *       let methname = sprintf "c_%s" cd.pcd_name.txt in
-   *       match cd.pcd_args with
-   *       | Pcstr_record _ -> not_implemented "record constructors"
-   *       | Pcstr_tuple ts ->
-   *           Ctf.method_ ~loc methname
-   *              (List.fold_right ts ~init:(Typ.var ~loc "syn") ~f:(Typ.arrow ~loc)
-   *               |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
-   *              )
-   *     )
-   *   )
-   *   ~onmanifest:(fun typ ->
-   *         let wrap name params =
-   *           let inh_params =
-   *               List.concat_map params ~f:(fun typ ->
-   *                 [ typ
-   *                 ; map_core_type typ ~onvar:(fun n -> Typ.var ("i"^n) )
-   *                 ; map_core_type typ ~onvar:(fun n -> Typ.var ("s"^n) )
-   *                 ]
-   *               )
-   *           in
-   *           let inh_params = List.concat
-   *               [ inh_params
-   *               ; inh_syn_ts ~loc ()
-   *               ; [Typ.var ~loc extra_var_name]
-   *               ]
-   *           in
-   *
-   *           [ Ctf.inherit_ ~loc @@
-   *             Cty.constr (Located.mk ~loc @@
-   *                         map_longident ~f:(sprintf "class_%s") name)
-   *               inh_params
-   *           ]
-   *         in
-   *
-   *         let rec helper typ = match typ with
-   *         | [%type: string]
-   *         | [%type: char]
-   *         | [%type: int]  ->
-   *           not_implemented "%s " Caml.__FILE__ (\* Caml.__LINE__ *\)
-   *         | _ -> match typ.ptyp_desc with
-   *         | Ptyp_var name -> not_implemented "antiphantom types"
-   *         | Ptyp_constr ({txt;loc}, params) ->
-   *           (\* a type alias on toplevel *\)
-   *           k @@ wrap txt params
-   *         | Ptyp_tuple ts ->
-   *           (\* let's say we have predefined aliases for now *\)
-   *           let loc = typ.ptyp_loc in
-   *           let new_lident = Ldot (Lident "GT", sprintf "tuple%d" @@ List.length ts) in
-   *           helper @@ Typ.constr ~loc (Located.mk ~loc new_lident) ts
-   *         | Ptyp_alias (typ, new_name) ->
-   *             map_core_type typ ~onvar:(fun as_ ->
-   *               if String.equal as_ new_name
-   *               then Typ.constr (Located.lident ~loc name.txt) params
-   *               else Typ.var ~loc as_
-   *             ) |> helper
-   *         | Ptyp_variant (rows,_,labels) ->
-   *             (\* rows go to virtual methods. label goes to inherit fields *\)
-   *             let meths =
-   *               List.concat_map rows ~f:(function
-   *               | Rtag (lab,_,_,args)  ->
-   *                 let methname = sprintf "c_%s" lab in
-   *                 [ Ctf.method_ ~loc methname @@
-   *                     (List.fold_right args ~init:[%type: 'syn]
-   *                        ~f:(Typ.arrow ~loc)
-   *                      |> (Typ.arrow ~loc [%type: 'inh])
-   *                     )
-   *                 ]
-   *               | Rinherit typ -> match typ.ptyp_desc with
-   *                 | Ptyp_constr ({txt;loc}, params) ->
-   *                    wrap txt params
-   *                 | _ -> assert false
-   *               )
-   *             in
-   *             k meths
-   *         | _ -> failwith "not implemented"
-   *         in
-   *         helper typ
-   *   ) *)
+  let params = List.map ~f:fst tdecl.ptype_params in
+  let name = tdecl.ptype_name in
+
+  let k fields =
+    let prepare_params =
+      let extra = [Plugin.extra_param_name] in
+      let tnames  = map_type_param_names tdecl.ptype_params ~f:id in
+      prepare_param_triples ~loc ~extra tnames
+    in
+    Sig.class_ ~loc ~virt:false
+      ~name:(sprintf "class_%s" name.txt)
+      ~params:prepare_params
+      fields
+
+  in
+  visit_typedecl ~loc tdecl
+    ~onrecord:(fun _labels ->
+        k []
+      )
+    ~onvariant:(fun cds ->
+      k @@
+      List.map cds ~f:(fun cd ->
+        let methname = sprintf "c_%s" cd.pcd_name.txt in
+        match cd.pcd_args with
+        | Pcstr_record _ -> not_implemented "record constructors"
+        | Pcstr_tuple ts ->
+          (* Abstract out the type below  *)
+            Ctf.method_ ~loc methname
+              (List.fold_right ts ~init:(Typ.var ~loc "syn")
+                 ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+                |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+               )
+      )
+    )
+    ~onmanifest:(fun typ ->
+          let wrap name params =
+            let inh_params =
+                List.concat_map params ~f:(fun typ ->
+                  [ typ
+                  ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                  ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
+                  ]
+                )
+              |> List.map ~f:Typ.from_caml
+            in
+            let inh_params = List.concat
+                [ inh_params
+                ; inh_syn_ts ~loc
+                ; [ Typ.var ~loc Plugin.extra_param_name ]
+                ]
+            in
+
+            [ Ctf.inherit_ ~loc @@
+              Cty.constr ~loc (map_longident ~f:(sprintf "class_%s") name)
+                inh_params
+            ]
+          in
+
+          let rec helper typ = match typ with
+          | _ -> match typ.ptyp_desc with
+          | Ptyp_var name -> not_implemented "antiphantom types"
+          | Ptyp_constr ({txt;loc}, params) ->
+            (* a type alias on toplevel *)
+            k @@ wrap txt params
+          | Ptyp_tuple ts ->
+            (* let's say we have predefined aliases for now *)
+            let new_lident = Ldot (Lident "GT", sprintf "tuple%d" @@ List.length ts) in
+            let open Ppxlib.Ast_builder.Default in
+            let loc = typ.ptyp_loc in
+            helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) ts
+          | Ptyp_alias (typ, new_name) ->
+            let loc = typ.ptyp_loc in
+            map_core_type typ ~onvar:(fun as_ ->
+                let open Ppxlib.Ast_builder.Default in
+                if String.equal as_ new_name
+                then ptyp_constr ~loc
+                    (Located.lident ~loc name.txt) params
+                else ptyp_var ~loc as_
+              ) |> helper
+          | Ptyp_variant (rows,_,labels) ->
+              (* rows go to virtual methods. label goes to inherit fields *)
+              let meths =
+                List.concat_map rows ~f:(function
+                | Rtag (lab,_,_,args)  ->
+                  let methname = sprintf "c_%s" lab in
+                  [ Ctf.method_ ~loc methname @@
+                      (List.fold_right args ~init:(Typ.var ~loc "syn")
+                         ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+                       |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+                      )
+                  ]
+                | Rinherit typ -> match typ.ptyp_desc with
+                  | Ptyp_constr ({txt;loc}, params) ->
+                     wrap txt params
+                  | _ -> assert false
+                )
+              in
+              k meths
+          | _ -> failwith "not implemented"
+          in
+          helper typ
+    )
 
 let make_interface_class ~loc tdecl =
   let params = List.map ~f:fst tdecl.ptype_params in
@@ -207,7 +209,7 @@ let make_interface_class ~loc tdecl =
 
   let ans ?(is_poly=false) fields =
     Str.class_single ~loc ~name:(sprintf "class_%s" name.txt) fields
-      ~params:(prepare_params)
+      ~params:prepare_params
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _ ->
@@ -265,7 +267,6 @@ let make_interface_class ~loc tdecl =
             ans @@ wrap txt params
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
-            (* let loc = typ.ptyp_loc in *)
             let new_lident = Ldot (Lident "GT", sprintf "tuple%d" @@ List.length ts)
             in
             let open Ppxlib.Ast_builder.Default in
@@ -316,52 +317,53 @@ let make_interface_class ~loc tdecl =
     )
 
 let make_gcata_typ ~loc tdecl =
-  assert false
-  (* let tr_t = visit_typedecl ~loc tdecl
-   *     ~onrecord:(fun _ ->
-   *         Typ.object_ ~loc Open @@
-   *         [ sprintf "do_%s" tdecl.ptype_name.txt,
-   *           [%type: 'inh -> [%t core_type_of_type_declaration tdecl] -> 'syn]
-   *         ]
-   *       )
-   *     ~onvariant:(fun cds ->
-   *         Typ.object_ ~loc Open @@
-   *         List.map cds
-   *           ~f:(fun cd ->
-   *             match cd.pcd_args with
-   *             | Pcstr_tuple ts ->
-   *                 sprintf "c_%s" cd.pcd_name.txt,
-   *                 Typ.chain_arrow ~loc ([%type: 'inh]::ts@[[%type: 'syn]])
-   *             | Pcstr_record _ -> assert false
-   *           )
-   *       )
-   *     ~onmanifest:(fun typ ->
-   *         match typ.ptyp_desc with
-   *         | Ptyp_constr ({txt;loc}, ts) ->
-   *           (\* there we can fuck up extra argument about polymorphic variants *\)
-   *           let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
-   *               [ Typ.var ~loc name
-   *               ; Typ.any ~loc ()
-   *               ; Typ.var ~loc @@ "s"^name ]
-   *             ) |> List.concat
-   *           in
-   *           let args = args @ [ [%type: 'inh]; [%type: 'syn]; [%type: _]] in
-   *           Typ.class_ ~loc (Lident(sprintf "class_%s" tdecl.ptype_name.txt)) args
-   *         | Ptyp_variant (rows,_flg,_) ->
-   *             let params = map_type_param_names tdecl.ptype_params
-   *                 ~f:(fun s ->
-   *                   [Typ.var ~loc s; Typ.any ~loc (); [%type: 'syn]]
-   *                 )
-   *             in
-   *             Typ.class_ ~loc
-   *               (Lident (sprintf "class_%s" tdecl.ptype_name.txt))
-   *               (List.concat params @
-   *                Typ.[var ~loc "inh"; var ~loc "syn"; any ~loc ()])
-   *         | _ -> assert false
-   *       )
-   * in
-   * let subj_t = using_type ~typename:tdecl.ptype_name.txt tdecl in
-   * Typ.chain_arrow ~loc [ tr_t; [%type: 'inh]; subj_t; [%type: 'syn] ] *)
+  let tr_t = visit_typedecl ~loc tdecl
+      ~onrecord:(fun _ ->
+          Typ.object_ ~loc Open @@
+          [ sprintf "do_%s" tdecl.ptype_name.txt,
+            Typ.(chain_arrow ~loc
+              [var ~loc "inh"; use_tdecl tdecl; var ~loc "syn"]
+                )
+          ]
+        )
+      ~onvariant:(fun cds ->
+          Typ.object_ ~loc Open @@
+          List.map cds
+            ~f:(fun cd -> match cd.pcd_args with
+                | Pcstr_tuple ts ->
+                  let new_ts = (List.map ts ~f:(Typ.from_caml)) @ [Typ.var ~loc "syn"] in
+                  let new_ts = Typ.var ~loc "inh" :: new_ts in
+                  (sprintf "c_%s" cd.pcd_name.txt, Typ.chain_arrow ~loc new_ts)
+              | Pcstr_record _ -> assert false
+            )
+        )
+      ~onmanifest:(fun typ ->
+          match typ.ptyp_desc with
+          | Ptyp_constr ({txt;_}, ts) ->
+            (* there we can fuck up extra argument about polymorphic variants *)
+            let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
+                [ Typ.var ~loc name
+                ; Typ.any ~loc
+                ; Typ.var ~loc @@ "s"^name ]
+              ) |> List.concat
+            in
+            let args = args @ [ Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ] in
+            Typ.class_ ~loc (Lident(sprintf "class_%s" tdecl.ptype_name.txt)) args
+          | Ptyp_variant (rows,_flg,_) ->
+              let params = map_type_param_names tdecl.ptype_params
+                  ~f:(fun s ->
+                    [Typ.var ~loc s; Typ.any ~loc; Typ.var ~loc "syn" ]
+                  )
+              in
+              Typ.class_ ~loc
+                (Lident (sprintf "class_%s" tdecl.ptype_name.txt))
+                (List.concat params @
+                 Typ.[var ~loc "inh"; var ~loc "syn"; any ~loc ])
+          | _ -> assert false
+        )
+  in
+  let subj_t = Typ.use_tdecl tdecl in
+  Typ.(chain_arrow ~loc [ tr_t; var ~loc "inh"; subj_t; var ~loc "syn" ])
 
 let make_gcata_sig ~loc ?(shortname=false) tdecl =
   let type_ = make_gcata_typ ~loc tdecl in
@@ -497,7 +499,7 @@ let collect_plugins_sig ~loc tdecl plugins =
   Typ.constr ~loc (Located.mk ~loc (Ldot (lident "GT", "t")) )
     [ make_gcata_typ ~loc tdecl
     ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
-        (p#plugin_name, p#make_trans_function_typ tdecl)
+        (p#plugin_name, p#make_trans_function_typ ~loc tdecl)
       )
     ]
 
@@ -514,7 +516,7 @@ let do_typ ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; [intf_class; gcata]
-    (* ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl) *)
+    ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
     ; [ collect_plugins_str ~loc tdecl plugins ]
     ]
 
@@ -591,8 +593,8 @@ let sig_type_decl ~loc ~path
     ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls) =
   let plugins =
+    wrap_plugin "show"        use_show  @@
     (* wrap_plugin "compare"     use_compare @@
-     * wrap_plugin "show"        use_show  @@
      * wrap_plugin "gmap"        use_gmap  @@
      * wrap_plugin "foldl"       use_foldl @@
      * wrap_plugin "show_typed"  use_show_type @@
@@ -613,8 +615,8 @@ let str_type_decl ~loc ~path si
     (rec_flag, tdls)
   =
   let plugins =
+    wrap_plugin "show"        use_show  @@
     (* wrap_plugin "compare"     use_compare @@
-     * wrap_plugin "show"        use_show  @@
      * wrap_plugin "gmap"        use_gmap  @@
      * wrap_plugin "foldl"       use_foldl @@
      * wrap_plugin "show_typed"  use_show_type @@

@@ -126,21 +126,47 @@ let tdecl_to_descr loc t =
   in
   (args, name, convert t.tdDef)
 
+module Migr =
+  Migrate_parsetree.Convert(Migrate_parsetree.OCaml_current)(Migrate_parsetree.OCaml_405)
+
+
 
 let generate_str tdecls loc =
   let _ : (type_decl * 'a) list = tdecls in
   let decls = List.map fst tdecls in
   let info = snd @@ List.hd @@ List.rev tdecls in
+
+  let generator_f =
+    let module H = Hack_expander.Make(Camlp5Helpers) in
+    H.str_type_decl ~loc ~path:1
+      ~use_show:(if List.mem "show" info
+                 then Hack_expander.Use [] else Hack_expander.Skip)
+      ~use_show_typed:(if List.mem "show_typed" info
+                       then Hack_expander.Use [] else Hack_expander.Skip)
+      ~use_gmap:(if List.mem "gmap" info
+                 then Hack_expander.Use [] else Hack_expander.Skip)
+      ~use_eq:(if List.mem "eq" info
+               then Hack_expander.Use [] else Hack_expander.Skip)
+      ~use_compare:(if List.mem "compare" info
+                    then Hack_expander.Use [] else Hack_expander.Skip)
+      ~use_foldl:(if List.mem "foldl" info
+                  then Hack_expander.Use [] else Hack_expander.Skip)
+  in
+
   let out =
    List.flatten @@
    List.map (fun (t,info) ->
-     let (argnames, typname, descr) = tdecl_to_descr loc t in
+     (* let (argnames, typname, descr) = tdecl_to_descr loc t in *)
      (* let (_:int) = descr in *)
-     let sis = Camlp5Helpers.Str.of_tdecls ~loc decls :: [] in
-     let caml_ast = Ast2pt.implem "asdf" sis in
+     let sis = <:str_item< type $list:[t]$ >>  in
+     let caml_ast = Ast2pt.implem "asdf" [sis] in
      assert (List.length caml_ast  =  1);
-     let module H = Hack_expander.Make(Camlp5Helpers) in
-     H.str_type_decl ~loc ~path:1 sis (Recursive, [(argnames,typname,descr)])
+     match (List.hd caml_ast).pstr_desc with
+     | Pstr_type (flg, [td]) ->
+       let copied = Migr.copy_type_declaration td in
+       let module H = Hack_expander.Make(Camlp5Helpers) in
+       generator_f [sis] (Recursive, [copied])
+     | _ -> assert false
      (* <:str_item< type $list:[t]$ >> *)
    ) tdecls
   in

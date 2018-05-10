@@ -116,22 +116,22 @@ test: tests
 ######################## Installation related stuff ##########################
 INSTALL_TARGETS=META \
 	$(wildcard _build/camlp5/pa_gt.cmo) \
-	_build/src/GT.cmx \
-	_build/src/GT.cma \
-	_build/src/GT.cmxa \
-	_build/src/GT.a \
-	_build/src/View.cmi \
-	_build/src/HTML.cmi \
-	_build/src/GT.cmi \
-	_build/ppx/ppx_deriving_gt.a \
-	_build/ppx/ppx_deriving_gt.cma \
-	_build/ppx/ppx_deriving_gt.cmxa \
-	_build/ppx/ppx_deriving_gt.cmxs \
-	_build/ppx/ppx_deriving_gt.cmi \
-	_build/ppx/ppx_gt_expander.cma \
-	_build/ppx/ppx_gt_expander.cmxa \
-	_build/ppx/ppx_gt_expander.cmi \
-	_build/ppx/ppx_gt_expander.a \
+	$(wildcard _build/src/GT.cmx)  \
+	$(wildcard _build/src/GT.cma)  \
+	$(wildcard _build/src/GT.cmxa) \
+	$(wildcard _build/src/GT.a)   \
+	$(wildcard _build/src/View.cmi) \
+	$(wildcard _build/src/HTML.cmi) \
+	$(wildcard _build/src/GT.cmi) \
+	$(wildcard _build/ppx/ppx_deriving_gt.a) \
+	$(wildcard _build/ppx/ppx_deriving_gt.cma) \
+	$(wildcard _build/ppx/ppx_deriving_gt.cmxa) \
+	$(wildcard _build/ppx/ppx_deriving_gt.cmxs) \
+	$(wildcard _build/ppx/ppx_deriving_gt.cmi) \
+	$(wildcard _build/ppx/ppx_gt_expander.cma) \
+	$(wildcard _build/ppx/ppx_gt_expander.cmxa) \
+	$(wildcard _build/ppx/ppx_gt_expander.cmi) \
+	$(wildcard _build/ppx/ppx_gt_expander.a) \
 	$(wildcard _build/rewriter/pp_gt.native) \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .cmo,$(PLUGINS))) ) \
 
