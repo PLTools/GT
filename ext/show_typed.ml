@@ -6,22 +6,19 @@
  *)
 
 open Base
+open HelpersBase
 open Ppxlib
 open Printf
-open Ast_helper
-open GtHelpers
-open Ppxlib.Ast_builder.Default
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
-(* module Plugin = Plugin.Make(AstHelpers)
- * open Plugin *)
-module Show = Show.Make(AstHelpers)
-
 let plugin_name = "show_typed"
-let g args = object(self: 'self)
-  inherit ['self] Show.g args as super
+module S = Show.Make(AstHelpers)
+open AstHelpers
 
-  method plugin_name = "show_typed"
+let g args = object(self: 'self)
+  inherit ['self] S.g args as super
+
+  method plugin_name = plugin_name
 
 
   (* TODO: next functions were required for previous implemntation.
@@ -51,7 +48,7 @@ let g args = object(self: 'self)
     (* let str_e = self#string_of_typ ~loc (\* ~is_self_rec *\) @@
      *   using_type ~typename: tdecl.ptype_name.txt tdecl
      * in *)
-    [%expr [%e super#wrap_tr_function_str ~loc tdecl gcata_on_new_expr ]]
+    super#wrap_tr_function_str ~loc tdecl gcata_on_new_expr
 
 
   (* method! generate_for_variable ~loc name =
@@ -61,21 +58,18 @@ let g args = object(self: 'self)
    *   [%expr snd [%e super#extract_transformation ~loc etrf ]] *)
 
 
-  method! prepare_fa_args tdecl =
-    let loc = tdecl.ptype_loc in
+  method! prepare_fa_args ~loc tdecl =
     List.concat @@ map_type_param_names tdecl.ptype_params
-      ~f:(fun s -> [Pat.sprintf "typ_%s" s; Pat.sprintf ~loc "f%s" s])
+      ~f:(fun s -> [Pat.sprintf ~loc "typ_%s" s; Pat.sprintf ~loc "f%s" s])
 
-  method apply_fas_in_new_object tdecl =
-    let loc = tdecl.ptype_loc in
+  method apply_fas_in_new_object ~loc tdecl =
     List.concat @@
     map_type_param_names tdecl.ptype_params
       ~f:(fun s -> [Exp.sprintf ~loc "typ_%s" s; Exp.sprintf ~loc "f%s" s ])
 
-  method! prepare_fa_arg_types tdecl =
-    let loc = tdecl.ptype_loc in
-    List.concat_map (super#prepare_fa_arg_types tdecl)
-      ~f:(fun t -> [ [%type: string]; t])
+  method! prepare_fa_arg_types ~loc tdecl =
+    List.concat_map (super#prepare_fa_arg_types ~loc tdecl)
+      ~f:(fun t -> [ Typ.sprintf ~loc "string"; t])
 
   method private string_of_typ ~loc (* ~is_self_rec *) typ =
       let rec string_of_longident = function
@@ -88,12 +82,12 @@ let g args = object(self: 'self)
         match typ.ptyp_desc with
         | Ptyp_var s -> Exp.sprintf ~loc "typ_%s" s
         | Ptyp_constr ({txt}, []) ->
-            Exp.constant ~loc @@ const_string @@ string_of_longident txt
+            Exp.string_const ~loc @@ string_of_longident txt
         | Ptyp_constr ({txt},ts) ->
             List.map ~f:helper ts
             |> List.fold_right
-              ~f:(fun e acc -> [%expr [%e e] ^ [%e acc]])
-              ~init:(Exp.constant ~loc @@ const_string @@ string_of_longident txt)
+              ~f:(fun e acc -> Exp.app_list ~loc (Exp.ident ~loc "^") [ e; acc ] )
+              ~init:(Exp.string_const ~loc @@ string_of_longident txt)
         |  _ -> assert false
       in
       helper typ
@@ -110,45 +104,46 @@ let g args = object(self: 'self)
           match typ.ptyp_desc with
           | Ptyp_var s -> [Exp.sprintf ~loc "typ_%s" s; Exp.sprintf ~loc "f%s" s ]
           | _ when is_self_rec typ ->
-              [ [%expr "put_self typ here"]; [%expr fself ] ]
+              [ Exp.string_const ~loc "put_self typ here"; Exp.ident ~loc "fself" ]
           | _ -> [ self#string_of_typ ~loc typ; rez]
         )
     in
-    [%expr fself] :: (List.concat xs)
+    (Exp.ident ~loc "fself") :: (List.concat xs)
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings  einh k =
     match bindings with
-    | [] -> k @@ Exp.constant ~loc (Pconst_string ("`"^constr_name, None))
+    | [] -> k @@ Exp.string_const ~loc ("`"^constr_name)
     | _ ->
-      k @@ List.fold_left
-        bindings
-        ~f:(fun acc (name, typ) -> Exp.apply1 ~loc acc
-               [%expr
-                 [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ]
-                 ([%e einh ]: unit)
-                 [%e Exp.ident ~loc name ]
-               ])
-        ~init:[%expr Format.sprintf [%e
-            let fmt = String.concat ~sep:", " @@ List.map bindings
-                ~f:(fun _ -> "%s")
-            in
-            Exp.constant ~loc @@ const_string @@
-            sprintf "`%s(%s)" constr_name fmt
-          ]]
+      assert false
+      (* k @@ List.fold_left
+       *   bindings
+       *   ~f:(fun acc (name, typ) -> Exp.app ~loc acc
+       *          [%expr
+       *            [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ]
+       *            ([%e einh ]: unit)
+       *            [%e Exp.ident ~loc name ]
+       *          ])
+       *   ~init:[%expr Format.sprintf [%e
+       *       let fmt = String.concat ~sep:", " @@ List.map bindings
+       *           ~f:(fun _ -> "%s")
+       *       in
+       *       Exp.constant ~loc @@ const_string @@
+       *       sprintf "`%s(%s)" constr_name fmt
+       *     ]] *)
 
   method! compose_apply_transformations ~loc ~left right typ =
-    let typ_str = [%expr "asdf" ] in
-    Exp.apply_nolabeled left [ typ_str; right ]
+    let typ_str = Exp.string_const ~loc "asdf" in
+    Exp.app_list ~loc  left [ typ_str; right ]
 
   method make_typ_of_mutal_trf ~loc mutal_tdecl k =
     super#make_typ_of_mutal_trf ~loc mutal_tdecl (fun typ ->
-        Cty.arrow ~loc [%type: string ] (k typ)
+        Cty.arrow ~loc (Typ.ident ~loc "string") (k typ)
       )
 
   method make_typ_of_class_argument ~loc tdecl name k =
     super#make_typ_of_class_argument ~loc tdecl name
-      (fun t -> [%type:  string -> [%t k t] ] )
+      (fun t -> Typ.arrow ~loc (Typ.ident ~loc "string") (k t) )
 
   (* is the same as for base class *)
   (* method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =

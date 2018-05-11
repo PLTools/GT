@@ -1,9 +1,9 @@
 open Base
 open Ppxlib
 open Printf
-open Ast_helper
-open Ppxlib.Ast_builder.Default
-open GtHelpers
+(* open Ast_helper
+ * open Ppxlib.Ast_builder.Default
+ * open GtHelpers *)
 
 (* Compare plugin where we pass another value of the same type as 'inh
  * and return true or false
@@ -11,19 +11,18 @@ open GtHelpers
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-module Compare = Compare.Make(AstHelpers)
+module C = Compare.Make(AstHelpers)
 let plugin_name = "eq"
+open AstHelpers
 
 let g initial_args = object(self: 'self)
-  inherit ['self] Compare.g initial_args as super
+  inherit ['self] C.g initial_args as super
 
   method plugin_name = "eq"
 
-  method default_inh = core_type_of_type_declaration
-  method syn_of_param ~loc s = [%type: bool]
-  method default_syn tdecl =
-    let loc = tdecl.ptype_loc in
-    [%type: bool]
+  (* method default_inh = core_type_of_type_declaration *)
+  method syn_of_param ~loc s = Typ.sprintf ~loc "bool"
+  method default_syn ~loc tdecl = self#syn_of_param ~loc "dummy"
 
   (* method inh_of_param tdecl name =
    *   let loc = tdecl.ptype_loc in
@@ -58,9 +57,10 @@ let g initial_args = object(self: 'self)
 
 
   method chain_exprs ~loc e1 e2 =
-    [%expr  [%e e1] && [%e e2] ]
-  method chain_init ~loc =
-    [%expr true ]
+    Exp.app_list ~loc (Exp.ident ~loc "&&") [ e1; e2 ]
+    (* [%expr  [%e e1] && [%e e2] ] *)
+  method chain_init ~loc = Exp.ident ~loc "true"
+    (* [%expr true ] *)
 
   (* method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
    *   let is_poly,cname =

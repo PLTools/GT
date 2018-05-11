@@ -11,12 +11,16 @@ open HelpersBase
 open Ppxlib
 open Printf
 open Ast_helper
-open GtHelpers
-open Ppxlib.Ast_builder.Default
 
 let param_name_mangler = sprintf "%s_2"
 
-let hack_params ?(loc=Location.none) ps =
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
+let plugin_name = "gmap"
+module P = Plugin.Make(AstHelpers)
+open AstHelpers
+
+let hack_params ?(loc=noloc) ps =
   let param_names = map_type_param_names ps ~f:id in
   let rez_names = map_type_param_names ps ~f:param_name_mangler in
   let name_migrations = List.zip_exn param_names rez_names in
@@ -28,24 +32,22 @@ let hack_params ?(loc=Location.none) ps =
   let blownup_params =
     List.concat_map param_names
       ~f:(fun s1 ->
-           [Typ.var ~loc s1; Typ.var ~loc @@ assoc s1 ]
+           [named_type_arg ~loc s1; named_type_arg ~loc @@ assoc s1 ]
          )
   in
   (param_names, rez_names, assoc, blownup_params)
 
-module Make(AstHelpers : GTHELPERS_sig.S) = struct
-let plugin_name = "gmap"
-module Plugin = Plugin.Make(AstHelpers)
-open Plugin
-
 let g args = object(self: 'self)
-  inherit ['self] Plugin.generator args
+  inherit ['self] P.generator args
 
   method plugin_name = plugin_name
 
-  method default_inh _ = let loc = Location.none in [%type: unit]
-  method default_syn tdecl =
-    let loc = tdecl.ptype_loc in
+  method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
+  method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
+  method inh_of_param tdecl _name =
+    self#default_inh ~loc:(loc_from_caml tdecl.ptype_loc) tdecl
+
+  method default_syn ~loc tdecl =
     let param_names,rez_names,find_param,blownup_params =
       hack_params tdecl.ptype_params
     in
@@ -54,7 +56,7 @@ let g args = object(self: 'self)
       let (ident,args) =
           (cur_name, rez_names)
       in
-      Typ.constr ~loc (Located.lident ~loc ident) @@
+      Typ.constr ~loc (Lident ident) @@
       List.map ~f:(Typ.var ~loc) args
     in
     if is_polyvariant_tdecl tdecl
@@ -63,117 +65,111 @@ let g args = object(self: 'self)
       (* [%type: ([> [%t ans]] as 'extra)] *)
     else ans
 
-  method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
-  method inh_of_param tdecl _name = self#default_inh tdecl
 
   method plugin_class_params tdecl =
-    let loc = tdecl.ptype_loc in
+    (* let loc = tdecl.ptype_loc in *)
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
-    blownup_params @ [self#extra_param_stub ~loc]
+    blownup_params @ [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
       hack_params tdecl.ptype_params
     in
-    List.concat_map rhs_args ~f:(fun t ->
-      [t; map_core_type t ~onvar:(fun s -> Typ.var ~loc (find_param s))]
-    ) @ [self#extra_param_stub ~loc]
+    let ps =
+      List.concat_map rhs_args ~f:(fun t ->
+          let open Ppxlib.Ast_builder.Default in
+          [ t
+          ; map_core_type t ~onvar:(fun s -> ptyp_var ~loc:t.ptyp_loc (find_param s))  ]
+        )
+    in
+    (List.map ~f:Typ.from_caml ps) @
+    [ Typ.ident ~loc Plugin.extra_param_name ]
 
+  (* TODO: refactor next two functions *)
   method! extra_class_sig_members tdecl =
-    let loc = tdecl.ptype_loc in
+    let loc = loc_from_caml tdecl.ptype_loc in
     if is_polyvariant_tdecl tdecl
     then
       let _param_names,rez_names,_find_param,_blownup_params =
         hack_params tdecl.ptype_params
       in
       let right = Typ.constr ~loc
-          (Located.map (fun s -> Lident s) tdecl.ptype_name)
+          (Lident tdecl.ptype_name.txt)
           (List.map ~f:(Typ.var ~loc) rez_names)
       in
       let right = openize_poly right in
-      [Ctf.constraint_ ~loc (self#extra_param_stub ~loc) right ]
+      [Ctf.constraint_ ~loc (Typ.ident ~loc Plugin.extra_param_name) right ]
     else []
 
   method! extra_class_str_members tdecl =
-    let loc = tdecl.ptype_loc in
+    let loc = loc_from_caml tdecl.ptype_loc in
     if is_polyvariant_tdecl tdecl
     then
       let _param_names,rez_names,_find_param,_blownup_params =
         hack_params tdecl.ptype_params
       in
-      let right = Typ.constr ~loc
-          (Located.map (fun s -> Lident s) tdecl.ptype_name)
+      let right = Typ.constr ~loc (Lident tdecl.ptype_name.txt)
           (List.map ~f:(Typ.var ~loc) rez_names)
       in
       let right = openize_poly right in
-      [Cf.constraint_ ~loc (self#extra_param_stub ~loc) right ]
+      [Cf.constraint_ ~loc (Typ.ident ~loc Plugin.extra_param_name) right ]
     else []
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings  einh k =
-    let ctuple =
-      match bindings with
-      | [] -> None
-      | _  ->
-        Some (Exp.tuple ~loc @@
-              List.map bindings
-                ~f:(fun (name, typ) ->
-                    [%expr
-                      [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ ]
-                      [%e Exp.ident ~loc name ]
-                    ]
-                  )
-             )
-    in
-    k @@ Exp.variant ~loc constr_name ctuple
+    k @@ Exp.variant ~loc constr_name @@
+    List.map bindings
+      ~f:(fun (name, typ) ->
+          Exp.app ~loc
+            (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+            (Exp.ident ~loc name)
+        )
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
-    let names = make_new_names (List.length ts) in
+    let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
     let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
     k [
-    Cf.method_concrete ~loc methname
-      [%expr fun () -> [%e
-        Exp.fun_list ~args:(List.map names ~f:(Pat.sprintf "%s")) @@
-        let ctuple =
-          if List.length ts = 0
-          then None
-          else Some (Exp.tuple ~loc @@
-                     List.map (List.zip_exn names ts)
-                       ~f:(fun (name, typ) ->
-                           self#app_transformation_expr
-                             (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                             [%expr assert false]
-                             (Exp.ident ~loc name)
-                         )
-                    )
+      Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+
+      Exp.fun_list ~loc
+        (List.map names ~f:(Pat.sprintf ~loc "%s"))
+        (let ctuple =
+           List.map (List.zip_exn names ts)
+             ~f:(fun (name, typ) ->
+                 self#app_transformation_expr ~loc
+                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                   (Exp.assert_false ~loc)
+                   (Exp.ident ~loc name)
+               )
         in
         (match constr_info with `Normal s -> Exp.construct ~loc (lident s)
                               | `Poly s   -> Exp.variant ~loc s
         )
           ctuple
-      ]]
+       )
   ]
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
-    let pat = Pat.record ~loc ~flag:Closed @@
+    let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
-          (Located.lident ~loc:l.pld_name.loc l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+          (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         )
     in
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
-    [ Cf.method_concrete ~loc methname
-        [%expr fun () -> [%e
-          Exp.fun_ ~loc Nolabel None pat @@
+    [ Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+
+          Exp.fun_ ~loc pat @@
           Exp.record ~loc @@ List.map labs
             ~f:(fun {pld_name; pld_type} ->
                 lident pld_name.txt,
-                self#app_transformation_expr
+                self#app_transformation_expr ~loc
                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
-                  [%expr assert false]
+                  (Exp.assert_false ~loc)
                   (Exp.ident ~loc pld_name.txt)
 
               )
-        ]]
     ]
 
 end

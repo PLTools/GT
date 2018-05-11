@@ -23,9 +23,11 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          let lhs = Pat.variant ~loc  lab @@ match args with
-            | [] -> None
-            | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
+          (* let lhs = Pat.variant ~loc  lab @@ match args with
+           *   | [] -> None
+           *   | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
+           * in *)
+          let lhs = Pat.variant ~loc  lab @@ List.map ~f:(Pat.var ~loc) names
           in
           case ~lhs ~rhs:(onrow lab @@ List.zip_exn names args)
         | Rinherit typ ->
@@ -97,7 +99,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             ~default_inh:(self#default_inh ~loc tdecl)
             tnames
         in
-        inh_params @ [named_type_arg ~loc extra_param_name]
+        inh_params @ [ Typ.ident ~loc extra_param_name]
       in
       self#wrap_class_definition ~loc mutal_names tdecl ~inh_params
         ((self#extra_class_str_members tdecl) @ fields)
@@ -142,8 +144,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
         Cl.fun_list ~loc names body
       )
       @@
-      [ Cf.inherit_ ~loc (Cl.constr ~loc (Lident ("class_"^cur_name))
-                            (List.map ~f:(Typ.of_type_arg ~loc) inh_params))
+      [ Cf.inherit_ ~loc (Cl.constr ~loc (Lident ("class_"^cur_name)) inh_params)
       ] @ fields
 
   (* shortened class only used for mutally recursive declarations *)
@@ -246,20 +247,20 @@ class virtual ['self] generator initial_args = object(self: 'self)
                   Ctf.method_ ~loc (sprintf "c_%s" lab) ~virt:false @@
                   match typs with
                   | [] -> Typ.(chain_arrow ~loc
-                                 [ of_type_arg ~loc @@ self#default_inh ~loc tdecl
-                                 ; of_type_arg ~loc @@ self#default_syn ~loc tdecl]
+                                 [ self#default_inh ~loc tdecl
+                                 ; self#default_syn ~loc tdecl]
                               )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
-                             [of_type_arg ~loc @@ self#default_inh ~loc tdecl] @
+                             [self#default_inh ~loc tdecl] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
-                             [of_type_arg ~loc @@ self#default_syn ~loc tdecl]
+                             [self#default_syn ~loc tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
-                             [of_type_arg ~loc @@ self#default_inh ~loc tdecl] @
+                             [self#default_inh ~loc tdecl] @
                              (List.map ~f:Typ.from_caml typs) @
-                             [of_type_arg ~loc @@ self#default_syn ~loc tdecl]
+                             [self#default_syn ~loc tdecl]
                           )
                 end
               )
@@ -394,11 +395,11 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
     let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
     let syn_t  = self#default_syn ~loc tdecl in
-    Typ.(arrow ~loc subj_t @@ of_type_arg ~loc syn_t)
+    Typ.(arrow ~loc subj_t @@ syn_t)
 
   method make_typ_of_mutal_trf ~loc mutal_tdecl (k: Typ.t -> _)  =
     let subj_t = Typ.use_tdecl mutal_tdecl in
-    k Typ.(arrow ~loc subj_t (of_type_arg ~loc @@ self#default_syn ~loc mutal_tdecl))
+    k Typ.(arrow ~loc subj_t (self#default_syn ~loc mutal_tdecl))
 
     (* k @@ Typ.from_caml [%type: ([%t subj_t] -> [%t self#default_syn ~loc mutal_tdecl]) ] *)
 
@@ -407,7 +408,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
   **)
   method make_typ_of_class_argument ~loc tdecl name k =
     let subj_t = Typ.var ~loc name in
-    let syn_t = Typ.of_type_arg ~loc @@ self#syn_of_param ~loc name in
+    let syn_t = self#syn_of_param ~loc name in
     k @@ Typ.arrow ~loc subj_t syn_t
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
@@ -417,7 +418,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let subj_t = Option.value subj_t
         ~default:(Typ.use_tdecl tdecl) in
     let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
-    Typ.arrow ~loc subj_t (Typ.of_type_arg ~loc syn_t)
+    Typ.arrow ~loc subj_t syn_t
 
   method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
     [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ]

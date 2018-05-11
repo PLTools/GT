@@ -2,7 +2,7 @@ true: debug, bin_annot, short_paths
 #, strict_sequence
 
 <ext/*>: package(ppxlib)
-<ext/plugin.ml>: package(ppxlib.metaquot)
+<ext/compare.ml> or <ext/plugin.ml>: package(ppxlib.metaquot)
 
 <camlp5/core2.ml> or <camlp5/extension.ml> or <camlp5/Camlp5Helpers.ml>: syntax(camlp5o), package(camlp5,camlp5.gramlib), for-pack(Pa_gt)
 <camlp5/hack_expander.*>: package(base,ppxlib)

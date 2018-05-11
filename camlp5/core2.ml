@@ -135,14 +135,14 @@ let generate_str tdecls loc =
   let _ : (type_decl * 'a) list = tdecls in
   let decls = List.map fst tdecls in
   let info = snd @@ List.hd @@ List.rev tdecls in
-
+  (* Printf.printf "plugins: %s\n%!" (String.concat ", " info); *)
   let generator_f =
     let module H = Hack_expander.Make(Camlp5Helpers) in
     H.str_type_decl ~loc ~path:1
       ~use_show:(if List.mem "show" info
                  then Hack_expander.Use [] else Hack_expander.Skip)
-      ~use_show_typed:(if List.mem "show_typed" info
-                       then Hack_expander.Use [] else Hack_expander.Skip)
+      ~use_show_type:(if List.mem "show_typed" info
+                      then Hack_expander.Use [] else Hack_expander.Skip)
       ~use_gmap:(if List.mem "gmap" info
                  then Hack_expander.Use [] else Hack_expander.Skip)
       ~use_eq:(if List.mem "eq" info

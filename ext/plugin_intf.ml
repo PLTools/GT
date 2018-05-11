@@ -10,12 +10,12 @@ open AstHelpers
 class virtual ['a] t = object
   method virtual plugin_name : string
 
-  method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> type_arg
+  method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
 
   (* synthethized attribute for whole type declaration *)
-  method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> type_arg
-  method virtual syn_of_param : loc:loc -> string -> type_arg
-  method virtual inh_of_param : Ppxlib.type_declaration -> string -> type_arg
+  method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  method virtual syn_of_param : loc:loc -> string -> Typ.t
+  method virtual inh_of_param : Ppxlib.type_declaration -> string -> Typ.t
 
   (* The parameters that the plugin class will have in its definition.
    * Add ['extra] manually if needed *)

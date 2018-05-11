@@ -148,16 +148,16 @@ module Typ = struct
   let var ~loc s = <:ctyp< '$s$ >>
   let app ~loc l r = <:ctyp< $l$ $r$ >>
   let any ~loc  = <:ctyp< _ >>
+  let alias ~loc t s =
+    let p = ident ~loc s in
+    <:ctyp< $t$ as $p$ >>
 
   let constr ~loc lident =
     let init = of_longident ~loc lident in
     function
     | []    -> init
-    | [r]   -> <:ctyp< $init$ $r$ >>
     | lt ->
       List.fold_left (app ~loc) init lt
-      (* let r = <:ctyp< ( $list:lt$ ) >> in
-       * <:ctyp< $init$ $r$ >> *)
 
   let class_ ~loc lident  =
     let init = <:ctyp< # $list:Longident.flatten lident$ >> in
@@ -349,17 +349,20 @@ module Ctf = struct
 
   let inherit_ ~loc cty = <:class_sig_item< inherit $cty$ >>
 end
-(* let prepare_param_triples ~loc ?(extra=[]) names =
- *   let default_inh = Typ.var ~loc "inh" in
- *   let default_syn = Typ.var ~loc "syn" in
- *
- *   let inh = fun ~loc s -> Typ.var ~loc ("i"^s) in
- *   let syn = fun ~loc s -> Typ.var ~loc ("s"^s) in
- *   let ps = List.concat @@ List.map (fun s ->
- *       [Typ.var ~loc s; inh ~loc s; syn ~loc s])
- *       names
- *   in
- *   ps @ [ default_inh; default_syn] @ extra *)
+
+
+let typ_arg_of_core_type t =
+  match t.Ppxlib.ptyp_desc with
+  | Ptyp_any -> failwith "wildcards are not supported"
+  | Ptyp_var s -> named_type_arg ~loc:(loc_from_caml t.ptyp_loc) s
+  | _ -> assert false
+
+let openize_poly t =
+  match t with
+  | MLast.TyVrn (loc, name, None) -> MLast.TyVrn (loc, name, Some None)
+  | MLast.TyVrn (loc, name, None) -> MLast.TyVrn (loc, name, Some None)
+  | t -> t
+
 let prepare_param_triples ~loc:loc ?(extra=[])
     ?(inh=fun ~loc:loc s -> named_type_arg ~loc @@ "i"^s)
     ?(syn=fun ~loc:loc s -> named_type_arg ~loc @@ "s"^s)
@@ -376,19 +379,3 @@ let prepare_param_triples ~loc:loc ?(extra=[])
       names
   in
   ps @ [ default_inh; default_syn] @ (List.map (named_type_arg ~loc) extra)
-  (* let ans = List.map (fun s -> Some s)
-   *     (ps @ [ default_inh; default_syn] @ extra)
-   * in
-   * ans *)
-  (* List.map (fun p -> (Ploc.VaVal p, None)) ans *)
-
-
-(* let invariantize xs : type_var list =
- *   List.map (fun p -> (Ploc.VaVal p,None)) xs *)
-
-
-
-(* let make_new_names ?(prefix="") n =
- *   List.init n ~f:(fun n ->
- *     Printf.sprintf "%s_%c" prefix
- *     Base.Char.(of_int_exn (n + to_int 'a')) ) *)

@@ -21,7 +21,8 @@ module Pat :
     val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
     val of_longident : loc:loc -> Ppxlib.longident -> t
     val constr : loc:loc -> string -> t list -> t
-    val variant: loc:loc -> string -> t option -> t
+    (* val variant: loc:loc -> string -> t option -> t *)
+    val variant: loc:loc -> string -> t list -> t
     val tuple:   loc:loc -> t list -> t
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
     val type_:  loc:loc -> Ppxlib.longident -> t
@@ -49,6 +50,8 @@ module rec Exp :
     val app_list : loc:loc -> t -> t list -> t
     val acc      : loc:loc -> t -> t -> t
     val acc_list : loc:loc -> t -> t list -> t
+
+    val field : loc:loc -> t -> Ppxlib.longident -> t
     val fun_ : loc:loc -> Pat.t -> t -> t
     val fun_list : loc:loc -> Pat.t list -> t -> t
     val match_  : loc:loc -> t -> case list -> t
@@ -57,7 +60,12 @@ module rec Exp :
     val send : loc:loc -> t -> string -> t
     val new_ : loc:loc -> Ppxlib.longident -> t
 
+    val variant:   loc:loc -> string    -> t list -> t
+    val construct: loc:loc -> Ppxlib.longident -> t list -> t
+
     val assert_false: loc:loc -> t
+    val objmagic_unit: loc:loc -> t
+    val failwith_: loc:loc -> string -> t
   end
 and Typ :
   sig
@@ -66,15 +74,18 @@ and Typ :
     val use_tdecl: Ppxlib.type_declaration -> t
     val of_type_arg: loc:loc -> type_arg -> t
     val of_longident : loc:loc -> Ppxlib.longident -> t
+    val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
+    val ident : loc:loc -> string -> t
+
     val var : loc:loc -> string -> t
     val any : loc:loc -> t
-    val ident : loc:loc -> string -> t
     val constr : loc:loc -> Ppxlib.longident -> t list -> t
     val class_ : loc:loc -> Ppxlib.longident -> t list -> t
     val object_ : loc:loc -> Ppxlib.closed_flag -> (string * t) list -> t
     val arrow : loc:loc -> t -> t -> t
     val chain_arrow : loc:loc -> t list -> t
     val variant : loc:loc -> ?is_open:bool -> Ppxlib.row_field list -> t
+    val alias : loc:loc -> t -> string -> t
   end
 and Cf :
   sig
@@ -137,14 +148,17 @@ and Vb :
 val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case
 
-val prepare_param_triples :
-  loc:loc -> ?extra:string list ->
-  ?inh:(loc:loc -> string -> type_arg) ->
-  ?syn:(loc:loc -> string -> type_arg) ->
-  ?default_inh: type_arg ->
-  ?default_syn: type_arg ->
-  string list -> type_arg list
+(* if argument is polymorphic variant type then make it open *)
+val openize_poly: Typ.t -> Typ.t
 
-(* val invariantize : string option list -> type_var list *)
+val prepare_param_triples : loc:loc ->
+  ?extra:string list ->
+  ?inh:(loc:loc -> string -> Typ.t) ->
+  ?syn:(loc:loc -> string -> Typ.t) ->
+  ?default_inh:  Typ.t ->
+  ?default_syn:  Typ.t ->
+  string list -> Typ.t list
+
+val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 
 end

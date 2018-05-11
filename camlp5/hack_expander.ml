@@ -56,11 +56,14 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          let lhs = Pat.variant ~loc  lab @@ match args with
-            | [] -> None
-            | _  -> Some (Pat.tuple ~loc @@
-                          List.map ~f:(fun s -> Pat.var ~loc (Located.mk ~loc s))
-                            names)
+          (* let lhs = Pat.variant ~loc  lab @@ match args with
+           *   | [] -> None
+           *   | _  -> Some (Pat.tuple ~loc @@
+           *                 List.map ~f:(fun s -> Pat.var ~loc (Located.mk ~loc s))
+           *                   names)
+           * in *)
+          let lhs = Pat.variant ~loc  lab @@
+            List.map ~f:(fun s -> Pat.var ~loc (Located.mk ~loc s)) names
           in
           case ~lhs
             ~rhs:(onrow lab @@ List.zip_exn names args)
@@ -566,18 +569,17 @@ let do_mutal_types_sig ~loc plugins tdecls =
 
 let registered_plugins : (string * _ ) list =
   [ (let module M = Show   .Make(AstHelpers) in
-     M.plugin_name,
-     (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  (* ; (let module M = Compare.Make(GtHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-   * ;  (let module M = Gmap   .Make(GtHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-   * ; (let module M = Foldl  .Make(GtHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-   * ; (let module M = Show_typed.Make(GtHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) )
-   * ; (let module M = Eq     .Make(GtHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> Plugin_intf.t)) ) *)
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+  ; (let module M = Compare.Make(AstHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+  ;  (let module M = Gmap   .Make(AstHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+  ; (let module M = Foldl  .Make(AstHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+  ; (let module M = Show_typed.Make(AstHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+  ; (let module M = Eq     .Make(AstHelpers) in
+     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
   ]
 
 let wrap_plugin name = function
@@ -594,11 +596,11 @@ let sig_type_decl ~loc ~path
     (rec_flag, tdls) =
   let plugins =
     wrap_plugin "show"        use_show  @@
-    (* wrap_plugin "compare"     use_compare @@
-     * wrap_plugin "gmap"        use_gmap  @@
-     * wrap_plugin "foldl"       use_foldl @@
-     * wrap_plugin "show_typed"  use_show_type @@
-     * wrap_plugin "eq"          use_eq @@ *)
+    wrap_plugin "compare"     use_compare @@
+    wrap_plugin "gmap"        use_gmap  @@
+    wrap_plugin "foldl"       use_foldl @@
+    wrap_plugin "show_typed"  use_show_type @@
+    wrap_plugin "eq"          use_eq @@
     []
   in
   match rec_flag, tdls with
@@ -616,11 +618,11 @@ let str_type_decl ~loc ~path si
   =
   let plugins =
     wrap_plugin "show"        use_show  @@
-    (* wrap_plugin "compare"     use_compare @@
-     * wrap_plugin "gmap"        use_gmap  @@
-     * wrap_plugin "foldl"       use_foldl @@
-     * wrap_plugin "show_typed"  use_show_type @@
-     * wrap_plugin "eq"          use_eq @@ *)
+    wrap_plugin "compare"     use_compare @@
+    wrap_plugin "gmap"        use_gmap  @@
+    wrap_plugin "foldl"       use_foldl @@
+    wrap_plugin "show_typed"  use_show_type @@
+    wrap_plugin "eq"          use_eq @@
     []
   in
 

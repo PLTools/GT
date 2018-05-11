@@ -15,14 +15,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 let plugin_name = "show"
 
 module P = Plugin.Make(AstHelpers)
-(* open Plugin *)
 open AstHelpers
-
-let typ_arg_of_core_type t =
-  match t.ptyp_desc with
-  | Ptyp_any -> failwith "wildcards are not supported "
-  | Ptyp_var s -> named_type_arg ~loc:(loc_from_caml t.ptyp_loc) s
-  | _ -> assert false
 
 let app_format_sprintf ~loc arg =
   Exp.app ~loc
@@ -33,10 +26,10 @@ class ['self] g args = object(self: 'self)
   inherit ['self] P.generator args
 
   method plugin_name = plugin_name
-  method default_inh ~loc _tdecl = named_type_arg ~loc "unit"
-  method default_syn ~loc _tdecl = named_type_arg ~loc "string"
+  method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
+  method default_syn ~loc _tdecl = Typ.ident ~loc "string"
 
-  method syn_of_param ~loc _ = named_type_arg ~loc "string"
+  method syn_of_param ~loc _     = Typ.ident ~loc "string"
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =
