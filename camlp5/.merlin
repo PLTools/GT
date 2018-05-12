@@ -3,7 +3,7 @@ PKG base
 PKG ppxlib
 
 SRC .
-SRC ../ext
+SRC ../common
 
 B ../_build/camlp5
-B ../_build/ext
+B ../_build/common

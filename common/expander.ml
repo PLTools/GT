@@ -2,7 +2,6 @@
  * Generic Transformers PPX syntax extension.
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
- *   Evgeniy Moiseenko aka eucpp
  * St.Petersburg State University, JetBrains Research
  *
  *)
@@ -12,9 +11,13 @@ open Ppxlib
 open Ppxlib.Ast_builder.Default
 open HelpersBase
 open Printf
-
-(* module AstHelpers = Camlp5Helpers *)
 let (@@) = Caml.(@@)
+
+let class_name_for_typ name = sprintf "%s_t" name
+let trait_class_name_for_typ ~trait name =
+  class_name_for_typ (if String.equal trait ""
+                      then name
+                      else sprintf "%s_%s" trait name)
 
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
@@ -22,7 +25,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 open AstHelpers
 
-let prepare_patt_match ~(loc:loc) what constructors make_rhs =
+let prepare_patt_match ~loc what constructors make_rhs =
   let on_alg cdts =
     let k cs = Exp.match_ ~loc what cs in
     k @@ List.map cdts ~f:(fun cd ->
@@ -32,10 +35,9 @@ let prepare_patt_match ~(loc:loc) what constructors make_rhs =
             let names = List.map args ~f:(fun _ -> gen_symbol ()) in
             case
               ~lhs:(Pat.constr ~loc cd.pcd_name.txt @@
-                    (Base.List.map ~f:(Pat.var ~loc) names)
-                         )
+                    List.map ~f:(Pat.var ~loc) names
+                   )
               ~rhs:(make_rhs cd names)
-
       )
   in
   let on_poly cs =
@@ -56,12 +58,6 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          (* let lhs = Pat.variant ~loc  lab @@ match args with
-           *   | [] -> None
-           *   | _  -> Some (Pat.tuple ~loc @@
-           *                 List.map ~f:(fun s -> Pat.var ~loc (Located.mk ~loc s))
-           *                   names)
-           * in *)
           let lhs = Pat.variant ~loc  lab @@
             List.map ~f:(fun s -> Pat.var ~loc (Located.mk ~loc s)) names
           in
@@ -93,21 +89,30 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
 
 let inh_syn_ts ~loc = [ Typ.var ~loc "inh"; Typ.var ~loc "syn" ]
 
+let params_of_interface_class ~loc tdecl =
+  (* actual params depend on sort of type.
+     2 + 3*params_count + 1 (for polyvar subtyping)
+  *)
+  (List.concat @@ map_type_param_names tdecl.ptype_params
+     ~f:(fun s ->
+         [ named_type_arg ~loc s
+         ; named_type_arg ~loc ("i"^s)
+         ; named_type_arg ~loc ("s"^s) ]
+       )
+  )
+  @ [ named_type_arg ~loc "inh"
+    ; named_type_arg ~loc "syn"
+    ; named_type_arg ~loc Plugin.extra_param_name]
+
 let make_interface_class_sig ~loc tdecl =
   let params = List.map ~f:fst tdecl.ptype_params in
   let name = tdecl.ptype_name in
 
   let k fields =
-    let prepare_params =
-      let extra = [Plugin.extra_param_name] in
-      let tnames  = map_type_param_names tdecl.ptype_params ~f:id in
-      prepare_param_triples ~loc ~extra tnames
-    in
     Sig.class_ ~loc ~virt:false
-      ~name:(sprintf "class_%s" name.txt)
-      ~params:prepare_params
+      ~name:(class_name_for_typ name.txt)
+      ~params:(params_of_interface_class ~loc tdecl)
       fields
-
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _labels ->
@@ -201,18 +206,10 @@ let make_interface_class ~loc tdecl =
   let params = List.map ~f:fst tdecl.ptype_params in
   let name = tdecl.ptype_name in
 
-  (* actual params depend on sort of type.
-     2 + 3*params_count + 1 (if polyvar)
-  *)
-  let prepare_params =
-    let extra = [Plugin.extra_param_name] in
-    let tnames  = map_type_param_names tdecl.ptype_params ~f:id in
-    prepare_param_triples ~loc ~extra tnames
-  in
-
   let ans ?(is_poly=false) fields =
-    Str.class_single ~loc ~name:(sprintf "class_%s" name.txt) fields
-      ~params:prepare_params
+    Str.class_single ~loc ~name:(class_name_for_typ name.txt) fields
+      ~virt:true
+      ~params:(params_of_interface_class ~loc tdecl)
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _ ->
@@ -394,11 +391,12 @@ let make_gcata_str ~loc tdecl =
           [Exp.ident ~loc "inh"; Exp.ident ~loc "t"]
       )
     ~onvariant:(fun cds ->
-      ans @@ prepare_patt_match ~loc (Exp.ident ~loc "t") (`Algebraic cds) (fun cd names ->
-          List.fold_left ("inh"::names)
-            ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                     (Located.mk ~loc @@ "c_" ^ cd.pcd_name.txt))
-            ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
+        ans @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
+          (fun cd names ->
+             List.fold_left ("inh"::names)
+               ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
+                        (Located.mk ~loc @@ "c_" ^ cd.pcd_name.txt))
+               ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
         )
       )
     ~onmanifest:(fun typ ->

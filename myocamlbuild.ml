@@ -32,11 +32,11 @@ let () = dispatch (fun hook ->
      flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"../camlp5o_pp.sh" ]);
      flag ["ocaml"; "link"; "link_pagtcmo"] (S [ A"camlp5/pa_gt.cmo" ]);
 
-     flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
-                                            ; A"show.cmo";  A"gmap.cmo"
-                                            ; A"foldl.cmo"; A"foldr.cmo"
-                                            ; A"compare.cmo"; A"eq.cmo"
-                                            ]);
+     (* flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
+      *                                        ; A"show.cmo";  A"gmap.cmo"
+      *                                        ; A"foldl.cmo"; A"foldr.cmo"
+      *                                        ; A"compare.cmo"; A"eq.cmo"
+      *                                        ]); *)
 
      (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
       * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)

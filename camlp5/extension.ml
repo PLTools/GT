@@ -29,14 +29,14 @@ open Printf
 open Pcaml
 open MLast
 open Ploc
-open Plugin
+(* open Plugin *)
 open Core2
 
 
 let hdtl loc xs = (List.hd xs, List.tl xs)
 let trait_proto_t typ trait = Printf.sprintf "%s_proto_%s" trait typ
-let class_t name = name ^ "_t"
-let trait_t typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ)
+(* let class_t name = name ^ "_t"
+ * let trait_t typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ) *)
 
 (* let tdecl_to_descr loc t =
  *   let name = get_val loc (snd (get_val loc t.tdNam)) in
@@ -169,7 +169,12 @@ EXTEND
   class_type_longident: [[
     "@"; ci=qname; t=OPT trait -> 
       let n, q = hdtl loc (rev ci) in
-      rev ((match t with None -> class_t n | Some t -> trait_t t n)::q)
+      let classname =
+        match t with
+        | None   -> Expander.class_name_for_typ n
+        | Some t -> Expander.trait_class_name_for_typ t n
+      in
+      rev (classname::q)
 
   | "+"; ci=qname; t=trait -> 
       let n, q = hdtl loc (rev ci) in
@@ -200,7 +205,12 @@ EXTEND
   class_longident: [[
     "@"; ci=qname; t=OPT trait -> 
       let n, q = hdtl loc (rev ci) in
-      rev ((match t with None -> class_t n | Some t -> trait_t n t)::q)
+      let classname =
+        match t with
+        | None   -> Expander.class_name_for_typ n
+        | Some t -> Expander.trait_class_name_for_typ t n
+      in
+      rev (classname::q)
 
   | "+"; ci=qname; t=trait -> 
       let n, q = hdtl loc (rev ci) in

@@ -1,14 +1,16 @@
 true: debug, bin_annot, short_paths
 #, strict_sequence
 
-<ext/*>: package(ppxlib)
-<ext/compare.ml> or <ext/plugin.ml>: package(ppxlib.metaquot)
+<common/*>:  package(ppxlib)
+<common/plugin.*>: package(ppxlib.metaquot)
+<plugins/*>: package(ppxlib)
+#<common/compare.ml> or <ext/plugin.ml>: package(ppxlib.metaquot)
 
 <camlp5/core2.ml> or <camlp5/extension.ml> or <camlp5/Camlp5Helpers.ml>: syntax(camlp5o), package(camlp5,camlp5.gramlib), for-pack(Pa_gt)
 <camlp5/hack_expander.*>: package(base,ppxlib)
 <camlp5/*>: package(ppxlib)
 <camlp5/pa_gt.cm*>: package(ppxlib,base)
-<camlp5/pp5gt.cma>: linkpkg, link_pagtcmo, package(ppxlib)
+<camlp5/pp5gt.cma>: linkpkg, link_pagtcmo, package(ppxlib), linkall
 
 #<src/GT.ml4>: use_m4
 <src/GT.ml>:  use_pa_gt, use_m4
@@ -23,6 +25,12 @@ true: debug, bin_annot, short_paths
 #<rewriter/pp_gt.cm*>: package(ppxlib.runner)
 #<rewriter/pp_gt.native>: make_pp_gt
 
+###########################################
+# Regression tests
+
+<regression/test*.cm*>: use_gt
+<regression/test*.native>: use_gt
+<regression/test0*.*>: pp(camlp5o)
 <regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
 
 <regression/orig/*>: traverse

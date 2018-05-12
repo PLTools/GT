@@ -1,4 +1,4 @@
-(**************************************************************************
+ (**************************************************************************
  *  Copyright (C) 2012-2015
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
  *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA

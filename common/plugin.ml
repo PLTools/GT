@@ -99,7 +99,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             ~default_inh:(self#default_inh ~loc tdecl)
             tnames
         in
-        inh_params @ [ Typ.ident ~loc extra_param_name]
+        inh_params @ [ Typ.var ~loc extra_param_name ]
       in
       self#wrap_class_definition ~loc mutal_names tdecl ~inh_params
         ((self#extra_class_str_members tdecl) @ fields)
@@ -572,12 +572,12 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
   method app_transformation_expr ~loc trf inh subj =
     (* we ignore inherited argument by default *)
-    Exp.app ~loc trf inh
+    Exp.app ~loc trf subj
 
 
   method abstract_trf ~loc k =
     Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
-    k (Exp.ident ~loc "should_not_seen") (Exp.ident ~loc "subj")
+    k (Exp.assert_false ~loc) (Exp.ident ~loc "subj")
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
     (* ignore inh attribute here too *)
     (* [%expr fun subj -> [%e k [%expr assert false ] [%expr subj]]] *)

@@ -3,6 +3,9 @@
 #camlp5o -I `ocamlfind query GT` pa_gt.cmo pr_o.cmo -I plugins show.cmo gmap.cmo foldl.cmo foldr.cmo compare.cmo eq.cmo $@
 
 
+camlp5o camlp5/pp5gt.cma camlp5/pa_gt.cmo $@
+exit $?
+
 camlp5o -I `ocamlfind query base` \
         -I `ocamlfind query base`/caml \
         -I `ocamlfind query base`/shadow_stdlib \

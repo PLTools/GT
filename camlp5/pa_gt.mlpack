@@ -2,8 +2,15 @@ Extension
 Core2
 Plugin
 Plugin_intf
-Show
-Hack_expander
+
+Expander
 HelpersBase
 Camlp5Helpers
 MidiAst
+
+Show
+Show_typed
+Eq
+Compare
+Gmap
+Foldl

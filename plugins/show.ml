@@ -1,60 +1,153 @@
-#load "q_MLast.cmo";;
+(*
+ * OCanren: syntax extension.
+ * Copyright (C) 2016-2017
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
 
-open Pa_gt.Plugin
+open Base
+open Ppxlib
+open HelpersBase
 open Printf
-open List
 
-let _ =
-  register "show" 
-    (fun loc d -> 
-       let module H = Helper (struct let loc = loc end) in
-       H.(
-        {
-          inh_t       = T.id "unit"; 
-          syn_t       = T.id "string";
-          proper_args = d.type_args; 
-          fixed_inh   = Some <:expr< () >>;
-          sname       = (fun _ -> T.id "string");
-          iname       = (fun _ -> T.id "unit")
-        }, 
-	let wrap_id l = map (fun (x, y) -> x, y, (fun x -> x)) l in
-        let (@@) x y = E.app [E.lid "^"; x; y] in
-        let rec body env start stop delim args = 
-          (snd 
-	     (fold_left 
-		(fun (first, expr as acc) arg ->
-                  let append e = false, expr @@ (if first then e else (E.str ", ") @@ e) in
-                  match arg with                     
-		  | arg, (Variable _ | Self _), wrapper -> 
-		      append (wrapper <:expr< $E.lid arg$.GT.fx () >>)
-		  | arg, Tuple (_, elems), wrapper ->
-		      let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in			
-		      append (
-                        <:expr<
-                           let $P.tuple (map P.id args)$ = $E.lid arg$ in
-			   $wrapper (body env (E.str "(") (E.str ")") (E.str ", ") (wrap_id (combine args elems)))$
-                        >>
-		      )
-                  | arg, typ, wrapper -> 
-		      (match env.trait "show" typ with
-		       | Some e -> append (wrapper <:expr< $e$ () $E.lid arg$>>)
-		       | None   -> acc
-		      )
-		)         
-		(true, start)
-                args 
-	     )
-          ) @@ stop
-	in
-        object
-	  inherit generator
-	  method record env fields = 
-            body env (E.str "{") (E.str "}") (E.str "; ") (map (fun (a, (f, _, t)) -> a, t, (fun x -> (E.str (f ^ "=")) @@ x)) fields)
-	  method tuple env elems = 
-	    body env (E.str "(") (E.str ")") (E.str ", ") (wrap_id elems)
-	  method constructor env name args = 
-	    body env (E.str ((if d.is_polyvar then "`" else "") ^ name ^ " (")) (E.str ")") (E.str ", ") (wrap_id args)
-	end
-     )
-    )
-    
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
+let plugin_name = "show"
+
+module P = Plugin.Make(AstHelpers)
+open AstHelpers
+
+let app_format_sprintf ~loc arg =
+  Exp.app ~loc
+    (Exp.of_longident ~loc (Ldot(Lident "Format", "sprintf")))
+    arg
+
+class ['self] g args = object(self: 'self)
+  inherit ['self] P.generator args
+
+  method plugin_name = plugin_name
+  method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
+  method default_syn ~loc _tdecl = Typ.ident ~loc "string"
+
+  method syn_of_param ~loc _     = Typ.ident ~loc "string"
+  method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
+
+  method plugin_class_params tdecl =
+    (* TODO: reuse prepare_inherit_typ_params_for_alias here *)
+    let ps =
+      List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
+    in
+    ps @
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+    List.map rhs_args ~f:Typ.from_caml @
+    [ Typ.var ~loc Plugin.extra_param_name]
+
+  (* We are constrainting extra type parameter using separate member of the class.
+   * The alternative will be to use `()` everywhere instead of `inh` identifier *)
+  method! extra_class_str_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    [ Cf.constraint_  ~loc (Typ.var ~loc "inh") (Typ.ident ~loc "unit") ]
+
+  method! extra_class_sig_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    [ Ctf.constraint_  ~loc (Typ.var ~loc "inh") (Typ.ident ~loc "unit") ]
+
+
+  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+      constr_name bindings einh k =
+    match bindings with
+    | [] -> k @@ Exp.string_const ~loc ("`"^constr_name)
+    | _ ->
+      k @@ List.fold_left
+        bindings
+        ~f:(fun acc (name, typ) -> Exp.app ~loc acc
+               (Exp.app ~loc
+                  (self#do_typ_gen ~loc ~mutal_names ~is_self_rec typ)
+                  (Exp.ident ~loc name))
+           )
+        ~init:Exp.(app ~loc
+                     (of_longident ~loc (Ldot(Lident "Format", "sprintf"))) @@
+
+                   let fmt = String.concat ~sep:", " @@ List.map bindings
+                       ~f:(fun _ -> "%s")
+                   in
+                   Exp.string_const ~loc @@ Printf.sprintf "`%s(%s)" constr_name fmt
+                  )
+
+
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
+    k @@
+    [ let methname = sprintf "c_%s" (match constr_info with
+            `Normal s -> s | `Poly s -> s) in
+      let constr_name = match constr_info with
+        | `Poly s -> sprintf "`%s" s
+        | `Normal s -> s
+      in
+      Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+
+        let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
+        Exp.fun_list ~loc
+          (List.map names ~f:(Pat.sprintf ~loc "%s"))
+          (if List.length ts = 0
+           then Exp.string_const ~loc constr_name
+           else
+             List.fold_left
+               (List.zip_exn names ts)
+               ~f:(fun acc (name, typ) ->
+                   Exp.app ~loc acc
+                     (self#app_transformation_expr ~loc
+                        (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                        (Exp.assert_false ~loc)
+                        (Exp.ident ~loc name)
+                     )
+                 )
+               ~init:Exp.(app ~loc
+                     (of_longident ~loc (Ldot(Lident "Format", "sprintf"))) @@
+
+                   let fmt = String.concat ~sep:", " @@ List.map names
+                       ~f:(fun _ -> "%s")
+                   in
+                   Exp.string_const ~loc @@ Printf.sprintf "`%s(%s)" constr_name fmt
+                  )
+          )
+
+
+  ]
+
+  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+    let pat = Pat.record ~loc @@
+      List.map labs ~f:(fun l ->
+          (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+        )
+    in
+    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    let fmt = List.fold_left labs ~init:""
+        ~f:(fun acc x ->
+            sprintf "%s %s=%%s;" acc x.pld_name.txt
+          )
+    in
+    [ Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+      Exp.fun_ ~loc pat @@
+      List.fold_left labs
+            ~f:(fun acc {pld_name; pld_type} ->
+                Exp.app ~loc acc
+                  (self#app_transformation_expr ~loc
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+                     (Exp.assert_false ~loc)
+                     (Exp.ident ~loc pld_name.txt)
+                  )
+              )
+            ~init:(app_format_sprintf ~loc @@
+                   Exp.string_const ~loc @@ sprintf "{ %s }" fmt
+                  )
+
+    ]
+
+end
+
+let g = new g
+end

@@ -1,94 +1,202 @@
-#load "q_MLast.cmo";;
-
-open Pa_gt.Plugin
-open List
+open Base
+open Ppxlib
+open HelpersBase
 open Printf
-open MLast
-open Ploc 
-open Pcaml
-exception Found of int
-let _ =
-  register "compare" 
-    (fun loc d -> 
-       let module H = Helper (struct let loc = loc end) in       
-       let ng   = name_generator d.type_args in
-       let self = ng#generate "self" in
-       H.(                
-        {
-          inh_t       = if d.is_polyvar 
-                        then T.app (T.id (type_open_t d.name) :: map T.var (self :: d.type_args)) 
-                        else T.app (T.id d.name :: map T.var d.type_args);
-          syn_t       = <:ctyp< GT.comparison >>;
-          fixed_inh   = None;
-          proper_args = if d.is_polyvar then self :: d.type_args else d.type_args;
-          sname       = (fun _ -> <:ctyp< GT.comparison >>);
-          iname       = (fun a -> T.var a)
-        }, 
-	let rec many env arg args =
-	  fold_left
-	    (fun acc (b, typ) ->
-	       let body = 
-		 match typ with
-		 | Instance (_, _, qname) ->
-		     (match env.trait "compare" typ with
-		      | None   -> <:expr< GT.EQ >>
-		      | Some e -> 
-			  let rec name = function
-			    | [n]  -> <:expr< $e$ ($E.id (arg b)$) $E.id b$ >> 
-			    | _::t -> name t
-			  in
-			  name qname
-		     )
-                 | Variable  (_, a) -> <:expr< $E.id b$.GT.fx ($E.id (arg b)$) >> 
-		 | Self      _      -> <:expr< $E.id b$.GT.fx ($E.id (arg b)$) >>
-		 | Arbitrary _      -> <:expr< GT.EQ >>
-		 | Tuple (_, elems) ->
-		     let args_a = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in
-		     let args_b = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in			   
-		     let elems  = combine args_a elems in
-		     let args   = combine args_a args_b in
-		     let arg' a = assoc a args in
-                     <:expr<
-                        let $P.tuple (map P.id args_a)$ = $E.lid b$       in
-                        let $P.tuple (map P.id args_b)$ = $E.lid (arg b)$ in
-                        $many env arg' elems$
-                     >>
-	       in			
-	       <:expr< GT.chain_compare $acc$ (fun _ -> $body$) >>
-	    )
-	    <:expr< GT.EQ >>
-	    args
-	in
-        object
-	  inherit generator
-	  method record env fields = 
-	    let args   = map (fun a -> a, env.new_name a) (map fst fields) in
-	    let arg  a = assoc a args in
-	    let branch = many env arg (map (fun (a, (_, _, t)) -> a, t) fields) in
-            <:expr< match $E.id env.inh$ with 
-                    | $P.record (map (fun (a, (f, _, _)) -> P.id f, P.id (arg a)) fields)$ -> $branch$
-                    end
-            >>
 
-	  method tuple env elems  = 
-	    let args   = map (fun a -> a, env.new_name a) (map fst elems) in
-	    let arg  a = assoc a args in
-	    let branch = many env arg elems in
-            <:expr< match $E.id env.inh$ with
-                    | $P.tuple (map (fun (_, a) -> P.id a) args)$ -> $branch$
-                    end
-            >>
+(* Compare plugin where we pass another value of the same type as 'inh
+ * and return GT.comparison as 'syn
+*)
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+module P = Plugin.Make(AstHelpers)
+open AstHelpers
+let plugin_name = "compare"
 
-	  method constructor env name cargs =
-	    let other  = env.new_name "other" in
-	    let args   = map (fun a -> a, env.new_name a) (map fst cargs) in
-	    let arg  a = assoc a args in
-	    let branch = many env arg cargs in
-            <:expr< match $E.id env.inh$ with
-                    | $P.app (((if d.is_polyvar then P.variant else P.uid) name)::(map (fun (_, a) -> P.id a) args))$ -> $branch$
-                    | $P.id other$ -> GT.$E.id (if d.is_polyvar then "compare_poly" else "compare_vari")$ $E.id other$ $E.id env.subj$.GT.x
-                    end
-            >>
-	end
-       )
-    )
+let access_GT s = Ldot (Lident "GT", s)
+class ['self] g initial_args = object(self: 'self)
+  inherit ['self] P.generator initial_args as super
+
+  method plugin_name = plugin_name
+
+  method default_inh ~loc = Typ.use_tdecl
+  method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))
+  method default_syn  ~loc tdecl = self#syn_of_param ~loc "dummy"
+
+  method inh_of_param tdecl name =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    Typ.var ~loc name
+
+  method plugin_class_params tdecl =
+    List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t) @
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+    List.map rhs_args ~f:Typ.from_caml @
+    [ Typ.var ~loc Plugin.extra_param_name]
+
+    (* rhs_args @ [self#extra_param_stub ~loc] *)
+
+  method! make_typ_of_self_trf ~loc tdecl =
+    Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
+
+  method make_typ_of_class_argument ~loc tdecl name k =
+    super#make_typ_of_class_argument ~loc tdecl name (fun t ->
+        Typ.arrow ~loc (self#default_inh ~loc tdecl) (k t)
+      )
+
+  method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+    let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
+    let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
+    Typ.arrow ~loc (self#default_inh ~loc tdecl)
+      (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
+
+  method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
+    let body = make_gcata_of_class (Exp.ident ~loc "self") in
+    Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
+    Exp.app_list ~loc
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
+      [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
+      ; Exp.sprintf ~loc "the_init"
+      ; Exp.sprintf ~loc "subj"
+      ]
+
+    (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
+
+
+  method chain_exprs ~loc e1 e2 =
+    Exp.app_list ~loc
+      (Exp.of_longident ~loc (access_GT "chain_compare"))
+      [ e1
+      ; Exp.fun_ ~loc (Pat.unit ~loc) e2
+      ]
+  (* [%expr GT.chain_compare [%e e1] (fun () -> [%e e2]) ] *)
+
+  method chain_init ~loc = Exp.of_longident ~loc (access_GT "EQ")
+    (* [%expr GT.EQ ] *)
+
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
+    let is_poly,cname =
+      match constr_info with
+      | `Normal s -> false,  s
+      | `Poly   s -> true,   s
+    in
+    let methname = sprintf "c_%s" cname in
+    let names     = List.map args ~f:(fun _ -> gen_symbol ()) in
+
+    k @@ [
+      Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.sprintf ~loc "inh") @@
+
+        let main_case =
+          let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
+          let lhs =
+            (* let arg_pats =
+             *   match pat_names with
+             *   | []  -> None
+             *   | [s] -> Some (Pat.var ~loc s)
+             *   | __  ->
+             *       Some (Pat.tuple ~loc @@ List.map pat_names ~f:(Pat.var ~loc))
+             * in *)
+            let arg_pats =
+              match pat_names with
+              | []  -> []
+              | [s] -> [Pat.var ~loc s]
+              | __  -> List.map pat_names ~f:(Pat.var ~loc)
+            in
+            if is_poly
+            then Pat.variant   ~loc  cname arg_pats
+            else Pat.constr    ~loc  cname arg_pats
+          in
+          let rhs =
+            List.fold_left  ~init:(self#chain_init ~loc)
+              (List.map3_exn pat_names names args ~f:(fun a b c -> (a,b,c)))
+              ~f:(fun acc (pname, name, typ) ->
+                self#chain_exprs ~loc
+                  acc
+                  (self#app_transformation_expr ~loc
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                     (Exp.ident ~loc pname)
+                     (Exp.ident ~loc name)
+                  )
+              )
+          in
+          case ~lhs ~rhs
+        in
+
+        let other_case =
+          let lhs = Pat.var ~loc "other" in
+          let rhs =
+            Exp.app_list ~loc
+              (Exp.of_longident ~loc (access_GT "compare_vari"))
+              [ Exp.ident ~loc "other"
+              ; (if is_poly then Exp.variant ~loc cname
+                  else Exp.construct ~loc (lident cname)) @@
+                  (* Exp.maybe_tuple ~loc @@ *)
+                  List.map args ~f:(fun _ -> Exp.objmagic_unit ~loc)
+                  (* It's annoying to use magic here but need to do this first:
+                     https://caml.inria.fr/mantis/print_bug_page.php?bug_id=4751
+                  *)
+              ]
+          in
+          case ~lhs ~rhs
+        in
+
+        Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
+        Exp.match_ ~loc (Exp.ident ~loc "inh") [ main_case; other_case ]
+  ]
+
+  method app_transformation_expr ~loc trf inh subj =
+    Exp.app_list ~loc trf [ inh; subj ]
+
+  method abstract_trf ~loc k =
+    Exp.fun_list ~loc [Pat.sprintf ~loc "inh"; Pat.sprintf ~loc "subj"] @@
+    k (Exp.sprintf ~loc "inh") (Exp.sprintf ~loc "subj")
+    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+
+  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
+      constr_name bindings einh k =
+    (* TODO: rewrite *)
+    let ctuple =
+      (* match bindings with
+       * | [] -> []
+       * | _  ->
+       *   Some (Exp.tuple ~loc @@ *)
+              List.map bindings
+                ~f:(fun (name, typ) ->
+                    Exp.app_list ~loc
+                      (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                      [ einh
+                      ; Exp.ident ~loc name
+                      ]
+                  )
+
+    in
+    k @@ Exp.variant ~loc constr_name ctuple
+
+  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+    assert Int.(List.length labs > 0);
+    let pat = Pat.record ~loc @@
+      List.map labs ~f:(fun {pld_name} ->
+          (Lident pld_name.txt, Pat.var ~loc pld_name.txt)
+        )
+    in
+    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    [ Cf.method_concrete ~loc methname @@
+      (* TODO: maybe use abstract_transformation_expr here *)
+      Exp.fun_list ~loc
+        [ Pat.sprintf ~loc "inh"; pat] @@
+        let wrap lab =
+          self#app_transformation_expr ~loc
+            (self#do_typ_gen ~loc ~is_self_rec ~mutal_names lab.pld_type)
+            (Exp.field ~loc (Exp.ident ~loc "inh") (Lident lab.pld_name.txt))
+            (Exp.ident ~loc lab.pld_name.txt )
+        in
+        let init = self#chain_init ~loc in
+        List.fold_left ~init labs
+          ~f:(fun acc lab -> self#chain_exprs ~loc acc (wrap lab))
+    ]
+
+end
+
+let g = new g
+
+end

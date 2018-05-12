@@ -58,8 +58,10 @@ module Pat = struct
   let variant ~loc name args =
     let v = <:patt< ` $name$ >> in
     match args with
-    | None  -> v
-    | Some p -> <:patt< $v$ $p$ >>
+    | []  -> v
+    | _ ->
+      let tup = tuple ~loc args in
+      <:patt< $v$ $tup$ >>
 
   let alias ~loc p1 name =
     let right = <:patt< $lid:name$ >> in
@@ -112,23 +114,34 @@ module Exp = struct
 
   let fun_ ~loc pat e =
     <:expr< fun [ $list:[ (pat,Ploc.VaVal None,e) ]$ ] >>
-
   let fun_list ~loc pats body =
     List.fold_right (fun x acc -> fun_ ~loc x acc) pats body
+
+  let construct ~loc lident args =
+    app_list ~loc (of_longident ~loc lident) args
+  let variant ~loc s args =
+    app_list ~loc <:expr< ` $s$ >> args
+
   let new_ ~loc lident =
     <:expr< new $list: Longident.flatten lident$ >>
   let object_ ~loc (pat, fields) =
     <:expr< object ($pat$) $list:fields$ end >>
+  let send ~loc left s = <:expr< $left$ # $s$ >>
+
   let record ~loc lpe =
     let lpe = List.map (fun (l,r) -> Pat.of_longident ~loc l, r) lpe in
     <:expr< {$list:lpe$} >>
-  let send ~loc left s = <:expr< $left$ # $s$ >>
+  let field ~loc e lident = acc ~loc e (of_longident ~loc lident)
 
   let from_caml e = failwith "not implemented"
+  let assert_false ~loc = <:expr< assert false >>
+  let failwith_ ~loc s  = <:expr< failwith $str:s$ >>
+  let objmagic_unit ~loc = <:expr< Obj.magic () >>
 end
 
 module Typ = struct
   type t = MLast.ctyp
+
   let of_longident ~loc lid =
     let open Ppxlib.Longident in
     let wrap s =
@@ -144,6 +157,8 @@ module Typ = struct
     in
     helper lid
 
+  let sprintf ~loc fmt =
+    Printf.ksprintf (fun s -> <:ctyp< $lid:s$ >>) fmt
   let ident ~loc s = <:ctyp< $lid:s$ >>
   let var ~loc s = <:ctyp< '$s$ >>
   let app ~loc l r = <:ctyp< $l$ $r$ >>
@@ -364,18 +379,18 @@ let openize_poly t =
   | t -> t
 
 let prepare_param_triples ~loc:loc ?(extra=[])
-    ?(inh=fun ~loc:loc s -> named_type_arg ~loc @@ "i"^s)
-    ?(syn=fun ~loc:loc s -> named_type_arg ~loc @@ "s"^s)
-    ?(default_inh=  named_type_arg ~loc @@ "syn")
-    ?(default_syn=  named_type_arg ~loc @@ "inh")
-    names : type_arg list =
+    ?(inh=fun ~loc:loc s -> Typ.sprintf ~loc "i%s" s)
+    ?(syn=fun ~loc:loc s -> Typ.sprintf ~loc "s%s" s)
+    ?(default_inh = Typ.sprintf ~loc "syn")
+    ?(default_syn = Typ.sprintf ~loc "inh")
+    names  =
   (* let default_inh = "inh" in
    * let default_syn = "syn" in *)
 
   (* let inh = fun ~loc s -> "i"^s in
    * let syn = fun ~loc s -> "s"^s in *)
   let ps = List.concat @@ List.map (fun s ->
-      [ named_type_arg ~loc s; inh ~loc s; syn ~loc s])
+      [ Typ.ident ~loc s; inh ~loc s; syn ~loc s])
       names
   in
-  ps @ [ default_inh; default_syn] @ (List.map (named_type_arg ~loc) extra)
+  ps @ [ default_inh; default_syn] @ (List.map (Typ.ident ~loc) extra)
