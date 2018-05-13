@@ -1,15 +1,17 @@
 module type S = sig
-module Located :
-  sig
-    type t
-    val mk : loc:'a -> 'b -> 'b
-  end
-type loc = Located.t
+(* module Located :
+ *   sig
+ *     type t
+ *     val mk : loc:'a -> 'b -> 'b
+ *   end
+ * type loc = Located.t *)
+type loc
 
 val loc_from_caml: Ppxlib.location -> loc
 val noloc: loc
 type type_arg
 val named_type_arg : loc:loc -> string -> type_arg
+val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 
 module Pat :
   sig
@@ -27,7 +29,7 @@ module Pat :
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
-val class_structure : self:'a -> fields:'b -> 'a * 'b
+type class_structure
 
 type case
 (* type type_declaration *)
@@ -55,7 +57,7 @@ module rec Exp :
     val fun_ : loc:loc -> Pat.t -> t -> t
     val fun_list : loc:loc -> Pat.t list -> t -> t
     val match_  : loc:loc -> t -> case list -> t
-    val object_ : loc:loc -> Pat.t * Cf.t list -> t
+    val object_ : loc:loc -> class_structure -> t
     val record :  loc:loc -> (Ppxlib.longident * t) list -> t
     val send : loc:loc -> t -> string -> t
     val new_ : loc:loc -> Ppxlib.longident -> t
@@ -148,6 +150,7 @@ and Vb :
 
 val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case
+val class_structure : self:Pat.t -> fields:Cf.t list -> class_structure
 
 (* if argument is polymorphic variant type then make it open *)
 val openize_poly: Typ.t -> Typ.t
@@ -159,7 +162,5 @@ val prepare_param_triples : loc:loc ->
   ?default_inh:  Typ.t ->
   ?default_syn:  Typ.t ->
   string list -> Typ.t list
-
-val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 
 end

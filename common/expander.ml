@@ -53,7 +53,7 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
           let lhs = Pat.variant ~loc  lab @@
-            List.map ~f:(fun s -> Pat.var ~loc (Located.mk ~loc s)) names
+            List.map ~f:(fun s -> Pat.var ~loc s) names
           in
           case ~lhs
             ~rhs:(onrow lab @@ List.zip_exn names args)
@@ -61,9 +61,7 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
           match typ.ptyp_desc with
           | Ptyp_constr({txt;_},ts) ->
             let newname = "subj" in
-            let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc txt))
-                (Located.mk ~loc newname)
-            in
+            let lhs = Pat.alias ~loc (Pat.type_ ~loc txt) newname in
             case ~lhs ~rhs:(oninherit ts txt newname)
           | _ -> failwith "this inherit field isn't supported"
 
@@ -73,9 +71,7 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
     | None -> []
     | Some ls -> List.map ls ~f:(fun lab ->
         let newname = "subj" in
-        let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc (Lident lab)) )
-            (Located.mk ~loc newname)
-        in
+        let lhs = Pat.alias ~loc (Pat.type_ ~loc (Lident lab)) newname in
         case ~lhs ~rhs:(onlabel lab newname)
       )
   in
@@ -383,7 +379,7 @@ let make_gcata_str ~loc tdecl =
     ~onrecord:(fun _labels ->
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         ans @@ Exp.app_list ~loc
-          (Exp.send ~loc (Exp.ident ~loc "tr") (Located.mk ~loc methname))
+          (Exp.send ~loc (Exp.ident ~loc "tr")  methname)
           [Exp.ident ~loc "inh"; Exp.ident ~loc "subj"]
       )
     ~onvariant:(fun cds ->
@@ -391,7 +387,7 @@ let make_gcata_str ~loc tdecl =
           (fun cd names ->
              List.fold_left ("inh"::names)
                ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                        (Located.mk ~loc @@ "c_" ^ cd.pcd_name.txt))
+                        ("c_" ^ cd.pcd_name.txt))
                ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
         )
       )
@@ -412,11 +408,8 @@ let make_gcata_str ~loc tdecl =
           rows maybe_labels
           ~onrow:(fun cname names ->
               List.fold_left ("inh"::(List.map ~f:fst names))
-                ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                         (Located.mk ~loc @@ "c_" ^ cname) )
-                ~f:(fun acc arg ->
-                       Exp.app ~loc acc (Exp.ident ~loc arg)
-                   )
+                ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname))
+                ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg) )
             )
             ~onlabel:(fun label patname -> failwith "not implemented")
             ~oninherit:(fun params cident patname ->
@@ -494,7 +487,7 @@ let collect_plugins_str ~loc tdecl plugins : Str.t =
 
 let collect_plugins_sig ~loc tdecl plugins =
   Sig.value ~loc ~name:tdecl.ptype_name.txt @@
-  Typ.constr ~loc (Located.mk ~loc (Ldot (lident "GT", "t")) )
+  Typ.constr ~loc (Ldot (lident "GT", "t"))
     [ make_gcata_typ ~loc tdecl
     ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
         (p#plugin_name, p#make_trans_function_typ ~loc tdecl)

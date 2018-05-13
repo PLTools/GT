@@ -9,7 +9,7 @@
 open Ppxlib
 
 open Ppx_gt_expander
-module E = Ppx_gt_expander.Make(GtHelpers)
+module E = Ppx_gt_expander.Make(PpxHelpers)
 
 let gt_param name =
   let open Deriving.Args in

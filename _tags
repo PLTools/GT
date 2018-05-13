@@ -1,4 +1,4 @@
-true: debug, bin_annot, short_paths
+true: debug, bin_annot, short_paths, annot
 #, strict_sequence
 <sample>: -traverse
 
@@ -20,8 +20,9 @@ true: debug, bin_annot, short_paths
 #<plugins/*.cmo>: pp(camlp5o), package(camlp5)
 
 #<ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
-#<ppx/*>: package(ppxlib,ppxlib.metaquot)
-#<ppx/ppx_deriving_gt.cm*>: linkall
+<ppx/*>: package(ppxlib)
+<ppx/PpxHelpers.*>: package(ppxlib.metaquot)
+<ppx/ppx_deriving_gt.cm*>: linkall
 
 #<rewriter/pp_gt.cm*>: package(ppxlib.runner)
 #<rewriter/pp_gt.native>: make_pp_gt

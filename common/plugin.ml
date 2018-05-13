@@ -34,7 +34,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
           match typ.ptyp_desc with
           | Ptyp_constr({txt;_},ts) ->
             let newname = "subj" in
-            let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc txt)) newname
+            let lhs = Pat.alias ~loc (Pat.type_ ~loc txt) newname
             in
             case ~lhs ~rhs:(oninherit ts txt newname)
           | _ -> failwith "this inherit field isn't supported"
@@ -45,7 +45,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
     | None -> []
     | Some ls -> List.map ls ~f:(fun lab ->
         let newname = "subj" in
-        let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc (Lident lab)) ) newname
+        let lhs = Pat.alias ~loc (Pat.type_ ~loc (Lident lab) ) newname
         in
         case ~lhs ~rhs:(onlabel lab newname)
       )
@@ -617,7 +617,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
                     (* [%expr let open GT in
                      *   [%e  Exp.sprintf "tuple%d" (List.length params)
                      *   ].GT.plugins ] *)
-                    (Located.mk ~loc self#plugin_name)
+                    self#plugin_name
                  )
                  (List.map ~f:helper params)
               )
@@ -642,7 +642,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
                  * ] *)
               Exp.(send ~loc
                      (access_plugins ~loc (of_longident ~loc txt))
-                     (Located.mk ~loc self#plugin_name)
+                     self#plugin_name
                   )
           in
         self#abstract_trf ~loc (fun einh esubj ->

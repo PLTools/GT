@@ -72,10 +72,10 @@ module Pat = struct
   let unit ~loc =     <:patt< () >> (* constr ~loc "()" [] *)
 end
 
-let class_structure ~self ~fields = (self, fields)
-type case = patt * expr option * expr
 
+type case = patt * expr option * expr
 let case ~lhs ~rhs : case = (lhs, None, rhs)
+
 
 module Exp = struct
   type t = MLast.expr
@@ -372,6 +372,8 @@ module Ctf = struct
   let inherit_ ~loc cty = <:class_sig_item< inherit $cty$ >>
 end
 
+let class_structure ~self ~fields = (self, fields)
+type class_structure = Pat.t * Cf.t list
 
 let typ_arg_of_core_type t =
   match t.Ppxlib.ptyp_desc with

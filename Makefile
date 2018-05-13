@@ -42,10 +42,10 @@ add_camlp5:
 	$(eval OBPARAMS  += -I common,plugins)
 camlp5: add_camlp5 compile
 
-ppx:
-	#$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs \
-		ppx/ppx_gt_expander.cma ppx/ppx_gt_expander.cmxa \
-		rewriter/pp_gt.native)
+ppx: add_ppx compile
+add_ppx:
+	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs rewriter/pp_gt.native)
+	$(eval OBPARAMS  += -I common -I plugins)
 
 PLUGINS=compare eq foldl gmap show show_typed #typename foldr html
 add_plugins:
