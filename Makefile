@@ -61,7 +61,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #807 029 037 811 900 809 808 801 802 803 804 806 #807 #805
 # now we add camlp5 tests
-REGRES_CASES += 000
+REGRES_CASES += 000 081 082 083
 
 TEST_DIR := regression
 define TESTRULES
@@ -99,12 +99,14 @@ $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
 
 .PHONY: compile_tests_native compile_tests_byte compile_tests run_tests
 
-compile_tests_native: #$(TEST_MLS)
+compile_tests_native:
 	@echo "Adding " $(NATIVE_TEST_EXECUTABLES)
 	$(eval OBTARGETS += $(NATIVE_TEST_EXECUTABLES))
+	$(eval OBPARAMS  += -Is src)
 
-compile_tests_byte: all #$(TEST_MLS)
-	$(OB) -plugin-tag "package(ppx_driver.ocamlbuild)" $(BYTE_TEST_EXECUTABLES)
+compile_tests_byte:
+	$(eval OBTARGETS += $(BYTE_TEST_EXECUTABLES))
+	$(eval OBPARAMS  += -Is src)
 
 compile_tests: compile_tests_native
 

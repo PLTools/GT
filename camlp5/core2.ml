@@ -132,8 +132,8 @@ module Migr =
 
 
 let generate_str tdecls loc =
-  let _ : (type_decl * 'a) list = tdecls in
-  let decls = List.map fst tdecls in
+  (* Printf.printf "generate_str with length = %d\n%!" (List.length tdecls); *)
+
   let info = snd @@ List.hd @@ List.rev tdecls in
   (* Printf.printf "plugins: %s\n%!" (String.concat ", " info); *)
   let generator_f =
@@ -154,13 +154,60 @@ let generate_str tdecls loc =
   in
 
   let out =
+    let sis = <:str_item< type $list:(List.map fst tdecls)$ >>  in
+    let caml_ast = Ast2pt.implem "asdf" [sis] in
+    let () = assert (List.length caml_ast = 1) in
+    match (List.hd caml_ast).pstr_desc with
+    | Pstr_type (flg, tds) ->
+       let copied = List.map Migr.copy_type_declaration tds in
+       let module H = Expander.Make(Camlp5Helpers) in
+       generator_f [sis] (Recursive, copied)
+    |  _ -> failwith "type declaration expected"
+   (* List.map (fun (t,info) ->
+    *   let sis = <:str_item< type $list:[t]$ >>  in
+    *   let caml_ast = Ast2pt.implem "asdf" [sis] in
+    *   assert (List.length caml_ast  =  1);
+    *   match (List.hd caml_ast).pstr_desc with
+    *   | Pstr_type (flg, [td]) ->
+    *     let copied = Migr.copy_type_declaration td in
+    *     let module H = Expander.Make(Camlp5Helpers) in
+    *     generator_f [sis] (Recursive, [copied])
+    *   | _ -> assert false
+    *   (\* <:str_item< type $list:[t]$ >> *\)
+    * ) tdecls *)
+  in
+
+  <:str_item< declare $list:out$ end >>
+
+let generate_sig tdecls loc =
+  (* let decls = List.map fst tdecls in *)
+  let info = snd @@ List.hd @@ List.rev tdecls in
+  (* Printf.printf "plugins: %s\n%!" (String.concat ", " info); *)
+  let generator_f =
+    let module H = Expander.Make(Camlp5Helpers) in
+    H.sig_type_decl ~loc ~path:1
+      ~use_show:(if List.mem "show" info
+                 then Expander.Use [] else Expander.Skip)
+      ~use_show_type:(if List.mem "show_typed" info
+                      then Expander.Use [] else Expander.Skip)
+      ~use_gmap:(if List.mem "gmap" info
+                 then Expander.Use [] else Expander.Skip)
+      ~use_eq:(if List.mem "eq" info
+               then Expander.Use [] else Expander.Skip)
+      ~use_compare:(if List.mem "compare" info
+                    then Expander.Use [] else Expander.Skip)
+      ~use_foldl:(if List.mem "foldl" info
+                  then Expander.Use [] else Expander.Skip)
+  in
+
+  let out =
    List.flatten @@
    List.map (fun (t,info) ->
-     let sis = <:str_item< type $list:[t]$ >>  in
-     let caml_ast = Ast2pt.implem "asdf" [sis] in
+     let sis = <:sig_item< type $list:[t]$ >>  in
+     let caml_ast = Ast2pt.interf "asdf" [sis] in
      assert (List.length caml_ast  =  1);
-     match (List.hd caml_ast).pstr_desc with
-     | Pstr_type (flg, [td]) ->
+     match (List.hd caml_ast).psig_desc with
+     | Psig_type (flg, [td]) ->
        let copied = Migr.copy_type_declaration td in
        let module H = Expander.Make(Camlp5Helpers) in
        generator_f [sis] (Recursive, [copied])
@@ -169,9 +216,4 @@ let generate_str tdecls loc =
    ) tdecls
   in
 
-  <:str_item< declare $list:out$ end >>
-
-
-let generate_sig _ loc =
-  <:sig_item< declare $list:[]$ end >>
-
+  <:sig_item< declare $list:out$ end >>

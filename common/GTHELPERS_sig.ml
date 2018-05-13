@@ -85,6 +85,7 @@ and Typ :
     val arrow : loc:loc -> t -> t -> t
     val chain_arrow : loc:loc -> t list -> t
     val variant : loc:loc -> ?is_open:bool -> Ppxlib.row_field list -> t
+    val variant_of_t : loc:loc -> t -> t
     val alias : loc:loc -> t -> string -> t
   end
 and Cf :

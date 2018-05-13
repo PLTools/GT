@@ -45,6 +45,7 @@ module Pat = struct
     let c = <:patt< $uid:uid$ >> in
     match ps with
     | [] -> c
+    | [x] -> <:patt< $c$ $x$ >>
     | _  -> let args = <:patt< ($list:ps$) >> in
       <:patt< $c$ $args$ >>
 
@@ -59,6 +60,7 @@ module Pat = struct
     let v = <:patt< ` $name$ >> in
     match args with
     | []  -> v
+    | [x] -> <:patt< $v$ $x$ >>
     | _ ->
       let tup = tuple ~loc args in
       <:patt< $v$ $tup$ >>
@@ -67,7 +69,7 @@ module Pat = struct
     let right = <:patt< $lid:name$ >> in
     <:patt< ($p1$ as $right$) >>
 
-  let unit ~loc = constr ~loc "()" []
+  let unit ~loc =     <:patt< () >> (* constr ~loc "()" [] *)
 end
 
 let class_structure ~self ~fields = (self, fields)
@@ -81,7 +83,7 @@ module Exp = struct
   let ident ~loc s = <:expr< $lid:s$ >>
   let lid = ident
   let uid ~loc s = <:expr< $uid:s$ >>
-  let unit ~loc = lid ~loc "()"
+  let unit ~loc =  <:expr< () >>
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:expr< $lid:s$ >>) fmt
 
@@ -97,7 +99,8 @@ module Exp = struct
 
   let of_longident ~loc l =
     let rec helper = function
-      | Longident.Lident s -> ident ~loc s
+      | Longident.Lident s when Char.equal s.[0] (Char.uppercase s.[0]) -> uid ~loc s
+      | Longident.Lident s -> lid ~loc s
       | Ldot (l, r) ->
         let u = helper l in
         acc ~loc u (ident ~loc r)
@@ -164,7 +167,7 @@ module Typ = struct
   let app ~loc l r = <:ctyp< $l$ $r$ >>
   let any ~loc  = <:ctyp< _ >>
   let alias ~loc t s =
-    let p = ident ~loc s in
+    let p = var ~loc s in
     <:ctyp< $t$ as $p$ >>
 
   let constr ~loc lident =
@@ -183,7 +186,7 @@ module Typ = struct
       List.fold_left (app ~loc) init lt
 
   let of_type_arg ~loc (s,_) = match s with
-    | VaVal (Some s) -> ident ~loc s
+    | VaVal (Some s) -> var ~loc s
     | VaAnt _ -> assert false
     | VaVal None -> failwith "bad type arg"
 
@@ -219,6 +222,8 @@ module Typ = struct
     then <:ctyp< [ > $list:vs$ ] >>
     else <:ctyp< [ < $list:vs$ ] >>
 
+  let variant_of_t ~loc typ =
+    <:ctyp< [ > $list:[PvInh (loc, typ)]$ ] >>
   let use_tdecl tdecl =
     let loc = loc_from_caml tdecl.Ppxlib.ptype_loc in
     let c = ident ~loc tdecl.ptype_name.txt in
@@ -275,7 +280,7 @@ module Str = struct
     let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
               ciPrm = (loc, Ploc.VaVal params);
               ciNam = Ploc.VaVal name;
-              ciExp = CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) }
+              ciExp = wrap @@ CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) }
     in
 
     <:str_item< class $list:[c]$ >>
@@ -360,7 +365,9 @@ module Ctf = struct
   type t = class_sig_item
   let constraint_ ~loc t1 t2 = <:class_sig_item< type $t1$ = $t2$ >>
   let method_ ~loc s ?(virt=false) t =
-    <:class_sig_item< method $lid:s$ : $t$ >>
+    if virt
+    then <:class_sig_item< method virtual $lid:s$ : $t$ >>
+    else <:class_sig_item< method $lid:s$ : $t$ >>
 
   let inherit_ ~loc cty = <:class_sig_item< inherit $cty$ >>
 end
@@ -374,15 +381,21 @@ let typ_arg_of_core_type t =
 
 let openize_poly t =
   match t with
-  | MLast.TyVrn (loc, name, None) -> MLast.TyVrn (loc, name, Some None)
-  | MLast.TyVrn (loc, name, None) -> MLast.TyVrn (loc, name, Some None)
+  | MLast.TyVrn (loc, name, flg) ->
+    (fun flg -> MLast.TyVrn (loc, name, flg) )
+      (
+      match flg with
+      | None -> Some None
+      | Some None -> Some None
+      | Some (Some xs) -> Some (Some xs)
+    )
   | t -> t
 
 let prepare_param_triples ~loc:loc ?(extra=[])
-    ?(inh=fun ~loc:loc s -> Typ.sprintf ~loc "i%s" s)
-    ?(syn=fun ~loc:loc s -> Typ.sprintf ~loc "s%s" s)
-    ?(default_inh = Typ.sprintf ~loc "syn")
-    ?(default_syn = Typ.sprintf ~loc "inh")
+    ?(inh=fun ~loc:loc s -> Typ.var ~loc @@ "i" ^ s)
+    ?(syn=fun ~loc:loc s -> Typ.var ~loc @@ "s" ^ s)
+    ?(default_inh = Typ.var ~loc "syn")
+    ?(default_syn = Typ.var ~loc "inh")
     names  =
   (* let default_inh = "inh" in
    * let default_syn = "syn" in *)
@@ -390,7 +403,7 @@ let prepare_param_triples ~loc:loc ?(extra=[])
   (* let inh = fun ~loc s -> "i"^s in
    * let syn = fun ~loc s -> "s"^s in *)
   let ps = List.concat @@ List.map (fun s ->
-      [ Typ.ident ~loc s; inh ~loc s; syn ~loc s])
+      [ Typ.var ~loc s; inh ~loc s; syn ~loc s])
       names
   in
   ps @ [ default_inh; default_syn] @ (List.map (Typ.ident ~loc) extra)

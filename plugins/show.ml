@@ -44,6 +44,7 @@ class ['self] g args = object(self: 'self)
     List.map rhs_args ~f:Typ.from_caml @
     [ Typ.var ~loc Plugin.extra_param_name]
 
+(*
   (* We are constrainting extra type parameter using separate member of the class.
    * The alternative will be to use `()` everywhere instead of `inh` identifier *)
   method! extra_class_str_members tdecl =
@@ -53,7 +54,7 @@ class ['self] g args = object(self: 'self)
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
     [ Ctf.constraint_  ~loc (Typ.var ~loc "inh") (Typ.ident ~loc "unit") ]
-
+*)
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings einh k =
@@ -105,12 +106,12 @@ class ['self] g args = object(self: 'self)
                      )
                  )
                ~init:Exp.(app ~loc
-                     (of_longident ~loc (Ldot(Lident "Format", "sprintf"))) @@
+                     (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
 
                    let fmt = String.concat ~sep:", " @@ List.map names
                        ~f:(fun _ -> "%s")
                    in
-                   Exp.string_const ~loc @@ Printf.sprintf "`%s(%s)" constr_name fmt
+                   Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
                   )
           )
 

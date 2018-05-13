@@ -30,6 +30,7 @@ open Pcaml
 open MLast
 open Ploc
 (* open Plugin *)
+(* open HelpersBase *)
 open Core2
 
 
@@ -171,8 +172,8 @@ EXTEND
       let n, q = hdtl loc (rev ci) in
       let classname =
         match t with
-        | None   -> Expander.class_name_for_typ n
-        | Some t -> Expander.trait_class_name_for_typ t n
+        | None   -> HelpersBase.class_name_for_typ n
+        | Some t -> HelpersBase.trait_class_name_for_typ t n
       in
       rev (classname::q)
 
@@ -207,8 +208,8 @@ EXTEND
       let n, q = hdtl loc (rev ci) in
       let classname =
         match t with
-        | None   -> Expander.class_name_for_typ n
-        | Some t -> Expander.trait_class_name_for_typ t n
+        | None   -> HelpersBase.class_name_for_typ n
+        | Some t -> HelpersBase.trait_class_name_for_typ t n
       in
       rev (classname::q)
 

@@ -61,8 +61,8 @@ let g args = object(self: 'self)
     in
     if is_polyvariant_tdecl tdecl
     then
-      Typ.alias ~loc (openize_poly ans) "extra"
-      (* [%type: ([> [%t ans]] as 'extra)] *)
+      Typ.alias ~loc (Typ.variant_of_t ~loc ans) Plugin.extra_param_name
+      (* Typ.var ~loc Plugin.extra_param_name *)
     else ans
 
 
@@ -83,7 +83,7 @@ let g args = object(self: 'self)
         )
     in
     (List.map ~f:Typ.from_caml ps) @
-    [ Typ.ident ~loc Plugin.extra_param_name ]
+    [ Typ.var ~loc Plugin.extra_param_name ]
 
   (* TODO: refactor next two functions *)
   method! extra_class_sig_members tdecl =
@@ -93,12 +93,12 @@ let g args = object(self: 'self)
       let _param_names,rez_names,_find_param,_blownup_params =
         hack_params tdecl.ptype_params
       in
-      let right = Typ.constr ~loc
-          (Lident tdecl.ptype_name.txt)
+      let right =
+        Typ.variant_of_t ~loc @@
+        Typ.constr ~loc (Lident tdecl.ptype_name.txt)
           (List.map ~f:(Typ.var ~loc) rez_names)
       in
-      let right = openize_poly right in
-      [Ctf.constraint_ ~loc (Typ.ident ~loc Plugin.extra_param_name) right ]
+      [Ctf.constraint_ ~loc (Typ.var ~loc Plugin.extra_param_name) right ]
     else []
 
   method! extra_class_str_members tdecl =
@@ -108,11 +108,12 @@ let g args = object(self: 'self)
       let _param_names,rez_names,_find_param,_blownup_params =
         hack_params tdecl.ptype_params
       in
-      let right = Typ.constr ~loc (Lident tdecl.ptype_name.txt)
+      let right =
+        Typ.variant_of_t ~loc @@
+        Typ.constr ~loc (Lident tdecl.ptype_name.txt)
           (List.map ~f:(Typ.var ~loc) rez_names)
       in
-      let right = openize_poly right in
-      [Cf.constraint_ ~loc (Typ.ident ~loc Plugin.extra_param_name) right ]
+      [Cf.constraint_ ~loc (Typ.var ~loc Plugin.extra_param_name) right ]
     else []
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names

@@ -31,7 +31,7 @@ class ['self] g initial_args = object(self: 'self)
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc Plugin.extra_param_name]
+    [ Typ.var ~loc Plugin.extra_param_name ]
 
     (* rhs_args @ [self#extra_param_stub ~loc] *)
 

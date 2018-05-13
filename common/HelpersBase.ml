@@ -170,22 +170,8 @@ let map_type_param_names ~f ps =
     | _ -> failwith "bad argument of map_type_param_names")
 
 
-
-(* let make_gt_a_typ ?(loc=Location.none)
- *     ?(inh=[%type: 'inh]) ?(itself=[%type: 'type_itself])
- *     ?(syn=[%type: 'syn]) ?(tpoT=[%type: 'tpoT]) () =
- *   (\* TODO: maybe add extra string argument to concat it with type variables to get
- *               ('a_inh, 'a, 'a_syn, 'heck) GT.a
- *   *\)
- *   [%type: ([%t inh], [%t itself], [%t syn], [%t tpoT]) GT.a]
- *
- * let arr_of_param ?(loc=Location.none)
- *     ?(loc=Location.none) ?(inh=fun s -> Typ.var @@ "i"^s)
- *     ?(syn=fun s -> Typ.var @@ "s"^s) t =
- *   (\* does from 'a the 'ia -> 'a -> 'sa *\)
- *   match t.ptyp_desc with
- *   | Ptyp_var n ->
- *       (n, [],
- *         [%type: [%t inh n] -> [%t Typ.var n] -> [%t syn n]] )
- *   | _ ->
- *       failwith "arr_of_param: not all type params are supported" *)
+let class_name_for_typ name = Printf.sprintf "%s_t" name
+let trait_class_name_for_typ ~trait name =
+  class_name_for_typ (if String.equal trait ""
+                      then name
+                      else Printf.sprintf "%s_%s" trait name)

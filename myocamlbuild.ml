@@ -25,7 +25,7 @@ let () = dispatch (fun hook ->
 
   | After_rules ->
      ocaml_lib "src/GT";
-     flag ["compile"; "short_paths"] & S [A "-short-paths"];
+     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
      m4_rules ();
      dep ["use_m4"] ["src/macro.m4"];

@@ -144,7 +144,10 @@ class virtual ['self] generator initial_args = object(self: 'self)
         Cl.fun_list ~loc names body
       )
       @@
-      [ Cf.inherit_ ~loc (Cl.constr ~loc (Lident ("class_"^cur_name)) inh_params)
+      [ let parent_name = HelpersBase.class_name_for_typ cur_name in
+            (* ~trait:self#plugin_name *)
+        (* in *)
+        Cf.inherit_ ~loc (Cl.constr ~loc (Lident parent_name) inh_params)
       ] @ fields
 
   (* shortened class only used for mutally recursive declarations *)
@@ -152,7 +155,9 @@ class virtual ['self] generator initial_args = object(self: 'self)
     List.map tdecls ~f:(fun tdecl ->
       let mutal_names = List.filter mutal_names
           ~f:(String.(<>) tdecl.ptype_name.txt) in
-      let class_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
+      let class_name =
+          trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
+      in
       let stub_name = class_name ^ "_stub" in
       (* maybe it should be called proto *)
       let mut_funcs = List.map ~f:(sprintf "%s_%s" self#plugin_name) mutal_names in
@@ -163,7 +168,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             Cl.fun_ ~loc (Pat.sprintf ~loc "%s" self_arg_name) @@
             Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl
           )
-        ~params:(new_params)
+        ~params:new_params
         [ Cf.inherit_ ~loc @@ Cl.apply ~loc
             (Cl.constr ~loc (Lident stub_name) @@
              List.map ~f:(Typ.of_type_arg ~loc) new_params)
@@ -189,8 +194,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let k fields =
       [ Sig.class_ ~loc
           ~params:(self#plugin_class_params tdecl)
-          ~name:(sprintf "%s_%s%s" self#plugin_name (self#cur_name tdecl)
-                   (match mutal_decls with [] -> "" | _ -> "_stub") )
+          ~name:(self#make_class_name ~is_mutal:false tdecl)
           ~virt:false
           ~wrap:(fun init ->
               let for_self = self#make_typ_of_self_trf ~loc tdecl in
@@ -211,38 +215,41 @@ class virtual ['self] generator initial_args = object(self: 'self)
     ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
-          (* | Ptyp_alias (t, aname) ->
-           *   map_core_type t ~onvar:(fun as_ ->
-           *     if String.equal as_ aname
-           *     then Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-           *       List.map tdecl.ptype_params ~f:(fun (t,_) -> Typ.from_caml t)
-           *     else Typ.var ~loc as_
-           *     ) |> helper *)
+          | Ptyp_alias (t, aname) ->
+            let loc = t.ptyp_loc in
+            map_core_type t ~onvar:(fun as_ ->
+              let open Ppxlib.Ast_builder.Default in
+              if String.equal as_ aname
+              then ptyp_constr ~loc (Located.lident ~loc tdecl.ptype_name.txt) @@
+                List.map tdecl.ptype_params ~f:(fun (t,_) -> t)
+              else ptyp_var ~loc as_
+              ) |> helper
           | Ptyp_constr (cid, params) ->
             (* there for type 'a list = ('a,'a list) alist
              * we inherit plugin class for base type, for example (gmap):
              *  inherit ('a,'a2,'a list,'a2 list) gmap_alist
              **)
-            assert false
-            (* k [Ctf.inherit_ ~loc @@ Cty.constr ~loc
-             *      (map_longident cid.txt
-             *         ~f:(sprintf "%s_%s" self#plugin_name))
-             *      (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
-             *   ] *)
+            k [Ctf.inherit_ ~loc @@ Cty.constr ~loc
+                 (map_longident cid.txt
+                    ~f:(trait_class_name_for_typ ~trait:self#plugin_name))
+                 (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
+              ]
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc:typ.ptyp_loc ts
           | Ptyp_variant (rows,_,_) ->
               let rr = List.map rows ~f:(function
               | Rinherit typ ->
-                  (with_constr_typ typ
-                     ~ok:(fun cid params ->
-                       Ctf.inherit_ ~loc @@ Cty.constr ~loc
-                         (map_longident ~f:(sprintf "%s_%s" self#plugin_name) cid.txt)
-                         (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
+                  with_constr_typ typ
+                    ~ok:(fun cid params ->
+                        Ctf.inherit_ ~loc @@
+                        Cty.constr ~loc
+                          (map_longident  cid.txt
+                             ~f:(trait_class_name_for_typ ~trait:self#plugin_name))
+                          (self#prepare_inherit_typ_params_for_alias ~loc
+                             tdecl params)
                      )
                      ~fail:(fun () -> assert false)
-                  )
               | Rtag (lab,_,_, typs) -> begin
                   Ctf.method_ ~loc (sprintf "c_%s" lab) ~virt:false @@
                   match typs with
@@ -270,22 +277,22 @@ class virtual ['self] generator initial_args = object(self: 'self)
         in
         helper typ
     )
-    (* ~onvariant:(fun cds ->
-     *     k @@ List.map cds
-     *       ~f:(fun cd ->
-     *           match cd.pcd_args with
-     *           | Pcstr_record _ -> assert false
-     *           | Pcstr_tuple ts ->
-     *             Ctf.method_ ~loc ~virt_flg:Concrete ("c_"^cd.pcd_name.txt) @@
-     *             List.fold_right ~init:(self#default_syn tdecl)
-     *               (self#default_inh tdecl :: ts)
-     *               ~f:(Typ.arrow ~loc)
-     *
-     *       )
-     * ) *)
+    ~onvariant:(fun cds ->
+        k @@ List.map cds
+          ~f:(fun cd ->
+              match cd.pcd_args with
+              | Pcstr_record _ -> assert false
+              | Pcstr_tuple ts ->
+                Ctf.method_ ~loc ~virt:false ("c_"^cd.pcd_name.txt) @@
+                List.fold_right ~init:(self#default_syn ~loc tdecl)
+                  (self#default_inh ~loc tdecl :: (List.map ~f:Typ.from_caml ts))
+                  ~f:(Typ.arrow ~loc)
+
+          )
+    )
 
 
-  method make_inherit_args_for_alias ~loc ~is_self_rec tdecl (do_typ: loc:loc -> core_type -> Exp.t)  cid cparams =
+  method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
     let args =
       List.mapi cparams ~f:(fun i t ->
           (* printf "checking for arg with index (%d+1)\n%!" i; *)
@@ -301,7 +308,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
 
 
   (* When we got declaration of type alias via type application *)
-  method got_constr ~loc ~is_self_rec tdecl (do_typ: loc:loc -> core_type -> Exp.t) cid cparams k =
+  method got_constr ~loc ~is_self_rec tdecl do_typ cid cparams k =
     (* printf "got a constr\n%!"; *)
     (* self#show_args; *)
     let ans args : Cf.t list =
@@ -309,7 +316,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
         in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
           (Cl.constr ~loc
-             (map_longident cid.txt ~f:(sprintf "%s_%s" self#plugin_name))
+             (map_longident cid.txt
+                ~f:(HelpersBase.trait_class_name_for_typ ~trait:self#plugin_name))
              typ_params)
           (args)
       ]
@@ -420,8 +428,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
     let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc subj_t syn_t
 
-  method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
-    [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ]
+  (* method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
+   *   [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ] *)
 
   method wrap_tr_function_typ (typ: core_type) =
     (* let loc = typ.ptyp_loc in *)
@@ -453,7 +461,9 @@ class virtual ['self] generator initial_args = object(self: 'self)
         )
 
   method make_class_name ?(is_mutal=false) tdecl =
-    sprintf "%s_%s%s" self#plugin_name tdecl.ptype_name.txt
+    sprintf "%s%s"
+      (HelpersBase.trait_class_name_for_typ ~trait:self#plugin_name
+         tdecl.ptype_name.txt)
       (if is_mutal then "_stub" else "")
 
   method wrap_tr_function_str ~loc tdecl gcata_on_new_expr =
@@ -622,7 +632,7 @@ class virtual ['self] generator initial_args = object(self: 'self)
             | Lident s when List.mem mutal_names s ~equal:String.equal ->
               (* we should use local trf function *)
               Exp.of_longident ~loc @@
-              map_longident ~f:(sprintf "%s_%s" self#plugin_name) txt
+              map_longident txt ~f:(sprintf "%s_%s" self#plugin_name)
             | _ ->
                 (* [%expr let (module Op) =
                  *          [%e Exp.ident_of_long txt] in

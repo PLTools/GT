@@ -13,12 +13,6 @@ open HelpersBase
 open Printf
 let (@@) = Caml.(@@)
 
-let class_name_for_typ name = sprintf "%s_t" name
-let trait_class_name_for_typ ~trait name =
-  class_name_for_typ (if String.equal trait ""
-                      then name
-                      else sprintf "%s_%s" trait name)
-
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
@@ -109,7 +103,7 @@ let make_interface_class_sig ~loc tdecl =
   let name = tdecl.ptype_name in
 
   let k fields =
-    Sig.class_ ~loc ~virt:false
+    Sig.class_ ~loc ~virt:true
       ~name:(class_name_for_typ name.txt)
       ~params:(params_of_interface_class ~loc tdecl)
       fields
@@ -126,7 +120,7 @@ let make_interface_class_sig ~loc tdecl =
         | Pcstr_record _ -> not_implemented "record constructors"
         | Pcstr_tuple ts ->
           (* Abstract out the type below  *)
-            Ctf.method_ ~loc methname
+            Ctf.method_ ~loc methname ~virt:true
               (List.fold_right ts ~init:(Typ.var ~loc "syn")
                  ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
                 |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
@@ -152,7 +146,7 @@ let make_interface_class_sig ~loc tdecl =
             in
 
             [ Ctf.inherit_ ~loc @@
-              Cty.constr ~loc (map_longident ~f:(sprintf "class_%s") name)
+              Cty.constr ~loc (map_longident ~f:class_name_for_typ name)
                 inh_params
             ]
           in
@@ -184,7 +178,7 @@ let make_interface_class_sig ~loc tdecl =
                 List.concat_map rows ~f:(function
                 | Rtag (lab,_,_,args)  ->
                   let methname = sprintf "c_%s" lab in
-                  [ Ctf.method_ ~loc methname @@
+                  [ Ctf.method_ ~loc ~virt:true methname @@
                       (List.fold_right args ~init:(Typ.var ~loc "syn")
                          ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
                        |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
@@ -254,7 +248,7 @@ let make_interface_class ~loc tdecl =
             in
 
             [ Cf.inherit_ ~loc @@
-              Cl.constr ~loc (map_longident ~f:(sprintf "class_%s") name)
+              Cl.constr ~loc (map_longident ~f:class_name_for_typ name)
                 inh_params
             ]
           in
@@ -331,7 +325,8 @@ let make_gcata_typ ~loc tdecl =
           List.map cds
             ~f:(fun cd -> match cd.pcd_args with
                 | Pcstr_tuple ts ->
-                  let new_ts = (List.map ts ~f:(Typ.from_caml)) @ [Typ.var ~loc "syn"] in
+                  let new_ts = (List.map ts ~f:Typ.from_caml) @ [Typ.var ~loc "syn"]
+                  in
                   let new_ts = Typ.var ~loc "inh" :: new_ts in
                   (sprintf "c_%s" cd.pcd_name.txt, Typ.chain_arrow ~loc new_ts)
               | Pcstr_record _ -> assert false
@@ -347,8 +342,9 @@ let make_gcata_typ ~loc tdecl =
                 ; Typ.var ~loc @@ "s"^name ]
               ) |> List.concat
             in
-            let args = args @ [ Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ] in
-            Typ.class_ ~loc (Lident(sprintf "class_%s" tdecl.ptype_name.txt)) args
+            let args = args @ [Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ]
+            in
+            Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args
           | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
                   ~f:(fun s ->
@@ -356,7 +352,7 @@ let make_gcata_typ ~loc tdecl =
                   )
               in
               Typ.class_ ~loc
-                (Lident (sprintf "class_%s" tdecl.ptype_name.txt))
+                (Lident (class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat params @
                  Typ.[var ~loc "inh"; var ~loc "syn"; any ~loc ])
           | _ -> assert false
@@ -412,8 +408,9 @@ let make_gcata_str ~loc tdecl =
         do_typ @@ constr_of_tuple ~loc:t.ptyp_loc ts
 
       | Ptyp_variant (rows,_,maybe_labels) ->
-          ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc "t") rows maybe_labels
-            ~onrow:(fun cname names ->
+        ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc "subj")
+          rows maybe_labels
+          ~onrow:(fun cname names ->
               List.fold_left ("inh"::(List.map ~f:fst names))
                 ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
                          (Located.mk ~loc @@ "c_" ^ cname) )
@@ -509,11 +506,6 @@ let do_typ ~loc sis plugins is_rec tdecl =
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata_str ~loc tdecl in
 
-  (* let decls = [] in *)
-  (* let decls = match Str.tdecl ~loc ~name ~params (MidiAst.ctyp_of tinfo) with
-   * | Some si -> [si]
-   * | None -> []
-   * in *)
   List.concat
     [ sis
     ; [intf_class; gcata]
@@ -521,38 +513,26 @@ let do_typ ~loc sis plugins is_rec tdecl =
     ; [ collect_plugins_str ~loc tdecl plugins ]
     ]
 
-(* let (_:int) = collect_plugins_str *)
-
-let do_mutal_types ~loc plugins tdecls =
+let do_mutal_types ~loc sis plugins tdecls =
+  sis @
   List.concat_map tdecls ~f:(fun tdecl ->
-    (* make_heading_str ~loc tdecl @ *)
-    [ make_interface_class ~loc tdecl
-    ; make_gcata_str ~loc tdecl ]
+      [ make_interface_class ~loc tdecl
+      ; make_gcata_str ~loc tdecl ]
   ) @
   List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
 
 
 (* for signatures *)
-let do_typ_sig ~loc plugins is_rec tdecl =
+let do_typ_sig ~loc sis plugins is_rec tdecl =
   let intf_class = make_interface_class_sig ~loc tdecl in
   let gcata = make_gcata_sig ~loc tdecl in
 
-  (* let mt_name = sprintf "MT_%s" tdecl.ptype_name.txt in
-   * let prepare_mt tdecl plugins =
-   *   let name = Located.mk ~loc mt_name in
-   *   let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
-   *   Sig.modtype ~loc (module_type_declaration ~loc ~name ~type_)
-   * in
-   * let module_itself =
-   *   Sig.value ~loc ~name:tdecl.ptype_name.txt @@
-   *     Typ.package ~loc (Located.lident ~loc mt_name)
-   * in *)
   List.concat
-    [ (* make_heading_sig ~loc tdecl
-     * ; *) [intf_class; gcata]
+    [ sis
+    ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; [ collect_plugins_sig ~loc tdecl plugins ]
-    (* ; [prepare_mt tdecl plugins; module_itself] *)
+
     ]
 
 let do_mutal_types_sig ~loc plugins tdecls =
@@ -588,7 +568,7 @@ let wrap_plugin name = function
     | None -> failwithf "Plugin '%s' is not registered" name ()
 ;;
 
-let sig_type_decl ~loc ~path
+let sig_type_decl ~loc ~path si
     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
     ?(use_compare=Skip) ?(use_eq=Skip)
     (rec_flag, tdls) =
@@ -603,10 +583,10 @@ let sig_type_decl ~loc ~path
   in
   match rec_flag, tdls with
   | Recursive, []      -> []
-  | Recursive, [tdecl] -> do_typ_sig ~loc plugins true tdecl
+  | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
   | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
   | Nonrecursive, ts ->
-      List.concat_map ~f:(do_typ_sig ~loc plugins false) tdls
+      List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
 
 
 let str_type_decl ~loc ~path si
@@ -626,8 +606,8 @@ let str_type_decl ~loc ~path si
 
   match rec_flag, tdls with
   | Recursive, []      -> []
-  | Recursive, [tdecl] -> do_typ ~loc si plugins true tdecl
-  | Recursive, ts      -> do_mutal_types ~loc plugins ts
+  | Recursive, [tdecl] -> do_typ         ~loc si plugins true tdecl
+  | Recursive, ts      -> do_mutal_types ~loc si plugins ts
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc si plugins false) tdls
 
@@ -636,7 +616,8 @@ let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
   str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~use_show_type
     ~use_compare ~use_eq
 
-let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
+let sig_type_decl_implicit ~loc ~path si
+    use_show use_gmap use_foldl
     use_compare use_eq use_show_type =
   let wrap f = if f then Use [] else Skip in
   sig_type_decl ~loc ~path
@@ -646,6 +627,6 @@ let sig_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     ~use_compare:(wrap use_compare)
     ~use_show_type:(wrap use_show_type)
     ~use_eq:(wrap use_eq)
-    info
+    si
 
 end
