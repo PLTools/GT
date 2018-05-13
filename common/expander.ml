@@ -384,7 +384,7 @@ let make_gcata_str ~loc tdecl =
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         ans @@ Exp.app_list ~loc
           (Exp.send ~loc (Exp.ident ~loc "tr") (Located.mk ~loc methname))
-          [Exp.ident ~loc "inh"; Exp.ident ~loc "t"]
+          [Exp.ident ~loc "inh"; Exp.ident ~loc "subj"]
       )
     ~onvariant:(fun cds ->
         ans @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)

@@ -32,13 +32,14 @@ compile:
 
 add_common:
 	$(eval OBTARGETS += common/plugin.cmo )
+	$(eval OBPARAMS  += -I plugins)
 common: add_common compile
 add_lib:
 	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
 lib: add_lib compile
 add_camlp5:
 	$(eval OBTARGETS += camlp5/pa_gt.cmo camlp5/pp5gt.cma)
-	$(eval OBPARAMS  += -Is common,plugins)
+	$(eval OBPARAMS  += -I common,plugins)
 camlp5: add_camlp5 compile
 
 ppx:
@@ -48,7 +49,7 @@ ppx:
 
 PLUGINS=compare eq foldl gmap show show_typed #typename foldr html
 add_plugins:
-	$(eval OBPARAMS  += -Is common)
+	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) )
 plugins: add_plugins compile
 
@@ -61,16 +62,16 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #807 029 037 811 900 809 808 801 802 803 804 806 #807 #805
 # now we add camlp5 tests
-REGRES_CASES += 000 081 082 083
+REGRES_CASES += 000 081 082 083 089
 
 TEST_DIR := regression
 define TESTRULES
 ML_FILE_$(1) = $(wildcard regression/test$(1)*.ml)
-$$(info $$(ML_FILE_$(1)) )
+#$$(info $$(ML_FILE_$(1)) )
 NATIVE_$(1) := $$(patsubst %.ml,%.native,$$(ML_FILE_$(1)) )
 #BYTE_TEST_EXECUTABLES += BYTE_$(1)
 NATIVE_TEST_EXECUTABLES += $$(NATIVE_$(1))
-$$(info $$(NATIVE_TEST_EXECUTABLES) )
+#$$(info $$(NATIVE_TEST_EXECUTABLES) )
 
 TEST$(1)_NAME := $$(ML_FILE_$(1):regression/test$(1)%.ml=%)
 #$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
@@ -102,11 +103,11 @@ $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
 compile_tests_native:
 	@echo "Adding " $(NATIVE_TEST_EXECUTABLES)
 	$(eval OBTARGETS += $(NATIVE_TEST_EXECUTABLES))
-	$(eval OBPARAMS  += -Is src)
+	$(eval OBPARAMS  += -I src)
 
 compile_tests_byte:
 	$(eval OBTARGETS += $(BYTE_TEST_EXECUTABLES))
-	$(eval OBPARAMS  += -Is src)
+	$(eval OBPARAMS  += -I src)
 
 compile_tests: compile_tests_native
 
