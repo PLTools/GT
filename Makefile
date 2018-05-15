@@ -31,8 +31,8 @@ compile:
 	$(OB) $(OBPARAMS) $(OBTARGETS)
 
 add_common:
-	$(eval OBTARGETS += common/plugin.cmo )
-	$(eval OBPARAMS  += -I plugins)
+	$(eval OBTARGETS += common/plugin.cmo common/expander.cmo )
+	#$(eval OBPARAMS  += -I plugins)
 common: add_common compile
 add_lib:
 	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
@@ -44,7 +44,7 @@ camlp5: add_camlp5 compile
 
 ppx: add_ppx compile
 add_ppx:
-	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs rewriter/pp_gt.native)
+	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 	$(eval OBPARAMS  += -I common -I plugins)
 
 PLUGINS=compare eq foldl gmap show show_typed #typename foldr html

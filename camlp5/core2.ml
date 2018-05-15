@@ -138,7 +138,7 @@ let generate_str tdecls loc =
   (* Printf.printf "plugins: %s\n%!" (String.concat ", " info); *)
   let generator_f =
     let module H = Expander.Make(Camlp5Helpers) in
-    H.str_type_decl ~loc ~path:1
+    H.str_type_decl ~loc ~path:""
       ~use_show:(if List.mem "show" info
                  then Expander.Use [] else Expander.Skip)
       ~use_show_type:(if List.mem "show_typed" info
@@ -180,12 +180,10 @@ let generate_str tdecls loc =
   <:str_item< declare $list:out$ end >>
 
 let generate_sig tdecls loc =
-  (* let decls = List.map fst tdecls in *)
   let info = snd @@ List.hd @@ List.rev tdecls in
-  (* Printf.printf "plugins: %s\n%!" (String.concat ", " info); *)
   let generator_f =
     let module H = Expander.Make(Camlp5Helpers) in
-    H.sig_type_decl ~loc ~path:1
+    H.sig_type_decl ~loc ~path:""
       ~use_show:(if List.mem "show" info
                  then Expander.Use [] else Expander.Skip)
       ~use_show_type:(if List.mem "show_typed" info

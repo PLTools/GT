@@ -22,8 +22,11 @@ let app_format_sprintf ~loc arg =
     (Exp.of_longident ~loc (Ldot(Lident "Format", "sprintf")))
     arg
 
-class ['self] g args = object(self: 'self)
-  inherit ['self] P.generator args
+class g args  =
+  object(self)
+  inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
+  inherit P.generator args
+
 
   method plugin_name = plugin_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
@@ -43,18 +46,6 @@ class ['self] g args = object(self: 'self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
     [ Typ.var ~loc Plugin.extra_param_name]
-
-(*
-  (* We are constrainting extra type parameter using separate member of the class.
-   * The alternative will be to use `()` everywhere instead of `inh` identifier *)
-  method! extra_class_str_members tdecl =
-    let loc = loc_from_caml tdecl.ptype_loc in
-    [ Cf.constraint_  ~loc (Typ.var ~loc "inh") (Typ.ident ~loc "unit") ]
-
-  method! extra_class_sig_members tdecl =
-    let loc = loc_from_caml tdecl.ptype_loc in
-    [ Ctf.constraint_  ~loc (Typ.var ~loc "inh") (Typ.ident ~loc "unit") ]
-*)
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings einh k =
@@ -150,5 +141,9 @@ class ['self] g args = object(self: 'self)
 
 end
 
-let g = new g
+let g = (new g :> (Plugin_intf.plugin_args ->
+                   (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
 end
+
+let register () =
+  Expander.register_plugin "show" (module Make: Plugin_intf.PluginRes)

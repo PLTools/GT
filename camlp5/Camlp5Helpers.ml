@@ -93,20 +93,21 @@ module Exp = struct
     let r = ident ~loc "false" in
     <:expr< assert $r$ >>
 
-
-  let acc ~loc l r = <:expr< $l$ . $r$ >>
-  let acc_list ~loc l rs = List.fold_left (acc ~loc) l rs
-
   let of_longident ~loc l =
     let rec helper = function
-      | Longident.Lident s when Char.equal s.[0] (Char.uppercase s.[0]) -> uid ~loc s
+      | Longident.Lident s when Char.equal s.[0] (Char.uppercase_ascii s.[0]) -> uid ~loc s
       | Longident.Lident s -> lid ~loc s
       | Ldot (l, r) ->
         let u = helper l in
-        acc ~loc u (ident ~loc r)
+        <:expr< $u$ . $ident ~loc r$ >>
+        (* acc ~loc u (ident ~loc r) *)
       | _ -> assert false
     in
     helper l
+
+  let acc ~loc e l = <:expr< $e$ . $of_longident ~loc l$ >>
+  (* let acc_list ~loc l rs = List.fold_left (acc ~loc) l rs *)
+
 
   let app ~loc l r = <:expr< $l$ $r$ >>
   let app_list ~loc l xs =
@@ -134,7 +135,7 @@ module Exp = struct
   let record ~loc lpe =
     let lpe = List.map (fun (l,r) -> Pat.of_longident ~loc l, r) lpe in
     <:expr< {$list:lpe$} >>
-  let field ~loc e lident = acc ~loc e (of_longident ~loc lident)
+  let field ~loc e lident = acc ~loc e lident
 
   let from_caml e = failwith "not implemented"
   let assert_false ~loc = <:expr< assert false >>
@@ -364,7 +365,7 @@ end
 module Ctf = struct
   type t = class_sig_item
   let constraint_ ~loc t1 t2 = <:class_sig_item< type $t1$ = $t2$ >>
-  let method_ ~loc s ?(virt=false) t =
+  let method_ ~loc ?(virt=false) s t =
     if virt
     then <:class_sig_item< method virtual $lid:s$ : $t$ >>
     else <:class_sig_item< method $lid:s$ : $t$ >>

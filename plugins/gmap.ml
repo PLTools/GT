@@ -2,7 +2,6 @@
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
- *   Evgeniy Moiseenko aka eucpp
  * St.Petersburg State University, JetBrains Research
  *)
 
@@ -12,14 +11,16 @@ open Ppxlib
 open Printf
 open Ast_helper
 
+let trait_name = "gmap"
 let param_name_mangler = sprintf "%s_2"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-let plugin_name = "gmap"
+let plugin_name = trait_name
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
 
+(* TODO: rethink this function *)
 let hack_params ?(loc=noloc) ps =
   let param_names = map_type_param_names ps ~f:id in
   let rez_names = map_type_param_names ps ~f:param_name_mangler in
@@ -37,8 +38,8 @@ let hack_params ?(loc=noloc) ps =
   in
   (param_names, rez_names, assoc, blownup_params)
 
-let g args = object(self: 'self)
-  inherit ['self] P.generator args
+class g args = object(self: 'self)
+  inherit P.generator args
 
   method plugin_name = plugin_name
 
@@ -174,5 +175,9 @@ let g args = object(self: 'self)
     ]
 
 end
-
+let g = (new g :> (Plugin_intf.plugin_args ->
+                   (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
 end
+
+let register () =
+  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)

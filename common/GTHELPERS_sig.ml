@@ -1,11 +1,9 @@
 module type S = sig
-(* module Located :
- *   sig
- *     type t
- *     val mk : loc:'a -> 'b -> 'b
- *   end
- * type loc = Located.t *)
+
 type loc
+type class_structure
+type case
+
 
 val loc_from_caml: Ppxlib.location -> loc
 val noloc: loc
@@ -29,10 +27,6 @@ module Pat :
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
-type class_structure
-
-type case
-(* type type_declaration *)
 
 module rec Exp :
   sig
@@ -43,15 +37,15 @@ module rec Exp :
     val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
 
     val unit : loc:loc -> t
-    val uid  : loc:loc -> string -> t
+    (* val uid  : loc:loc -> string -> t *)
     val lid  : loc:loc -> string -> t
     val int_const : loc:loc -> int -> t
     val string_const : loc:loc -> string -> t
     val record : loc:loc -> (Ppxlib.longident * t) list -> t
     val app : loc:loc -> t -> t -> t
     val app_list : loc:loc -> t -> t list -> t
-    val acc      : loc:loc -> t -> t -> t
-    val acc_list : loc:loc -> t -> t list -> t
+    val acc      : loc:loc -> t -> Ppxlib.longident -> t
+    (* val acc_list : loc:loc -> t -> t list -> t *)
 
     val field : loc:loc -> t -> Ppxlib.longident -> t
     val fun_ : loc:loc -> Pat.t -> t -> t
@@ -106,9 +100,9 @@ end
 and Ctf : (* class_sig_item *)
   sig
     type t
-    val inherit_: loc:loc -> Cty.t -> t
-    val method_ : loc:loc -> string -> ?virt:bool -> Typ.t -> t
-    val constraint_:      loc:loc -> Typ.t -> Typ.t -> t
+    val inherit_   : loc:loc -> Cty.t -> t
+    val method_    : loc:loc -> ?virt:bool -> string -> Typ.t -> t
+    val constraint_: loc:loc -> Typ.t -> Typ.t -> t
   end
 and Str :
   sig
@@ -147,6 +141,10 @@ and Vb :
   sig
     type t
   end
+
+(* type structure = Str.t list
+ * type signature = Sig.t list *)
+
 
 val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case

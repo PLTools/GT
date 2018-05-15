@@ -77,7 +77,7 @@ module Exp = struct
   let field ~loc t lident =
     pexp_field ~loc t (Located.mk ~loc lident)
 
-  let acc ~loc l r = assert false
+  let acc ~loc l r = pexp_field ~loc l (Located.mk ~loc r)
   let acc_list ~loc l xs = assert false
   let fun_ ~loc = pexp_fun ~loc Nolabel None
   let fun_list ~loc args e =
@@ -134,20 +134,20 @@ module Cl = struct
   include Cl
 
   type t = class_expr
-  let fun_list args e =
+  let fun_list ~loc args e =
     if List.is_empty args then e else
     List.fold_right args ~init:e
-      ~f:(fun arg acc -> Cl.fun_ Asttypes.Nolabel None arg acc)
+      ~f:(fun arg acc -> Cl.fun_ ~loc Asttypes.Nolabel None arg acc)
 
-  let apply e args =
-    if List.is_empty args then e else Cl.apply e args
+  let apply ~loc e args =
+    if List.is_empty args then e else Cl.apply ~loc e (nolabelize args)
 
-  let fun_ ?(loc=Location.none) = pcl_fun ~loc
+  let fun_ ~loc = pcl_fun ~loc Nolabel None
 
-  let constr ?(loc=Location.none) (lid: longident) ts =
+  let constr ~loc (lid: longident) ts =
     pcl_constr ~loc (Located.mk ~loc lid) ts
-  let structure ?(loc=Location.none) = pcl_structure ~loc
-  let let_ ?(loc=Location.none) ?(flg=Nonrecursive) = Cl.let_ ~loc flg
+  let structure ~loc = pcl_structure ~loc
+  let let_ ~loc ?(flg=Nonrecursive) = Cl.let_ ~loc flg
 end
 
 
@@ -197,34 +197,63 @@ module Typ = struct
 end
 
 module Str = struct
-  open Ast_helper
-  include Str
+  (* open Ast_helper
+   * include Str *)
 
-  let single_class ?(loc=Location.none) ?(virt=Asttypes.Virtual) ?(pat=[%pat? _])
+  type t = structure_item
+  let single_class ~loc ?(virt=Asttypes.Virtual) ?(pat=[%pat? _])
       ?(wrap= (fun x -> x)) ~name ~params body =
-    Str.class_ [Ci.mk ~virt ~params (Located.mk ~loc name) @@
-                wrap (Ast_helper.Cl.structure (Cstr.mk pat body))
+    pstr_class [Ast_helper.Ci.mk ~virt ~params (Located.mk ~loc name) @@
+                wrap (Ast_helper.Cl.structure (Ast_helper.Cstr.mk pat body))
   ]
 
-  (* make value have a default re4cursive flag *)
-  let class_single = single_class
+  let of_tdecls ~loc decl = Ast_helper.Str.type_ ~loc Recursive [decl]
 
-  let value ?(loc=Location.none) ?(flag=Nonrecursive) decls =
+  let tdecl ~loc ~name ~params typ =
+    let params = List.map ~f:(fun s -> Typ.var ~loc s, Invariant) params in
+    pstr_type ~loc Recursive @@
+    [ type_declaration ~loc ~name:(Located.mk ~loc name) ~params
+        ~manifest:None
+        ~kind:Ptype_abstract
+        ~cstrs:[] ~private_:Public
+    ]
+
+  (* make value have a default re4cursive flag *)
+  let class_single ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fields =
+    let open Ast_builder.Default in
+    let virt = if virt then Virtual else Concrete in
+    let params = invariantize params in
+    let pat = [%pat? _] in
+    pstr_class ~loc
+      [ Ast_helper.Ci.mk ~loc ~virt ~params (Located.mk ~loc name) @@
+        wrap (Ast_helper.Cl.structure ~loc (Ast_helper.Cstr.mk pat fields))
+      ]
+
+  let value ~loc ?(flag=Nonrecursive) decls =
     pstr_value ~loc flag decls
-  let single_value ?(loc=Location.none) ?(flag=Nonrecursive) pat expr =
+  let single_value ~loc pat expr =
+    let flag = Nonrecursive in
     pstr_value ~loc flag [value_binding ~loc ~pat ~expr]
+  let values ~loc vbs =
+    pstr_value ~loc Recursive vbs
 end
 
 module Sig = struct
   open Ast_helper
   include Sig
-  let class_ ?(loc=Location.none) ?(virt=Asttypes.Virtual)
-      ?(wrap= (fun x -> x)) ~name ~params body =
+
+  type t = signature_item
+  let class_ ~loc  ~name ~params ?(virt=false)
+      ?(wrap= (fun x -> x)) body =
+    let virt = if virt then Virtual else Concrete in
+    let params = invariantize params in
     psig_class ~loc [Ci.mk ~loc (Located.mk ~loc name) ~virt ~params @@
                      wrap (Cty.signature (Csig.mk [%type: _] body))
                     ]
 
-  let value ?(loc=Location.none) ?(prim=[]) ~name type_ = psig_value ~loc @@
+  let value ~loc ~name type_ =
+    psig_value ~loc @@
+    let prim = [] in
     value_description ~loc ~name:(Located.mk ~loc name) ~type_ ~prim
 
 end
@@ -245,32 +274,36 @@ module Cf = struct
 
 end
 module Ctf = struct
-  let method_ ~loc ?(flg=Public) ?(virt_flg=Virtual) name kind =
+  type t = class_type_field
+  let method_ ~loc ?(virt=false) name kind =
+    let flg = Public in
+    let virt_flg = if virt then Virtual else Concrete in
     pctf_method ~loc (Located.mk ~loc name, flg, virt_flg, kind)
   let inherit_ ~loc = pctf_inherit ~loc
   let constraint_ ~loc l r = pctf_constraint ~loc (l,r)
 end
 module Cty = struct
-  include Ast_helper.Cty
+  (* include Ast_helper.Cty *)
   type t = class_type
   let arrow ~loc  l r =
     Ast_helper.Cty.arrow ~loc Nolabel l r
+  let constr ~loc lident ts =
+    pcty_constr ~loc (Located.mk ~loc lident) ts
 end
 
 module Vb = struct
-
+  type t = Ppxlib.value_binding
 end
-let value_binding ~loc ~pat ~expr =
-  value_binding
+let value_binding = value_binding
 module Cstr = struct
   let mk ~self fields = class_structure ~self ~fields
 end
 
 type case = Ppxlib.case
-let case  ~lhs ~rhs = 1
+let case  ~lhs ~rhs = case ~lhs ~rhs ~guard:None
 
 type class_structure = Ppxlib.class_structure
-let class_structure ~self ~fields = (self,fields)
+let class_structure = Ast_builder.Default.class_structure
 
 open Parsetree
 
@@ -285,20 +318,19 @@ let map_type_param_names ~f ps =
     | Ptyp_var name -> f name
     | _ -> failwith "bad argument of map_type_param_names")
 
-let prepare_param_triples ?(loc=Location.none) ?(extra=(fun ()->[]))
-    ?(normal=fun ~loc s -> Typ.var ~loc @@ s)
+let prepare_param_triples ~loc
+    ?(extra=[])
     ?(inh=fun ~loc s -> Typ.var ~loc @@ "i"^s)
     ?(syn=fun ~loc s -> Typ.var ~loc @@ "s"^s)
-    ?(default_syn=[%type: 'syn])
     ?(default_inh=[%type: 'inh])
-    ?(middle=[])
-    params =
-  let ps = List.concat @@ map_type_param_names params ~f:(fun n ->
-    [normal ~loc n; inh ~loc n; syn ~loc n]
+    ?(default_syn=[%type: 'syn])
+    names =
+  let ps = List.concat_map names ~f:(fun n ->
+    [Typ.var ~loc n; inh ~loc n; syn ~loc n]
   )
   in
   let tail = [ default_inh; default_syn ] in
-  ps @ (extra ()) @ tail @ middle
+  ps @ tail @ (List.map ~f:(Typ.ident ~loc) extra)
 
 
 (* let params_obj ?(loc=Location.none)
@@ -321,69 +353,3 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
     false
   )
 
-
-(* let make_new_names ?(prefix="") n =
- *   List.init n ~f:(fun n -> Printf.sprintf "%s_%c" prefix
- *     Base.Char.(of_int_exn (n + to_int 'a')) )
- *
- * let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
- *   let k cs = Exp.match_ ~loc what cs in
- *   let rs =
- *     List.map rows ~f:(function
- *         | Rtag (lab, _, _, args) ->
- *           let args = match args with
- *             | [t] -> unfold_tuple t
- *             | [] -> []
- *             | _ -> failwith "we don't support conjunction types"
- *           in
- *           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
- *           let lhs = Pat.variant ~loc  lab @@ match args with
- *             | [] -> None
- *             | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
- *           in
- *           case ~guard:None ~lhs
- *             ~rhs:(onrow lab @@ List.zip_exn names args)
- *         | Rinherit typ ->
- *           match typ.ptyp_desc with
- *           | Ptyp_constr({txt;loc},ts) ->
- *             let newname = "subj" in
- *             let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc txt)) newname
- *             in
- *             case ~guard:None ~lhs ~rhs:(oninherit ts txt newname)
- *           | _ -> failwith "this inherit field isn't supported"
- *
- *       )
- *   in
- *   let ls = match labels with
- *     | None -> []
- *     | Some ls -> List.map ls ~f:(fun lab ->
- *         let newname = "subj" in
- *         let lhs = Pat.alias ~loc (Pat.type_ ~loc (Located.mk ~loc (Lident lab)) ) newname
- *         in
- *         case ~guard:None ~lhs ~rhs:(onlabel lab newname)
- *       )
- *   in
- *   k @@ rs@ls
- *
- * let prepare_patt_match ~loc what constructors make_rhs =
- *   let on_alg cdts =
- *     let k cs = Exp.match_ ~loc what cs in
- *     k @@ List.map cdts ~f:(fun cd ->
- *         match cd.pcd_args with
- *         | Pcstr_record _ -> not_implemented "wtf"
- *         | Pcstr_tuple args ->
- *             let names = make_new_names (List.length args) in
- *             case ~guard:None
- *               ~lhs:(Pat.construct ~loc (lident cd.pcd_name.txt) @@
- *                     Some (Pat.tuple ~loc (Base.List.map ~f:(Pat.var ~loc) names)
- *                          ))
- *               ~rhs:(make_rhs cd names)
- *
- *       )
- *   in
- *   let on_poly cs =
- *     assert false
- *   in
- *   match constructors with
- *   | `Algebraic cdts -> on_alg cdts
- *   | `PolyVar cs -> on_poly cs *)

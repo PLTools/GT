@@ -1,5 +1,6 @@
 version = "0.1"
 description = "Generic transformers for algebraic types"
+requires = "ppxlib"
 archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
 
@@ -26,7 +27,7 @@ package "expander" (
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
-  requires = "camlp5"
+  requires = "camlp5,ppxlib"
   archive(syntax, preprocessor) = "pa_gt.cmo"
   archive(syntax, toploop) = "pa_gt.cmo"
 

@@ -31,8 +31,8 @@ let hack_params ?(loc=noloc) ps =
 
 open Plugin
 
-let g initial_args = object(self: 'self)
-  inherit ['self] P.generator initial_args as super
+class g initial_args = object(self: 'self)
+  inherit P.generator initial_args as super
 
   method plugin_name = "foldl"
 
@@ -138,4 +138,10 @@ let g initial_args = object(self: 'self)
 
 end
 
+let g = (new g :> (Plugin_intf.plugin_args ->
+                   (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
+
 end
+
+let register () =
+  Expander.register_plugin "show" (module Make: Plugin_intf.PluginRes)

@@ -52,8 +52,8 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   in
   k @@ rs@ls
 
-class virtual ['self] generator initial_args = object(self: 'self)
-  inherit [_] Intf.t
+class virtual generator initial_args = object(self: 'self)
+  inherit Intf.g
 
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
@@ -119,8 +119,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
     in
     self#got_typedecl ~loc tdecl ~is_self_rec ~mutal_names k
 
-  method extra_class_lets tdecl k =
-    k
+  (* method extra_class_lets tdecl k =
+   *   k *)
 
   method prepare_fa_args ~loc tdecl =
     map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
@@ -598,10 +598,8 @@ class virtual ['self] generator initial_args = object(self: 'self)
    *)
   method do_typ_gen ~loc ~mutal_names ~is_self_rec t : Exp.t =
     let access_plugins ~loc e =
-      Exp.(acc_list ~loc e
-             [ uid ~loc "GT"
-             ; lid ~loc "plugins"
-             ])
+      Exp.acc ~loc e @@
+      (Ldot (Lident "GT", "plugins"))
     in
     let rec helper t =
       match t.ptyp_desc with
@@ -612,8 +610,9 @@ class virtual ['self] generator initial_args = object(self: 'self)
               Exp.(app_list ~loc
                  (send ~loc
                     (access_plugins ~loc
-                       (acc ~loc (uid ~loc "GT")
-                          (lid ~loc @@ Printf.sprintf "tuple%d" (List.length params))))
+                       (of_longident ~loc
+                          (Ldot (Lident "GT", Printf.sprintf "tuple%d" (List.length params))))
+                    )
                     (* [%expr let open GT in
                      *   [%e  Exp.sprintf "tuple%d" (List.length params)
                      *   ].GT.plugins ] *)

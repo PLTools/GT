@@ -24,8 +24,8 @@ true: debug, bin_annot, short_paths, annot
 <ppx/PpxHelpers.*>: package(ppxlib.metaquot)
 <ppx/ppx_deriving_gt.cm*>: linkall
 
-#<rewriter/pp_gt.cm*>: package(ppxlib.runner)
-#<rewriter/pp_gt.native>: make_pp_gt
+<ppx/pp_gt.cm*>: package(ppxlib.runner)
+<ppx/pp_gt.native>: make_pp_gt
 
 ###########################################
 # Regression tests

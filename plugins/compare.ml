@@ -3,17 +3,18 @@ open Ppxlib
 open HelpersBase
 open Printf
 
+let trait_name = "compare"
 (* Compare plugin where we pass another value of the same type as 'inh
  * and return GT.comparison as 'syn
-*)
+ *)
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
-let plugin_name = "compare"
+let plugin_name = trait_name
 
 let access_GT s = Ldot (Lident "GT", s)
-class ['self] g initial_args = object(self: 'self)
-  inherit ['self] P.generator initial_args as super
+class g initial_args = object(self: 'self)
+  inherit P.generator initial_args as super
 
   method plugin_name = plugin_name
 
@@ -197,6 +198,10 @@ class ['self] g initial_args = object(self: 'self)
 
 end
 
-let g = new g
+let g = (new g :> (Plugin_intf.plugin_args ->
+                   (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
 
 end
+
+let register () =
+  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)

@@ -15,6 +15,15 @@ let (@@) = Caml.(@@)
 
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
+let registered_plugins
+  : (string * (module Plugin_intf.PluginRes))  list ref =
+  ref []
+
+let register_plugin name m =
+  let p = (name, m) in
+  registered_plugins := p :: !registered_plugins;
+  ()
+
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 open AstHelpers
@@ -538,27 +547,34 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * ) @
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
-let registered_plugins : (string * _ ) list =
-  [ (let module M = Show   .Make(AstHelpers) in
-     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  ; (let module M = Compare.Make(AstHelpers) in
-     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  ;  (let module M = Gmap   .Make(AstHelpers) in
-     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  ; (let module M = Foldl  .Make(AstHelpers) in
-     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  ; (let module M = Show_typed.Make(AstHelpers) in
-     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  ; (let module M = Eq     .Make(AstHelpers) in
-     M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-  ]
+(* let () =
+ *   Show.register ();
+ *   Gmap.register () *)
+
+  (* [ (let module M = Show   .Make(AstHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+   * ; (let module M = Compare.Make(AstHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+   * ;  (let module M = Gmap   .Make(AstHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+   * ; (let module M = Foldl  .Make(AstHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+   * ; (let module M = Show_typed.Make(AstHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+   * ; (let module M = Eq     .Make(AstHelpers) in
+   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
+   * ] *)
 
 let wrap_plugin name = function
 | Skip -> id
 | Use args ->
-    match List.Assoc.find registered_plugins name ~equal:String.equal with
-    | Some p -> List.cons (p args :> _ Plugin_intf.Make(AstHelpers).t)
-    | None -> failwithf "Plugin '%s' is not registered" name ()
+    match List.Assoc.find !registered_plugins name ~equal:String.equal with
+      | Some m ->
+        let module F = (val m : Plugin_intf.PluginRes) in
+        let module P = F(AstHelpers) in
+        (* List.cons (p args :> Plugin_intf.Make(AstHelpers).t) *)
+        List.cons @@ P.g args
+      | None -> failwithf "Plugin '%s' is not registered" name ()
 ;;
 
 let sig_type_decl ~loc ~path si
@@ -605,21 +621,26 @@ let str_type_decl ~loc ~path si
       List.concat_map ~f:(do_typ ~loc si plugins false) tdls
 
 let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
-    use_compare use_eq use_show_type =
-  str_type_decl ~loc ~path info ~use_show ~use_gmap ~use_foldl ~use_show_type
-    ~use_compare ~use_eq
+    use_compare use_eq use_show_type p =
+  str_type_decl ~loc ~path info
+    ~use_show ~use_gmap ~use_foldl ~use_show_type ~use_compare ~use_eq
+    p
 
-let sig_type_decl_implicit ~loc ~path si
+let sig_type_decl_implicit ~loc ~path
+    extra_decls
     use_show use_gmap use_foldl
-    use_compare use_eq use_show_type =
+    use_compare use_eq use_show_type  (flg, tdls) =
   let wrap f = if f then Use [] else Skip in
   sig_type_decl ~loc ~path
+    extra_decls
     ~use_show: (wrap use_show)
     ~use_gmap: (wrap use_gmap)
     ~use_foldl:(wrap use_foldl)
     ~use_compare:(wrap use_compare)
     ~use_show_type:(wrap use_show_type)
     ~use_eq:(wrap use_eq)
-    si
+    (flg, tdls)
+
+(* let (_:int) = sig_type_decl_implicit *)
 
 end

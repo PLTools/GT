@@ -8,8 +8,8 @@
 
 open Ppxlib
 
-open Ppx_gt_expander
-module E = Ppx_gt_expander.Make(PpxHelpers)
+open Expander
+module E = Expander.Make(PpxHelpers)
 
 let gt_param name =
   let open Deriving.Args in
@@ -20,7 +20,6 @@ let str_type_decl : (_, _) Deriving.Generator.t =
     Deriving.Args.(rest +> (gt_param name) )
   in
   Deriving.Generator.make
-    (* ~attributes:[ Attribute.T Attrs.ignore ] *)
     Deriving.Args.(empty
                    |> (bothp "show")
                    |> (bothp "gmap")
@@ -29,7 +28,8 @@ let str_type_decl : (_, _) Deriving.Generator.t =
                    |> (bothp "compare")
                    |> (bothp "eq")
                   )
-    (fun ~loc ~path info show gmap foldl show_typed  compare eq  ->
+    (fun ~loc ~path info ->
+     fun show gmap foldl show_typed compare eq  ->
       let wrap name = function
         | None -> Skip
         | Some e -> match e.pexp_desc with
@@ -45,17 +45,22 @@ let str_type_decl : (_, _) Deriving.Generator.t =
       let show_typed = wrap "show_typed" show_typed in
       let compare    = wrap "compare"    compare in
       let eq         = wrap "eq"         eq in
+
       E.str_type_decl_implicit ~loc ~path
-        info show gmap foldl compare eq show_typed
+        [] show gmap foldl compare eq show_typed info
     )
 
+(* let (_:int) = E.sig_type_decl_implicit *)
 let sig_type_decl : (_, _) Deriving.Generator.t =
   Deriving.Generator.make
     Deriving.Args.(empty
                    +> flag "show" +> flag "gmap" +> flag "foldl"
                    +> flag "compare" +> flag "eq" +> flag "show_typed"
                   )
-    E.sig_type_decl_implicit
+
+    (fun ~loc ~path defs f1 f2 f3 f4 f5 f6 ->
+       E.sig_type_decl_implicit ~loc ~path ([] : PpxHelpers.Sig.t list)
+         f1 f2 f3 f4 f5 f6 defs)
 
 let () =
   (* Sys.command "notify-send 'Registering deriver' wtf" |> ignore; *)

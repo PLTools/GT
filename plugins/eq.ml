@@ -1,9 +1,6 @@
 open Base
 open Ppxlib
 open Printf
-(* open Ast_helper
- * open Ppxlib.Ast_builder.Default
- * open GtHelpers *)
 
 (* Compare plugin where we pass another value of the same type as 'inh
  * and return true or false
@@ -16,7 +13,7 @@ let plugin_name = "eq"
 open AstHelpers
 
 let g initial_args = object(self: 'self)
-  inherit ['self] C.g initial_args as super
+  inherit C.g initial_args as super
 
   method plugin_name = "eq"
 
