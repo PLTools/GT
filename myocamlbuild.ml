@@ -17,15 +17,12 @@ let m4_rules ext =
 open Command;;
 
 let () = dispatch (fun hook ->
-        (*
-  Migrate_parsetree_ocamlbuild.dispatch hook;
-  *)
   match hook with
   | Before_rules -> ()
-
   | After_rules ->
-     ocaml_lib "src/GT";
-     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
+    (* ocaml_lib "common/common"; *)
+    ocaml_lib "src/GT";
+    (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
      m4_rules ();
      dep ["use_m4"] ["src/macro.m4"];

@@ -8,8 +8,7 @@ true: debug, bin_annot, short_paths, annot
 #<common/compare.ml> or <ext/plugin.ml>: package(ppxlib.metaquot)
 
 <camlp5/core2.ml> or <camlp5/extension.ml> or <camlp5/Camlp5Helpers.ml>: syntax(camlp5o), package(camlp5,camlp5.gramlib), for-pack(Pa_gt)
-#<camlp5/hack_expander.*>: package(base,ppxlib)
-<camlp5/*>: package(ppxlib)
+<camlp5/*>: package(ppxlib), use_common
 <camlp5/pa_gt.cm*>: package(ppxlib,base)
 <camlp5/pp5gt.cma>: linkpkg, link_pagtcmo, package(ppxlib), linkall
 
