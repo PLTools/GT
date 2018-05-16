@@ -10,9 +10,11 @@ open Ppxlib
 open HelpersBase
 open Printf
 
+let trait_name = "show"
+
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-let plugin_name = "show"
+let plugin_name = trait_name
 
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
@@ -28,7 +30,7 @@ class g args  =
   inherit P.generator args
 
 
-  method plugin_name = plugin_name
+  method plugin_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
   method default_syn ~loc _tdecl = Typ.ident ~loc "string"
 
@@ -146,4 +148,6 @@ let g = (new g :> (Plugin_intf.plugin_args ->
 end
 
 let register () =
-  Expander.register_plugin "show" (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+
+let () = register ()

@@ -2,6 +2,7 @@ open Base
 open Ppxlib
 open Printf
 
+let trait_name = "eq"
 (* Compare plugin where we pass another value of the same type as 'inh
  * and return true or false
 *)
@@ -9,13 +10,13 @@ open Printf
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 module C = Compare.Make(AstHelpers)
-let plugin_name = "eq"
+let plugin_name = trait_name
 open AstHelpers
 
-let g initial_args = object(self: 'self)
+class g initial_args = object(self: 'self)
   inherit C.g initial_args as super
 
-  method plugin_name = "eq"
+  method plugin_name = trait_name
 
   (* method default_inh = core_type_of_type_declaration *)
   method syn_of_param ~loc s = Typ.sprintf ~loc "bool"
@@ -159,4 +160,12 @@ let g initial_args = object(self: 'self)
 
 end
 
+let g =  (new g :>
+            (Plugin_intf.plugin_args ->
+              (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
 end
+
+let register () =
+  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+
+let () = register ()

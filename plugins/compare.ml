@@ -201,7 +201,10 @@ end
 let g = (new g :> (Plugin_intf.plugin_args ->
                    (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
 
+(* let g = new g *)
 end
 
 let register () =
   Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+
+let () = register ()

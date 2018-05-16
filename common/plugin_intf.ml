@@ -102,44 +102,5 @@ module type PluginRes =
   sig
     open AstHelpers
     val plugin_name : string
-    (* class virtual g : object
-     *   inherit [AstHelpers.loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] typ_g
-     * end *)
-      (* object
-       *
-       *   method virtual default_inh :
-       *     loc:AstHelpers.loc -> Ppxlib.type_declaration -> AstHelpers.Typ.t
-       *   method virtual default_syn :
-       *     loc:AstHelpers.loc -> Ppxlib.type_declaration -> AstHelpers.Typ.t
-       *   method virtual do_mutals :
-       *     loc:AstHelpers.loc ->
-       *     is_rec:bool ->
-       *     Ppxlib.type_declaration list -> AstHelpers.Str.t list
-       *   method virtual do_single :
-       *     loc:AstHelpers.loc ->
-       *     is_rec:bool -> Ppxlib.type_declaration -> AstHelpers.Str.t list
-       *   method virtual do_single_sig :
-       *     loc:AstHelpers.loc ->
-       *     is_rec:bool -> Ppxlib.type_declaration -> AstHelpers.Sig.t list
-       *   method virtual extra_class_sig_members :
-       *     Ppxlib.type_declaration -> AstHelpers.Ctf.t list
-       *   method virtual extra_class_str_members :
-       *     Ppxlib.type_declaration -> AstHelpers.Cf.t list
-       *   method virtual inh_of_param :
-       *     Ppxlib.type_declaration -> string -> AstHelpers.Typ.t
-       *   method virtual make_trans_function_name :
-       *     Ppxlib.type_declaration -> string
-       *   method virtual make_trans_function_typ :
-       *     loc:AstHelpers.loc -> Ppxlib.type_declaration -> AstHelpers.Typ.t
-       *   method virtual plugin_class_params :
-       *     Ppxlib.type_declaration -> AstHelpers.type_arg list
-       *   method virtual plugin_name : string
-       *   method virtual prepare_inherit_typ_params_for_alias :
-       *     loc:AstHelpers.loc ->
-       *     Ppxlib.type_declaration ->
-       *     Ppxlib.core_type list -> AstHelpers.Typ.t list
-       *   method virtual syn_of_param :
-       *     loc:AstHelpers.loc -> string -> AstHelpers.Typ.t
-       * end *)
     val g : plugin_args -> (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
   end

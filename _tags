@@ -7,11 +7,13 @@ true: debug, bin_annot, short_paths, annot
 <plugins/*>: package(ppxlib)
 #<common/compare.ml> or <ext/plugin.ml>: package(ppxlib.metaquot)
 
-<camlp5/core2.ml> or <camlp5/extension.ml> or <camlp5/Camlp5Helpers.ml>: syntax(camlp5o), package(camlp5,camlp5.gramlib), for-pack(Pa_gt)
-<camlp5/*>: package(ppxlib), use_GTCommon
+<camlp5/core2.ml> or <camlp5/extension.ml> or <camlp5/Camlp5Helpers.ml>: syntax(camlp5o), package(camlp5,camlp5.gramlib), for-pack(Pa_gt), package(ppxlib)
+#<camlp5/*>: package(ppxlib)
 <camlp5/Camlp5Helpers.*>: use_GTCommon
 <camlp5/pa_gt.cm*>: package(ppxlib,base)
-<camlp5/pp5gt.cma>: linkpkg, link_pagtcmo, package(ppxlib), linkall
+#<camlp5/pa_gt.cma>: linkall
+<camlp5/pp5gt.cma>: linkpkg, link_pp5gt
+#package(ppxlib), linkall, use_GTCommon, link_pagtcmo
 
 #<src/GT.ml4>: use_m4
 <src/GT.ml>:  use_pa_gt, use_m4

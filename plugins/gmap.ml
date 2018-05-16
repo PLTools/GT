@@ -181,3 +181,5 @@ end
 
 let register () =
   Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+
+let () = register ()

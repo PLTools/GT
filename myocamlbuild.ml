@@ -24,10 +24,15 @@ let () = dispatch (fun hook ->
     ocaml_lib "src/GT";
     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
-     m4_rules ();
-     dep ["use_m4"] ["src/macro.m4"];
-     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"../camlp5o_pp.sh" ]);
-     flag ["ocaml"; "link"; "link_pagtcmo"] (S [ A"camlp5/pa_gt.cmo" ]);
+    m4_rules ();
+    dep ["use_m4"] ["src/macro.m4"];
+    flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"../camlp5o_pp.sh" ]);
+    flag ["ocaml"; "link"; "link_pagtcmo"] (S [ A"camlp5/pa_gt.cma" ]);
+    flag ["ocaml"; "link"; "link_pp5gt"]
+      (S[ A"-package"; A"ppxlib"
+        ; A"common/GTCommon.cma"
+        ; A"camlp5/pa_gt.cma"
+        ]);
 
      (* flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
       *                                        ; A"show.cmo";  A"gmap.cmo"

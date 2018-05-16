@@ -3,12 +3,13 @@ open HelpersBase
 open Ppxlib
 open Printf
 
+let trait_name = "foldl"
 (* TODO: we want easily get foldr from foldl *)
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module P = Plugin.Make(AstHelpers)
 
-let plugin_name = "foldl"
+let plugin_name =  trait_name
 let make_dest_param_names  ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
@@ -144,4 +145,6 @@ let g = (new g :> (Plugin_intf.plugin_args ->
 end
 
 let register () =
-  Expander.register_plugin "show" (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+
+let () = register ()

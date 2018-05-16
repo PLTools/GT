@@ -31,15 +31,15 @@ compile:
 	$(OB) $(OBPARAMS) $(OBTARGETS)
 
 add_common:
-	$(eval OBTARGETS += common/GTCommon.cma common/GTCommon.cmxa)
+	$(eval OBTARGETS +=  common/GTCommon.cma common/GTCommon.cmxa)
 	#$(eval OBPARAMS  += -I plugins)
 common: add_common compile
 add_lib:
 	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
 lib: add_lib compile
 add_camlp5: add_common
-	$(eval OBTARGETS += camlp5/pa_gt.cmo camlp5/pp5gt.cma)
-	$(eval OBPARAMS  += -I common)
+	$(eval OBTARGETS += camlp5/pa_gt.cma camlp5/pp5gt.cma)
+	#$(eval OBPARAMS  += -I common)
 camlp5: add_camlp5 compile
 
 ppx: add_ppx compile
