@@ -20,7 +20,7 @@ let () = dispatch (fun hook ->
   match hook with
   | Before_rules -> ()
   | After_rules ->
-    (* ocaml_lib "common/common"; *)
+    ocaml_lib "common/GTCommon";
     ocaml_lib "src/GT";
     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
