@@ -142,9 +142,12 @@ module Exp = struct
   let field ~loc e lident = acc ~loc e lident
 
   let from_caml e = failwith "not implemented"
-  let assert_false ~loc = <:expr< assert false >>
+  let assert_false ~loc = <:expr< assert False >>
   let failwith_ ~loc s  = <:expr< failwith $str:s$ >>
   let objmagic_unit ~loc = <:expr< Obj.magic () >>
+  let true_  ~loc = <:expr< True >>
+  let false_ ~loc = <:expr< False >>
+
 end
 
 module Typ = struct

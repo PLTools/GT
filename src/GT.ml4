@@ -446,6 +446,12 @@ class ['a, 'b, 'extra] show_pair _ fa fb =
     inherit ['a, unit, string, 'b, unit, string, unit, string, 'extra] class_pair
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
   end
+class ['a, 'b, 'extra] html_pair _ fa fb =
+  object
+    inherit ['a, unit, 'syn, 'b, unit, 'syn, unit, 'syn, 'extra] class_pair
+    constraint 'syn = HTML.viewer
+    method c_Pair () x y = HTML.string "not implemented"
+  end
 
 class ['a, 'sa, 'b, 'sb, 'extra] gmap_pair _ (fa: 'a -> 'sa) fb =
   object
@@ -457,6 +463,12 @@ class ['a, 'b, 'syn, 'extra] foldl_pair _ fa fb  =
   object
     inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn, 'extra] class_pair
     method c_Pair s x y = fb (fa s x) y
+  end
+
+class ['a, 'b, 'syn, 'extra] foldr_pair _ fa fb  =
+  object
+    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn, 'extra] class_pair
+    method c_Pair s x y = fa (fb s y) x
   end
 
 class ['a, 'b, 'extra] eq_pair _ fa fb  =
@@ -494,10 +506,10 @@ class ['a, 'b, 'extra] html_pair_t =
 
 let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> ('a, 'b) pair -> 'syn,
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
-(*                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) -> ('a, 'b) pair -> HTML.viewer; *)
+                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) -> ('a, 'b) pair -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair;
                 foldl   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;
-(*           foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c; *)
+                foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;
                 eq      : ('a -> 'a -> bool) -> ('b -> 'b -> bool) ->
                           ('a, 'b) pair -> ('a, 'b) pair -> bool;
                 compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) ->
@@ -506,10 +518,12 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> (
   {gcata   = pair_gcata;
    plugins = object
        method show    fa fb = pair_gcata (new show_pair (fun _ -> assert false) fa fb) ()
+       method html    fa fb = pair_gcata (new html_pair (fun _ -> assert false) fa fb) ()
        method gmap    fa fb = pair_gcata (new gmap_pair (fun _ -> assert false) fa fb) ()
        method eq      fa fb = pair_gcata (new eq_pair     (fun _ -> assert false) fa fb)
        method compare fa fb = pair_gcata (new compare_pair(fun _ -> assert false) fa fb)
        method foldl   fa fb = pair_gcata (new foldl_pair  (fun _ -> assert false) fa fb)
+       method foldr   fa fb = pair_gcata (new foldr_pair  (fun _ -> assert false) fa fb)
 
 (*
                method html    fa fb = pair_gcata (lift fa) (lift fb) (new @pair[html]) ()

@@ -2,9 +2,11 @@
 #export OCAMLPATH=`pwd`/_build/bundle
 #camlp5o -I `ocamlfind query GT` pa_gt.cmo pr_o.cmo -I plugins show.cmo gmap.cmo foldl.cmo foldr.cmo compare.cmo eq.cmo $@
 
-
-camlp5o camlp5/pp5gt.cma plugins/foldl.cmo plugins/gmap.cmo \
-        plugins/show.cmo \
+set  +x
+camlp5o camlp5/pp5gt.cma plugins/foldl.cmo plugins/foldr.cmo \
+	plugins/gmap.cmo plugins/show.cmo \
+	plugins/compare.cmo plugins/eq.cmo \
+	plugins/html.cmo \
         $@
 exit $?
 

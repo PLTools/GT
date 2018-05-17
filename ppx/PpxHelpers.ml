@@ -126,7 +126,8 @@ module Exp = struct
   let assert_false ~loc = [%expr assert false]
   let objmagic_unit ~loc = [%expr Obj.magic ()]
   let failwith_ ~loc s = app ~loc [%expr failwith] (string_const ~loc s)
-
+  let true_  ~loc = [%expr true]
+  let false_ ~loc = [%expr false]
 end
 
 module Cl = struct

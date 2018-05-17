@@ -62,6 +62,8 @@ module rec Exp :
     val assert_false: loc:loc -> t
     val objmagic_unit: loc:loc -> t
     val failwith_: loc:loc -> string -> t
+    val true_ : loc:loc -> t
+    val false_: loc:loc -> t
   end
 and Typ :
   sig

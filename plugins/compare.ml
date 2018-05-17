@@ -73,7 +73,19 @@ class g initial_args = object(self: 'self)
   (* [%expr GT.chain_compare [%e e1] (fun () -> [%e e2]) ] *)
 
   method chain_init ~loc = Exp.of_longident ~loc (access_GT "EQ")
-    (* [%expr GT.EQ ] *)
+
+  method on_different_constructors ~loc is_poly other_name cname arg_typs =
+    Exp.app_list ~loc
+      (Exp.of_longident ~loc (access_GT "compare_vari"))
+      [ Exp.ident ~loc other_name
+      ; (if is_poly then Exp.variant ~loc cname
+         else Exp.construct ~loc (lident cname)) @@
+        List.map arg_typs ~f:(fun _ -> Exp.objmagic_unit ~loc)
+        (* It's annoying to use magic here but need to do this first:
+           https://caml.inria.fr/mantis/print_bug_page.php?bug_id=4751
+        *)
+      ]
+
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
     let is_poly,cname =
@@ -91,13 +103,6 @@ class g initial_args = object(self: 'self)
         let main_case =
           let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
           let lhs =
-            (* let arg_pats =
-             *   match pat_names with
-             *   | []  -> None
-             *   | [s] -> Some (Pat.var ~loc s)
-             *   | __  ->
-             *       Some (Pat.tuple ~loc @@ List.map pat_names ~f:(Pat.var ~loc))
-             * in *)
             let arg_pats =
               match pat_names with
               | []  -> []
@@ -125,19 +130,10 @@ class g initial_args = object(self: 'self)
         in
 
         let other_case =
-          let lhs = Pat.var ~loc "other" in
+          let other_name = "other" in
+          let lhs = Pat.var ~loc other_name in
           let rhs =
-            Exp.app_list ~loc
-              (Exp.of_longident ~loc (access_GT "compare_vari"))
-              [ Exp.ident ~loc "other"
-              ; (if is_poly then Exp.variant ~loc cname
-                  else Exp.construct ~loc (lident cname)) @@
-                  (* Exp.maybe_tuple ~loc @@ *)
-                  List.map args ~f:(fun _ -> Exp.objmagic_unit ~loc)
-                  (* It's annoying to use magic here but need to do this first:
-                     https://caml.inria.fr/mantis/print_bug_page.php?bug_id=4751
-                  *)
-              ]
+            self#on_different_constructors ~loc is_poly "other" cname args
           in
           case ~lhs ~rhs
         in

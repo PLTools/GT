@@ -53,11 +53,12 @@ class g initial_args = object(self: 'self)
    *   let body = make_gcata_of_class [%expr self] in
    *   [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
 
-
+  method! on_different_constructors ~loc is_poly other_name cname arg_typs =
+    Exp.false_ ~loc
   method chain_exprs ~loc e1 e2 =
     Exp.app_list ~loc (Exp.ident ~loc "&&") [ e1; e2 ]
     (* [%expr  [%e e1] && [%e e2] ] *)
-  method chain_init ~loc = Exp.ident ~loc "true"
+  method chain_init ~loc = Exp.true_ ~loc
     (* [%expr true ] *)
 
   (* method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
