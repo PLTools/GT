@@ -81,9 +81,12 @@ let case ~lhs ~rhs : case = (lhs, None, rhs)
 module Exp = struct
   type t = MLast.expr
 
-  let ident ~loc s = <:expr< $lid:s$ >>
+  let ident ~loc s =
+    if Base.Char.is_uppercase s.[0]
+    then <:expr< $uid:s$ >>
+    else <:expr< $lid:s$ >>
   let lid = ident
-  let uid ~loc s = <:expr< $uid:s$ >>
+  (* let uid ~loc s = <:expr< $uid:s$ >> *)
   let unit ~loc =  <:expr< () >>
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:expr< $lid:s$ >>) fmt
@@ -96,8 +99,8 @@ module Exp = struct
 
   let of_longident ~loc l =
     let rec helper = function
-      | Longident.Lident s when Char.equal s.[0] (Char.uppercase_ascii s.[0]) -> uid ~loc s
-      | Longident.Lident s -> lid ~loc s
+      (* | Longident.Lident s when Char.equal s.[0] (Char.uppercase_ascii s.[0]) -> uid ~loc s *)
+      | Longident.Lident s -> ident ~loc s
       | Ldot (l, r) ->
         let u = helper l in
         <:expr< $u$ . $ident ~loc r$ >>

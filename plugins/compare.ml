@@ -13,6 +13,7 @@ open AstHelpers
 let plugin_name = trait_name
 
 let access_GT s = Ldot (Lident "GT", s)
+
 class g initial_args = object(self: 'self)
   inherit P.generator initial_args as super
 

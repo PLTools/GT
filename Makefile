@@ -24,7 +24,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 OBTARGETS=
 OBPARAMS=
-all: add_common add_plugins add_camlp5 add_lib compile \
+all: add_common add_plugins add_camlp5 add_lib add_ppx compile \
 		bundle #standalone_rewriter bundle
 
 compile:
@@ -42,15 +42,16 @@ add_camlp5: add_common
 	#$(eval OBPARAMS  += -I common)
 camlp5: add_camlp5 compile
 
-ppx: add_ppx compile
+ppx: add_common add_plugins add_ppx compile
 add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 	$(eval OBPARAMS  += -I common -I plugins)
 
-PLUGINS=compare eq foldl gmap show show_typed #typename foldr html
+PLUGINS=compare eq foldl foldr gmap show show_typed # html
 add_plugins:
 	$(eval OBPARAMS  += -I common)
-	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) )
+	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
+											$(addprefix plugins/,$(addsuffix .cmx,$(PLUGINS))) )
 plugins: add_plugins compile
 
 celan: clean
@@ -124,7 +125,10 @@ test: tests
 
 ######################## Installation related stuff ##########################
 INSTALL_TARGETS=META \
-	$(wildcard _build/camlp5/pa_gt.cmo) \
+	$(wildcard _build/common/GTCommon.cma) \
+	$(wildcard _build/common/GTCommon.cmxa) \
+	_build/camlp5/pa_gt.cma \
+	_build/camlp5/pp5gt.cma \
 	$(wildcard _build/src/GT.cmx)  \
 	$(wildcard _build/src/GT.cma)  \
 	$(wildcard _build/src/GT.cmxa) \

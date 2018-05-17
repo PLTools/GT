@@ -27,7 +27,7 @@ true: debug, bin_annot, short_paths, annot
 <ppx/ppx_deriving_gt.cm*>: linkall
 
 <ppx/pp_gt.cm*>: package(ppxlib.runner)
-<ppx/pp_gt.native>: make_pp_gt
+<ppx/pp_gt.native>: use_GTCommon, make_pp_gt
 
 ###########################################
 # Regression tests

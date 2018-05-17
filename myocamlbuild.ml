@@ -16,6 +16,12 @@ let m4_rules ext =
 
 open Command;;
 
+let make_plugins_args ~is_byte =
+  (* N.B. Order matters *)
+  let names = [ "show"; "gmap"; "foldl"; "foldr"; "compare"; "eq" ] in
+  List.map (fun s -> A(Printf.sprintf "plugins/%s.cm%s" s (if is_byte then "o" else "x")) )
+    names
+
 let () = dispatch (fun hook ->
   match hook with
   | Before_rules -> ()
@@ -43,14 +49,17 @@ let () = dispatch (fun hook ->
      (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
       * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
 
-     flag ["compile"; "native"; "use_gt"]   (S [ A"-I";A"src" ]);
-     flag ["compile"; "byte";   "use_gt"]   (S [ A"-I";A"src" ]);
-     flag ["link";    "byte";   "use_gt"]   (S [ A"-I";A"src"; A"GT.cma" ]);
-     flag ["link";    "native"; "use_gt"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
+    flag ["compile"; "native"; "use_gt"]   (S [ A"-I";A"src" ]);
+    flag ["compile"; "byte";   "use_gt"]   (S [ A"-I";A"src" ]);
+    flag ["link";    "byte";   "use_gt"]   (S [ A"-I";A"src"; A"GT.cma" ]);
+    flag ["link";    "native"; "use_gt"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
 
-     flag ["make_pp_gt"; "link"] (S[A"ppx/ppx_deriving_gt.cmxa"
-                                   ;A"-package"; A"ppxlib"
-                                   ]);
+    flag ["make_pp_gt"; "link"; "byte"] @@
+    S ([ A"-package"; A"ppxlib"; A"common/GTCommon.cma" ] @
+       make_plugins_args ~is_byte:true );
+    flag ["make_pp_gt"; "link"; "native"] @@
+    S ([ A"-package"; A"ppxlib"; A"common/GTCommon.cmxa"] @
+       make_plugins_args ~is_byte:false);
 
      dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
      ()

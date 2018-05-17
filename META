@@ -4,6 +4,13 @@ requires = "ppxlib"
 archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
 
+package "common" (
+  description = ""
+  requires = ""
+  archive(byte)    = "GTCommon.cma"
+  archive(native)  = "GTCommon.cmxa"
+
+)
 package "ppx" (
   description = "PPX syntax extensionon top of ppx_core"
 
@@ -27,9 +34,9 @@ package "expander" (
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
-  requires = "camlp5,ppxlib"
-  archive(syntax, preprocessor) = "pa_gt.cmo"
-  archive(syntax, toploop) = "pa_gt.cmo"
+  requires = "camlp5,ppxlib,GT.common"
+  archive(syntax, preprocessor) = "pa_gt.cma"
+  archive(syntax, toploop) = "pa_gt.cma"
 
   package "compare" (
     description = "Plugin 'compare'"
@@ -76,7 +83,7 @@ package "syntax" (
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo show.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo show.cmo"
   )
 )

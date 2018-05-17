@@ -51,17 +51,10 @@ class g initial_args = object(self: 'self)
     ; named_type_arg ~loc Plugin.extra_param_name
     ]
 
-    (* let loc = tdecl.ptype_loc in
-     * (\* There we should have all parameters on the LHS of definition and 'syn one *\)
-     * List.map ~f:fst tdecl.ptype_params @
-     * [self#default_syn tdecl; self#extra_param_stub ~loc] *)
-
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
     [ self#default_syn ~loc tdecl
     ; Typ.var ~loc Plugin.extra_param_name ]
-
-    (* rhs_args @ [ self#default_syn tdecl ] @ [self#extra_param_stub ~loc] *)
 
   method! make_typ_of_self_trf ~loc tdecl =
     Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
@@ -75,11 +68,6 @@ class g initial_args = object(self: 'self)
     let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc (self#default_inh ~loc tdecl)
       (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
-
-  (* method wrap_tr_function_typ (typ: core_type) =
-   *   let loc = typ.ptyp_loc in
-   *   typ
-   *   [%type: [%t self#syn_of_param] -> [%t self#default_inh] -> [%t typ] ] *)
 
   (* the same for foldl and eq, compare plugins. Should be moved out *)
   method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
@@ -105,6 +93,15 @@ class g initial_args = object(self: 'self)
                       ]
       )
 
+  method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
+    List.fold_left ~f:(fun acc (name,typ) ->
+        Exp.app_list ~loc
+          (do_typ typ)
+          [ acc; Exp.sprintf ~loc "%s" name]
+        )
+        ~init
+        xs
+
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
     let names = List.map args ~f:(fun _ -> gen_symbol ()) in
     let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
@@ -113,11 +110,13 @@ class g initial_args = object(self: 'self)
     Cf.method_concrete ~loc methname @@
     Exp.fun_ ~loc (Pat.sprintf ~loc "inh") @@
     Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
-    List.fold_left ~f:(fun acc (name,typ) ->
-        Exp.app_list ~loc
-          (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-          [ acc; Exp.sprintf ~loc "%s" name]
-        )
+    self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_names)
+
+    (* List.fold_left ~f:(fun acc (name,typ) ->
+     *     Exp.app_list ~loc
+     *       (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+     *       [ acc; Exp.sprintf ~loc "%s" name]
+     *     ) *)
         ~init:(Exp.ident ~loc "inh")
         (List.zip_exn names args)
 
