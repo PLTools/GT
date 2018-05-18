@@ -417,7 +417,7 @@ class virtual generator initial_args = object(self: 'self)
   method make_typ_of_class_argument ~loc tdecl name k =
     let subj_t = Typ.var ~loc name in
     let syn_t = self#syn_of_param ~loc name in
-    k @@ Typ.arrow ~loc subj_t syn_t
+    k @@ Typ.arrow ~loc subj_t syn_xt
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
                      <this type we are generating here>

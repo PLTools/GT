@@ -40,12 +40,14 @@ class g initial_args = object(self: 'self)
   method! make_typ_of_self_trf ~loc tdecl =
     Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
 
-  method make_typ_of_class_argument ~loc tdecl name k =
+  method! make_typ_of_class_argument ~loc tdecl name k =
+    k @@
     super#make_typ_of_class_argument ~loc tdecl name (fun t ->
-        Typ.arrow ~loc (self#default_inh ~loc tdecl) (k t)
+        Typ.arrow ~loc (Typ.var ~loc name) t
       )
 
   method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+    (* TODO: last argument should be either name of argument or core_type *)
     let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
     let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc (self#default_inh ~loc tdecl)
