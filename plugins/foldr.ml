@@ -12,8 +12,6 @@ module P = Foldl.Make(AstHelpers)
 
 let plugin_name =  trait_name
 
-open Plugin
-
 class g initial_args = object(self: 'self)
   inherit P.g initial_args as super
 

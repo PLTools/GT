@@ -19,7 +19,10 @@ let registered_plugins
   : (string * (module Plugin_intf.PluginRes))  list ref =
   ref []
 
+let get_registered_plugins () = List.map ~f:fst !registered_plugins
 let register_plugin name m =
+  (* ifprintf Stdio.stdout "registering '%s'\n%!" name;
+   * flush stdout; *)
   let p = (name, m) in
   registered_plugins := p :: !registered_plugins;
   ()
@@ -505,6 +508,7 @@ let collect_plugins_sig ~loc tdecl plugins =
 
 (* for structures *)
 let do_typ ~loc sis plugins is_rec tdecl =
+  let (_:bool) = is_rec in
   let intf_class = make_interface_class ~loc tdecl in
   let gcata = make_gcata_str ~loc tdecl in
 
@@ -594,7 +598,21 @@ let sig_type_decl ~loc ~path si
   | Recursive, []      -> []
   | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
   | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
-  | Nonrecursive, ts ->
+  | Nonrecursive, tdls ->
+      List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
+
+let sig_type_decl_many_plugins ~loc si plugins_info declaration =
+  let plugins =
+    List.fold_left plugins_info ~init:[]
+      ~f:(fun acc (name,args) ->
+          wrap_plugin name args acc
+        )
+  in
+  match declaration with
+  | Recursive, []      -> []
+  | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
+  | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
+  | Nonrecursive, tdls ->
       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
 
 
@@ -619,6 +637,20 @@ let str_type_decl ~loc ~path si
   | Recursive, ts      -> do_mutal_types ~loc si plugins ts
   | Nonrecursive, ts ->
       List.concat_map ~f:(do_typ ~loc si plugins false) tdls
+
+let str_type_decl_many_plugins ~loc si plugins_info declaration =
+  let plugins =
+    List.fold_left plugins_info ~init:[]
+      ~f:(fun acc (name,args) ->
+          wrap_plugin name args acc
+        )
+  in
+  match declaration with
+  | Recursive, []      -> []
+  | Recursive, [tdecl] -> do_typ         ~loc si plugins true tdecl
+  | Recursive, ts      -> do_mutal_types ~loc si plugins ts
+  | Nonrecursive, decls ->
+      List.concat_map ~f:(do_typ ~loc si plugins false) decls
 
 let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     use_compare use_eq use_show_type p =

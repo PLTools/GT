@@ -127,6 +127,7 @@ test: tests
 INSTALL_TARGETS=META \
 	$(wildcard _build/common/GTCommon.cma) \
 	$(wildcard _build/common/GTCommon.cmxa) \
+	$(wildcard _build/common/expander.cmi) \
 	_build/camlp5/pa_gt.cma \
 	_build/camlp5/pp5gt.cma \
 	$(wildcard _build/src/GT.cmx)  \

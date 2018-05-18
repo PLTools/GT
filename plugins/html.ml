@@ -73,7 +73,22 @@ class g args  =
 
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
-    k []
+    k @@
+    [ let methname = sprintf "c_%s" (match constr_info with
+            `Normal s -> s | `Poly s -> s) in
+      (* let constr_name = match constr_info with
+       *   | `Poly s -> sprintf "`%s" s
+       *   | `Normal s -> s
+       * in *)
+      Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+
+        let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
+        Exp.fun_list ~loc
+          (List.map names ~f:(Pat.sprintf ~loc "%s"))
+          (Exp.assert_false ~loc)
+  ]
+
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     []

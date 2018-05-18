@@ -61,7 +61,8 @@ let () = dispatch (fun hook ->
     S ([ A"-package"; A"ppxlib"; A"common/GTCommon.cmxa"] @
        make_plugins_args ~is_byte:false);
 
-     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
-     ()
+    dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
+    dep ["compile"; "link_pp5gt"]        ["camlp5/core2.ml"];
+    ()
  | _ -> ()
 )

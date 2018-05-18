@@ -4,7 +4,6 @@ open Printf
 open Pcaml
 open MLast
 open Ploc
-(* open MidiAst *)
 
 let oops loc str = Ploc.raise loc (Failure str)
 let get_val loc = function
@@ -136,23 +135,37 @@ let generate_str tdecls loc =
 
   let info = snd @@ List.hd @@ List.rev tdecls in
   (* Printf.printf "plugins: %s\n%!" (String.concat ", " info); *)
-  let generator_f =
+  (* let generator_f =
+   *   let module H = Expander.Make(Camlp5Helpers) in
+   *   H.str_type_decl ~loc ~path:""
+   *     ~use_show:(if List.mem "show" info
+   *                then Expander.Use [] else Expander.Skip)
+   *     ~use_show_type:(if List.mem "show_typed" info
+   *                     then Expander.Use [] else Expander.Skip)
+   *     ~use_gmap:(if List.mem "gmap" info
+   *                then Expander.Use [] else Expander.Skip)
+   *     ~use_eq:(if List.mem "eq" info
+   *              then Expander.Use [] else Expander.Skip)
+   *     ~use_compare:(if List.mem "compare" info
+   *                   then Expander.Use [] else Expander.Skip)
+   *     ~use_foldl:(if List.mem "foldl" info
+   *                 then Expander.Use [] else Expander.Skip)
+   * in *)
+  let generator_f si =
     let module H = Expander.Make(Camlp5Helpers) in
-    H.str_type_decl ~loc ~path:""
-      ~use_show:(if List.mem "show" info
-                 then Expander.Use [] else Expander.Skip)
-      ~use_show_type:(if List.mem "show_typed" info
-                      then Expander.Use [] else Expander.Skip)
-      ~use_gmap:(if List.mem "gmap" info
-                 then Expander.Use [] else Expander.Skip)
-      ~use_eq:(if List.mem "eq" info
-               then Expander.Use [] else Expander.Skip)
-      ~use_compare:(if List.mem "compare" info
-                    then Expander.Use [] else Expander.Skip)
-      ~use_foldl:(if List.mem "foldl" info
-                  then Expander.Use [] else Expander.Skip)
+    let wrap s = s, (if List.mem s info
+                     then Expander.Use [] else Expander.Skip)
+    in
+    H.str_type_decl_many_plugins ~loc si
+      [ wrap "show"
+      ; wrap "show_typed"
+      ; wrap "gmap"
+      ; wrap "eq"
+      ; wrap "compare"
+      ; wrap "foldl"
+      ; wrap "html"
+      ]
   in
-
   let out =
     let sis = <:str_item< type $list:(List.map fst tdecls)$ >>  in
     let caml_ast = Ast2pt.implem "asdf" [sis] in
@@ -163,40 +176,43 @@ let generate_str tdecls loc =
        let module H = Expander.Make(Camlp5Helpers) in
        generator_f [sis] (Recursive, copied)
     |  _ -> failwith "type declaration expected"
-   (* List.map (fun (t,info) ->
-    *   let sis = <:str_item< type $list:[t]$ >>  in
-    *   let caml_ast = Ast2pt.implem "asdf" [sis] in
-    *   assert (List.length caml_ast  =  1);
-    *   match (List.hd caml_ast).pstr_desc with
-    *   | Pstr_type (flg, [td]) ->
-    *     let copied = Migr.copy_type_declaration td in
-    *     let module H = Expander.Make(Camlp5Helpers) in
-    *     generator_f [sis] (Recursive, [copied])
-    *   | _ -> assert false
-    *   (\* <:str_item< type $list:[t]$ >> *\)
-    * ) tdecls *)
   in
 
   <:str_item< declare $list:out$ end >>
 
 let generate_sig tdecls loc =
   let info = snd @@ List.hd @@ List.rev tdecls in
-  let generator_f =
+  let generator_f si =
     let module H = Expander.Make(Camlp5Helpers) in
-    H.sig_type_decl ~loc ~path:""
-      ~use_show:(if List.mem "show" info
-                 then Expander.Use [] else Expander.Skip)
-      ~use_show_type:(if List.mem "show_typed" info
-                      then Expander.Use [] else Expander.Skip)
-      ~use_gmap:(if List.mem "gmap" info
-                 then Expander.Use [] else Expander.Skip)
-      ~use_eq:(if List.mem "eq" info
-               then Expander.Use [] else Expander.Skip)
-      ~use_compare:(if List.mem "compare" info
-                    then Expander.Use [] else Expander.Skip)
-      ~use_foldl:(if List.mem "foldl" info
-                  then Expander.Use [] else Expander.Skip)
+    let wrap s = s, (if List.mem s info
+                     then Expander.Use [] else Expander.Skip)
+    in
+    H.sig_type_decl_many_plugins ~loc si
+      [ wrap "show"
+      ; wrap "show_typed"
+      ; wrap "gmap"
+      ; wrap "eq"
+      ; wrap "compare"
+      ; wrap "foldl"
+      ; wrap "html"
+      ]
   in
+  (* let generator_f =
+   *   let module H = Expander.Make(Camlp5Helpers) in
+   *   H.sig_type_decl ~loc ~path:""
+   *     ~use_show:(if List.mem "show" info
+   *                then Expander.Use [] else Expander.Skip)
+   *     ~use_show_type:(if List.mem "show_typed" info
+   *                     then Expander.Use [] else Expander.Skip)
+   *     ~use_gmap:(if List.mem "gmap" info
+   *                then Expander.Use [] else Expander.Skip)
+   *     ~use_eq:(if List.mem "eq" info
+   *              then Expander.Use [] else Expander.Skip)
+   *     ~use_compare:(if List.mem "compare" info
+   *                   then Expander.Use [] else Expander.Skip)
+   *     ~use_foldl:(if List.mem "foldl" info
+   *                 then Expander.Use [] else Expander.Skip)
+   * in *)
 
   let out =
    List.flatten @@
