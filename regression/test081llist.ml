@@ -1,9 +1,9 @@
 let id x = x
 
-module AL : sig
-  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,gmap,foldl,compare
-end  = struct
-  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with show,gmap,foldl,compare
+module AL (*: sig
+  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,foldr
+end*)  = struct
+  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with foldr,show
 end
 
 
@@ -38,9 +38,6 @@ let () =
  *   let sh x = show_logic id x in
  *   Printf.printf "%s\t%s\n%!" (sh @@ Var 5) (sh @@ Value "asdf")
  * ;;
- *
- *
- *
  *
  * module LList : sig
  *   @type 'a llist = ('a, 'a llist) AL.alist Lo.logic with show,gmap,foldl

@@ -30,14 +30,16 @@ let str_type_decl : (_, _) Deriving.Generator.t =
                   )
     (fun ~loc ~path info ->
      fun show gmap foldl show_typed compare eq  ->
-      let wrap name = function
-        | None -> Skip
-        | Some e -> match e.pexp_desc with
-          | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> Use []
-          | Pexp_record (ls, _) -> Use (List.map (fun (l,r) -> (l.txt,r)) ls)
-          | _ -> HelpersBase.raise_errorf
-                   "This kind of arguments is not supported. Bad expression %s"
-                   (Pprintast.string_of_expression e)
+       let wrap name opt =
+         (name, match opt with
+           | None -> Skip
+           | Some e -> match e.pexp_desc with
+             | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> Use []
+             | Pexp_record (ls, _) -> Use (List.map (fun (l,r) -> (l.txt,r)) ls)
+             | _ -> HelpersBase.raise_errorf
+                      "This kind of arguments is not supported. Bad expression %s"
+                      (Pprintast.string_of_expression e)
+         )
       in
       let show       = wrap "show"       show in
       let gmap       = wrap "gmap"       gmap in
@@ -46,8 +48,7 @@ let str_type_decl : (_, _) Deriving.Generator.t =
       let compare    = wrap "compare"    compare in
       let eq         = wrap "eq"         eq in
 
-      E.str_type_decl_implicit ~loc ~path
-        [] show gmap foldl compare eq show_typed info
+      E.str_type_decl_many_plugins ~loc [] [show; gmap; foldl; compare; eq; show_typed] info
     )
 
 (* let (_:int) = E.sig_type_decl_implicit *)
@@ -59,8 +60,20 @@ let sig_type_decl : (_, _) Deriving.Generator.t =
                   )
 
     (fun ~loc ~path defs f1 f2 f3 f4 f5 f6 ->
-       E.sig_type_decl_implicit ~loc ~path ([] : PpxHelpers.Sig.t list)
-         f1 f2 f3 f4 f5 f6 defs)
+       let wrap name f = if f then (name, Use []) else (name, Skip) in
+
+       E.sig_type_decl_many_plugins ~loc []
+         [ wrap "show" f1
+         ; wrap "gmap" f2
+         ; wrap "foldl" f3
+         ; wrap "compare" f4
+         ; wrap "eq" f5
+         (* ; wrap "show_typed" f6 *)
+         ]
+         defs
+       (* E.sig_type_decl_implicit ~loc ~path ([] : PpxHelpers.Sig.t list)
+        * f1 f2 f3 f4 f5 f6 defs *)
+    )
 
 let () =
   (* Sys.command "notify-send 'Registering deriver' wtf" |> ignore; *)

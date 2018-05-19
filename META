@@ -34,9 +34,9 @@ package "expander" (
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
-  requires = "camlp5,ppxlib,GT.common"
-  archive(syntax, preprocessor) = "pa_gt.cma"
-  archive(syntax, toploop) = "pa_gt.cma"
+  requires = "camlp5,ppxlib"
+  archive(syntax, preprocessor) = "GTCommon.cma pa_gt.cma"
+  archive(syntax, toploop) = "GTCommon.cma pa_gt.cma"
 
   package "compare" (
     description = "Plugin 'compare'"

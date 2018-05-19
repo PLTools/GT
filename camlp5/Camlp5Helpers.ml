@@ -216,7 +216,8 @@ module Typ = struct
       | Ptyp_var s -> <:ctyp< '$s$ >>
       | Ptyp_arrow (lab, l, r) -> arrow ~loc (helper l) (helper r)
       | Ptyp_constr ({txt;_}, ts) -> constr ~loc txt (List.map helper ts)
-      | _ -> assert false
+      | Ptyp_tuple ts -> <:ctyp< ( $list:(List.map helper ts)$ ) >>
+      | _ -> failwith "Not implemented: conversion from OCaml ast to Camlp5 Ast"
     in
     helper root_typ
   (* this might need to be changed *)

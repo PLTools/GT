@@ -15,6 +15,13 @@ let (@@) = Caml.(@@)
 
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
+let notify fmt  =
+  Printf.ksprintf (fun s ->
+      let cmd = sprintf "notify-send \"%s\"" s in
+      (* let _:int = Caml.Sys.command cmd in *)
+      ()
+    ) fmt
+
 let registered_plugins
   : (string * (module Plugin_intf.PluginRes))  list ref =
   ref []
@@ -23,6 +30,7 @@ let get_registered_plugins () = List.map ~f:fst !registered_plugins
 let register_plugin name m =
   (* ifprintf Stdio.stdout "registering '%s'\n%!" name;
    * flush stdout; *)
+  notify "'Registering deriver' %s" name;
   let p = (name, m) in
   registered_plugins := p :: !registered_plugins;
   ()
@@ -572,6 +580,8 @@ let do_mutal_types_sig ~loc plugins tdecls =
 let wrap_plugin name = function
 | Skip -> id
 | Use args ->
+  let () = notify "checking '%s'....." name in
+  (* let () = assert false in *)
     match List.Assoc.find !registered_plugins name ~equal:String.equal with
       | Some m ->
         let module F = (val m : Plugin_intf.PluginRes) in
@@ -581,25 +591,25 @@ let wrap_plugin name = function
       | None -> failwithf "Plugin '%s' is not registered" name ()
 ;;
 
-let sig_type_decl ~loc ~path si
-    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
-    ?(use_compare=Skip) ?(use_eq=Skip)
-    (rec_flag, tdls) =
-  let plugins =
-    wrap_plugin "show"        use_show  @@
-    wrap_plugin "compare"     use_compare @@
-    wrap_plugin "gmap"        use_gmap  @@
-    wrap_plugin "foldl"       use_foldl @@
-    wrap_plugin "show_typed"  use_show_type @@
-    wrap_plugin "eq"          use_eq @@
-    []
-  in
-  match rec_flag, tdls with
-  | Recursive, []      -> []
-  | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
-  | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
-  | Nonrecursive, tdls ->
-      List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
+(* let sig_type_decl ~loc ~path si
+ *     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
+ *     ?(use_compare=Skip) ?(use_eq=Skip)
+ *     (rec_flag, tdls) =
+ *   let plugins =
+ *     wrap_plugin "show"        use_show  @@
+ *     wrap_plugin "compare"     use_compare @@
+ *     wrap_plugin "gmap"        use_gmap  @@
+ *     wrap_plugin "foldl"       use_foldl @@
+ *     wrap_plugin "show_typed"  use_show_type @@
+ *     wrap_plugin "eq"          use_eq @@
+ *     []
+ *   in
+ *   match rec_flag, tdls with
+ *   | Recursive, []      -> []
+ *   | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
+ *   | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
+ *   | Nonrecursive, tdls ->
+ *       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls *)
 
 let sig_type_decl_many_plugins ~loc si plugins_info declaration =
   let plugins =
@@ -658,20 +668,20 @@ let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
     ~use_show ~use_gmap ~use_foldl ~use_show_type ~use_compare ~use_eq
     p
 
-let sig_type_decl_implicit ~loc ~path
-    extra_decls
-    use_show use_gmap use_foldl
-    use_compare use_eq use_show_type  (flg, tdls) =
-  let wrap f = if f then Use [] else Skip in
-  sig_type_decl ~loc ~path
-    extra_decls
-    ~use_show: (wrap use_show)
-    ~use_gmap: (wrap use_gmap)
-    ~use_foldl:(wrap use_foldl)
-    ~use_compare:(wrap use_compare)
-    ~use_show_type:(wrap use_show_type)
-    ~use_eq:(wrap use_eq)
-    (flg, tdls)
+(* let sig_type_decl_implicit ~loc ~path
+ *     extra_decls
+ *     use_show use_gmap use_foldl
+ *     use_compare use_eq use_show_type  (flg, tdls) =
+ *   let wrap f = if f then Use [] else Skip in
+ *   sig_type_decl ~loc ~path
+ *     extra_decls
+ *     ~use_show: (wrap use_show)
+ *     ~use_gmap: (wrap use_gmap)
+ *     ~use_foldl:(wrap use_foldl)
+ *     ~use_compare:(wrap use_compare)
+ *     ~use_show_type:(wrap use_show_type)
+ *     ~use_eq:(wrap use_eq)
+ *     (flg, tdls) *)
 
 (* let (_:int) = sig_type_decl_implicit *)
 

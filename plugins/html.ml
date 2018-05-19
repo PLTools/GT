@@ -30,12 +30,11 @@ class g args  =
   inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit P.generator args
 
-
   method plugin_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method default_syn ~loc _tdecl = Typ.ident ~loc "string"
+  method default_syn ~loc _tdecl = self#syn_of_param ~loc "dummy"
 
-  method syn_of_param ~loc _     = Typ.ident ~loc "string"
+  method syn_of_param ~loc _     = Typ.of_longident ~loc (Ldot (Lident "View", "viewer"))
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =

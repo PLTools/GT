@@ -182,11 +182,14 @@ class virtual generator initial_args = object(self: 'self)
   method prepare_fa_arg_types ~loc tdecl =
     map_type_param_names tdecl.ptype_params
       ~f:(fun name ->
-          self#make_RHS_typ_of_transformation
+          self#make_typ_of_class_argument
             ~loc
-            ~syn_t:(self#syn_of_param ~loc name)
-            ~subj_t:(Typ.var ~loc name)
             tdecl
+            name
+            (fun x -> x)
+            (* ~syn_t:(self#syn_of_param ~loc name)
+             * ~subj_t:(Typ.var ~loc name)
+             * tdecl *)
       )
 
   (* signature for a plugin class *)
@@ -417,7 +420,7 @@ class virtual generator initial_args = object(self: 'self)
   method make_typ_of_class_argument ~loc tdecl name k =
     let subj_t = Typ.var ~loc name in
     let syn_t = self#syn_of_param ~loc name in
-    k @@ Typ.arrow ~loc subj_t syn_xt
+    k @@ Typ.arrow ~loc subj_t syn_t
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
                      <this type we are generating here>
