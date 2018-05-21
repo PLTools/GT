@@ -1,3 +1,4 @@
 true: rectypes, debug, package(GT)
 
-<*.*>: predicate(custom_ppx), omp-driver(GT.ppx)
+<lambdas.*>: predicate(custom_ppx), omp-driver(GT.ppx)
+<decoration.*>: syntax(camlp5o), package(GT.syntax.all,GT), rectypes
