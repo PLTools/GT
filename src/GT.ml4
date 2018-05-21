@@ -433,15 +433,18 @@ class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
 *)
 
 let pair_gcata tr inh = function (a, b) -> tr#c_Pair inh a b
+let gcata_pair = pair_gcata
 
 class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_pair =
   object (this)
     method virtual c_Pair : 'inh -> 'a -> 'b -> 'syn
     (* method t_pair fa fb = transform pair fa fb this *)
   end
+class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t = object
+  inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_pair
+end
 
-
-class ['a, 'b, 'extra] show_pair _ fa fb =
+class ['a, 'b, 'extra] show_pair_t _ fa fb =
   object
     inherit ['a, unit, string, 'b, unit, string, unit, string, 'extra] class_pair
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
@@ -517,7 +520,7 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> (
               >) t =
   {gcata   = pair_gcata;
    plugins = object
-       method show    fa fb = pair_gcata (new show_pair (fun _ -> assert false) fa fb) ()
+       method show    fa fb = pair_gcata (new show_pair_t (fun _ -> assert false) fa fb) ()
        method html    fa fb = pair_gcata (new html_pair (fun _ -> assert false) fa fb) ()
        method gmap    fa fb = pair_gcata (new gmap_pair (fun _ -> assert false) fa fb) ()
        method eq      fa fb = pair_gcata (new eq_pair     (fun _ -> assert false) fa fb)
@@ -532,13 +535,13 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> (
   end
   }
 
-class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_tuple2 = object
-  inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_pair
+class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] tuple2_t = object
+  inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t
 end
 let gcata_tuple2 = pair.gcata
 
 class ['a, 'b, 'extra] show_tuple2 fself fa fb = object
-  inherit [ 'a, 'b, 'extra] show_pair fself fa fb
+  inherit [ 'a, 'b, 'extra] show_pair_t fself fa fb
 end
 class ['a, 'a2, 'b, 'b2, 'extra] gmap_tuple2 fself fa fb = object
   inherit [ 'a, 'a2, 'b, 'b2, 'extra] gmap_pair fself fa fb
