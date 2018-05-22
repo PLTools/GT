@@ -42,15 +42,16 @@ let compare_core_type a b =
 let visit_typedecl ~loc
   ?(onrecord  =fun _ -> not_implemented ~loc "record types")
   ?(onmanifest=fun _ -> not_implemented ~loc "manifest")
-  ?(onvariant =fun _ -> not_implemented ~loc "vairant types")
-    tdecl =
+  ?(onvariant =fun _ -> not_implemented ~loc "variant types")
+  ?(onabstract=fun _ -> not_implemented ~loc "abstract types without manifest")
+  tdecl =
   match tdecl.ptype_kind with
   | Ptype_record r -> onrecord r
   | Ptype_open     -> not_implemented ~loc "open types"
   | Ptype_variant cds -> onvariant cds
   | Ptype_abstract ->
       match tdecl.ptype_manifest with
-      | None -> failwith "abstract types without manifest can't be supported"
+      | None -> onabstract ()
       | Some typ -> onmanifest typ
 
 open Longident
@@ -112,6 +113,7 @@ let is_polyvariant_tdecl tdecl =
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _ -> false)
     ~onvariant:(fun _ -> false)
+    ~onabstract:(fun () -> false)
     ~onmanifest:(fun typ -> is_polyvariant typ)
 
 let unfold_tuple t =

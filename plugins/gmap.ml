@@ -61,9 +61,7 @@ class g args = object(self: 'self)
       List.map ~f:(Typ.var ~loc) args
     in
     if is_polyvariant_tdecl tdecl
-    then
-      Typ.alias ~loc (Typ.variant_of_t ~loc ans) Plugin.extra_param_name
-      (* Typ.var ~loc Plugin.extra_param_name *)
+    then Typ.alias ~loc (Typ.variant_of_t ~loc ans) Plugin.extra_param_name
     else ans
 
 

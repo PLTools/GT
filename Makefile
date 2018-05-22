@@ -45,7 +45,7 @@ camlp5: add_camlp5 compile
 ppx: add_common add_plugins add_ppx compile
 add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
-	$(eval OBPARAMS  += -I common -I plugins)
+	#$(eval OBPARAMS  += -I common -I plugins)
 
 PLUGINS=compare eq foldl foldr gmap show show_typed html
 add_plugins:
@@ -104,11 +104,11 @@ $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
 compile_tests_native:
 	@echo "Adding " $(NATIVE_TEST_EXECUTABLES)
 	$(eval OBTARGETS += $(NATIVE_TEST_EXECUTABLES))
-	$(eval OBPARAMS  += -I src)
+	#$(eval OBPARAMS  += -I src)
 
 compile_tests_byte:
 	$(eval OBTARGETS += $(BYTE_TEST_EXECUTABLES))
-	$(eval OBPARAMS  += -I src)
+	#$(eval OBPARAMS  += -I src)
 
 compile_tests: compile_tests_native
 
@@ -117,7 +117,7 @@ clean_tests:
 
 promote: promote_all
 
-tests: add_common add_plugins add_camlp5 add_lib compile
+tests: #add_common add_plugins add_camlp5 add_lib compile
 	$(MAKE) compile_tests compile run_tests
 
 regression: tests

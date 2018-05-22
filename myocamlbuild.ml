@@ -55,10 +55,10 @@ let () = dispatch (fun hook ->
     flag ["link";    "native"; "use_gt"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
 
     flag ["make_pp_gt"; "link"; "byte"] @@
-    S ([ A"-package"; A"ppxlib"; A"common/GTCommon.cma" ] @
+    S ([ A"ppx/ppx_deriving_gt.cma"; A"-package"; A"ppxlib" ] @
        make_plugins_args ~is_byte:true );
     flag ["make_pp_gt"; "link"; "native"] @@
-    S ([ A"-package"; A"ppxlib"; A"common/GTCommon.cmxa"] @
+    S ([ A"ppx/ppx_deriving_gt.cmxa"; A"-package"; A"ppxlib" ] @
        make_plugins_args ~is_byte:false);
 
     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];

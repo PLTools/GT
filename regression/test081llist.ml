@@ -1,9 +1,9 @@
 let id x = x
 
-module AL (*: sig
-  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,foldr
-end*)  = struct
-  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with foldr,show
+module AL : sig
+  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,gmap,foldl,foldr,compare,eq
+end  = struct
+  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with show,gmap,foldl,foldr,compare,eq
 end
 
 
@@ -16,35 +16,35 @@ let () =
   (* Printf.printf "%s\n%!" (fo @@ Cons ("aaa", "bbb")); *)
   ()
 
-(* module L : sig
- *   @type 'a list = ('a, 'a list) AL.alist with show,gmap,foldl
- * end = struct
- *   @type 'a list = ('a, 'a list) AL.alist with show,gmap,foldl
- * end
- *
- * let () =
- *   let open L in
- *   let sh x = show_list id x in
- *   Printf.printf "%s\n%!" (sh @@ Cons ("aaa", Cons ("bbb", Nil)))
- *
- * module Lo : sig
- *   @type 'a logic = Var of GT.int | Value of 'a with show,gmap,foldl
- * end = struct
- *   @type 'a logic = Var of GT.int | Value of 'a with show,gmap,foldl
- * end
- *
- * let () =
- *   let open Lo in
- *   let sh x = show_logic id x in
- *   Printf.printf "%s\t%s\n%!" (sh @@ Var 5) (sh @@ Value "asdf")
- * ;;
- *
- * module LList : sig
- *   @type 'a llist = ('a, 'a llist) AL.alist Lo.logic with show,gmap,foldl
- * end = struct
- *   @type 'a llist = ('a, 'a llist) AL.alist Lo.logic with show,gmap,foldl
- * end
- *
- * let () =
- *   let sh x = LList.show_llist id x in
- *   Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) ) *)
+module L : sig
+  @type 'a list = ('a, 'a list) AL.alist with show,gmap,foldl
+end = struct
+  @type 'a list = ('a, 'a list) AL.alist with show,gmap,foldl
+end
+
+let () =
+  let open L in
+  let sh x = show_list id x in
+  Printf.printf "%s\n%!" (sh @@ Cons ("aaa", Cons ("bbb", Nil)))
+
+module Lo : sig
+  @type 'a logic = Var of GT.int | Value of 'a with show,gmap,foldl
+end = struct
+  @type 'a logic = Var of GT.int | Value of 'a with show,gmap,foldl
+end
+
+let () =
+  let open Lo in
+  let sh x = show_logic id x in
+  Printf.printf "%s\t%s\n%!" (sh @@ Var 5) (sh @@ Value "asdf")
+;;
+
+module LList : sig
+  @type 'a llist = ('a, 'a llist) AL.alist Lo.logic with show,gmap,foldl
+end = struct
+  @type 'a llist = ('a, 'a llist) AL.alist Lo.logic with show,gmap,foldl
+end
+
+let () =
+  let sh x = LList.show_llist id x in
+  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) )

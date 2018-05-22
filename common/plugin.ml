@@ -215,7 +215,8 @@ class virtual generator initial_args = object(self: 'self)
       ]
     in
     visit_typedecl ~loc tdecl
-    ~onmanifest:(fun typ ->
+      ~onabstract:(fun () -> k [])
+      ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
           | Ptyp_alias (t, aname) ->

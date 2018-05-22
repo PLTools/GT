@@ -17,7 +17,7 @@ type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
 let notify fmt  =
   Printf.ksprintf (fun s ->
-      let cmd = sprintf "notify-send \"%s\"" s in
+      let _cmd = sprintf "notify-send \"%s\"" s in
       (* let _:int = Caml.Sys.command cmd in *)
       ()
     ) fmt
@@ -126,6 +126,10 @@ let make_interface_class_sig ~loc tdecl =
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _labels ->
+        k []
+      )
+    ~onabstract:(fun () ->
+        (* For purely abstract type we can only generate interface class without methods *)
         k []
       )
     ~onvariant:(fun cds ->
@@ -327,7 +331,22 @@ let make_interface_class ~loc tdecl =
     )
 
 let make_gcata_typ ~loc tdecl =
-  let tr_t = visit_typedecl ~loc tdecl
+  let on_alias_or_abstract () =
+    let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
+        [ Typ.var ~loc name
+        ; Typ.any ~loc
+        ; Typ.var ~loc @@ "s"^name ]
+      ) |> List.concat
+    in
+    let args = args @ [Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ]
+    in
+    Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args
+  in
+  let tr_t =
+    visit_typedecl ~loc tdecl
+      ~onabstract:(fun () ->  on_alias_or_abstract ()
+      (* failwith "can't generate gcata type for abstract type" *)
+                  )
       ~onrecord:(fun _ ->
           Typ.object_ ~loc Open @@
           [ sprintf "do_%s" tdecl.ptype_name.txt,
@@ -350,17 +369,17 @@ let make_gcata_typ ~loc tdecl =
         )
       ~onmanifest:(fun typ ->
           match typ.ptyp_desc with
-          | Ptyp_constr ({txt;_}, ts) ->
-            (* there we can fuck up extra argument about polymorphic variants *)
-            let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
-                [ Typ.var ~loc name
-                ; Typ.any ~loc
-                ; Typ.var ~loc @@ "s"^name ]
-              ) |> List.concat
-            in
-            let args = args @ [Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ]
-            in
-            Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args
+          | Ptyp_constr (_,_) -> on_alias_or_abstract ()
+            (* (\* there we can fuck up extra argument about polymorphic variants *\)
+             * let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
+             *     [ Typ.var ~loc name
+             *     ; Typ.any ~loc
+             *     ; Typ.var ~loc @@ "s"^name ]
+             *   ) |> List.concat
+             * in
+             * let args = args @ [Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ]
+             * in
+             * Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args *)
           | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
                   ~f:(fun s ->
@@ -559,24 +578,6 @@ let do_mutal_types_sig ~loc plugins tdecls =
    * ) @
    * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
-(* let () =
- *   Show.register ();
- *   Gmap.register () *)
-
-  (* [ (let module M = Show   .Make(AstHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-   * ; (let module M = Compare.Make(AstHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-   * ;  (let module M = Gmap   .Make(AstHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-   * ; (let module M = Foldl  .Make(AstHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-   * ; (let module M = Show_typed.Make(AstHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-   * ; (let module M = Eq     .Make(AstHelpers) in
-   *    M.plugin_name, (M.g :> (Plugin_intf.plugin_args -> _ Plugin_intf.Make(AstHelpers).t)) )
-   * ] *)
-
 let wrap_plugin name = function
 | Skip -> id
 | Use args ->
@@ -626,27 +627,27 @@ let sig_type_decl_many_plugins ~loc si plugins_info declaration =
       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
 
 
-let str_type_decl ~loc ~path si
-    ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
-    ?(use_compare=Skip) ?(use_eq=Skip)
-    (rec_flag, tdls)
-  =
-  let plugins =
-    wrap_plugin "show"        use_show  @@
-    wrap_plugin "compare"     use_compare @@
-    wrap_plugin "gmap"        use_gmap  @@
-    wrap_plugin "foldl"       use_foldl @@
-    wrap_plugin "show_typed"  use_show_type @@
-    wrap_plugin "eq"          use_eq @@
-    []
-  in
-
-  match rec_flag, tdls with
-  | Recursive, []      -> []
-  | Recursive, [tdecl] -> do_typ         ~loc si plugins true tdecl
-  | Recursive, ts      -> do_mutal_types ~loc si plugins ts
-  | Nonrecursive, ts ->
-      List.concat_map ~f:(do_typ ~loc si plugins false) tdls
+(* let str_type_decl ~loc ~path si
+ *     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
+ *     ?(use_compare=Skip) ?(use_eq=Skip)
+ *     (rec_flag, tdls)
+ *   =
+ *   let plugins =
+ *     wrap_plugin "show"        use_show  @@
+ *     wrap_plugin "compare"     use_compare @@
+ *     wrap_plugin "gmap"        use_gmap  @@
+ *     wrap_plugin "foldl"       use_foldl @@
+ *     wrap_plugin "show_typed"  use_show_type @@
+ *     wrap_plugin "eq"          use_eq @@
+ *     []
+ *   in
+ *
+ *   match rec_flag, tdls with
+ *   | Recursive, []      -> []
+ *   | Recursive, [tdecl] -> do_typ         ~loc si plugins true tdecl
+ *   | Recursive, ts      -> do_mutal_types ~loc si plugins ts
+ *   | Nonrecursive, ts ->
+ *       List.concat_map ~f:(do_typ ~loc si plugins false) tdls *)
 
 let str_type_decl_many_plugins ~loc si plugins_info declaration =
   let plugins =
@@ -662,11 +663,11 @@ let str_type_decl_many_plugins ~loc si plugins_info declaration =
   | Nonrecursive, decls ->
       List.concat_map ~f:(do_typ ~loc si plugins false) decls
 
-let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
-    use_compare use_eq use_show_type p =
-  str_type_decl ~loc ~path info
-    ~use_show ~use_gmap ~use_foldl ~use_show_type ~use_compare ~use_eq
-    p
+(* let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
+ *     use_compare use_eq use_show_type p =
+ *   str_type_decl ~loc ~path info
+ *     ~use_show ~use_gmap ~use_foldl ~use_show_type ~use_compare ~use_eq
+ *     p *)
 
 (* let sig_type_decl_implicit ~loc ~path
  *     extra_decls
@@ -682,7 +683,5 @@ let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
  *     ~use_show_type:(wrap use_show_type)
  *     ~use_eq:(wrap use_eq)
  *     (flg, tdls) *)
-
-(* let (_:int) = sig_type_decl_implicit *)
 
 end
