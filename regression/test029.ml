@@ -1,10 +1,7 @@
-open GT
+@type ('a, 'b) t = GT.int * (GT.string * ('a * 'b))
+with show, gmap, eq, compare, foldl,foldr
 
-@type ('a, 'b) t = int * (string * ('a * 'b))
-with show, gmap, eq, compare, foldl, foldr
-
-
-class ['a, 'b] print _ fa fb =
+class ['a, 'b] print (fa: 'a -> unit) fb =
   object
     inherit ['a, unit, unit, 'b, unit, unit, unit, unit, _] @t
     method c_Pair () x (y, (a, b)) =
@@ -15,29 +12,26 @@ class ['a, 'b] print _ fa fb =
   end
 
 let printer fa fb subj =
-  GT.fix0 (fun self -> GT.transform t (new print self fa fb) ()) subj
+  GT.fix0 (fun self -> GT.transform t (new print fa fb) ()) subj
 
 let _ =
-  let cs    = function EQ -> "EQ" | GT -> "GT" | LT -> "LT" in  
-  let c x y = if x = y then EQ else if x < y then LT else GT in
+  let cs    = function GT.EQ -> "EQ" | GT -> "GT" | LT -> "LT" in
+  let c x y = if x = y then GT.EQ else if x < y then LT else GT in
   let x = (1, ("2", ("a", `B))) in
   let y = (1, ("2", ("3", `B))) in
-  Printf.printf "x == x: %b\n" (transform(t) (=) (=) (new @t[eq]) x x);
-  Printf.printf "x == y: %b\n" (transform(t) (=) (=) (new @t[eq]) x y);
-  Printf.printf "compare (x, x) = %s\n" (cs (transform(t) c c (new @t[compare]) x x));
-  Printf.printf "compare (x, y) = %s\n" (cs (transform(t) c c (new @t[compare]) x y));
-  Printf.printf "compare (y, x) = %s\n" (cs (transform(t) c c (new @t[compare]) y x));
-  Printf.printf "%s\n"
-    (transform(t)
-       (fun _ a -> string_of_int a)
-       (fun _ -> function `B -> "`B")
-       (new @t[show])
-       ()
-       (transform(t) (fun _ a -> int_of_string a) (fun _ x -> x) (new @t[gmap]) () y)
-    );
-  transform(t) 
-    (fun _ a -> Printf.printf "%s\n" a) 
-    (fun _ -> function `B -> Printf.printf "`B\n") 
-    (new print) 
-    () 
+  let eq1 a b = GT.transform(t) (new @t[eq] (fun _ -> assert false) (=) (=) ) a b in
+  Printf.printf "x == x: %b\n" (eq1 x x);
+  Printf.printf "x == y: %b\n" (eq1 x y);
+  let cmp1 a b = GT.transform(t) (new @t[compare] (fun _ -> assert false) c c) a b in
+  Printf.printf "compare (x, x) = %s\n" (cs @@ cmp1 x x);
+  Printf.printf "compare (x, y) = %s\n" (cs @@ cmp1 x y);
+  Printf.printf "compare (y, x) = %s\n" (cs @@ cmp1 y x);
+  Printf.printf "%s\n" @@
+  GT.transform(t)
+    (new @t[show] (fun _ -> assert false) string_of_int (function `B -> "`B")) () @@
+  t.GT.plugins#gmap int_of_string (fun x -> x) y
+  ;
+  GT.transform(t)
+    (new print (fun a -> Printf.printf "%s\n" a) (function `B -> Printf.printf "`B\n"))
+    ()
     x
