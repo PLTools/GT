@@ -78,27 +78,31 @@ GENERIFY(int32)
 GENERIFY(int64)
 GENERIFY(nativeint)
 
+(* Fixpoint combinator to define recursive transformation without extra
+ * object allocations *)
+let fix0 f t =
+  let knot = ref (fun _ -> assert false) in
+  let recurse t = f !knot t in
+  knot := recurse;
+  recurse t
+
+
+(** Standart type go there *)
 type 'a plist      = 'a list
 type 'a list       = 'a plist
 
-class type html_list_env_tt = object  end
-class type show_list_env_tt = object  end
-class type foldl_list_env_tt = object  end
-class type foldr_list_env_tt = object  end
-class type eq_list_env_tt = object  end
-class type compare_list_env_tt = object  end
-class type gmap_list_env_tt = object  end
-
-class type ['a, 'ia, 'sa, 'inh, 'syn] list_tt =
+class virtual ['a, 'ia, 'sa, 'inh, 'syn, 'extra] list_t =
   object
-    method c_Nil  : 'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method c_Cons : 'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
-                                    ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a ->
-                                    ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method t_list : ('ia -> 'a -> 'sa) -> 'inh -> 'a list -> 'syn
+    method virtual c_Nil  : 'inh -> 'syn
+    method virtual c_Cons : 'inh -> 'a -> 'a list -> 'syn
   end
 
-let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn, unit) t =
+let gcata_list tr inh = function
+| []    -> tr#c_Nil inh
+| x::xs -> tr#c_Cons inh x xs
+
+(*
+let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn, _) #list_tt -> 'inh -> 'a list -> 'syn, unit) t =
   let rec list_gcata fa trans inh subj =
     let rec self = list_gcata fa trans
     and tpo = object method a = fa end in
@@ -120,69 +124,70 @@ class virtual ['a, 'ia, 'sa, 'inh, 'syn] list_t =
         ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
     method t_list fa = transform list fa this
   end
+*)
 
-class ['a] html_list_t =
+class ['a, 'extra] html_list_t fself fa =
   object
-    inherit ['a, unit, HTML.viewer, unit, HTML.viewer] @list
-    method c_Nil  _ _      = View.empty
-    method c_Cons _ _ x xs = View.concat (x.fx ()) (match xs.x with [] -> View.empty | _ -> HTML.li (xs.fx ()))
+    inherit ['a, unit, HTML.viewer, unit, HTML.viewer, 'extra] @list
+    method c_Nil  _      = View.empty
+    method c_Cons _ x xs =
+      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself xs))
   end
 
-class ['a] show_list_t =
+class ['a, 'extra] show_list_t fself fa =
   object
-    inherit ['a, unit, string, unit, string] @list
-    method c_Nil  _ _      = ""
-    method c_Cons _ _ x xs = x.fx () ^ (match xs.x with [] -> "" | _ -> "; " ^ xs.fx ())
+    inherit ['a, unit, string, unit, string, 'extra] @list
+    method c_Nil  _      = ""
+    method c_Cons _ x xs = (fa x) ^ (match xs with [] -> "" | _ -> "; " ^ fself xs)
   end
 
-class ['a, 'sa] gmap_list_t =
+class ['a, 'sa, 'extra] gmap_list_t fself fa =
   object
-    inherit ['a, unit, 'sa, unit, 'sa list] @list
-    method c_Nil _ _ = []
-    method c_Cons _ _ x xs = x.fx () :: xs.fx ()
+    inherit ['a, unit, 'sa, unit, 'sa list, 'extra] @list
+    method c_Nil  _ = []
+    method c_Cons _ x xs = (fa x) :: (fself xs)
   end
 
-class ['a, 'syn] foldl_list_t =
+class ['a, 'syn, 'extra] foldl_list_t fself fa =
   object
-    inherit ['a, 'syn, 'syn, 'syn, 'syn] @list
-    method c_Nil s _ = s
-    method c_Cons s _ x xs = xs.fx (x.fx s)
+    inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra] @list
+    method c_Nil  s = s
+    method c_Cons s x xs = fself  (fa s x) xs
   end
 
-class ['a, 'syn] foldr_list_t =
+class ['a, 'syn, 'extra] foldr_list_t fself fa =
   object
-    inherit ['a, 'syn] @list[foldl]
-    method c_Cons s _ x xs = x.fx (xs.fx s)
+    inherit ['a, 'syn, 'extra] @list[foldl] fself fa
+    method c_Cons s x xs = fa (fself s xs) x
   end
 
-class ['a] eq_list_t =
+class ['a, 'extra] eq_list_t fself fa =
   object
-    inherit ['a, 'a, bool, 'a list, bool] @list
-    method c_Nil inh subj = inh = []
-    method c_Cons inh subj x xs =
+    inherit ['a, 'a, bool, 'a list, bool, 'extra] @list
+    method c_Nil inh  = (inh = [])
+    method c_Cons inh x xs =
       match inh with
-      | y::ys -> x.fx y && xs.fx ys
+      | y::ys -> fa y x && fself ys xs
       | _ -> false
   end
 
-class ['a] compare_list_t =
+class ['a, 'extra] compare_list_t fself fa =
   object
-    inherit ['a, 'a, comparison, 'a list, comparison] @list
-    method c_Nil inh subj =
+    inherit ['a, 'a, comparison, 'a list, comparison, 'extra] @list
+    method c_Nil inh =
       match inh with
       | [] -> EQ
       |  _ -> GT
-    method c_Cons inh subj x xs =
+    method c_Cons inh x xs =
       match inh with
       | [] -> LT
-      | (y::ys) ->
-	  (match x.fx y with
-	  | EQ -> xs.fx ys
-	  | c  -> c
-	  )
+      | (y::ys) -> (match fa y x with
+                   | EQ -> fself ys xs
+                   | c  -> c
+                   )
   end
 
-let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh -> 'a list -> 'syn,
+let list : (('a, 'ia, 'sa, 'inh, 'syn, _) #list_t -> 'inh -> 'a list -> 'syn,
             < show    : ('a -> string)      -> 'a list -> string;
               html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
               gmap    : ('a -> 'b) -> 'a list -> 'b list;
@@ -191,15 +196,37 @@ let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #list_tt -> 'inh ->
               eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool;
               compare : ('a -> 'a -> comparison) -> 'a list -> 'a list -> comparison;
             >) t =
-  {gcata   = list.gcata;
+  {gcata   = gcata_list;
    plugins = object
-               method show    fa l = "[" ^ (transform(list) (lift fa) (new @list[show]) () l) ^ "]"
-               method html    fa   = transform(list) (lift fa) (new @list[html]) ()
-               method gmap    fa   = transform(list) (lift fa) (new @list[gmap] ) ()
-               method eq      fa   = transform(list) fa (new @list[eq])
-               method compare fa   = transform(list) fa (new @list[compare])
-               method foldl   fa   = transform(list) fa (new @list[foldl])
-               method foldr   fa   = transform(list) fa (new @list[foldr])
+               method show    fa l = "[" ^ (
+                 fix0 (fun fself ->
+                   gcata_list (new @list[show] fself fa) ()
+                 )
+                 l) ^ "]"
+               method html    fa   =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[html] fself fa) ()
+                 )
+               method gmap    fa   =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[gmap] fself fa) ()
+                 )
+               method eq      fa   =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[eq] fself fa)
+                 )
+               method compare fa   =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[compare] fself fa)
+                 )
+               method foldl   fa   =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[foldl] fself fa)
+                 )
+               method foldr   fa  =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[foldr] fself fa)
+                 )
              end
   }
 
@@ -748,8 +775,3 @@ let eq      t = t.plugins#eq
 let compare t = t.plugins#compare
 
 
-let fix0 f t =
-  let knot = ref (fun _ -> assert false) in
-  let recurse t = f !knot t in
-  knot := recurse;
-  recurse t
