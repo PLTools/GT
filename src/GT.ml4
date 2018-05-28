@@ -412,8 +412,11 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
              end
   }
 
+
+(* Pairs and other stuff without explicit structure *)
 type ('a, 'b) pair = 'a * 'b
 
+(*
 class type html_pair_env_tt = object  end
 class type show_pair_env_tt = object  end
 class type foldl_pair_env_tt = object  end
@@ -422,7 +425,7 @@ class type eq_pair_env_tt = object  end
 class type compare_pair_env_tt = object  end
 class type gmap_pair_env_tt = object  end
 
-(*
+
 class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
   object
     method c_Pair : 'inh -> ('inh, ('a, 'b) pair, 'syn, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
@@ -432,63 +435,58 @@ class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
   end
 *)
 
-let pair_gcata tr inh = function (a, b) -> tr#c_Pair inh a b
-let gcata_pair = pair_gcata
+let gcata_pair tr inh = function (a, b) -> tr#c_Pair inh a b
 
-class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_pair =
-  object (this)
+class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t =
+  object
     method virtual c_Pair : 'inh -> 'a -> 'b -> 'syn
     (* method t_pair fa fb = transform pair fa fb this *)
   end
-class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t = object
-  inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] class_pair
-end
 
 class ['a, 'b, 'extra] show_pair_t _ fa fb =
   object
-    inherit ['a, unit, string, 'b, unit, string, unit, string, 'extra] class_pair
+    inherit ['a, unit, string, 'b, unit, string, unit, string, 'extra] pair_t
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
   end
-class ['a, 'b, 'extra] html_pair _ fa fb =
+
+class ['a, 'b, 'extra] html_pair_t _ fa fb =
   object
-    inherit ['a, unit, 'syn, 'b, unit, 'syn, unit, 'syn, 'extra] class_pair
+    inherit ['a, unit, 'syn, 'b, unit, 'syn, unit, 'syn, 'extra] pair_t
     constraint 'syn = HTML.viewer
     method c_Pair () x y = HTML.string "not implemented"
   end
 
-class ['a, 'sa, 'b, 'sb, 'extra] gmap_pair _ (fa: 'a -> 'sa) fb =
+class ['a, 'sa, 'b, 'sb, 'extra] gmap_pair_t _ (fa: 'a -> 'sa) fb =
   object
-    inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair, 'extra] class_pair
+    inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair, 'extra] pair_t
     method c_Pair () x y = (fa x, fb y)
   end
 
-class ['a, 'b, 'syn, 'extra] foldl_pair _ fa fb  =
+class ['a, 'b, 'syn, 'extra] foldl_pair_t _ fa fb  =
   object
-    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn, 'extra] class_pair
+    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn, 'extra] pair_t
     method c_Pair s x y = fb (fa s x) y
   end
 
-class ['a, 'b, 'syn, 'extra] foldr_pair _ fa fb  =
+class ['a, 'b, 'syn, 'extra] foldr_pair_t _ fa fb  =
   object
-    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn, 'extra] class_pair
+    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'syn, 'syn, 'extra] pair_t
     method c_Pair s x y = fa (fb s y) x
   end
 
-class ['a, 'b, 'extra] eq_pair _ fa fb  =
+class ['a, 'b, 'extra] eq_pair_t _ fa fb  =
   object
-    inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, bool, 'extra] class_pair
+    inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, bool, 'extra] pair_t
     method c_Pair inh x y =
       match inh with
       (z, t) -> fa z x && fb t y
   end
 
-class ['a, 'b, 'extra] compare_pair _ fa fb  =
+class ['a, 'b, 'extra] compare_pair_t _ fa fb  =
   object
-    inherit ['a, 'a, 'syn, 'b, 'b, 'syn, ('a, 'b) pair, 'syn, 'extra] class_pair
+    inherit ['a, 'a, 'syn, 'b, 'b, 'syn, ('a, 'b) pair, 'syn, 'extra] pair_t
     constraint 'syn = comparison
-    method c_Pair inh x y =
-      match inh with
-       (z, t) -> (match fa z x with EQ -> fb t y | c -> c)
+    method c_Pair (z,t) x y = (match fa z x with EQ -> fb t y | c -> c)
   end
 
 (*
@@ -507,7 +505,7 @@ class ['a, 'b, 'extra] html_pair_t =
   end
 *)
 
-let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> ('a, 'b) pair -> 'syn,
+let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
                 html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) -> ('a, 'b) pair -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair;
@@ -518,39 +516,40 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #class_pair -> 'inh -> (
                 compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) ->
                           ('a, 'b) pair -> ('a, 'b) pair -> comparison;
               >) t =
-  {gcata   = pair_gcata;
+  {gcata   = gcata_pair;
    plugins = object
-       method show    fa fb = pair_gcata (new show_pair_t (fun _ -> assert false) fa fb) ()
-       method html    fa fb = pair_gcata (new html_pair (fun _ -> assert false) fa fb) ()
-       method gmap    fa fb = pair_gcata (new gmap_pair (fun _ -> assert false) fa fb) ()
-       method eq      fa fb = pair_gcata (new eq_pair     (fun _ -> assert false) fa fb)
-       method compare fa fb = pair_gcata (new compare_pair(fun _ -> assert false) fa fb)
-       method foldl   fa fb = pair_gcata (new foldl_pair  (fun _ -> assert false) fa fb)
-       method foldr   fa fb = pair_gcata (new foldr_pair  (fun _ -> assert false) fa fb)
-
-(*
-               method html    fa fb = pair_gcata (lift fa) (lift fb) (new @pair[html]) ()
-               method foldr   fa fb = pair_gcata (new foldr_pair  fa fb)
-*)
+       method show    fa fb = gcata_pair (new show_pair_t (fun _ -> assert false) fa fb) ()
+       method html    fa fb = gcata_pair (new html_pair_t (fun _ -> assert false) fa fb) ()
+       method gmap    fa fb = gcata_pair (new gmap_pair_t (fun _ -> assert false) fa fb) ()
+       method eq      fa fb = gcata_pair (new eq_pair_t   (fun _ -> assert false) fa fb)
+       method compare fa fb = gcata_pair (new compare_pair_t(fun _ -> assert false) fa fb)
+       method foldl   fa fb = gcata_pair (new foldl_pair_t (fun _ -> assert false) fa fb)
+       method foldr   fa fb = gcata_pair (new foldr_pair_t (fun _ -> assert false) fa fb)
   end
   }
 
 class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] tuple2_t = object
   inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t
 end
-let gcata_tuple2 = pair.gcata
+let gcata_tuple2 = gcata_pair
 
-class ['a, 'b, 'extra] show_tuple2 fself fa fb = object
+class ['a, 'b, 'extra] show_tuple2_t fself fa fb = object
   inherit [ 'a, 'b, 'extra] show_pair_t fself fa fb
 end
-class ['a, 'a2, 'b, 'b2, 'extra] gmap_tuple2 fself fa fb = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'extra] gmap_pair fself fa fb
+class ['a, 'a2, 'b, 'b2, 'extra] gmap_tuple2_t fself fa fb = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'extra] gmap_pair_t fself fa fb
 end
-class ['a, 'b, 'extra] compare_tuple2 fself fa fb = object
-  inherit [ 'a, 'b, 'extra] compare_pair fself fa fb
+class ['a, 'b, 'extra] compare_tuple2_t fself fa fb = object
+  inherit [ 'a, 'b, 'extra] compare_pair_t fself fa fb
 end
-class ['a, 'b, 'extra] eq_tuple2 fself fa fb = object
-  inherit [ 'a, 'b, 'extra] eq_pair fself fa fb
+class ['a, 'b, 'extra] eq_tuple2_t fself fa fb = object
+  inherit [ 'a, 'b, 'extra] eq_pair_t fself fa fb
+end
+class ['a, 'b, 'syn, 'extra] foldl_tuple2_t fself fa fb = object
+  inherit [ 'a, 'b, 'syn, 'extra] foldl_pair_t fself fa fb
+end
+class ['a, 'b, 'syn, 'extra] foldr_tuple2_t fself fa fb = object
+  inherit [ 'a, 'b, 'syn, 'extra] foldr_pair_t fself fa fb
 end
 
 type ('a,'b,'c) triple = 'a * 'b * 'c

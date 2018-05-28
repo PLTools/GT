@@ -14,7 +14,7 @@ open GT
 
 class toString =
   object
-    inherit [int, unit, string, unit, string] @t
+    inherit [int, unit, string, unit, string,_] @t
     method c_R  () _     = "R"
     method c_W  () _     = "W"
     method c_L  () _ x   = "L " ^ x
@@ -29,17 +29,17 @@ class toString =
 
 class resolve =
   object
-    inherit [string, unit, int, unit, int t] @t
-    method c_R  _ _     = R
-    method c_W  _ _     = W
-    method c_L  _ _ x   = L x
-    method c_S  _ _ x   = S x
-    method c_B  _ _ f x = B (f, x)
-    method c_E  _ _     = E
-    method c_C  _ _ x   = C x
-    method c_J  _ _ x   = J  (x.fx ())
-    method c_JT _ _ x   = JT (x.fx ())
-    method c_JF _ _ x   = JF (x.fx ())
+    inherit [string, unit, int, unit, int t,_] @t
+    method c_R   _     = R
+    method c_W   _     = W
+    method c_L   _ x   = L x
+    method c_S   _ x   = S x
+    method c_B   _ f x = B (f, x)
+    method c_E   _     = E
+    method c_C   _ x   = C x
+    method c_J   _ x   = J  (x.fx ())
+    method c_JT  _ x   = JT (x.fx ())
+    method c_JF  _ x   = JF (x.fx ())
   end
 
 let resolve p = 

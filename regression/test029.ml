@@ -1,16 +1,21 @@
 open GT
 
-@type ('a, 'b) t = int * (string * ('a * 'b)) with show, gmap, eq, compare, foldl, foldr
+@type ('a, 'b) t = int * (string * ('a * 'b))
+with show, gmap, eq, compare, foldl, foldr
 
-class ['a, 'b] print =
-  object 
-    inherit ['a, unit, unit, 'b, unit, unit, unit, unit] @t
-    method value _ _ x (y, (a, b)) = 
+
+class ['a, 'b] print _ fa fb =
+  object
+    inherit ['a, unit, unit, 'b, unit, unit, unit, unit, _] @t
+    method c_Pair () x (y, (a, b)) =
       Printf.printf "%d\n" x;
-      Printf.printf "%s\n" y; 
-      a.fx (); 
-      b.fx ()
+      Printf.printf "%s\n" y;
+      fa a;
+      fb b
   end
+
+let printer fa fb subj =
+  GT.fix0 (fun self -> GT.transform t (new print self fa fb) ()) subj
 
 let _ =
   let cs    = function EQ -> "EQ" | GT -> "GT" | LT -> "LT" in  

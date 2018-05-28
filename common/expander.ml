@@ -367,20 +367,11 @@ let make_gcata_typ ~loc tdecl =
               | Pcstr_record _ -> assert false
             )
         )
-      ~onmanifest:(fun typ ->
-          match typ.ptyp_desc with
-          | Ptyp_constr (_,_) -> on_alias_or_abstract ()
-            (* (\* there we can fuck up extra argument about polymorphic variants *\)
-             * let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
-             *     [ Typ.var ~loc name
-             *     ; Typ.any ~loc
-             *     ; Typ.var ~loc @@ "s"^name ]
-             *   ) |> List.concat
-             * in
-             * let args = args @ [Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ]
-             * in
-             * Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args *)
-          | Ptyp_variant (rows,_flg,_) ->
+      ~onmanifest:(fun t ->
+          let rec helper typ =
+            match typ.ptyp_desc with
+            | Ptyp_constr (_,_) -> on_alias_or_abstract ()
+            | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
                   ~f:(fun s ->
                     [Typ.var ~loc s; Typ.any ~loc; Typ.var ~loc "syn" ]
@@ -390,7 +381,11 @@ let make_gcata_typ ~loc tdecl =
                 (Lident (class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat params @
                  Typ.[var ~loc "inh"; var ~loc "syn"; any ~loc ])
-          | _ -> assert false
+            | Ptyp_tuple ts ->
+              helper @@ constr_of_tuple ~loc:t.ptyp_loc ts
+            | _ -> assert false
+          in
+          helper t
         )
   in
   let subj_t = Typ.use_tdecl tdecl in
