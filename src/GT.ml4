@@ -412,28 +412,84 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
              end
   }
 
+(* ************************************************************************* *)
+(* Antiphantom type *)
+type 'a free = 'a
+class virtual ['a, 'ia, 'sa, 'inh, 'syn, 'extra] free_t = object
+  method virtual c_Free : 'inh -> 'a -> 'syn
+end
+let gcata_free tr = tr#c_Free
+
+class ['a, 'extra] show_free_t _ fa =
+  object
+    inherit ['a, unit, string, unit, string, 'extra] free_t
+    method c_Free () x = "(" ^ fa x ^ ")"
+  end
+
+class ['a, 'extra] html_free_t _ fa =
+  object
+    inherit ['a, unit, 'syn, unit, 'syn, 'extra] free_t
+    constraint 'syn = HTML.viewer
+    method c_Free () x = HTML.string "not implemented"
+  end
+
+class ['a, 'sa, 'extra] gmap_free_t _ fa =
+  object
+    inherit ['a, unit, 'sa, unit, 'sa free, 'extra] free_t
+    method c_Free () x = fa x
+  end
+
+class ['a, 'syn, 'extra] foldl_free_t _ fa  =
+  object
+    inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra] free_t
+    method c_Free inh x = fa inh x
+  end
+
+class ['a, 'syn, 'extra] foldr_free_t _ fa  =
+  object
+    inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra] free_t
+    method c_Free inh x = fa inh x
+  end
+
+class ['a, 'b, 'extra] eq_free_t _ fa  =
+  object
+    inherit ['a, 'a, bool, 'a free, bool, 'extra] free_t
+    method c_Free inh x = fa inh x
+  end
+
+class ['a, 'b, 'extra] compare_free_t _ fa  =
+  object
+    inherit ['a, 'a, 'syn, 'a free, 'syn, 'extra] free_t
+    constraint 'syn = comparison
+    method c_Free z x = fa z x
+  end
+
+let free : ( ('a, 'ia, 'sa, 'inh, 'syn, _) #free_t -> 'inh -> 'a free -> 'syn,
+              < show    : ('a -> string) -> 'a free -> string;
+                html    : ('a -> HTML.viewer) -> 'a free -> HTML.viewer;
+                gmap    : ('a -> 'c) -> 'a free -> 'c free;
+                foldl   : ('c -> 'a -> 'c) -> 'c -> 'a free -> 'c;
+                foldr   : ('c -> 'a -> 'c) -> 'c -> 'a free -> 'c;
+                eq      : ('a -> 'a -> bool) ->
+                          'a free -> 'a free -> bool;
+                compare : ('a -> 'a -> comparison) ->
+                          'a free -> 'a free -> comparison;
+              >) t =
+  {gcata   = gcata_free;
+   plugins = object
+       method show    fa = gcata_free (new show_free_t (fun _ -> assert false) fa) ()
+       method html    fa = gcata_free (new html_free_t (fun _ -> assert false) fa) ()
+       method gmap    fa = gcata_free (new gmap_free_t (fun _ -> assert false) fa) ()
+       method eq      fa = gcata_free (new eq_free_t   (fun _ -> assert false) fa)
+       method compare fa = gcata_free (new compare_free_t(fun _ -> assert false) fa)
+       method foldl   fa = gcata_free (new foldl_free_t (fun _ -> assert false) fa)
+       method foldr   fa = gcata_free (new foldr_free_t (fun _ -> assert false) fa)
+  end
+  }
+
 
 (* Pairs and other stuff without explicit structure *)
 type ('a, 'b) pair = 'a * 'b
-
-(*
-class type html_pair_env_tt = object  end
-class type show_pair_env_tt = object  end
-class type foldl_pair_env_tt = object  end
-class type foldr_pair_env_tt = object  end
-class type eq_pair_env_tt = object  end
-class type compare_pair_env_tt = object  end
-class type gmap_pair_env_tt = object  end
-
-
-class type ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn] pair_tt =
-  object
-    method c_Pair : 'inh -> ('inh, ('a, 'b) pair, 'syn, < a : 'ia -> 'a -> 'sa; b : 'ib -> 'b -> 'sb >) a ->
-                            ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa ; b : 'ib -> 'b -> 'sb >) a ->
-                            ('ib, 'b, 'sb, < a : 'ia -> 'a -> 'sa ; b : 'ib -> 'b -> 'sb >) a -> 'syn
-    method t_pair : ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> 'inh -> ('a, 'b) pair -> 'syn
-  end
-*)
 
 let gcata_pair tr inh = function (a, b) -> tr#c_Pair inh a b
 
@@ -532,7 +588,9 @@ class virtual ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] tuple2_t = object
   inherit ['a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn, 'extra] pair_t
 end
 let gcata_tuple2 = gcata_pair
+let tuple2 = pair
 
+(* Just aliases *)
 class ['a, 'b, 'extra] show_tuple2_t fself fa fb = object
   inherit [ 'a, 'b, 'extra] show_pair_t fself fa fb
 end
@@ -552,47 +610,75 @@ class ['a, 'b, 'syn, 'extra] foldr_tuple2_t fself fa fb = object
   inherit [ 'a, 'b, 'syn, 'extra] foldr_pair_t fself fa fb
 end
 
+(*******************************************************************************)
+(* Tuples of size 3 *)
 type ('a,'b,'c) triple = 'a * 'b * 'c
-class virtual ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn] triple_t = object
+class virtual ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] triple_t = object
   method virtual c_Triple : 'inh -> 'a -> 'b -> 'c -> 'syn
 end
-class ['a, 'b, 'c, 'extra] show_triple _ fa fb fc =
+class virtual ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] tuple3_t = object
+  inherit ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] triple_t
+end
+let gcata_triple tr inh (a,b,c) = tr#c_Triple inh a b c
+let gcata_tuple3 = gcata_triple
+
+class ['a, 'b, 'c, 'extra] show_triple_t _ fa fb fc =
   object
     inherit [ 'a, unit, string
             , 'b, unit, string
             , 'c, unit, string
-            , unit, string] @triple
+            , unit, string, 'extra] @triple
     method c_Triple () x y z = Printf.sprintf "(%s, %s, %s)"
       (fa x) (fb y) (fc z)
 end
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'extra] gmap_triple _ fa fb fc =
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'extra] gmap_triple_t _ fa fb fc =
   object
     inherit [ 'a, unit, 'a2
             , 'b, unit, 'b2
             , 'c, unit, 'c2
-            , unit, ('a2,'b2,'c2) triple ] @triple
+            , unit, ('a2,'b2,'c2) triple, 'extra ] @triple
     method c_Triple () x y z = ( (fa x), (fb y), (fc z) )
 end
-class ['a, 'b, 'c, 'extra] compare_triple _ fa fb fc =
+class ['a, 'b, 'c, 'extra] compare_triple_t _ fa fb fc =
   object
     inherit [ 'a, 'a, 'syn
             , 'b, 'b, 'syn
             , 'c, 'c, 'syn
-            , 'inh, 'syn ] @triple
+            , 'inh, 'syn, 'extra  ] @triple
     constraint 'inh = ('a, 'b, 'c) triple
     constraint 'syn = comparison
     method c_Triple (a,b,c) x y z =
       chain_compare (fa a x) @@ fun _ ->
       chain_compare (fb b y) @@ fun _ ->
        (fc c z)
-
 end
-let triple_gcata tr inh (a,b,c) = tr#c_Triple inh a b c
+
+class ['a, 'b, 'c, 'extra] eq_triple_t _ fa fb fc =
+  object
+    inherit [ 'a, 'a, bool, 'b, 'b, bool, 'c, 'c, bool
+            , ('a, 'b, 'c) triple, bool, 'extra] @triple
+    method c_Triple inh x y z =
+      match inh with
+      (z, t, v) -> fa z x && fb t y && fc v z
+  end
+
+class ['a, 'b, 'c, 'syn, 'extra] foldl_triple_t _ fa fb fc =
+  object
+    inherit [ 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'c, 'syn, 'syn
+            , 'syn, 'syn, 'extra] @triple
+    method c_Triple s x y z = fc (fb (fa s x) y) z
+  end
+
+class ['a, 'b, 'c, 'syn, 'extra] foldr_triple_t _ fa fb fc =
+  object
+    inherit ['a, 'syn, 'syn, 'b, 'syn, 'syn, 'c, 'syn, 'syn
+            , 'syn, 'syn, 'extra] triple_t
+    method c_Triple s x y z = fa (fb (fc s z) y) x
+  end
 
 let triple :
-    ( (* ('ia -> 'a -> 'sa) -> ('ib -> 'b -> 'sb) -> ('ic -> 'c -> 'sc) -> *)
-             ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn) #triple_t ->
-             'inh -> ('a, 'b, 'c) triple -> 'syn
+    ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'c, 'ic, 'sc, 'inh, 'syn, 'extra ) #triple_t ->
+      'inh -> ('a, 'b, 'c) triple -> 'syn
     , < show    : ('a -> string) -> ('b -> string) ->  ('c -> string) ->
                        ('a, 'b, 'c) triple  -> string;
         gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
@@ -602,21 +688,55 @@ let triple :
                   ('c -> 'c -> comparison) ->
                   ('a, 'b, 'c) triple ->
                   ('a, 'b, 'c) triple ->
-                  comparison
+                  comparison;
+        eq      : ('a -> 'a -> bool) ->
+                  ('b -> 'b -> bool) ->
+                  ('c -> 'c -> bool) ->
+                  ('a, 'b, 'c) triple ->
+                  ('a, 'b, 'c) triple ->
+                  bool;
+        foldl   : ('syn -> 'a -> 'syn) ->
+                  ('syn -> 'b -> 'syn) ->
+                  ('syn -> 'c -> 'syn) ->
+                  'syn ->
+                  ('a, 'b, 'c) triple ->
+                  'syn;
       >) t =
-  {gcata   = triple_gcata;
+  {gcata   = gcata_triple;
    plugins = object
      method show    fa fb fc =
-       triple_gcata (new show_triple    (fun _ -> assert false) fa fb fc) ()
+       gcata_triple (new show_triple_t    (fun _ -> assert false) fa fb fc) ()
      method gmap    fa fb fc =
-       triple_gcata (new gmap_triple    (fun _ -> assert false) fa fb fc) ()
+       gcata_triple (new gmap_triple_t    (fun _ -> assert false) fa fb fc) ()
      method compare fa fb fc inh =
-       triple_gcata (new compare_triple (fun _ -> assert false) fa fb fc) inh
+       gcata_triple (new compare_triple_t (fun _ -> assert false) fa fb fc) inh
+     method eq      fa fb fc inh =
+       gcata_triple (new eq_triple_t (fun _ -> assert false) fa fb fc) inh
+     method foldl fa fb fc inh =
+       gcata_triple (new foldl_triple_t (fun _ -> assert false) fa fb fc) inh
   end
 }
 
-let tuple2 = pair
 let tuple3 = triple
+
+class ['a, 'b, 'c, 'extra] show_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'extra] show_triple_t fself fa fb fc
+end
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'extra] gmap_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'extra] gmap_triple_t fself fa fb fc
+end
+class ['a, 'b, 'c, 'extra] compare_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'extra] compare_triple_t fself fa fb fc
+end
+class ['a, 'b, 'c, 'extra] eq_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'extra] eq_triple_t fself fa fb fc
+end
+class ['a, 'b, 'c, 'syn, 'extra] foldl_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'syn, 'extra] foldl_triple_t fself fa fb fc
+end
+class ['a, 'b, 'c, 'syn, 'extra] foldr_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'syn, 'extra] foldr_triple_t fself fa fb fc
+end
 
 (****************************************************************************)
 let show    t = t.plugins#show

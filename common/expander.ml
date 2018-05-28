@@ -148,35 +148,38 @@ let make_interface_class_sig ~loc tdecl =
       )
     )
     ~onmanifest:(fun typ ->
-          let wrap name params =
-            let inh_params =
-                List.concat_map params ~f:(fun typ ->
-                  [ typ
-                  ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
-                  ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
-                  ]
-                )
-              |> List.map ~f:Typ.from_caml
-            in
-            let inh_params = List.concat
-                [ inh_params
-                ; inh_syn_ts ~loc
-                ; [ Typ.var ~loc Plugin.extra_param_name ]
+        let wrap name params =
+          let inh_params =
+            List.concat_map params ~f:(fun typ ->
+                [ typ
+                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
                 ]
-            in
-
-            [ Ctf.inherit_ ~loc @@
-              Cty.constr ~loc (map_longident ~f:class_name_for_typ name)
-                inh_params
-            ]
+              )
+            |> List.map ~f:Typ.from_caml
+          in
+          let inh_params = List.concat
+              [ inh_params
+              ; inh_syn_ts ~loc
+              ; [ Typ.var ~loc Plugin.extra_param_name ]
+              ]
           in
 
-          let rec helper typ = match typ with
-          | _ -> match typ.ptyp_desc with
-          | Ptyp_var name -> not_implemented "antiphantom types"
+          [ Ctf.inherit_ ~loc @@
+            Cty.constr ~loc (map_longident ~f:class_name_for_typ name)
+              inh_params
+          ]
+        in
+
+        let rec helper typ = match typ.ptyp_desc with
           | Ptyp_constr ({txt;loc}, params) ->
             (* a type alias on toplevel *)
             k @@ wrap txt params
+          | Ptyp_var name ->
+            let new_lident = Ldot (Lident "GT", "free") in
+            let open Ppxlib.Ast_builder.Default in
+            let loc = typ.ptyp_loc in
+            helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             let new_lident = Ldot (Lident "GT", sprintf "tuple%d" @@ List.length ts) in
@@ -250,32 +253,37 @@ let make_interface_class ~loc tdecl =
       )
     )
     ~onmanifest:(fun typ ->
-          let wrap ?(is_poly=false) name params =
-            let inh_params =
-                List.concat_map params ~f:(fun typ ->
-                  [ typ
-                  ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
-                  ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
-                  ]
-                )
-              |> List.map ~f:Typ.from_caml
-            in
-            let inh_params = List.concat
-                [ inh_params
-                ; inh_syn_ts ~loc
-                ; [ Typ.var ~loc Plugin.extra_param_name ]
+        let wrap ?(is_poly=false) name params =
+          let inh_params =
+            List.concat_map params ~f:(fun typ ->
+                [ typ
+                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
                 ]
-            in
-
-            [ Cf.inherit_ ~loc @@
-              Cl.constr ~loc (map_longident ~f:class_name_for_typ name)
-                inh_params
-            ]
+              )
+            |> List.map ~f:Typ.from_caml
+          in
+          let inh_params = List.concat
+              [ inh_params
+              ; inh_syn_ts ~loc
+              ; [ Typ.var ~loc Plugin.extra_param_name ]
+              ]
           in
 
-          let rec helper typ = match typ with
+          [ Cf.inherit_ ~loc @@
+            Cl.constr ~loc (map_longident ~f:class_name_for_typ name)
+              inh_params
+          ]
+        in
+
+        let rec helper typ = match typ with
           | _ -> match typ.ptyp_desc with
-          | Ptyp_var name -> not_implemented "antiphantom types"
+          | Ptyp_var name ->
+            let new_lident = Ldot (Lident "GT", "free") in
+            let open Ppxlib.Ast_builder.Default in
+            let loc = typ.ptyp_loc in
+            helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
+
           | Ptyp_constr ({txt;loc}, params) ->
             (* a type alias on toplevel *)
             ans @@ wrap txt params
@@ -371,6 +379,11 @@ let make_gcata_typ ~loc tdecl =
           let rec helper typ =
             match typ.ptyp_desc with
             | Ptyp_constr (_,_) -> on_alias_or_abstract ()
+            | Ptyp_var name ->
+              let new_lident = Ldot (Lident "GT", "free") in
+              let open Ppxlib.Ast_builder.Default in
+              let loc = typ.ptyp_loc in
+              helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
             | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
                   ~f:(fun s ->
@@ -426,8 +439,14 @@ let make_gcata_str ~loc tdecl =
         )
       )
     ~onmanifest:(fun typ ->
-      let rec do_typ t = match t.ptyp_desc with
-      | Ptyp_alias (t,_) -> do_typ t
+        let rec do_typ t = match t.ptyp_desc with
+        | Ptyp_alias (t,_) -> do_typ t
+        | Ptyp_var name ->
+          let new_lident = Ldot (Lident "GT", "free") in
+          let open Ppxlib.Ast_builder.Default in
+          let loc = typ.ptyp_loc in
+          do_typ @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
+
       | Ptyp_constr ({txt},_) ->
           Str.single_value ~loc
                gcata_pat
@@ -462,14 +481,11 @@ let make_gcata_str ~loc tdecl =
 (* Seems that we don't need it no more *)
 let make_heading_gen ~loc wrap tdecl = []
 
-(* let make_heading_str ~loc = make_heading_gen ~loc (Str.type_ ~loc Nonrecursive)
- * let make_heading_sig ~loc = make_heading_gen ~loc (Sig.type_ ~loc Nonrecursive) *)
-
-let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
 
 (* Part of old implementation where we are trying to collect all values in t
  * first-class module. But we decided to roll back because we can't write
  * generic function to access it *)
+let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
 (* let gather_module_str tdecl plugins =
  *   let loc = tdecl.ptype_loc in
  *

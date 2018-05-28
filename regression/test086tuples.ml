@@ -1,3 +1,9 @@
-@type ('name, 'term) abs = ('name, 'term) GT.pair with gmap;;
-
-@type ('var, 'lam, 'abs) a_lam = Var of 'var | Abs of 'abs | App of 'lam * 'lam with gmap;;
+module T : sig
+  @type t2 = GT.int * GT.string with show;;
+  @type 'a t3 = GT.int * 'a * GT.string with show;;
+  @type 'a t1 = 'a with show;;
+end = struct
+  @type t2 = GT.int * GT.string with show;;
+  @type 'a t3 = GT.int * 'a * GT.string with show;;
+  @type 'a t1 = 'a with show;;
+end

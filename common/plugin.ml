@@ -219,6 +219,12 @@ class virtual generator initial_args = object(self: 'self)
       ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
+          | Ptyp_var name -> (* antiphantom types *)
+            let new_lident = Ldot (Lident "GT", "free") in
+            let open Ppxlib.Ast_builder.Default in
+            let loc = typ.ptyp_loc in
+            helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
+
           | Ptyp_alias (t, aname) ->
             let loc = t.ptyp_loc in
             map_core_type t ~onvar:(fun as_ ->
@@ -362,6 +368,11 @@ class virtual generator initial_args = object(self: 'self)
     ~onmanifest:(fun typ ->
         let rec helper typ  =
           match typ.ptyp_desc with
+          | Ptyp_var name -> (* antiphantom types *)
+            let new_lident = Ldot (Lident "GT", "free") in
+            let open Ppxlib.Ast_builder.Default in
+            let loc = typ.ptyp_loc in
+            helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
           | Ptyp_alias (t, aname) ->
             let open Ppxlib.Ast_builder.Default in
             let loc = tdecl.ptype_loc in
