@@ -22,15 +22,7 @@
  **************************************************************************)
 
 type ('a, 'b) t = {gcata : 'a; plugins : 'b}
-type ('a, 'b, 'c, 'd) a = {x : 'b; fx : 'a -> 'c; f : 'a -> 'b -> 'c; t : 'd}
-
-let (~:) x = x.x
 let transform t = t.gcata
-
-let make  f x p = {x=x; fx=(fun a -> f a x); f=f; t=p}
-let apply f a x = f a x
-
-let lift f _ = f
 
 type comparison = LT | EQ | GT
 
@@ -100,31 +92,6 @@ class virtual ['a, 'ia, 'sa, 'inh, 'syn, 'extra] list_t =
 let gcata_list tr inh = function
 | []    -> tr#c_Nil inh
 | x::xs -> tr#c_Cons inh x xs
-
-(*
-let list : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn, _) #list_tt -> 'inh -> 'a list -> 'syn, unit) t =
-  let rec list_gcata fa trans inh subj =
-    let rec self = list_gcata fa trans
-    and tpo = object method a = fa end in
-    match subj with
-      [] -> trans#c_Nil inh (make self subj tpo)
-    | p1::p2 ->
-        trans#c_Cons inh (make self subj tpo) (make fa p1 tpo)
-          (make self p2 tpo)
-  in
-  {gcata = list_gcata; plugins = ()}
-
-class virtual ['a, 'ia, 'sa, 'inh, 'syn] list_t =
-  object (this)
-    method virtual c_Nil :
-      'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method virtual c_Cons :
-      'inh -> ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
-        ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a ->
-        ('inh, 'a list, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method t_list fa = transform list fa this
-  end
-*)
 
 class ['a, 'extra] html_list_t fself fa =
   object
@@ -230,6 +197,7 @@ let list : (('a, 'ia, 'sa, 'inh, 'syn, _) #list_t -> 'inh -> 'a list -> 'syn,
              end
   }
 
+
 module Lazy =
   struct
 
@@ -237,71 +205,55 @@ module Lazy =
 
     include Lazy
 
-    class type html_t_env_tt = object  end
-    class type show_t_env_tt = object  end
-    class type foldl_t_env_tt = object  end
-    class type foldr_t_env_tt = object  end
-    class type eq_t_env_tt = object  end
-    class type compare_t_env_tt = object  end
-    class type gmap_list_env_tt = object  end
+    class virtual ['a, 'ia, 'sa, 'inh, 'syn, 'extra] t_t = object
+        method virtual t_t : 'inh -> 'a t -> 'syn
+      end
+    let gcata_t tr inh subj = tr#t_t inh subj
+    let gcata_lazy = gcata_t
 
-    class type ['a, 'ia, 'sa, 'inh, 'syn] t_tt =
+    class ['a, 'extra ] html_t_t _fself fa =
       object
-        method t_t : ('ia -> 'a -> 'sa) -> 'inh -> 'a t -> 'syn
+        inherit ['a, unit, HTML.viewer, unit, HTML.viewer, 'extra ] @t
+        method t_t inh subj = fa @@ Lazy.force subj
       end
 
-    let t : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #t_tt -> 'inh -> 'a t -> 'syn, unit) t' =
-      let t_gcata fa trans inh subj = trans#t_t fa inh subj (* fa inh (Lazy.force subj) in*) in
-      {gcata = t_gcata; plugins = ()}
-
-    class virtual ['a, 'ia, 'sa, 'inh, 'syn] t_t =
-      object (this)
-        method virtual t_t : ('ia -> 'a -> 'sa) -> 'inh -> 'a t -> 'syn
-      end
-
-    class ['a] html_t_t =
+    class ['a, 'extra ] show_t_t _fself fa =
       object
-        inherit ['a, unit, HTML.viewer, unit, HTML.viewer] @t
-        method t_t fa inh subj = fa inh @@ Lazy.force subj
+        inherit ['a, unit, string, unit, string, 'extra ] @t
+        method t_t inh subj = fa @@ Lazy.force subj
       end
 
-    class ['a] show_t_t =
+    class ['a, 'sa, 'extra ] gmap_t_t _fself fa =
       object
-        inherit ['a, unit, string, unit, string] @t
-        method t_t fa inh subj = fa inh @@ Lazy.force subj
+        inherit ['a, unit, 'sa, unit, 'sa t, 'extra ] @t
+        method t_t inh subj = lazy (fa @@ Lazy.force subj)
       end
 
-    class ['a, 'sa] gmap_t_t =
+    class ['a, 'syn, 'extra ] foldl_t_t _fself fa =
       object
-        inherit ['a, unit, 'sa, unit, 'sa t] @t
-        method t_t fa inh subj = lazy (fa inh @@ Lazy.force subj)
+        inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra ] @t
+        method t_t inh subj = fa inh @@ Lazy.force subj
       end
 
-    class ['a, 'syn] foldl_t_t =
+    class ['a, 'syn, 'extra ] foldr_t_t fself fa =
       object
-        inherit ['a, 'syn, 'syn, 'syn, 'syn] @t
-        method t_t fa inh subj = fa inh @@ Lazy.force subj
+        inherit ['a, 'syn, 'extra ] @t[foldl] fself fa
       end
 
-    class ['a, 'syn] foldr_t_t =
+    class ['a, 'extra ] eq_t_t _fself fa =
       object
-        inherit ['a, 'syn] @t[foldl]
+        inherit ['a, 'a, bool, 'a t, bool, 'extra ] @t
+        method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
-    class ['a] eq_t_t =
+
+    class ['a, 'extra ] compare_t_t fself fa =
       object
-        inherit ['a, 'a, bool, 'a t, bool] @t
-        method t_t fa inh subj = fa (Lazy.force inh) (Lazy.force subj)
+        inherit ['a, 'a, comparison, 'a t, comparison, 'extra ] @t
+        method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
-
-    class ['a] compare_t_t =
-      object
-        inherit ['a, 'a, comparison, 'a t, comparison] @t
-        method t_t fa inh subj = fa (Lazy.force inh) (Lazy.force subj)
-      end
-
-    let t : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #t_tt -> 'inh -> 'a t -> 'syn,
+    let t : ( ('a, 'ia, 'sa, 'inh, 'syn, _) #t_t -> 'inh -> 'a t -> 'syn,
              < show    : ('a -> string)      -> 'a t -> string;
                html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
                gmap    : ('a -> 'b) -> 'a t -> 'b t;
@@ -310,115 +262,91 @@ module Lazy =
                eq      : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool;
                compare : ('a -> 'a -> comparison) -> 'a t -> 'a t -> comparison;
              >) t' =
-      {gcata   = t.gcata;
+      let fself _ = assert false in
+      {gcata   = gcata_lazy;
        plugins = object
-                   method show    fa l = transform(t) (lift fa) (new @t[show]) () l
-                   method html    fa   = transform(t) (lift fa) (new @t[html]) ()
-                   method gmap    fa   = transform(t) (lift fa) (new @t[gmap] ) ()
-                   method eq      fa   = transform(t) fa (new @t[eq])
-                   method compare fa   = transform(t) fa (new @t[compare])
-                   method foldl   fa   = transform(t) fa (new @t[foldl])
-                   method foldr   fa   = transform(t) fa (new @t[foldr])
+                   method show    fa   = gcata_lazy (new @t[show] fself fa) ()
+                   method html    fa   = gcata_lazy (new @t[html] fself fa) ()
+                   method gmap    fa   = gcata_lazy (new @t[gmap] fself fa) ()
+                   method eq      fa   = gcata_lazy (new @t[eq] fself fa)
+                   method compare fa   = gcata_lazy (new @t[compare] fself fa)
+                   method foldl   fa   = gcata_lazy (new @t[foldl] fself fa)
+                   method foldr   fa   = gcata_lazy (new @t[foldr] fself fa)
                  end
       }
   end
 
+
 type 'a poption = 'a option
 type 'a option = 'a poption
 
-class type html_option_env_tt = object  end
-class type show_option_env_tt = object  end
-class type foldl_option_env_tt = object  end
-class type foldr_option_env_tt = object  end
-class type eq_option_env_tt = object  end
-class type compare_option_env_tt = object  end
-class type gmap_option_env_tt = object  end
+let gcata_option tr inh subj =
+  match subj with
+  | None -> tr#c_None inh
+  | Some x -> tr#c_Some inh x
 
-class type ['a, 'ia, 'sa, 'inh, 'syn] option_tt =
+class virtual ['a, 'ia, 'sa, 'inh, 'syn, 'extra] option_t =
   object
-    method c_None : 'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method c_Some : 'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
-                            ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method t_option : ('ia -> 'a -> 'sa) -> 'inh -> 'a option -> 'syn
+    method virtual c_None :   'inh -> 'syn
+    method virtual c_Some :   'inh -> 'a  -> 'syn
   end
 
-let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn, unit) t =
-  let rec option_gcata fa trans inh subj =
-    let rec self = option_gcata fa trans
-    and tpo = object method a = fa end in
-    match subj with
-      None   -> trans#c_None inh (make self subj tpo)
-    | Some p -> trans#c_Some inh (make self subj tpo) (make fa p tpo)
-  in
-  {gcata = option_gcata; plugins = ()}
-
-class virtual ['a, 'ia, 'sa, 'inh, 'syn] option_t =
-  object (this)
-    method virtual c_None :
-      'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method virtual c_Some :
-      'inh -> ('inh, 'a option, 'syn, < a : 'ia -> 'a -> 'sa >) a ->
-        ('ia, 'a, 'sa, < a : 'ia -> 'a -> 'sa >) a -> 'syn
-    method t_option fa = transform option fa this
+class ['a] html_option_t _fself fa =
+  object
+    inherit ['a, unit, HTML.viewer, unit, HTML.viewer, 'extra] @option
+    method c_None _  = HTML.string "None"
+    method c_Some _ x = View.concat (HTML.string "Some") (HTML.ul (fa x))
   end
 
-class ['a] html_option_t =
+class ['a, 'extra] show_option_t _fself fa =
   object
-    inherit ['a, unit, HTML.viewer, unit, HTML.viewer] @option
-    method c_None  _ _  = HTML.string "None"
-    method c_Some _ _ x = View.concat (HTML.string "Some") (HTML.ul (x.fx ()))
+    inherit ['a, unit, string, unit, string, 'extra] @option
+    method c_None _  = "None"
+    method c_Some _ x = "Some (" ^ fa x ^ ")"
   end
 
-class ['a] show_option_t =
+class ['a, 'sa, 'extra] gmap_option_t _fself fa =
   object
-    inherit ['a, unit, string, unit, string] @option
-    method c_None  _ _  = "None"
-    method c_Some _ _ x = "Some (" ^ x.fx () ^ ")"
+    inherit ['a, unit, 'sa, unit, 'sa option, 'extra] @option
+    method c_None _ = None
+    method c_Some _ x = Some (fa x)
   end
 
-class ['a, 'sa] gmap_option_t =
+class ['a, 'syn, 'extra] foldl_option_t _fself fa =
   object
-    inherit ['a, unit, 'sa, unit, 'sa option] @option
-    method c_None _ _ = None
-    method c_Some _ _ x = Some (x.fx ())
+    inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra] @option
+    method c_None s = s
+    method c_Some s x = fa s x
   end
 
-class ['a, 'syn] foldl_option_t =
+class ['a, 'syn, 'extra] foldr_option_t _fself fa =
   object
-    inherit ['a, 'syn, 'syn, 'syn, 'syn] @option
-    method c_None s _ = s
-    method c_Some s _ x = x.fx s
+    inherit ['a, 'syn, 'extra] @option[foldl] _fself fa
   end
 
-class ['a, 'syn] foldr_option_t =
+class ['a, 'extra] eq_option_t _fself fa =
   object
-    inherit ['a, 'syn] @option[foldl]
-  end
-
-class ['a] eq_option_t =
-  object
-    inherit ['a, 'a, bool, 'a option, bool] @option
-    method c_None inh subj = inh = None
-    method c_Some inh subj x =
+    inherit ['a, 'a, bool, 'a option, bool, 'extra] @option
+    method c_None inh = inh = None
+    method c_Some inh x =
       match inh with
-      | Some y -> x.fx y
+      | Some y -> fa y x
       | _ -> false
   end
 
-class ['a] compare_option_t =
+class ['a, 'extra] compare_option_t _fself fa =
   object
-    inherit ['a, 'a, comparison, 'a option, comparison] @option
-    method c_None inh subj =
-      match inh with
+    inherit ['a, 'a, comparison, 'a option, comparison, 'extra] @option
+    method c_None = function
       | None -> EQ
       | _  -> GT
-    method c_Some inh subj x =
+    method c_Some inh x =
       match inh with
       | None -> LT
-      | Some y -> x.fx y
+      | Some y -> fa y x
   end
 
-let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'inh -> 'a option -> 'syn,
+let option : ( ('a, 'ia, 'sa, 'inh, 'syn, _) #option_t -> 'inh -> 'a option -> 'syn,
               < show    : ('a -> string)      -> 'a option -> string;
                 html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
                 gmap    : ('a -> 'b) -> 'a option -> 'b option;
@@ -427,15 +355,16 @@ let option : (('ia -> 'a -> 'sa) -> ('a, 'ia, 'sa, 'inh, 'syn) #option_tt -> 'in
                 eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool;
                 compare : ('a -> 'a -> comparison) -> 'a option -> 'a option -> comparison;
               >) t =
-  {gcata   = option.gcata;
+  let fself _ = assert false in (* because nonrecursive type *)
+  {gcata   = gcata_option;
    plugins = object
-               method show    fa = transform(option) (lift fa) (new @option[show]) ()
-               method html    fa = transform(option) (lift fa) (new @option[html]) ()
-               method gmap    fa = transform(option) (lift fa) (new @option[gmap] ) ()
-               method eq      fa = transform(option) fa (new @option[eq])
-               method compare fa = transform(option) fa (new @option[compare])
-               method foldl   fa = transform(option) fa (new @option[foldl])
-               method foldr   fa = transform(option) fa (new @option[foldr])
+               method show    fa = gcata_option (new @option[show] fself fa) ()
+               method html    fa = gcata_option (new @option[html] fself fa) ()
+               method gmap    fa = gcata_option (new @option[gmap] fself fa) ()
+               method eq      fa = gcata_option (new @option[eq] fself fa)
+               method compare fa = gcata_option (new @option[compare] fself fa)
+               method foldl   fa = gcata_option (new @option[foldl] fself fa)
+               method foldr   fa = gcata_option (new @option[foldr] fself fa)
              end
   }
 
@@ -478,13 +407,13 @@ class ['a, 'syn, 'extra] foldr_free_t _ fa  =
     method c_Free inh x = fa inh x
   end
 
-class ['a, 'b, 'extra] eq_free_t _ fa  =
+class ['a, 'extra] eq_free_t _ fa  =
   object
     inherit ['a, 'a, bool, 'a free, bool, 'extra] free_t
     method c_Free inh x = fa inh x
   end
 
-class ['a, 'b, 'extra] compare_free_t _ fa  =
+class ['a, 'extra] compare_free_t _ fa  =
   object
     inherit ['a, 'a, 'syn, 'a free, 'syn, 'extra] free_t
     constraint 'syn = comparison
@@ -644,7 +573,7 @@ class virtual ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] triple_t = ob
   method virtual c_Triple : 'inh -> 'a -> 'b -> 'c -> 'syn
 end
 class virtual ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] tuple3_t = object
-  inherit ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] triple_t
+  inherit     ['a,'ia,'sa, 'b,'ib,'sb, 'c,'ic,'sc, 'inh, 'syn, 'e] triple_t
 end
 let gcata_triple tr inh (a,b,c) = tr#c_Triple inh a b c
 let gcata_tuple3 = gcata_triple
@@ -682,11 +611,13 @@ end
 
 class ['a, 'b, 'c, 'extra] eq_triple_t _ fa fb fc =
   object
-    inherit [ 'a, 'a, bool, 'b, 'b, bool, 'c, 'c, bool
+    inherit [ 'a, 'a, bool
+            , 'b, 'b, bool
+            , 'c, 'c, bool
             , ('a, 'b, 'c) triple, bool, 'extra] @triple
     method c_Triple inh x y z =
       match inh with
-      (z, t, v) -> fa z x && fb t y && fc v z
+      (a, b, c) -> fa a x && fb b y && fc c z
   end
 
 class ['a, 'b, 'c, 'syn, 'extra] foldl_triple_t _ fa fb fc =
