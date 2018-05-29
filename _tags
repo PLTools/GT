@@ -32,7 +32,7 @@ true: debug, bin_annot, short_paths, annot
 ###########################################
 # Regression tests
 
-<regression/test081*>: rectypes
+<regression/test090*> or <regression/test081*>: rectypes
 <regression/test0*.*>: use_pa_gt
 <regression/test*.*> or <regression/test*.cm*>: use_GT
 <regression/test090.*>: use_GT
