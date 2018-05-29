@@ -1,3 +1,11 @@
+let rec fix f x = f (fix f) x
+let ith m n =
+  fix (fun me i -> function
+      | []                 -> raise Not_found
+      | x :: tl when x = n -> i
+      | _ :: tl            -> me (i+1) tl
+    ) 0 m
+
 module Abs = struct
   @type ('name, 'term) t = [`Abs of 'name * 'term ] with show,gmap,eval;;
   class ['term, 'term2, 'extra] de_bruijn ft =
@@ -57,7 +65,7 @@ end
 
 class ['extra] de_bruijn fself = object
   inherit [string, int, string, unit, 'env, 'extra] eval_t_t
-      fself (fun _ _ -> 100500) (fun _ _ -> ())
+      fself ith (fun _ _ -> ())
   constraint 'env = string list
   inherit [named, nameless, 'extra]    Abs.de_bruijn fself
   inherit [named, nameless, 'extra]    Let.de_bruijn fself
