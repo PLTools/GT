@@ -32,22 +32,19 @@ compile:
 
 add_common:
 	$(eval OBTARGETS +=  common/GTCommon.cma common/GTCommon.cmxa)
-	#$(eval OBPARAMS  += -I plugins)
 common: add_common compile
 add_lib:
 	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
 lib: add_lib compile
 add_camlp5: add_common
 	$(eval OBTARGETS += camlp5/pa_gt.cma camlp5/pp5gt.cma)
-	#$(eval OBPARAMS  += -I common)
 camlp5: add_camlp5 compile
 
 ppx: add_common add_plugins add_ppx compile
 add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
-	#$(eval OBPARAMS  += -I common -I plugins)
 
-PLUGINS=compare eq foldl foldr gmap show show_typed html
+PLUGINS=compare eq foldl foldr gmap eval show show_typed html
 add_plugins:
 	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
@@ -63,7 +60,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #807 029 037 811 900 809 808 801 802 803 804 806 #807 #805
 # now we add camlp5 tests
-REGRES_CASES += 000 037 081 082 083 086 089 029
+REGRES_CASES += 090 000 037 081 082 083 086 089 029
 
 TEST_DIR := regression
 define TESTRULES
@@ -104,11 +101,9 @@ $(foreach i,$(REGRES_CASES),$(eval $(call TESTRULES,$(i)) ) )
 compile_tests_native:
 	@echo "Adding " $(NATIVE_TEST_EXECUTABLES)
 	$(eval OBTARGETS += $(NATIVE_TEST_EXECUTABLES))
-	#$(eval OBPARAMS  += -I src)
 
 compile_tests_byte:
 	$(eval OBTARGETS += $(BYTE_TEST_EXECUTABLES))
-	#$(eval OBPARAMS  += -I src)
 
 compile_tests: compile_tests_native
 

@@ -24,10 +24,10 @@ let app_format_sprintf ~loc arg =
     (Exp.of_longident ~loc (Ldot(Lident "Format", "sprintf")))
     arg
 
-class g args  =
-  object(self)
+class g args = object(self)
   inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit P.generator args
+  inherit [_] P.no_inherit_arg
 
 
   method plugin_name = trait_name

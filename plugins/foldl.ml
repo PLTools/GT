@@ -4,7 +4,7 @@ open Ppxlib
 open Printf
 
 let trait_name = "foldl"
-(* TODO: we want easily get foldr from foldl *)
+
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module P = Plugin.Make(AstHelpers)
@@ -30,17 +30,18 @@ let hack_params ?(loc=noloc) ps =
   in
   (param_names, rez_names, assoc, blownup_params)
 
-open Plugin
+(* open Plugin *)
 
 class g initial_args = object(self: 'self)
   inherit P.generator initial_args as super
+  inherit [_] P.with_inherit_arg  as super2
 
   method plugin_name = "foldl"
 
-  method default_inh ~loc tdecl = self#default_syn ~loc tdecl
-  method default_syn ~loc tdecl = self#syn_of_param ~loc "dummy"
-
   method syn_of_param ~loc s = Typ.var ~loc "syn"
+  method default_inh  ~loc tdecl = self#default_syn ~loc tdecl
+  method default_syn  ~loc tdecl = self#syn_of_param ~loc "dummy"
+
   method inh_of_param tdecl _ =
     self#syn_of_param ~loc:(loc_from_caml tdecl.ptype_loc) "dummy"
 
@@ -56,19 +57,18 @@ class g initial_args = object(self: 'self)
     [ self#default_syn ~loc tdecl
     ; Typ.var ~loc Plugin.extra_param_name ]
 
-  method! make_typ_of_self_trf ~loc tdecl =
-    Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
-
+  (* new type of trasfomation function is 'syn -> old_type *)
   method make_typ_of_class_argument ~loc tdecl name k =
-    super#make_typ_of_class_argument ~loc tdecl name (fun t ->
+    super2#make_typ_of_class_argument ~loc tdecl name (fun t ->
         k @@ Typ.arrow ~loc (self#default_inh ~loc tdecl) t )
 
-  method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
-    let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
-    let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
-    Typ.arrow ~loc (self#default_inh ~loc tdecl)
-      (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
+  (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+   *   let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
+   *   let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
+   *   Typ.arrow ~loc (self#default_inh ~loc tdecl)
+   *     (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl) *)
 
+(*
   (* the same for foldl and eq, compare plugins. Should be moved out *)
   method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
     let body = make_gcata_of_class (Exp.ident ~loc "self") in
@@ -79,7 +79,7 @@ class g initial_args = object(self: 'self)
       ; Exp.sprintf ~loc "the_init"
       ; Exp.sprintf ~loc "subj"
       ]
-
+*)
 
   method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
       constr_name bindings einh k =

@@ -23,12 +23,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          (* let lhs = Pat.variant ~loc  lab @@ match args with
-           *   | [] -> None
-           *   | _  -> Some (Pat.tuple ~loc (List.map ~f:(Pat.var ~loc) names))
-           * in *)
-          let lhs = Pat.variant ~loc  lab @@ List.map ~f:(Pat.var ~loc) names
-          in
+          let lhs = Pat.variant ~loc  lab @@ List.map ~f:(Pat.var ~loc) names in
           case ~lhs ~rhs:(onrow lab @@ List.zip_exn names args)
         | Rinherit typ ->
           match typ.ptyp_desc with
@@ -408,40 +403,22 @@ class virtual generator initial_args = object(self: 'self)
     label_declaration list ->
     Cf.t list
 
-  (* almost the same as `make_typ_of_class_argument` *)
-  method make_typ_of_self_trf ~loc tdecl =
-    let is_poly = is_polyvariant_tdecl tdecl in
-    let openize_poly typ =
-      if is_poly then Typ.variant ~loc ~is_open:true [Rinherit typ]
-      else Typ.from_caml typ
-    in
-
-    let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
-    let syn_t  = self#default_syn ~loc tdecl in
-    Typ.(arrow ~loc subj_t @@ syn_t)
-
   method make_typ_of_mutal_trf ~loc mutal_tdecl (k: Typ.t -> _)  =
     let subj_t = Typ.use_tdecl mutal_tdecl in
     k Typ.(arrow ~loc subj_t (self#default_syn ~loc mutal_tdecl))
 
     (* k @@ Typ.from_caml [%type: ([%t subj_t] -> [%t self#default_syn ~loc mutal_tdecl]) ] *)
 
-  (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
-   *   fot a type ('a,'b,....'z) being generated
-  **)
-  method make_typ_of_class_argument ~loc tdecl name k =
-    let subj_t = Typ.var ~loc name in
-    let syn_t = self#syn_of_param ~loc name in
-    k @@ Typ.arrow ~loc subj_t syn_t
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
                      <this type we are generating here>
   *)
-  method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
-    let subj_t = Option.value subj_t
-        ~default:(Typ.use_tdecl tdecl) in
-    let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
-    Typ.arrow ~loc subj_t syn_t
+
+  (* method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+   *   let subj_t = Option.value subj_t
+   *       ~default:(Typ.use_tdecl tdecl) in
+   *   let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
+   *   Typ.arrow ~loc subj_t syn_t *)
 
   (* method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
    *   [%type: [%t inh_t] -> [%t subj_t] -> [%t syn_t] ] *)
@@ -701,6 +678,86 @@ class virtual generator initial_args = object(self: 'self)
 
   method compose_apply_transformations ~loc ~left right typ =
     Exp.app ~loc left right
+
+
+  method virtual make_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
+  method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
+
+  method virtual make_RHS_typ_of_transformation: loc:AstHelpers.loc ->
+         ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
+end
+
+class virtual ['self] no_inherit_arg = object(self: 'self)
+  (* inherit [_] generator as super *)
+
+  method virtual default_syn : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  method virtual syn_of_param: loc:loc -> string -> Typ.t
+
+
+  (* almost the same as `make_typ_of_class_argument` *)
+  method make_typ_of_self_trf ~loc tdecl =
+    let is_poly = is_polyvariant_tdecl tdecl in
+    let openize_poly typ =
+      if is_poly then Typ.variant ~loc ~is_open:true [Rinherit typ]
+      else Typ.from_caml typ
+    in
+
+    let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
+    let syn_t  = self#default_syn ~loc tdecl in
+    Typ.(arrow ~loc subj_t @@ syn_t)
+
+  (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
+   *   fot a type ('a,'b,....'z) being generated
+  **)
+  method make_typ_of_class_argument ~loc tdecl name k =
+    let subj_t = Typ.var ~loc name in
+    let syn_t = self#syn_of_param ~loc name in
+    k @@ Typ.arrow ~loc subj_t syn_t
+
+  method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+    let subj_t = Option.value subj_t
+        ~default:(Typ.use_tdecl tdecl) in
+    let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
+    Typ.arrow ~loc subj_t syn_t
+
+end
+
+class virtual ['self] with_inherit_arg = object(self: 'self)
+  inherit [_] no_inherit_arg as super
+
+  method wrap_tr_function_str ~loc _tdelcl make_gcata_of_class =
+    (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
+    let body = make_gcata_of_class (Exp.ident ~loc "self") in
+    Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
+    Exp.app_list ~loc
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
+      [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
+      ; Exp.sprintf ~loc "the_init"
+      ; Exp.sprintf ~loc "subj"
+      ]
+
+  method! make_typ_of_self_trf ~loc tdecl =
+    Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
+
+  (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
+   *   fot a type ('a,'b,....'z) being generated
+   **)
+(*
+  method! make_typ_of_class_argument ~loc tdecl name k =
+    k @@
+    super#make_typ_of_class_argument ~loc tdecl name (fun t ->
+        Typ.arrow ~loc (Typ.var ~loc (name^"__")) t
+      )
+    *)
+
+  method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+    let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
+    let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
+    Typ.arrow ~loc (self#default_inh ~loc tdecl)
+      (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
+
 end
 
 end

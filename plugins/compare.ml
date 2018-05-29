@@ -16,6 +16,7 @@ let access_GT s = Ldot (Lident "GT", s)
 
 class g initial_args = object(self: 'self)
   inherit P.generator initial_args as super
+  inherit [_] P.with_inherit_arg as super2
 
   method plugin_name = plugin_name
 
@@ -37,33 +38,36 @@ class g initial_args = object(self: 'self)
 
     (* rhs_args @ [self#extra_param_stub ~loc] *)
 
-  method! make_typ_of_self_trf ~loc tdecl =
-    Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
+  (* method! make_typ_of_self_trf ~loc tdecl =
+   *   Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl) *)
 
+  (* old type is:  'a -> comparison
+   * new type is:  'a -> 'a -> comparison
+   *)
   method! make_typ_of_class_argument ~loc tdecl name k =
     k @@
-    super#make_typ_of_class_argument ~loc tdecl name (fun t ->
+    super2#make_typ_of_class_argument ~loc tdecl name (fun t ->
         Typ.arrow ~loc (Typ.var ~loc name) t
       )
 
-  method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
-    (* TODO: last argument should be either name of argument or core_type *)
-    let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
-    let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
-    Typ.arrow ~loc (self#default_inh ~loc tdecl)
-      (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
+  (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+   *   (\* TODO: last argument should be either name of argument or core_type *\)
+   *   let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
+   *   let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
+   *   Typ.arrow ~loc (self#default_inh ~loc tdecl)
+   *     (super2#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl) *)
 
-  method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
-    let body = make_gcata_of_class (Exp.ident ~loc "self") in
-    Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
-    Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
-      [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
-      ; Exp.sprintf ~loc "the_init"
-      ; Exp.sprintf ~loc "subj"
-      ]
+  (* method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
+   *   let body = make_gcata_of_class (Exp.ident ~loc "self") in
+   *   Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
+   *   Exp.app_list ~loc
+   *     (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
+   *     [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
+   *     ; Exp.sprintf ~loc "the_init"
+   *     ; Exp.sprintf ~loc "subj"
+   *     ] *)
 
-    (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
+
 
 
   method chain_exprs ~loc e1 e2 =
@@ -200,7 +204,6 @@ end
 let g = (new g :> (Plugin_intf.plugin_args ->
                    (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
 
-(* let g = new g *)
 end
 
 let register () =

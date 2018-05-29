@@ -18,7 +18,7 @@ open Command;;
 
 let make_plugins_args ~is_byte =
   (* N.B. Order matters *)
-  let names = [ "show"; "gmap"; "foldl"; "foldr"; "compare"; "eq"; "html" ] in
+  let names = [ "show"; "gmap"; "eval"; "foldl"; "foldr"; "compare"; "eq"; "html" ] in
   List.map (fun s -> A(Printf.sprintf "plugins/%s.cm%s" s (if is_byte then "o" else "x")) )
     names
 
@@ -29,6 +29,11 @@ let () = dispatch (fun hook ->
     ocaml_lib "common/GTCommon";
     ocaml_lib "src/GT";
     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
+
+    flag ["compile"; "native"; "use_GT"]   (S [ A"-I";A"src" ]);
+    flag ["compile"; "byte";   "use_GT"]   (S [ A"-I";A"src" ]);
+    flag ["link";    "byte";   "use_GT"]   (S [ A"-I";A"src"; A"GT.cma" ]);
+    flag ["link";    "native"; "use_GT"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
 
     m4_rules ();
     dep ["use_m4"] ["src/macro.m4"];
@@ -49,10 +54,6 @@ let () = dispatch (fun hook ->
      (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
       * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
 
-    flag ["compile"; "native"; "use_gt"]   (S [ A"-I";A"src" ]);
-    flag ["compile"; "byte";   "use_gt"]   (S [ A"-I";A"src" ]);
-    flag ["link";    "byte";   "use_gt"]   (S [ A"-I";A"src"; A"GT.cma" ]);
-    flag ["link";    "native"; "use_gt"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
 
     flag ["make_pp_gt"; "link"; "byte"] @@
     S ([ A"ppx/ppx_deriving_gt.cma"; A"-package"; A"ppxlib" ] @

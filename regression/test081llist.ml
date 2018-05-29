@@ -1,9 +1,9 @@
 let id x = x
 
 module AL : sig
-  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,gmap,foldl,foldr,compare,eq
+  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,gmap,foldl
 end  = struct
-  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with show,gmap,foldl,foldr,compare,eq
+  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with show,gmap,foldl
 end
 
 

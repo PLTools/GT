@@ -40,6 +40,7 @@ let hack_params ?(loc=noloc) ps =
 
 class g args = object(self: 'self)
   inherit P.generator args
+  inherit [_] P.no_inherit_arg
 
   method plugin_name = plugin_name
 
@@ -66,9 +67,9 @@ class g args = object(self: 'self)
 
 
   method plugin_class_params tdecl =
-    (* let loc = tdecl.ptype_loc in *)
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
-    blownup_params @ [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+    blownup_params @
+    [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
@@ -130,7 +131,7 @@ class g args = object(self: 'self)
     let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
     k [
       Cf.method_concrete ~loc methname @@
-      Exp.fun_ ~loc (Pat.unit ~loc) @@
+      Exp.fun_ ~loc (Pat.sprintf ~loc "_inh") @@
 
       Exp.fun_list ~loc
         (List.map names ~f:(Pat.sprintf ~loc "%s"))
@@ -139,7 +140,7 @@ class g args = object(self: 'self)
              ~f:(fun (name, typ) ->
                  self#app_transformation_expr ~loc
                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                   (Exp.assert_false ~loc)
+                   (Exp.ident ~loc "_inh")
                    (Exp.ident ~loc name)
                )
         in
