@@ -8,6 +8,7 @@ The key feature of the approach in question is object-oriented representation of
 [visitors](https://gitlab.inria.fr/fpottier/visitors)
 
 [BAP's vistors](http://binaryanalysisplatform.github.io/bap/api/master/Bap.Std.Exp.visitor-c.html)
+
 [Janestreet's PPX Traverse](https://github.com/janestreet-deprecated/ppx_traverse)
 
 ## Usage 
@@ -71,7 +72,7 @@ decoration of the original declaration:
  | Mul of expr * expr 
  | Int of GT.int
  | Var of GT.string with show
-``**
+```
 
 We replaced here **type** with**@type**, **int** and **string** with **GT.int** and **GT.string** respectively, and added **with show* to the end of type declaration to make the framework generate all "boilerplate" code for us. **GT.int** and 
 **GT.string*** are two synonyms for regular standard types, equipped with some
@@ -220,9 +221,8 @@ Our next example is variable-collecting function. For this purpose we add "`fold
 
 With this plugin enabled we can easily express what we want:
 
- module S = Set.Make (String) 
-
 ```ocaml
+ module S = Set.Make (String) 
  class vars = 
    object inherit [S.t] @expr[foldl]
      method c_Var s _ x = S.add x s
@@ -316,11 +316,11 @@ The interesting part of this implementation is an explicit utilization of a supe
 
 The complete example can be found in file `sample/expr.ml`.
 
-## References ===
+## References
 
-  # Dmitry Boulytchev. [http://oops.math.spbu.ru/db/generics-tfp-2014.pdf Code Reuse with Object-Encoded Transformers] // A talk at the International Symposium on Trends in Functional Programming, 2014.
-  # Dmitry Boulytchev. [http://oops.math.spbu.ru/db/transformation-objects.pdf Code Reuse with Transformation Objects] // unpublished.
-  # Dmitry Boulytchev. [http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf Combinators and Type-Driven Transformers in Objectove Caml] // submitted to the Science of Computer Programming.
+  * Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers]( http://oops.math.spbu.ru/db/generics-tfp-2014.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
+  * Dmitry Boulytchev. [Code Reuse with Transformation Objects](http://oops.math.spbu.ru/db/transformation-objects.pdf) // unpublished.
+  * Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
 
 <wiki:comment>
 == Implementation ==
