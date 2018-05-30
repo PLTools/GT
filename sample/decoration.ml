@@ -1,7 +1,3 @@
-(* Opening GT *)
-(* open GT *)
-
-(* Some useful idioms: identity, fixpoint *)
 let id x = x
 let fix = GT.fix0;;
 
@@ -10,9 +6,7 @@ let fix = GT.fix0;;
 | Const of GT.int
 | Add   of 'expr * 'expr with show, gmap, foldl
 
-(* Must replace with @type expr = expr a_expr with ... *)
 @type expr = expr a_expr with show;;
-
 @type 'a decorated = ('a decorated a_expr, 'a) GT.pair with show;;
 
 let show_decorated e = GT.show(decorated) e
@@ -77,7 +71,7 @@ module Custom =
         inherit [ 'a decorated a_expr, 'inh, 'c decorated a_expr * 'inh
                 , 'a, 'inh, 'c
                 , 'inh, 'c decorated * 'inh, _
-                ] GT.class_pair
+                ] GT.pair_t
 
         method c_Pair c0 l r =
           let (l, c1) = GT.transform a_expr (object
@@ -95,8 +89,6 @@ module Custom =
       end in
       GT.transform (decorated) tr init expr |> fst
 
-
-    (* let (_:int) = redecorate *)
     let () =
       Printf.printf "\n";
       let e = Add (Add (Const 1, Const 2), Const 3) in
