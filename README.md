@@ -1,13 +1,14 @@
-# Datatype-generic object-oriented transformations for OCaml
+# Datatype-generic object-oriented transformations for OCaml (a.k.a. GT)
 
 This library implements a framework for datatype-generic programming in Objective Caml language. 
 
 The key feature of the approach in question is object-oriented representation of transformations performed over regular algebraic datatypes. Our implementation supports polymorphic variants; in particular, a transformation for a "joined" polymorphic variant type can be acquired via inheritance from the transformations for its counterparts.
 
 ### See also
-[https://gitlab.inria.fr/fpottier/visitors](visitors)
-[http://binaryanalysisplatform.github.io/bap/api/master/Bap.Std.Exp.visitor-c.html](BAP's vistors)
-[https://github.com/janestreet-deprecated/ppx_traverse](Janestreet's PPX Traverse) 
+[visitors](https://gitlab.inria.fr/fpottier/visitors)
+
+[BAP's vistors](http://binaryanalysisplatform.github.io/bap/api/master/Bap.Std.Exp.visitor-c.html)
+[Janestreet's PPX Traverse](https://github.com/janestreet-deprecated/ppx_traverse)
 
 ## Usage 
 ### As PPX
@@ -31,7 +32,7 @@ Use findlib package `GT.syntax.all` to enable extension and all built-in plugins
 # Dependencies
 
   * ppxlib
-  * The (fork)[https://github.com/Kakadu/camlp5/tree/ast2pt.cmi] of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. We hope that it will be merged to upstream eventually 
+  * The [fork](https://github.com/Kakadu/camlp5/tree/ast2pt.cmi) of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. We hope that it will be merged to upstream eventually 
   
 # Compilation
 
