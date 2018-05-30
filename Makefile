@@ -2,7 +2,7 @@ PKGNAME=GT
 MKDIR ?= mkdir -vp
 CP    ?= cp
 
-OB=ocamlbuild -use-ocamlfind -classic-display #-plugin-tag "package(ocaml-migrate-parsetree-ocamlbuild)" #-classic-display -ignore Test025
+OB=ocamlbuild -use-ocamlfind #-classic-display #-plugin-tag "package(ocaml-migrate-parsetree-ocamlbuild)" #-classic-display -ignore Test025
 ifdef OBV
 OB += -verbose 6
 endif
@@ -24,8 +24,10 @@ TESTS_ENVIRONMENT=./test.sh
 
 OBTARGETS=
 OBPARAMS=
-all: add_common add_plugins add_camlp5 add_lib add_ppx compile \
-		bundle #standalone_rewriter bundle
+all: common
+	$(MAKE) add_plugins add_camlp5 add_ppx compile
+	$(MAKE) add_lib compile
+	$(MAKE) bundle #standalone_rewriter bundle
 
 compile:
 	$(OB) $(OBPARAMS) $(OBTARGETS)
@@ -33,16 +35,14 @@ compile:
 add_common:
 	$(eval OBTARGETS +=  common/GTCommon.cma common/GTCommon.cmxa)
 common: add_common compile
-add_lib:
-	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
-lib: add_lib compile
+
 add_camlp5: add_common
 	$(eval OBTARGETS += camlp5/pa_gt.cma camlp5/pp5gt.cma)
 camlp5: add_camlp5 compile
 
-ppx: add_common add_plugins add_ppx compile
 add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
+ppx: add_ppx compile
 
 PLUGINS=compare eq foldl foldr gmap eval show show_typed html
 add_plugins:
@@ -51,10 +51,14 @@ add_plugins:
 											$(addprefix plugins/,$(addsuffix .cmx,$(PLUGINS))) )
 plugins: add_plugins compile
 
-celan: clean
+add_lib:
+	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
+lib: add_lib compile
 
+
+celan: clean
 clean: clean_tests
-	$(RM) -r _build *.log  *.native *.byte
+	$(RM) -r _build *.log *.native *.byte
 
 
 ######################## Tests related stuff  ##########################

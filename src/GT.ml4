@@ -114,6 +114,12 @@ class ['a, 'sa, 'extra] gmap_list_t fself fa =
     method c_Nil  _ = []
     method c_Cons _ x xs = (fa x) :: (fself xs)
   end
+class ['a, 'sa, 'env, 'extra] eval_list_t fself fa =
+  object
+    inherit ['a, 'env, 'sa, 'env, 'sa list, 'extra] @list
+    method c_Nil  _ = []
+    method c_Cons env x xs = (fa env x) :: (fself env xs)
+  end
 
 class ['a, 'syn, 'extra] foldl_list_t fself fa =
   object
@@ -158,6 +164,7 @@ let list : (('a, 'ia, 'sa, 'inh, 'syn, _) #list_t -> 'inh -> 'a list -> 'syn,
             < show    : ('a -> string)      -> 'a list -> string;
               html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
               gmap    : ('a -> 'b) -> 'a list -> 'b list;
+              eval    : ('env -> 'a -> 'b) -> 'env -> 'a list -> 'b list;
               foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
               foldr   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
               eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool;
@@ -177,6 +184,10 @@ let list : (('a, 'ia, 'sa, 'inh, 'syn, _) #list_t -> 'inh -> 'a list -> 'syn,
                method gmap    fa   =
                  fix0 (fun fself ->
                    gcata_list (new @list[gmap] fself fa) ()
+                 )
+               method eval    fa   =
+                 fix0 (fun fself ->
+                   gcata_list (new @list[eval] fself fa)
                  )
                method eq      fa   =
                  fix0 (fun fself ->
@@ -229,6 +240,12 @@ module Lazy =
         method t_t inh subj = lazy (fa @@ Lazy.force subj)
       end
 
+    class ['a, 'sa, 'env, 'extra ] eval_t_t _fself fa =
+      object
+        inherit ['a, 'env, 'sa, 'env, 'sa t, 'extra ] @t
+        method t_t env subj = lazy (fa env @@ Lazy.force subj)
+      end
+
     class ['a, 'syn, 'extra ] foldl_t_t _fself fa =
       object
         inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra ] @t
@@ -246,7 +263,6 @@ module Lazy =
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
-
     class ['a, 'extra ] compare_t_t fself fa =
       object
         inherit ['a, 'a, comparison, 'a t, comparison, 'extra ] @t
@@ -257,6 +273,7 @@ module Lazy =
              < show    : ('a -> string)      -> 'a t -> string;
                html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
                gmap    : ('a -> 'b) -> 'a t -> 'b t;
+               eval    : ('env -> 'a -> 'b) -> 'env -> 'a t -> 'b t;
                foldl   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;
                foldr   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;
                eq      : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool;
@@ -268,6 +285,7 @@ module Lazy =
                    method show    fa   = gcata_lazy (new @t[show] fself fa) ()
                    method html    fa   = gcata_lazy (new @t[html] fself fa) ()
                    method gmap    fa   = gcata_lazy (new @t[gmap] fself fa) ()
+                   method eval    fa   = gcata_lazy (new @t[eval] fself fa)
                    method eq      fa   = gcata_lazy (new @t[eq] fself fa)
                    method compare fa   = gcata_lazy (new @t[compare] fself fa)
                    method foldl   fa   = gcata_lazy (new @t[foldl] fself fa)
@@ -312,6 +330,13 @@ class ['a, 'sa, 'extra] gmap_option_t _fself fa =
     method c_Some _ x = Some (fa x)
   end
 
+class ['a, 'sa, 'env, 'extra] eval_option_t _fself fa =
+  object
+    inherit ['a, 'env, 'sa, 'env, 'sa option, 'extra] @option
+    method c_None _ = None
+    method c_Some env x = Some (fa env x)
+  end
+
 class ['a, 'syn, 'extra] foldl_option_t _fself fa =
   object
     inherit ['a, 'syn, 'syn, 'syn, 'syn, 'extra] @option
@@ -350,6 +375,7 @@ let option : ( ('a, 'ia, 'sa, 'inh, 'syn, _) #option_t -> 'inh -> 'a option -> '
               < show    : ('a -> string)      -> 'a option -> string;
                 html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
                 gmap    : ('a -> 'b) -> 'a option -> 'b option;
+                eval    : ('env -> 'a -> 'b) -> 'env -> 'a option -> 'b option;
                 foldl   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;
                 foldr   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;
                 eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool;
@@ -361,6 +387,7 @@ let option : ( ('a, 'ia, 'sa, 'inh, 'syn, _) #option_t -> 'inh -> 'a option -> '
                method show    fa = gcata_option (new @option[show] fself fa) ()
                method html    fa = gcata_option (new @option[html] fself fa) ()
                method gmap    fa = gcata_option (new @option[gmap] fself fa) ()
+               method eval    fa = gcata_option (new @option[eval] fself fa)
                method eq      fa = gcata_option (new @option[eq] fself fa)
                method compare fa = gcata_option (new @option[compare] fself fa)
                method foldl   fa = gcata_option (new @option[foldl] fself fa)
@@ -393,6 +420,11 @@ class ['a, 'sa, 'extra] gmap_free_t _ fa =
   object
     inherit ['a, unit, 'sa, unit, 'sa free, 'extra] free_t
     method c_Free () x = fa x
+  end
+class ['a, 'sa, 'env, 'extra] eval_free_t _ fa =
+  object
+    inherit ['a, 'env, 'sa, 'env, 'sa free, 'extra] free_t
+    method c_Free env x = fa env x
   end
 
 class ['a, 'syn, 'extra] foldl_free_t _ fa  =
@@ -465,13 +497,25 @@ class ['a, 'b, 'extra] html_pair_t _ fa fb =
   object
     inherit ['a, unit, 'syn, 'b, unit, 'syn, unit, 'syn, 'extra] pair_t
     constraint 'syn = HTML.viewer
-    method c_Pair () x y = HTML.string "not implemented"
+    method c_Pair () x y =
+      List.fold_left View.concat View.empty
+         [ HTML.string "("
+         ; HTML.ul (fa x)
+         ; HTML.string ", "
+         ; HTML.ul (fb y)
+         ; HTML.string ")"]
   end
 
 class ['a, 'sa, 'b, 'sb, 'extra] gmap_pair_t _ (fa: 'a -> 'sa) fb =
   object
     inherit ['a, unit, 'sa, 'b, unit, 'sb, unit, ('sa, 'sb) pair, 'extra] pair_t
     method c_Pair () x y = (fa x, fb y)
+  end
+
+class ['a, 'sa, 'b, 'sb, 'env, 'extra] eval_pair_t _ fa fb =
+  object
+    inherit ['a, 'env, 'sa, 'b, 'env, 'sb, 'env, ('sa, 'sb) pair, 'extra] pair_t
+    method c_Pair env x y = (fa env x, fb env y)
   end
 
 class ['a, 'b, 'syn, 'extra] foldl_pair_t _ fa fb  =
@@ -501,26 +545,14 @@ class ['a, 'b, 'extra] compare_pair_t _ fa fb  =
     method c_Pair (z,t) x y = (match fa z x with EQ -> fb t y | c -> c)
   end
 
-(*
-class ['a, 'b, 'syn, 'extra] foldr_pair_t _ fa fb  =
-  object
-    inherit ['a, 'b, 'syn, 'extra] @pair[foldl]
-    method c_Pair s _ x y = y.fx (x.fx s)
-  end
-
-class ['a, 'b, 'extra] html_pair_t =
-  object
-    inherit ['a, unit, HTML.viewer, 'b, unit, HTML.viewer, unit, HTML.viewer, 'extra] @pair
-    method c_Pair _ _ x y =
-      List.fold_left View.concat View.empty
-         [HTML.string "("; HTML.ul (x.fx ()); HTML.string ", "; HTML.ul (y.fx ()); HTML.string ")"]
-  end
-*)
-
-let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
+let pair:
+  ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
-                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) -> ('a, 'b) pair -> HTML.viewer;
+                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) ->
+                          ('a, 'b) pair -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair;
+                eval    : ('env -> 'a -> 'c) -> ('env -> 'b -> 'd) ->
+                          'env -> ('a, 'b) pair -> ('c, 'd) pair;
                 foldl   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;
                 foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) pair -> 'c;
                 eq      : ('a -> 'a -> bool) -> ('b -> 'b -> bool) ->
@@ -533,6 +565,7 @@ let pair : ( ('a, 'ia, 'sa, 'b, 'ib, 'sb, 'inh, 'syn,_) #pair_t -> 'inh -> ('a, 
        method show    fa fb = gcata_pair (new show_pair_t (fun _ -> assert false) fa fb) ()
        method html    fa fb = gcata_pair (new html_pair_t (fun _ -> assert false) fa fb) ()
        method gmap    fa fb = gcata_pair (new gmap_pair_t (fun _ -> assert false) fa fb) ()
+       method eval    fa fb = gcata_pair (new @pair[eval] (fun _ -> assert false) fa fb)
        method eq      fa fb = gcata_pair (new eq_pair_t   (fun _ -> assert false) fa fb)
        method compare fa fb = gcata_pair (new compare_pair_t(fun _ -> assert false) fa fb)
        method foldl   fa fb = gcata_pair (new foldl_pair_t (fun _ -> assert false) fa fb)
@@ -552,6 +585,9 @@ class ['a, 'b, 'extra] show_tuple2_t fself fa fb = object
 end
 class ['a, 'a2, 'b, 'b2, 'extra] gmap_tuple2_t fself fa fb = object
   inherit [ 'a, 'a2, 'b, 'b2, 'extra] gmap_pair_t fself fa fb
+end
+class ['a, 'a2, 'b, 'b2, 'env, 'extra] eval_tuple2_t fself fa fb = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'extra] eval_pair_t fself fa fb
 end
 class ['a, 'b, 'extra] compare_tuple2_t fself fa fb = object
   inherit [ 'a, 'b, 'extra] compare_pair_t fself fa fb
@@ -594,6 +630,14 @@ class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'extra] gmap_triple_t _ fa fb fc =
             , 'c, unit, 'c2
             , unit, ('a2,'b2,'c2) triple, 'extra ] @triple
     method c_Triple () x y z = ( (fa x), (fb y), (fc z) )
+end
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'extra] eval_triple_t _ fa fb fc =
+  object
+    inherit [ 'a, 'env, 'a2
+            , 'b, 'env, 'b2
+            , 'c, 'env, 'c2
+            , 'env, ('a2,'b2,'c2) triple, 'extra ] @triple
+    method c_Triple e x y z = ( (fa e x), (fb e y), (fc e z) )
 end
 class ['a, 'b, 'c, 'extra] compare_triple_t _ fa fb fc =
   object
@@ -640,7 +684,9 @@ let triple :
     , < show    : ('a -> string) -> ('b -> string) ->  ('c -> string) ->
                        ('a, 'b, 'c) triple  -> string;
         gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
-                       ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
+                  ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
+        eval    : ('env -> 'a -> 'd) -> ('env -> 'b -> 'e) -> ('env -> 'c -> 'f) ->
+                  'env -> ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
         compare : ('a -> 'a -> comparison) ->
                   ('b -> 'b -> comparison) ->
                   ('c -> 'c -> comparison) ->
@@ -666,6 +712,8 @@ let triple :
        gcata_triple (new show_triple_t    (fun _ -> assert false) fa fb fc) ()
      method gmap    fa fb fc =
        gcata_triple (new gmap_triple_t    (fun _ -> assert false) fa fb fc) ()
+     method eval    fa fb fc =
+       gcata_triple (new @triple[eval]    (fun _ -> assert false) fa fb fc)
      method compare fa fb fc inh =
        gcata_triple (new compare_triple_t (fun _ -> assert false) fa fb fc) inh
      method eq      fa fb fc inh =
@@ -682,6 +730,9 @@ class ['a, 'b, 'c, 'extra] show_tuple3_t fself fa fb fc = object
 end
 class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'extra] gmap_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'extra] gmap_triple_t fself fa fb fc
+end
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'extra] eval_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'extra] eval_triple_t fself fa fb fc
 end
 class ['a, 'b, 'c, 'extra] compare_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'b, 'c, 'extra] compare_triple_t fself fa fb fc
@@ -700,6 +751,7 @@ end
 let show    t = t.plugins#show
 let html    t = t.plugins#html
 let gmap    t = t.plugins#gmap
+let eval    t = t.plugins#eval
 let foldl   t = t.plugins#foldl
 let foldr   t = t.plugins#foldr
 let eq      t = t.plugins#eq

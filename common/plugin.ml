@@ -182,9 +182,6 @@ class virtual generator initial_args = object(self: 'self)
             tdecl
             name
             (fun x -> x)
-            (* ~syn_t:(self#syn_of_param ~loc name)
-             * ~subj_t:(Typ.var ~loc name)
-             * tdecl *)
       )
 
   (* signature for a plugin class *)
@@ -295,7 +292,6 @@ class virtual generator initial_args = object(self: 'self)
 
           )
     )
-
 
   method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
     let args =
@@ -562,27 +558,18 @@ class virtual generator initial_args = object(self: 'self)
         | Pcstr_record ls -> self#on_record_constr tdecl cd ls
       )
 
-
   method virtual generate_for_polyvar_tag : loc:loc ->
     is_self_rec:(core_type -> bool) -> mutal_names:(string list) ->
     string -> (string*core_type) list -> Exp.t ->
     (Exp.t -> 'x) -> 'x
 
-
   method generate_for_variable ~loc varname =
     Exp.sprintf ~loc "f%s" varname
 
-  method app_transformation_expr ~loc trf inh subj =
-    (* we ignore inherited argument by default *)
-    Exp.app ~loc trf subj
+  method virtual app_transformation_expr: loc:loc ->
+    Exp.t -> Exp.t -> Exp.t -> Exp.t
 
-
-  method abstract_trf ~loc k =
-    Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
-    k (Exp.assert_false ~loc) (Exp.ident ~loc "subj")
-    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
-    (* ignore inh attribute here too *)
-    (* [%expr fun subj -> [%e k [%expr assert false ] [%expr subj]]] *)
+  method virtual abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
 
   (* TODO: decide expression of which type should be returned here *)
   (* do_type_gen will return an expression which after being applied
@@ -664,7 +651,6 @@ class virtual generator initial_args = object(self: 'self)
                 (fun x -> x)
             in
             self#abstract_trf ~loc (fun einh esubj ->
-            (* let k e = [%expr fun inh foo  -> [%e e]] in *)
               prepare_patt_match_poly ~loc esubj rows maybe_labels
                 ~onrow
                 ~onlabel:(fun _ _ -> Exp.int_const ~loc 1)
@@ -722,6 +708,15 @@ class virtual ['self] no_inherit_arg = object(self: 'self)
     let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc subj_t syn_t
 
+  method abstract_trf ~loc k =
+    Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
+    k (Exp.assert_false ~loc) (Exp.ident ~loc "subj")
+    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+
+  method app_transformation_expr ~loc trf inh subj =
+    (* we ignore inherited argument by default *)
+    Exp.app ~loc trf subj
+
 end
 
 class virtual ['self] with_inherit_arg = object(self: 'self)
@@ -757,6 +752,15 @@ class virtual ['self] with_inherit_arg = object(self: 'self)
     let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc (self#default_inh ~loc tdecl)
       (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
+
+  method! abstract_trf ~loc k =
+    Exp.fun_list ~loc [ Pat.sprintf ~loc "inh"; Pat.sprintf ~loc "subj" ]  @@
+    k (Exp.ident ~loc "inh") (Exp.ident ~loc "subj")
+    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+
+  method! app_transformation_expr ~loc trf inh subj =
+    (* we ignore inherited argument by default *)
+    Exp.app_list ~loc trf [inh; subj]
 
 end
 
