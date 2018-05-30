@@ -1,3 +1,44 @@
+# Datatype-generic object-oriented transformations for OCaml
+
+This library implements a framework for datatype-generic programming in Objective Caml language. 
+
+The key feature of the approach in question is object-oriented representation of transformations performed over regular algebraic datatypes. Our implementation supports polymorphic variants; in particular, a transformation for a "joined" polymorphic variant type can be acquired via inheritance from the transformations for its counterparts.
+
+### See also
+[https://gitlab.inria.fr/fpottier/visitors](visitors)
+[http://binaryanalysisplatform.github.io/bap/api/master/Bap.Std.Exp.visitor-c.html](BAP's vistors)
+[https://github.com/janestreet-deprecated/ppx_traverse](Janestreet's PPX Traverse) 
+
+## Usage 
+### As PPX
+Use findlib package `GT.ppx` in combination with `ppxlib`. See [this part](https://github.com/ocaml-ppx/ppxlib/#drivers) of `ppxlib`'s README for details
+
+### As Camlp5 syntax extension 
+
+Use findlib package `GT.syntax.all` to enable extension and all built-in plugins. To compile and see the generated code use the following command:
+
+    ocamlfind opt -syntax camlp5o -package GT.syntax.all regression/test081llist.ml -dsource
+
+## Directory structure 
+
+ * The framework for generation is in `common/`. The generic plugin for adding new transformations is in `common/plugin.ml`.
+ * All built-in plugins live in `plugins/` and depend on the stuff in `common/`.
+ * Camlp5-specific preprocessing plugin lives in `camlp5/`. Depends on stuff in `common/`.
+ * PPX-specific preprocessing plugin lives in `ppx/`. Depends on stuff in `common/`.
+ * Built-in plugins that represent transformations live in `plugins/`. Depends on `common/`.
+ * A library for built-in types and transformations for types from Pervasives live in `src/`. Depends on syntax extension from `camlp5/`.
+ 
+# Dependencies
+
+  * ppxlib
+  * The (fork)[https://github.com/Kakadu/camlp5/tree/ast2pt.cmi] of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. We hope that it will be merged to upstream eventually 
+  
+# Compilation
+
+* `make` to compile whole library.
+* `make && make tests` to compile regression tests too.
+
+  
 # This branch adds PPX support for Generic Transformers.
 
 * Use `make ppx` to compile PPX syntax extension.
@@ -5,11 +46,6 @@
 * New tests and demos are in the directory `./regression_ppx`
 * To run PPX preprocessor and see the generated code, for example, the following command: `./pp_gt.native -type-conv-keep-w32 both regression_ppx/test801.ml`
 
-# Datatype-generic object-oriented transformations for OCaml
-
-This library implements a framework for datatype-generic programming in Objective Caml language. 
-
-The key feature of the approach in question is object-oriented representation of transformations performed over regular algebraic datatypes. Our implementation supports polymorphic variants; in particular, a transformation for a "joined" polymorphic variant type can be acquired via inheritance from the transformations for its counterparts.
 
 In the following section we describe our approach in a nutshell by a typical example.
 
@@ -34,11 +70,11 @@ decoration of the original declaration:
  | Mul of expr * expr 
  | Int of GT.int
  | Var of GT.string with show
-```
+``**
 
-We replaced here "<tt>type</tt>" with "<tt>@type</tt>", "<tt>int</tt>" and "<tt>string</tt>" with "<tt>GT.int</tt>" and "<tt>GT.string</tt>" respectively, and added "<tt>with show</t>" to the end of type declaration to make the framework generate all "boilerplate" code for us. "<tt>GT.int</tt>" and 
-"<tt>GT.string</tt>" are two synonyms for regular standard types, equipped with some
-additional generic features; alternatively, we could just add "<tt>open GT</tt>" to the
+We replaced here **type** with**@type**, **int** and **string** with **GT.int** and **GT.string** respectively, and added **with show* to the end of type declaration to make the framework generate all "boilerplate" code for us. **GT.int** and 
+**GT.string*** are two synonyms for regular standard types, equipped with some
+additional generic features; alternatively, we could just add**open GT** to the
 beginning of the code snippet and use short names. Further we will continue to
 explicitly mention features of the framework in a fully-qualified form. 
 
@@ -51,8 +87,8 @@ Having made this, we can instantly print expressions with the following
 
 Here
 
-* "<tt>GT.transform(expr)</tt>" - type-indexed function, applied to the type "<tt>expr</tt>"; in our framework all computations are performed by this single function;
-* "<tt>new @expr[show]</tt>" - an expression, which creates a _transformation object_, encapsulating the "show" functionality for type "<tt>expr</tt>";  
+* **GT.transform(expr)** - type-indexed function, applied to the type **expr**; in our framework all computations are performed by this single function;
+* **new @expr[show]** - an expression, which creates a _transformation object_, encapsulating the "show" functionality for type **expr**;  
 * we provide unit value as additional parameter, which in fact is not used; think of it as an initial value for fold-like transformations;
 * the rest is the expression tree we're going to show.
 
