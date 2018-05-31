@@ -123,6 +123,9 @@ module Exp = struct
     pexp_constraint ~loc (pexp_pack ~loc me) @@
     ptyp_package ~loc (typname, [])
 
+  let let_one ~loc pat expr ewhere =
+    pexp_let ~loc Nonrecursive [value_binding ~loc ~pat ~expr] ewhere
+
   let assert_false ~loc = [%expr assert false]
   let objmagic_unit ~loc = [%expr Obj.magic ()]
   let failwith_ ~loc s = app ~loc [%expr failwith] (string_const ~loc s)
@@ -180,6 +183,9 @@ module Typ = struct
     ptyp_package ~loc (lident, [])
   let arrow ~loc l r =
     ptyp_arrow ~loc Nolabel l r
+  let tuple ~loc ts =
+    let () = assert (List.length ts > 1) in
+    ptyp_tuple ~loc ts
 
   let class_ ~loc lident args =
     ptyp_class ~loc (Located.mk ~loc lident) args

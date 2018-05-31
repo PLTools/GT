@@ -21,6 +21,10 @@ Use findlib package `GT.syntax.all` to enable extension and all built-in plugins
 
     ocamlfind opt -syntax camlp5o -package GT.syntax.all regression/test081llist.ml -dsource
 
+To preprocess only the code in this library (for example, a test) use the command:
+
+    camlp5o _build/camlp5/pp5gt.cma _build/plugins/show.cmo pr_o.cmo _build/plugins/gmap.cmo _build/plugins/foldl.cmo _build/plugins/compare.cmo _build/plugins/eq.cmo _build/plugins/eval.cmo _build/plugins/stateful.cmo filename.ml
+
 ## Directory structure 
 
  * The framework for generation is in `common/`. The generic plugin for adding new transformations is in `common/plugin.ml`.

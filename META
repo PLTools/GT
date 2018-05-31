@@ -17,7 +17,7 @@ package "ppx" (
   requires(ppx_driver)        = "ppxlib"
 
   archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
-  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx"
+  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx "
   plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
   plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
 
@@ -83,7 +83,7 @@ package "syntax" (
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo"
   )
 )

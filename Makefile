@@ -44,7 +44,7 @@ add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 ppx: add_ppx compile
 
-PLUGINS=compare eq foldl foldr gmap eval show show_typed html
+PLUGINS=compare eq foldl foldr gmap eval stateful show show_typed html
 add_plugins:
 	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
@@ -64,7 +64,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #807 029 037 811 900 809 808 801 802 803 804 806 #807 #805
 # now we add camlp5 tests
-REGRES_CASES += 090 000 037 081 082 083 086 089 029
+REGRES_CASES += 090 000 037 081 082 083 086 087 089 029
 
 TEST_DIR := regression
 define TESTRULES

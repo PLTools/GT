@@ -8,6 +8,7 @@ camlp5o camlp5/pp5gt.cma plugins/foldl.cmo plugins/foldr.cmo \
 	plugins/compare.cmo plugins/eq.cmo \
 	plugins/html.cmo \
 	plugins/eval.cmo \
+	plugins/stateful.cmo \
         $@
 exit $?
 

@@ -56,8 +56,10 @@ module rec Exp :
     val send : loc:loc -> t -> string -> t
     val new_ : loc:loc -> Ppxlib.longident -> t
 
-    val variant:   loc:loc -> string    -> t list -> t
+    val variant:   loc:loc -> string -> t list -> t
     val construct: loc:loc -> Ppxlib.longident -> t list -> t
+    val tuple:     loc:loc -> t list -> t
+    val let_one:   loc:loc -> Pat.t -> t -> t -> t
 
     val assert_false: loc:loc -> t
     val objmagic_unit: loc:loc -> t
@@ -78,6 +80,7 @@ and Typ :
     val var : loc:loc -> string -> t
     val any : loc:loc -> t
     val constr : loc:loc -> Ppxlib.longident -> t list -> t
+    val tuple : loc:loc -> t list -> t
     val class_ : loc:loc -> Ppxlib.longident -> t list -> t
     val object_ : loc:loc -> Ppxlib.closed_flag -> (string * t) list -> t
     val arrow : loc:loc -> t -> t -> t

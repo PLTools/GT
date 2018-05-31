@@ -129,6 +129,7 @@ module Exp = struct
     app_list ~loc (of_longident ~loc lident) args
   let variant ~loc s args =
     app_list ~loc <:expr< ` $s$ >> args
+  let tuple ~loc le = <:expr< ($list:le$) >>
 
   let new_ ~loc lident =
     <:expr< new $list: Longident.flatten lident$ >>
@@ -140,6 +141,9 @@ module Exp = struct
     let lpe = List.map (fun (l,r) -> Pat.of_longident ~loc l, r) lpe in
     <:expr< {$list:lpe$} >>
   let field ~loc e lident = acc ~loc e lident
+  let let_one ~loc pat e1 ewhere =
+    let lpe = [pat, e1] in
+    <:expr< let $list:lpe$ in $ewhere$ >>
 
   let from_caml e = failwith "not implemented"
   let assert_false ~loc = <:expr< assert False >>
@@ -177,7 +181,7 @@ module Typ = struct
   let alias ~loc t s =
     let p = var ~loc s in
     <:ctyp< $t$ as $p$ >>
-
+  let tuple ~loc lt = <:ctyp< ( $list:lt$ ) >>
   let constr ~loc lident =
     let init = of_longident ~loc lident in
     function

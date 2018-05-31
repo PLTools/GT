@@ -49,6 +49,11 @@ class ['env, 'extra] eval_$1_t _fself =
     inherit ['env, $1, 'extra] @$1
     method t_$1 inh x = x
   end
+class ['env, 'extra] stateful_$1_t _fself =
+  object
+    inherit ['env, 'env * $1, 'extra] @$1
+    method t_$1 inh x = (inh,x)
+  end
 
 let gcata_$1 tr inh x = tr#t_$1 inh x
 
@@ -58,7 +63,8 @@ let $1 : (('inh, 'syn, 'extra) # $1_t -> 'inh -> $1 -> 'syn,
             compare : $1 -> $1 -> comparison;
             eq      : $1 -> $1 -> bool;
             gmap    : $1 -> $1;
-            eval    : 'env -> '$1 -> $1;
+            eval    : 'env -> $1 -> $1;
+            stateful: 'env -> $1 -> 'env * $1;
             foldl   : 'a -> $1 -> 'a;
             foldr   : 'a -> $1 -> 'a >) t =
   {gcata = gcata_$1;
@@ -70,6 +76,7 @@ let $1 : (('inh, 'syn, 'extra) # $1_t -> 'inh -> $1 -> 'syn,
         method eq      = gcata_$1 (new @$1[eq]      (fun _ -> assert false))
         method gmap    = gcata_$1 (new @$1[gmap]    (fun _ -> assert false)) ()
         method eval    = gcata_$1 (new @$1[eval]    (fun _ -> assert false))
+        method stateful= gcata_$1 (new @$1[stateful](fun _ -> assert false))
         method foldl   = gcata_$1 (new @$1[foldl]   (fun _ -> assert false))
         method foldr   = gcata_$1 (new @$1[foldr]   (fun _ -> assert false))
       end
