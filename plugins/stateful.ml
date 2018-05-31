@@ -21,6 +21,8 @@ class g initial_args = object(self: 'self)
   method plugin_name = trait_name
 
   method! default_inh ~loc _tdecl = Typ.var ~loc "env"
+  method! syn_of_param ~loc s =
+    Typ.tuple ~loc [Typ.var ~loc "env"; Typ.var ~loc @@ Gmap.param_name_mangler s]
   method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
   method! default_syn ~loc tdecl =
