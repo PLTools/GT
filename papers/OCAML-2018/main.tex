@@ -79,17 +79,17 @@ We present a generic programming library GT (Generic Transformers), which has be
 2014. This library is an inheritor of our earlier work~\cite{SYBOCaml} on implementation of ``Scrap Your Boilerplate''
 approach~\cite{SYB,SYB1,SYB2}. However, our experience has shown, that the extensibility of SYB is insufficient; in addition
 uniform transformations, based solely on type discrimination, turned out to be inconvenient to use (for example, they can allow
-one to break through the incapsulation barrier). Our idea initially was to combine combinator and object-oriented approaches~--- the former
+one to break through the encapsulation barrier). Our idea initially was to combine combinator and object-oriented approaches~--- the former
 would provide means for parameterization, while the latter~--- for extensibility via late binding utilization. This idea in the form of
-a certain design pattern was succesfully evaluated~\cite{SCICO} and then reified in a library and a syntax extension~\cite{TransformationObjects}.
+a certain design pattern was successfully evaluated~\cite{SCICO} and then reified in a library and a syntax extension~\cite{TransformationObjects}.
 Our follow-up experience with the library~\cite{OCanren} has (once again) shown some flaws in the implementation. The version we present here is
-almost a complete reimplementation with these flaws fixed.
+almost a complete re-implementation with these flaws fixed.
 
 From an end user perspective, our library is comprised of four layers:
 
 \begin{enumerate}
-\item On the top level it provides a syntax extension (in terms of both \cd{camlp5} and \cd{ppx\_deriving}) with a number of plugins
-(\cd{map}, \cd{fold}, \cd{show}, etc.) The interface of generated features is combinatorial, so their utilization is rather straighforward.
+\item On the top level it provides a syntax extension (in terms of both \cd{camlp5} and \cd{ppxlib}) with a number of plugins
+(\cd{map}, \cd{fold}, \cd{show}, etc.) The interface of generated features is combinatorial, so their utilization is rather straightforward.
   
 \item On the middle level it turns out, that all these features are implemented via object-encoded transformations with some reasonable
 default behavior. This behavior can be modified/overridden using inheritance. Thus, customized transformations can be acquired using
@@ -102,7 +102,7 @@ which do not fit in any pre-supplied plugin can still be implemented manually.
 requires only a limited amount of work. In particular, all plugins use the same single traversal function, which need not to be generated.
 \end{enumerate}
 
-In fact, there is also an underground layer~--- all generic features are combinted into an object, which can be passed as a parameter or modified. While
+In fact, there is also an underground layer~--- all generic features are combined into an object, which can be passed as a parameter or modified. While
 currently the library does not contain any conventional interface to deal with the object, it can be provided in the future (which opens a potentially
 interesting opportunities for integration with existing proposals for \emph{ad-hoc} polymorphism~\cite{ModularImplicits}).
 
@@ -173,7 +173,7 @@ we consider an important feature of our library.
 \section{Examples}
 
 In this section we demonstrate some examples, written with the aid of our library. In this examples we will use \cd{camlp5} syntax extension,
-althought \cd{ppx\_deriving} plugin can be used equally.
+although \cd{ppxlib} plugin can be used equally.
 
 First, we consider a simple type to represent arithmetic expressions:
 
@@ -187,7 +187,7 @@ First, we consider a simple type to represent arithmetic expressions:
 \end{lstlisting}
 
 Here we requested a feature \cd{fmap}, which implements the conventional functor semantics. Since the type is not polymorphic, the function \cd{fmap(expr)}
-just copies its argument. Althought the copying can be considered useful on its own, this result a bit disappointing. However, with the aid of our framework we
+just copies its argument. Although the copying can be considered useful on its own, this result a bit disappointing. However, with the aid of our framework we
 actually can acquire a number of useful transformations, taking the copying as the starting point. For example, given a state \cd{st} we can substitute the
 values of all variables in this state in an expression:
 
@@ -204,7 +204,7 @@ values of all variables in this state in an expression:
 
 Indeed, all we need is to redefine the copy behavior for constructor \cd{Var}. In order to do this we inherit from the class \cd{fmap} for the type
 \cd{expr} (denoted by \cd{@expr[gmap]} in the snippet), and rewrite the method \cd{c\_Var} (note the use of generic function \cd{transform(expr)} and
-fixpoint combinator). As it can be seen from this example, we needed to implement only ``the interesting'' part of the transformation. All other
+fix point combinator). As it can be seen from this example, we needed to implement only ``the interesting'' part of the transformation. All other
 functionality (recursive propagation through the whole data structure) is handled by framework-generated code.
 
 For another example we consider an expression simplifier, which performs all possible calculations with constants and utilizes some
@@ -278,7 +278,7 @@ First, we define the generic part of the terms:
   ] with eval
 \end{lstlisting}
 
-The \cd{eval} plugin here generates a transformation \cd{eval(lam)}, which is analoguous to \cd{fmap}, but additionally uses some environment, which
+The \cd{eval} plugin here generates a transformation \cd{eval(lam)}, which is analogous to \cd{fmap}, but additionally uses some environment, which
 by default is propagated unchanged. We here follow~\cite{PolyVarReuse} and use an open non-recursive definition of the type; our \cd{eval} is
 in fact \cd{map} in terms of~\cite{Visitors}.
 
@@ -324,7 +324,7 @@ Now we can combine two types into the single type for lambda terms:
 
 Here we distinguish names in binder positions (\lstinline{'b}) and bound positions (\lstinline{'n}) since their behavior during the
 transformation essentially different: names in binder positions are erased, while in bound positions are substituted with corresponding
-DeBruijn index. We also define a shortcuts for the terms in named and nameless representations.
+De Bruijn index. We also define a shortcuts for the terms in named and nameless representations.
 
 Similarly to the types, the transformations can be combined as well:
 
@@ -407,13 +407,13 @@ we summarize the main differences:
      compiler with the aid of some neat trick. However, this trick makes it impossible to use \cd{Visitors} syntax extension in module signatures. There is no
      such a problem in our case~--- our framework can be equally used in both implementation and interface files.
 
-   \item \cd{Visitors} in theis current state do not support polymorphic variants.
+   \item \cd{Visitors} in this current state do not support polymorphic variants.
 \end{itemize}
 
 {\footnotesize
 \begin{thebibliography}{99}
 \bibitem{Staged} Jeremy Jallop. Staged Generic Programming // ICFP-2017.
-  
+
 \bibitem{Visitors}
 Fran\c{c}ois Pottier. Visitors Unchained // ICFP-2017.
 
@@ -449,7 +449,7 @@ ICFP-2009.
 
 %\bibitem{DGP}
 %Jeremy Gibbons. Datatype-generic Programming // Spring School on Datatype-Generic 
-Programming. LNCS 4719, 2006.
+%Programming. LNCS 4719, 2006.
 
 %\bibitem{ALaCarte}
 %Wouter Swierstra. Data Types \`a la Carte // Journal of Functional Programming, Vol. 18, 
@@ -484,15 +484,6 @@ Ralf L\"ammel, Simon Peyton Jones.
 Scrap Your Boilerplate with Class: Extensible Generic Functions //
 ICFP-2005.
 
-%\bibitem{InstantGenerics}
-%Manuel M. T Chakravarty, Gabriel C. Ditu, Roman Leshchinskiy.
-%Instant Generics: Fast and Easy, 2009.
-
-%\bibitem{ObjectAlgebras}
-%Bruno C. d. S. Oliveira, William R. Cook.
-%Extensibility for the Masses: Practical Extensibility with Object Algebras //
-%ECOOP, 2012.
-
 \bibitem{SCICO}
 Dmitry Boulytchev. Combinators and Type-driven Transformers in Objective Caml // Science of
 Computer Programming, Vol.~114, December 2015.
@@ -511,6 +502,7 @@ Typed Embedding of a Relational Language in OCaml // ML-2016.
 
 \bibitem{ModularImplicits}
 Leo White, Fr\'ed\'eric Bour, Jeremy Yallop. Modular Implicits // EPTCS 198, 2015.
-\end{thebibliography}}
+\end{thebibliography}
+}
 
 \end{document}
