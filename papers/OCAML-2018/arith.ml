@@ -46,9 +46,33 @@ class ns_simplifier f =
                    )
   end
     
-let simplify e =
-  fix0 (fun f -> transform(expr) ( new simplifier f) ()) e 
-           
+let fix f =
+  let knot    = ref (fun _ -> assert false) in
+  let recurse = ref (f !knot) in
+  knot := recurse;
+  fun x -> recurse x
+  
+(*
+let recurse t = f !knot t in
+knot := recurse;
+recurse t
+ *)                 
+(*          
+let rec fix f =
+  let g = lazy (f (fix f)) in
+  fun x -> (Lazy.force g) x 
+*)
+                   
+let rec simplify e =
+  fix
+    (fun f -> transform(expr) (Printf.printf "new\n"; new simplifier f) ())
+    e
+                         
+                         (*
+  let sobj = lazy (transform(expr) (Printf.printf "new\n"; new simplifier simplify)) in
+  fun e ->
+    (Lazy.force sobj) () e 
+                          *)
 let ns_simplify e = fix0 (fun f -> transform(expr) (new ns_simplifier f) ()) e
 
 let substitute st e =
@@ -65,10 +89,11 @@ let substitute st e =
  let _ =
    let e = Mul (Add (Var "a", Const 3), Add (Const 5, Var "b")) in
    Printf.printf "Original           : %s\n" (show(expr) e);
-   Printf.printf "Simplified         : %s\n" (show(expr) @@ simplify e);
+   Printf.printf "Simplified         : %s\n" (show(expr) @@ simplify e)
+     (*
    Printf.printf "Substitute         : %s\n" (show(expr) @@ substitute (function "a" -> 0 | "b" -> 1) e);
    Printf.printf "Substitute+simplify: %s\n" (show(expr) @@ simplify @@ substitute (function "a" -> 0 | "b" -> 1) e);
    Printf.printf "Eval               : %d\n" (eval  (function "a" -> 0 | "b" -> 1) e);
    let e = Mul (Mul (Var "a", Const 0), Div (Const 1, Const 0)) in
    Printf.printf "Simplified         : %s\n" (show(expr) @@ ns_simplify e)
-   
+      *)
