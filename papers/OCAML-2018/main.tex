@@ -175,12 +175,11 @@ although \cd{ppxlib} plugin can be used equally.
 First, we consider a simple type to represent arithmetic expressions:
 
 \begin{lstlisting}
-  @type expr =
-  | Var   of string
-  | Add   of expr * expr
-  | Mul   of expr * expr
-  | Div   of expr * expr
-  | Const of int with fmap
+  @type expr  = Var   of string
+	      | Add   of expr * expr
+	      | Mul   of expr * expr
+	      | Div   of expr * expr
+	      | Const of int with fmap
 \end{lstlisting}
 
 Here we requested a feature \cd{fmap}, which implements the conventional functor semantics. Since the type is not polymorphic, the function \cd{fmap(expr)}
@@ -407,6 +406,10 @@ we summarize the main differences:
 
    \item \cd{Visitors} in their current state do not support polymorphic variants.
 \end{itemize}
+
+\section{Conclusion}
+In this paper we presented an upgraded version of Generic Transformers extended by support of PPX rewriters and type abbrevations. Although it 
+uses the similar idea as related works, we claim that it allows to express some problems in more convenient manner.
 
 {
 \small
