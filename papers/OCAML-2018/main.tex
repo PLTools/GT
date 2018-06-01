@@ -72,10 +72,10 @@ language=ocaml
 \section{Introduction}
 
 Generic programming in the context of OCaml lately gains additional attention~\cite{Staged,Visitors,GenericOCaml}. 
-We present a generic programming library GT\footnote{\url{https://github.com/kakadu/GT/tree/ppx-new}} (Generic Transformers), which has been in active development and use since
+We present a generic programming library GT\footnote{\url{https://github.com/kakadu/GT/tree/ppx-new}} (Generic Transformers), which has been in an active development and use since
 2014. This library is an inheritor of our earlier work~\cite{SYBOCaml} on implementation of ``Scrap Your Boilerplate''
 approach~\cite{SYB,SYB1,SYB2}. However, our experience has shown, that the extensibility of SYB is insufficient; in addition
-uniform transformations, based solely on type discrimination, turned out to be inconvenient to use (for example, they can allow
+the uniform transformations, based solely on type discrimination, turned out to be inconvenient to use (for example, they can allow
 one to break through the encapsulation barrier). Our idea initially was to combine combinator and object-oriented approaches~--- the former
 would provide means for parameterization, while the latter~--- for extensibility via late binding utilization. This idea in the form of
 a certain design pattern was successfully evaluated~\cite{SCICO} and then reified in a library and a syntax extension~\cite{TransformationObjects}.
@@ -398,7 +398,8 @@ we summarize the main differences:
    \item Following SYB, \cd{Visitors} take a type-discriminating route: for each type of interest (including the built-in ones) there is a dedicated
      transformation method in each object, representing a transformation. While this solution indeed adds some flexibility, we firmly oppose it, since it
      breaks the abstraction: inspecting the methods of a transformation (which cannot be hidden in a module signature) one can retrieve some
-     information about the implementation of encapsulated types.
+     information about the implementation of encapsulated types. Even worse, the data structures of abstract types can be manipulated in an unprescribed
+     manner using the public type-transforming interface.
 
    \item In our case the type parameters for transformation classes have to be specified by as end user. With \cd{Visitors} this burden is offloaded to the
      compiler with the aid of some neat trick. However, this trick makes it impossible to use \cd{Visitors} syntax extension in module signatures. There is no
