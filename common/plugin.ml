@@ -173,16 +173,20 @@ class virtual generator initial_args = object(self: 'self)
         ]
     )
 
+  method virtual make_typ_of_class_argument: loc:loc -> type_declaration ->
+    string -> right:Cty.t -> Cty.t
+
   (* next method should be synchronized with prepare_fa_args *)
   method prepare_fa_arg_types ~loc tdecl =
-    map_type_param_names tdecl.ptype_params
+    let names = map_type_param_names tdecl.ptype_params ~f:id  in
+    List.map names
       ~f:(fun name ->
           self#make_typ_of_class_argument
             ~loc
             tdecl
             name
             (fun x -> x)
-      )
+        )
 
   (* signature for a plugin class *)
   method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
@@ -196,8 +200,7 @@ class virtual generator initial_args = object(self: 'self)
               let funcs_for_args = self#prepare_fa_arg_types ~loc tdecl in
 
               List.fold_right mutal_decls
-                ~init:(List.fold_right ~init (for_self :: funcs_for_args)
-                         ~f:(Cty.arrow ~loc))
+                ~init:(Cty.arrow ~loc for_self funcs_for_args)
                 ~f:(fun mut_decl acc ->
                   self#make_typ_of_mutal_trf ~loc mut_decl
                     (fun t -> Cty.arrow ~loc t acc)
@@ -430,8 +433,8 @@ class virtual generator initial_args = object(self: 'self)
     List.fold_right
       (map_type_param_names tdecl.ptype_params ~f:id)
       ~init:type_
-      ~f:(fun name acc ->
-          self#make_typ_of_class_argument ~loc tdecl name (fun t -> Typ.arrow ~loc t acc)
+      ~f:(fun name right ->
+          self#make_typ_of_class_argument ~loc tdecl name ~right
          )
 
   method make_trans_function_name tdecl =

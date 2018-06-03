@@ -35,7 +35,7 @@ true: debug, bin_annot, short_paths, annot
 <regression/test090.*>: use_GT
 #<regression/test*.native>: use_gt
 
-<regression/test7*.*>: ppx(ocamlfind ppx_deriving/ppx_deriving --as-ppx -deriving-plugin ppx/ppx_deriving_gt.cma)
+<regression/test807*.*>: ppx(ppx/pp_gt.native --as-ppx)
 
 <regression/orig/*>: traverse
 

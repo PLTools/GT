@@ -148,6 +148,7 @@ let g = (new g :> (Plugin_intf.plugin_args ->
 end
 
 let register () =
+  Expander.notify "registering %s" trait_name;
   Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
 
 let () = register ()

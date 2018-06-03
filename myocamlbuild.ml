@@ -19,7 +19,10 @@ open Command;;
 let make_plugins_args ~is_byte =
   (* N.B. Order matters *)
   let names =
-    [ "show"; "gmap"; "eval"; "stateful"; "foldl"; "foldr"; "compare"; "eq"; "html" ]
+    [ "show"; "gmap"; "eval";  "compare"; "eq";  "stateful"; "foldl"; "foldr"
+    ; "show_typed"
+    ; "html"
+    ]
   in
   List.map (fun s -> A(Printf.sprintf "plugins/%s.cm%s" s (if is_byte then "o" else "x")) )
     names

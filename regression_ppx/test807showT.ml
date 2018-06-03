@@ -4,10 +4,10 @@ let show_typed_string = Printf.sprintf "\"%s\""
 
 module AL : sig
   type ('a,'b) alist = Nil | Cons of 'a * 'b
-  [@@deriving gt ~show_typed ]
+  [@@deriving gt ~show ~show_typed ~gmap ]
 end = struct
   type ('a,'b) alist  = Nil | Cons of 'a * 'b
-  [@@deriving gt ~show_typed]
+  [@@deriving gt ~show ~show_typed ~gmap ]
 end
 
 

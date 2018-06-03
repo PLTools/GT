@@ -15,64 +15,52 @@ let gt_param name =
   let open Deriving.Args in
   arg name __
 
-let str_type_decl : (_, _) Deriving.Generator.t =
-  let bothp name rest =
-    Deriving.Args.(rest +> (gt_param name) )
-  in
-  Deriving.Generator.make
-    Deriving.Args.(empty
-                   |> (bothp "show")
-                   |> (bothp "gmap")
-                   |> (bothp "foldl")
-                   |> (bothp "show_typed")
-                   |> (bothp "compare")
-                   |> (bothp "eq")
-                  )
-    (fun ~loc ~path info ->
-     fun show gmap foldl show_typed compare eq  ->
-       let wrap name opt =
-         (name, match opt with
-           | None -> Skip
-           | Some e -> match e.pexp_desc with
-             | Pexp_ident {txt} when Caml.(=) txt (Lident name) -> Use []
-             | Pexp_record (ls, _) -> Use (List.map (fun (l,r) -> (l.txt,r)) ls)
-             | _ -> HelpersBase.raise_errorf
-                      "This kind of arguments is not supported. Bad expression %s"
-                      (Pprintast.string_of_expression e)
-         )
-      in
-      let show       = wrap "show"       show in
-      let gmap       = wrap "gmap"       gmap in
-      let foldl      = wrap "foldl"      foldl in
-      let show_typed = wrap "show_typed" show_typed in
-      let compare    = wrap "compare"    compare in
-      let eq         = wrap "eq"         eq in
+let r =
+  let open Deriving.Args in
+  map1 ~f:(List.map (fun ({txt},e) -> (txt, e)) ) @@
+  pexp_record __ none
 
-      E.str_type_decl_many_plugins ~loc [] [show; gmap; foldl; compare; eq; show_typed] info
+let str_type_decl : (_, _) Deriving.Generator.t =
+  Deriving.Generator.make Deriving.Args.(empty +> arg "options" r)
+    (fun ~loc ~path info options ->
+       let module H = Expander.Make(PpxHelpers) in
+       (* Expander.notify "with annotations %s" (String.concat "," info); *)
+       let generator_f si =
+         H.str_type_decl_many_plugins ~loc si
+           (match options with
+            | None -> []
+            | Some xs ->
+              List.map (function
+                  | (Lident name, e) ->
+                    (name,Expander.Use [])
+                  | _ -> failwith "only lowercase identifiers are allowed"
+                ) xs
+           )
+
+       in
+       generator_f [] info
     )
 
-(* let (_:int) = E.sig_type_decl_implicit *)
+
 let sig_type_decl : (_, _) Deriving.Generator.t =
-  Deriving.Generator.make
-    Deriving.Args.(empty
-                   +> flag "show" +> flag "gmap" +> flag "foldl"
-                   +> flag "compare" +> flag "eq" +> flag "show_typed"
-                  )
+  Deriving.Generator.make Deriving.Args.(empty +> arg "options" r)
+    (fun ~loc ~path info options ->
+       let module H = Expander.Make(PpxHelpers) in
+       (* Expander.notify "with annotations %s" (String.concat "," info); *)
+       let generator_f si =
+         H.sig_type_decl_many_plugins ~loc si
+           (match options with
+            | None -> []
+            | Some xs ->
+              List.map (function
+                  | (Lident name, e) ->
+                    (name,Expander.Use [])
+                  | _ -> failwith "only lowercase identifiers are allowed"
+                ) xs
+           )
 
-    (fun ~loc ~path defs f1 f2 f3 f4 f5 f6 ->
-       let wrap name f = if f then (name, Use []) else (name, Skip) in
-
-       E.sig_type_decl_many_plugins ~loc []
-         [ wrap "show" f1
-         ; wrap "gmap" f2
-         ; wrap "foldl" f3
-         ; wrap "compare" f4
-         ; wrap "eq" f5
-         (* ; wrap "show_typed" f6 *)
-         ]
-         defs
-       (* E.sig_type_decl_implicit ~loc ~path ([] : PpxHelpers.Sig.t list)
-        * f1 f2 f3 f4 f5 f6 defs *)
+       in
+       generator_f [] info
     )
 
 let () =

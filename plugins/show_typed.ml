@@ -16,9 +16,12 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 let plugin_name = trait_name
 module S = Show.Make(AstHelpers)
 open AstHelpers
+module P = Plugin.Make(AstHelpers)
 
 class g args = object(self: 'self)
+  inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit S.g args as super
+  inherit [_] P.no_inherit_arg
 
   method plugin_name = plugin_name
 
@@ -69,9 +72,9 @@ class g args = object(self: 'self)
     map_type_param_names tdecl.ptype_params
       ~f:(fun s -> [Exp.sprintf ~loc "typ_%s" s; Exp.sprintf ~loc "f%s" s ])
 
-  method! prepare_fa_arg_types ~loc tdecl =
-    List.concat_map (super#prepare_fa_arg_types ~loc tdecl)
-      ~f:(fun t -> [ Typ.sprintf ~loc "string"; t])
+  (* method! prepare_fa_arg_types ~loc tdecl =
+   *   List.concat_map (super#prepare_fa_arg_types ~loc tdecl)
+   *     ~f:(fun t -> [ Typ.sprintf ~loc "string"; t]) *)
 
   method private string_of_typ ~loc (* ~is_self_rec *) typ =
       let rec string_of_longident = function
@@ -143,9 +146,10 @@ class g args = object(self: 'self)
         Cty.arrow ~loc (Typ.ident ~loc "string") (k typ)
       )
 
-  method make_typ_of_class_argument ~loc tdecl name k =
+  method! make_typ_of_class_argument ~loc tdecl name k =
     super#make_typ_of_class_argument ~loc tdecl name
-      (fun t -> Typ.arrow ~loc (Typ.ident ~loc "string") (k t) )
+
+      (fun t -> Typ.arrow ~loc (Typ.ident ~loc "str2ing") (k t) )
 
   (* is the same as for base class *)
   (* method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
@@ -191,4 +195,7 @@ let g = (new g :> (Plugin_intf.plugin_args ->
 end
 
 let register () =
+  Expander.notify "registering %s" trait_name;
   Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+
+let () = register ()
