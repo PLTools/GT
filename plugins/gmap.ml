@@ -40,7 +40,7 @@ let hack_params ?(loc=noloc) ps =
 
 class g args = object(self: 'self)
   inherit P.generator args
-  inherit [_] P.no_inherit_arg
+  inherit P.no_inherit_arg
 
   method plugin_name = plugin_name
 

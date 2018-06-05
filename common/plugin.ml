@@ -173,20 +173,22 @@ class virtual generator initial_args = object(self: 'self)
         ]
     )
 
-  method virtual make_typ_of_class_argument: loc:loc -> type_declaration ->
-    string -> right:Cty.t -> Cty.t
+  method virtual make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a
 
   (* next method should be synchronized with prepare_fa_args *)
-  method prepare_fa_arg_types ~loc tdecl =
-    let names = map_type_param_names tdecl.ptype_params ~f:id  in
-    List.map names
-      ~f:(fun name ->
-          self#make_typ_of_class_argument
-            ~loc
-            tdecl
-            name
-            (fun x -> x)
-        )
+  (* method prepare_fa_arg_types ~loc tdecl =
+   *   let names = map_type_param_names tdecl.ptype_params ~f:id  in
+   *   List.map names
+   *     ~f:(fun name ->
+   *         self#make_typ_of_class_argument
+   *           ~loc
+   *           tdecl
+   *           name
+   *           (fun x -> x)
+   *       ) *)
+
 
   (* signature for a plugin class *)
   method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
@@ -195,9 +197,18 @@ class virtual generator initial_args = object(self: 'self)
           ~params:(self#plugin_class_params tdecl)
           ~name:(self#make_class_name ~is_mutal:false tdecl)
           ~virt:false
-          ~wrap:(fun init ->
+          ~wrap:(fun sign ->
               let for_self = self#make_typ_of_self_trf ~loc tdecl in
-              let funcs_for_args = self#prepare_fa_arg_types ~loc tdecl in
+              let funcs_for_args =
+                let names = map_type_param_names tdecl.ptype_params ~f:id in
+                List.fold_left names
+                  ~init:(fun t -> t)
+                  ~f:(fun acc name ->
+                      self#make_typ_of_class_argument ~loc tdecl (Cty.arrow ~loc) name
+                        (fun f arg -> acc @@ f arg)
+                    )
+                  sign
+              in
 
               List.fold_right mutal_decls
                 ~init:(Cty.arrow ~loc for_self funcs_for_args)
@@ -429,13 +440,14 @@ class virtual generator initial_args = object(self: 'self)
 
   method make_trans_function_typ ~loc tdecl =
     let type_ = self#make_RHS_typ_of_transformation ~loc tdecl in
-
-    List.fold_right
-      (map_type_param_names tdecl.ptype_params ~f:id)
-      ~init:type_
-      ~f:(fun name right ->
-          self#make_typ_of_class_argument ~loc tdecl name ~right
-         )
+    let names = map_type_param_names tdecl.ptype_params ~f:id in
+    List.fold_left names
+      ~init:id
+      ~f:(fun acc name ->
+          self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name
+            (fun f arg -> acc @@ f arg)
+        )
+      type_
 
   method make_trans_function_name tdecl =
     sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt
@@ -677,7 +689,7 @@ class virtual generator initial_args = object(self: 'self)
          ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
 end
 
-class virtual ['self] no_inherit_arg = object(self: 'self)
+class virtual no_inherit_arg = object(self: 'self)
   (* inherit [_] generator as super *)
 
   method virtual default_syn : loc:loc -> Ppxlib.type_declaration -> Typ.t
@@ -699,11 +711,16 @@ class virtual ['self] no_inherit_arg = object(self: 'self)
 
   (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
    *   fot a type ('a,'b,....'z) being generated
-  **)
-  method make_typ_of_class_argument ~loc tdecl name k =
-    let subj_t = Typ.var ~loc name in
-    let syn_t = self#syn_of_param ~loc name in
-    k @@ Typ.arrow ~loc subj_t syn_t
+   **)
+  (* method virtual make_typ_of_class_argument: *)
+
+  method make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      k @@ (fun arg -> chain (Typ.arrow ~loc subj_t syn_t) arg)
 
   method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t
@@ -716,16 +733,16 @@ class virtual ['self] no_inherit_arg = object(self: 'self)
     k (Exp.assert_false ~loc) (Exp.ident ~loc "subj")
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
 
-  method app_transformation_expr ~loc trf inh subj =
+  method app_transformation_expr ~loc trf (inh: Exp.t) subj =
     (* we ignore inherited argument by default *)
     Exp.app ~loc trf subj
 
 end
 
-class virtual ['self] with_inherit_arg = object(self: 'self)
-  inherit [_] no_inherit_arg as super
+class virtual with_inherit_arg = object(self: 'self)
+  inherit no_inherit_arg as super
 
-  method wrap_tr_function_str ~loc _tdelcl make_gcata_of_class =
+  method wrap_tr_function_str ~loc (_tdelcl: type_declaration) make_gcata_of_class =
     (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
     let body = make_gcata_of_class (Exp.ident ~loc "self") in
     Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@

@@ -16,7 +16,7 @@ open AstHelpers
 class g initial_args = object(self: 'self)
   (* inherit P.generator initial_args as super *)
   inherit G.g initial_args as super
-  inherit [_] P.with_inherit_arg as super2
+  inherit P.with_inherit_arg as super2
 
   method plugin_name = trait_name
 

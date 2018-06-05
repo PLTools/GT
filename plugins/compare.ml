@@ -16,7 +16,7 @@ let access_GT s = Ldot (Lident "GT", s)
 
 class g initial_args = object(self: 'self)
   inherit P.generator initial_args as super
-  inherit [_] P.with_inherit_arg as super2
+  inherit P.with_inherit_arg as super2
 
   method plugin_name = plugin_name
 
@@ -43,12 +43,13 @@ class g initial_args = object(self: 'self)
 
   (* old type is:  'a -> comparison
    * new type is:  'a -> 'a -> comparison
-   *)
-  method! make_typ_of_class_argument ~loc tdecl name k =
-    k @@
-    super2#make_typ_of_class_argument ~loc tdecl name (fun t ->
-        Typ.arrow ~loc (Typ.var ~loc name) t
-      )
+  *)
+
+  (* method! make_typ_of_class_argument ~loc tdecl chain name k =
+   *   k @@
+   *   super2#make_typ_of_class_argument ~loc tdecl name (fun t ->
+   *       Typ.arrow ~loc (Typ.var ~loc name) t
+   *     ) *)
 
   (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
    *   (\* TODO: last argument should be either name of argument or core_type *\)
