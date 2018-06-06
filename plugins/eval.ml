@@ -21,7 +21,8 @@ class g initial_args = object(self: 'self)
   method plugin_name = trait_name
 
   method! default_inh ~loc _tdecl = Typ.var ~loc "env"
-  method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
+  method inh_of_param tdecl _name =
+    Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->

@@ -159,7 +159,7 @@ val class_structure : self:Pat.t -> fields:Cf.t list -> class_structure
 val openize_poly: Typ.t -> Typ.t
 
 val prepare_param_triples : loc:loc ->
-  ?extra:string list ->
+  extra:Typ.t ->
   ?inh:(loc:loc -> string -> Typ.t) ->
   ?syn:(loc:loc -> string -> Typ.t) ->
   ?default_inh:  Typ.t ->

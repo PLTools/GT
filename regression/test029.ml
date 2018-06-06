@@ -3,7 +3,7 @@ with show, gmap, eq, compare, foldl,foldr
 
 class ['a, 'b] print (fa: 'a -> unit) fb =
   object
-    inherit ['a, unit, unit, 'b, unit, unit, unit, unit, _] @t
+    inherit [unit, 'a, unit, unit, 'b, unit, unit, _, unit] @t
     method c_Pair () x (y, (a, b)) =
       Printf.printf "%d\n" x;
       Printf.printf "%s\n" y;

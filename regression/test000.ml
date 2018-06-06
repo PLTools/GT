@@ -11,7 +11,7 @@ class ['a, 'b] tree_map_t fself f =
 
 class ['a, 'b] tree_fold_t fself f =
   object
-    inherit ['a, 'b, _] @tree
+    inherit ['a, _, 'b] @tree
     method c_Node acc n l = List.fold_left fself (f acc n) l
   end
 

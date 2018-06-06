@@ -42,7 +42,7 @@ module Abs = struct
     end
 
   (* let (_:int) = new stateful_t_t *)
-  (* let (_:int) = new import *)
+
 end
 
 module Lam = struct
@@ -74,11 +74,10 @@ module LetRec = struct
   @type ('name, 'term) t = [`LetRec of 'name * 'term * 'term] with show,eval,stateful
 
   class ['me, 'me2, 'extra] de_bruijn ft = object
-    inherit [string, unit, 'me, 'me2, 'env, 'extra] eval_t_t
+    inherit [string, unit, 'me, 'me2, string list, 'extra] eval_t_t
         (fun _ -> assert false)
         (fun _ _ -> ())
         ft
-    constraint 'env = string list
     constraint 'extra = [> (unit, 'term2) t]
     method c_LetRec env name bnd term =
       let env' = name :: env in
@@ -109,10 +108,11 @@ end
 @type nameless = (GT.int, GT.unit) t with show;;
 @type nominal  = (GT.int, GT.int ) t with show;;
 
+(* let (_:int) = new eval_t_t *)
 class ['extra] de_bruijn fself = object
   inherit [string, int, string, unit, 'env, 'extra] eval_t_t
       fself ith (fun _ _ -> ())
-  constraint 'env = string list
+
   inherit [named, nameless, 'extra]    Abs.de_bruijn fself
   inherit [named, nameless, 'extra]    Let.de_bruijn fself
   inherit [named, nameless, 'extra] LetRec.de_bruijn fself

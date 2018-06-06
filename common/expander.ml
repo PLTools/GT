@@ -97,7 +97,7 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
   in
   k @@ rs@ls
 
-let inh_syn_ts ~loc = [ Typ.var ~loc "inh"; Typ.var ~loc "syn" ]
+(* let inh_syn_ts ~loc = [ Typ.var ~loc "inh"; Typ.var ~loc "syn" ] *)
 
 let params_of_interface_class ~loc tdecl =
   (* actual params depend on sort of type.
@@ -105,14 +105,15 @@ let params_of_interface_class ~loc tdecl =
   *)
   (List.concat @@ map_type_param_names tdecl.ptype_params
      ~f:(fun s ->
-         [ named_type_arg ~loc s
-         ; named_type_arg ~loc ("i"^s)
+         [ named_type_arg ~loc ("i"^s)
+         ; named_type_arg ~loc s
          ; named_type_arg ~loc ("s"^s) ]
        )
   )
   @ [ named_type_arg ~loc "inh"
+    ; named_type_arg ~loc Plugin.extra_param_name
     ; named_type_arg ~loc "syn"
-    ; named_type_arg ~loc Plugin.extra_param_name]
+    ]
 
 let make_interface_class_sig ~loc tdecl =
   let params = List.map ~f:fst tdecl.ptype_params in
@@ -151,17 +152,18 @@ let make_interface_class_sig ~loc tdecl =
         let wrap name params =
           let inh_params =
             List.concat_map params ~f:(fun typ ->
-                [ typ
-                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                [ map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                ; typ
                 ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
                 ]
               )
             |> List.map ~f:Typ.from_caml
           in
-          let inh_params = List.concat
-              [ inh_params
-              ; inh_syn_ts ~loc
-              ; [ Typ.var ~loc Plugin.extra_param_name ]
+          let inh_params =
+              inh_params @
+              [ Typ.var ~loc "inh"
+              ; Typ.var ~loc Plugin.extra_param_name
+              ; Typ.var ~loc "syn"
               ]
           in
 
@@ -256,17 +258,18 @@ let make_interface_class ~loc tdecl =
         let wrap ?(is_poly=false) name params =
           let inh_params =
             List.concat_map params ~f:(fun typ ->
-                [ typ
-                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                [ map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                ; typ
                 ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
                 ]
               )
             |> List.map ~f:Typ.from_caml
           in
-          let inh_params = List.concat
-              [ inh_params
-              ; inh_syn_ts ~loc
-              ; [ Typ.var ~loc Plugin.extra_param_name ]
+          let inh_params =
+              inh_params @
+              [ Typ.var ~loc "inh"
+              ; Typ.var ~loc Plugin.extra_param_name
+              ; Typ.var ~loc "syn"
               ]
           in
 
@@ -341,12 +344,12 @@ let make_interface_class ~loc tdecl =
 let make_gcata_typ ~loc tdecl =
   let on_alias_or_abstract () =
     let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
-        [ Typ.var ~loc name
-        ; Typ.any ~loc
+        [ Typ.any ~loc
+        ; Typ.var ~loc name
         ; Typ.var ~loc @@ "s"^name ]
       ) |> List.concat
     in
-    let args = args @ [Typ.var ~loc "inh"; Typ.var ~loc "syn"; Typ.any ~loc ]
+    let args = args @ [Typ.var ~loc "inh"; Typ.any ~loc; Typ.var ~loc "syn" ]
     in
     Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args
   in
@@ -387,13 +390,13 @@ let make_gcata_typ ~loc tdecl =
             | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
                   ~f:(fun s ->
-                    [Typ.var ~loc s; Typ.any ~loc; Typ.var ~loc "syn" ]
+                    [Typ.any ~loc; Typ.var ~loc s;  Typ.var ~loc "syn" ]
                   )
               in
               Typ.class_ ~loc
                 (Lident (class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat params @
-                 Typ.[var ~loc "inh"; var ~loc "syn"; any ~loc ])
+                 Typ.[var ~loc "inh"; any ~loc; var ~loc "syn" ])
             | Ptyp_tuple ts ->
               helper @@ constr_of_tuple ~loc:t.ptyp_loc ts
             | _ -> assert false

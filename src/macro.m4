@@ -4,60 +4,60 @@ define(GENERIFY, [[
 type proto$1 = $1
 type $1 = proto$1
 
-class virtual ['inh, 'syn, 'extra] $1_t =
+class virtual ['inh, 'self, 'syn] $1_t =
   object
     method virtual t_$1 : 'inh -> $1 -> 'syn
   end
 
 class ['extra] html_$1_t _fself =
   object
-    inherit [unit, HTML.viewer, 'extra] @$1
+    inherit [unit, 'extra, HTML.viewer] @$1
     method t_$1 inh x = HTML.string (string_of_$1 x)
   end
 class ['extra] show_$1_t _fself =
   object
-    inherit [unit, string, 'extra] @$1
+    inherit [unit, 'extra, string] @$1
     method t_$1 inh x = string_of_$1 x
   end
 class ['extra] gmap_$1_t _fself =
-  object (this)
-    inherit [unit, $1, 'extra] @$1
+  object
+    inherit [unit, 'extra, $1] @$1
     method t_$1 _ x = x
   end
 class ['syn, 'extra] foldl_$1_t _fself =
   object
-    inherit ['syn, 'syn, 'extra] @$1
+    inherit ['syn, 'extra, 'syn] @$1
     method t_$1 s _ = s
   end
 class ['syn, 'extra] foldr_$1_t _fself =
   object
-    inherit ['syn, 'syn, 'extra] @$1
+    inherit ['syn, 'extra, 'syn] @$1
     method t_$1 s _ = s
   end
 class ['extra] eq_$1_t _fself =
   object
-    inherit [$1, bool, 'extra] @$1
+    inherit [$1, 'extra, 'bool] @$1
     method t_$1 inh x = x = inh
   end
 class ['extra] compare_$1_t _fself =
   object
-    inherit [$1, comparison, 'extra] @$1
+    inherit [$1, 'extra, 'comparison] @$1
     method t_$1 inh x = compare_primitive inh x
   end
 class ['env, 'extra] eval_$1_t _fself =
   object
-    inherit ['env, $1, 'extra] @$1
+    inherit ['env, 'extra, '$1] @$1
     method t_$1 inh x = x
   end
 class ['env, 'extra] stateful_$1_t _fself =
   object
-    inherit ['env, 'env * $1, 'extra] @$1
+    inherit ['env, 'extra, 'env * $1] @$1
     method t_$1 inh x = (inh,x)
   end
 
 let gcata_$1 tr inh x = tr#t_$1 inh x
 
-let $1 : (('inh, 'syn, 'extra) # $1_t -> 'inh -> $1 -> 'syn,
+let $1 : (('inh, _, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
           < show    : $1 -> string;
             html    : $1 -> HTML.viewer;
             compare : $1 -> $1 -> comparison;

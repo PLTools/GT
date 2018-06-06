@@ -5,7 +5,7 @@ open Asttypes
 open HelpersBase
 
 let self_arg_name = "fself"
-let extra_param_name = "extra"
+let extra_param_name = "self"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
@@ -85,16 +85,13 @@ class virtual generator initial_args = object(self: 'self)
     let cur_name = self#cur_name tdecl in
     let k fields =
       let inh_params =
-        let inh_params =
-          let tnames  = map_type_param_names tdecl.ptype_params ~f:id in
-          prepare_param_triples ~loc
-            ~inh:(fun ~loc -> self#inh_of_param tdecl)
-            ~syn:self#syn_of_param
-            ~default_syn:(self#default_syn ~loc tdecl)
-            ~default_inh:(self#default_inh ~loc tdecl)
-            tnames
-        in
-        inh_params @ [ Typ.var ~loc extra_param_name ]
+        prepare_param_triples ~loc
+          ~inh:(fun ~loc -> self#inh_of_param tdecl)
+          ~syn:self#syn_of_param
+          ~default_syn:(self#default_syn ~loc tdecl)
+          ~default_inh:(self#default_inh ~loc tdecl)
+          ~extra:(Typ.var ~loc extra_param_name)
+          (map_type_param_names tdecl.ptype_params ~f:id)
       in
       self#wrap_class_definition ~loc mutal_names tdecl ~inh_params
         ((self#extra_class_str_members tdecl) @ fields)
@@ -140,8 +137,6 @@ class virtual generator initial_args = object(self: 'self)
       )
       @@
       [ let parent_name = HelpersBase.class_name_for_typ cur_name in
-            (* ~trait:self#plugin_name *)
-        (* in *)
         Cf.inherit_ ~loc (Cl.constr ~loc (Lident parent_name) inh_params)
       ] @ fields
 

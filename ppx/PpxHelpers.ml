@@ -326,18 +326,17 @@ let map_type_param_names ~f ps =
     | _ -> failwith "bad argument of map_type_param_names")
 
 let prepare_param_triples ~loc
-    ?(extra=[])
+    ~extra
     ?(inh=fun ~loc s -> Typ.var ~loc @@ "i"^s)
     ?(syn=fun ~loc s -> Typ.var ~loc @@ "s"^s)
     ?(default_inh=[%type: 'inh])
     ?(default_syn=[%type: 'syn])
     names =
   let ps = List.concat_map names ~f:(fun n ->
-    [Typ.var ~loc n; inh ~loc n; syn ~loc n]
+    [inh ~loc n; Typ.var ~loc n; syn ~loc n]
   )
   in
-  let tail = [ default_inh; default_syn ] in
-  ps @ tail @ (List.map ~f:(Typ.ident ~loc) extra)
+  ps @ [ default_inh; extra; default_syn ]
 
 
 (* let params_obj ?(loc=Location.none)

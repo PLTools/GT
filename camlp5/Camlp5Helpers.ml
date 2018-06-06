@@ -406,19 +406,16 @@ let openize_poly t =
     )
   | t -> t
 
-let prepare_param_triples ~loc:loc ?(extra=[])
+(* Need to be synchronized with Expander.params_of_interface_class *)
+let prepare_param_triples ~loc ~extra
     ?(inh=fun ~loc:loc s -> Typ.var ~loc @@ "i" ^ s)
     ?(syn=fun ~loc:loc s -> Typ.var ~loc @@ "s" ^ s)
     ?(default_inh = Typ.var ~loc "syn")
     ?(default_syn = Typ.var ~loc "inh")
     names  =
-  (* let default_inh = "inh" in
-   * let default_syn = "syn" in *)
 
-  (* let inh = fun ~loc s -> "i"^s in
-   * let syn = fun ~loc s -> "s"^s in *)
   let ps = List.concat @@ List.map (fun s ->
-      [ Typ.var ~loc s; inh ~loc s; syn ~loc s])
+      [ inh ~loc s; Typ.var ~loc s; syn ~loc s])
       names
   in
-  ps @ [ default_inh; default_syn] @ (List.map (Typ.ident ~loc) extra)
+  ps @ [ default_inh; extra; default_syn]

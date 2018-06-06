@@ -1,6 +1,11 @@
-@type 'a t1 = [`A | `B of 'a] with show, gmap
-@type 'a t2 = [`C | `D of 'a] with show, gmap
-@type 'a t  = ['a t1 | 'a t2] with show, gmap
+module M : sig
+@type 'a t1 = [`A | `B of 'a] with show, gmap;;
+@type 'a t2 = [`C | `D of 'a] with show, gmap;;
+@type 'a t  = ['a t1 | 'a t2] with show, gmap;;
+end = struct
+  @type 'a t1 = [`A | `B of 'a] with show, gmap;;
+  @type 'a t2 = [`C | `D of 'a] with show, gmap;;
+  @type 'a t  = ['a t1 | 'a t2] with show, gmap;;
 
 let _ =
   let a = `B (`B `A) in
@@ -29,3 +34,4 @@ let _ =
     GT.fix0 (fun self -> GT.transform(t)  (new show_t_t self self) ()) x
   in
   Printf.printf "c=%s, map c=%s\n" (show c) (show (mapt c))
+end
