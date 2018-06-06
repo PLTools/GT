@@ -28,10 +28,15 @@ class g initial_args = object(self: 'self)
   method! default_syn ~loc tdecl =
     Typ.tuple ~loc [self#default_inh ~loc tdecl; super#default_syn ~loc tdecl]
 
-  method! make_typ_of_class_argument ~loc tdecl name k =
-    k @@
-    super#make_typ_of_class_argument ~loc tdecl name @@
-    Typ.arrow ~loc (Typ.var ~loc "env")
+  (* the same as in eval *)
+  method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      let inh_t = self#default_inh ~loc tdecl in
+      k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
   (* method! app_transformation_expr ~loc trf inh subj =
    *   Exp.app_list ~loc trf [ inh; subj ] *)

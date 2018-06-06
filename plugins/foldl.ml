@@ -58,9 +58,15 @@ class g initial_args = object(self: 'self)
     ; Typ.var ~loc Plugin.extra_param_name ]
 
   (* new type of trasfomation function is 'syn -> old_type *)
-  method make_typ_of_class_argument ~loc tdecl name k =
-    super2#make_typ_of_class_argument ~loc tdecl name (fun t ->
-        k @@ Typ.arrow ~loc (self#default_inh ~loc tdecl) t )
+  method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      let inh_t = self#inh_of_param tdecl name in
+      k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
+
 
   (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
    *   let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in

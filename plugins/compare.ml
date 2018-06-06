@@ -45,11 +45,14 @@ class g initial_args = object(self: 'self)
    * new type is:  'a -> 'a -> comparison
   *)
 
-  (* method! make_typ_of_class_argument ~loc tdecl chain name k =
-   *   k @@
-   *   super2#make_typ_of_class_argument ~loc tdecl name (fun t ->
-   *       Typ.arrow ~loc (Typ.var ~loc name) t
-   *     ) *)
+  method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      let inh_t = subj_t in
+      k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
   (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
    *   (\* TODO: last argument should be either name of argument or core_type *\)
