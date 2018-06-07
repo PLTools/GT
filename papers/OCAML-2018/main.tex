@@ -320,7 +320,7 @@ Now we can combine two types into the single type for lambda terms:
 
 Here we distinguish names in binder positions (\lstinline{'b}) and bound positions (\lstinline{'n}) since their behavior during the
 transformation essentially different: names in binder positions are erased, while in bound positions are substituted with corresponding
-DeBruijn index. We also define a shortcuts for the terms in named and nameless representations.
+DeBruijn index. We also define shortcuts for the terms in named and nameless representations.
 
 Similarly to the types, the transformations can be combined as well:
 
@@ -337,7 +337,7 @@ Similarly to the types, the transformations can be combined as well:
 \end{lstlisting}
 
 For the generic part of the terms we reused the \cd{eval} transformation, while for abstractions we took the customized one (\lstinline{de_bruijn}); in
-any case the final transformation is build via inheritance with no other glue; here \lstinline{ith} is a function, which finds a names in an
+any case the final transformation is build via inheritance with no other glue; here \lstinline{ith} is a function, which finds names in an
 environment and returns their indices.
 
 It is interesting, that with polymorphic variants is becomes possible to define a transformation with an output type, different from the input

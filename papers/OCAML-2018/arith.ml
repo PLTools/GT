@@ -1,12 +1,34 @@
 open GT
 
-@type expr =
-| Var   of string
-| Add   of expr * expr
-| Mul   of expr * expr
-| Div   of expr * expr
-| Const of int with show, gmap
+@type 'expr a_expr = [
+| `Var    of string
+| `Const  of int
+| `Binop  of string * 'expr * 'expr
+| `Assign of string * 'expr
+] with show, gmap, eval, stateful
 
+@type expr = expr a_expr with show, gmap, eval, stateful
+                 
+let eval st e =
+  fix0 (fun f st e ->
+          match transform(a_expr) (new @a_expr[stateful] f f) st e with
+          | st', `Var    x          -> st', st' x
+          | st', `Const  y          -> st', y
+          | st', `Assign (x, y)     -> (fun z -> if z = x then y else st' z), y
+          | st', `Binop  (op, x, y) ->
+               st',
+               match op with
+               | "+" -> x + y
+               | "-" -> x - y
+       ) st e
+
+let _ =
+  let e = `Binop ("+", `Binop ("-", `Const 10, `Var "x"), (`Binop ("+", `Var "a", `Const 3))) in
+  let f = `Binop ("+", `Binop ("-", `Const 10, `Assign ("a", `Const 10)), (`Binop ("+", `Var "a", `Const 3))) in
+  Printf.printf "Original: %s\n" (show(expr) e);
+  Printf.printf "Value   : %d\n" (snd @@ eval (function "x" -> 3 | "a" -> 8) f)
+  
+ (*
 class simplifier f =
   object inherit [_] @expr[gmap] f
     method c_Div _ x y =
@@ -96,4 +118,5 @@ let substitute st e =
    Printf.printf "Eval               : %d\n" (eval  (function "a" -> 0 | "b" -> 1) e);
    let e = Mul (Mul (Var "a", Const 0), Div (Const 1, Const 0)) in
    Printf.printf "Simplified         : %s\n" (show(expr) @@ ns_simplify e)
+      *)
       *)
