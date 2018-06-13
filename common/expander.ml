@@ -15,13 +15,6 @@ let (@@) = Caml.(@@)
 
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
-let notify fmt  =
-  Printf.ksprintf (fun s ->
-      let _cmd = sprintf "notify-send \"%s\"" s in
-      (* let _:int = Caml.Sys.command _cmd in *)
-      ()
-    ) fmt
-
 let registered_plugins
   : (string * (module Plugin_intf.PluginRes))  list ref =
   ref []

@@ -116,7 +116,7 @@ class ['a, 'sa, 'self] gmap_list_t fself fa =
   end
 class ['a, 'sa, 'env, 'self] eval_list_t fself fa =
   object
-    inherit ['env, 'env, 'sa, 'env, 'self, 'sa list] @list
+    inherit ['env, 'a, 'sa, 'env, 'self, 'sa list] @list
     method c_Nil  _ = []
     method c_Cons env x xs = (fa env x) :: (fself env xs)
   end
@@ -256,9 +256,10 @@ module Lazy =
 
     class ['a, 'sa, 'env, 'self ] eval_t_t _fself fa =
       object
-        inherit ['a, 'env, 'sa, 'env, 'sa t, 'self ] @t
+        inherit ['env, 'a, 'sa, 'env, 'self, 'sa t ] @t
         method t_t env subj = lazy (fa env @@ Lazy.force subj)
       end
+
     class ['a, 'sa, 'env, 'self ] stateful_t_t _fself fa =
       object
         inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa t ] @t
@@ -356,7 +357,7 @@ class ['a, 'sa, 'self] gmap_option_t _fself fa =
 
 class ['a, 'sa, 'env, 'self] eval_option_t _fself fa =
   object
-    inherit ['a, 'env, 'env * 'sa, 'env, 'self, 'sa option] @option
+    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'sa option] @option
     method c_None _ = None
     method c_Some env x = Some (fa env x)
   end

@@ -33,6 +33,7 @@ true: debug, bin_annot, short_paths, annot
 <regression/test0*.*>: use_pa_gt
 <regression/test*.*> or <regression/test*.cm*>: use_GT
 <regression/test090.*>: use_GT
+<regression/show_typed_api.*>: use_GT
 #<regression/test*.native>: use_gt
 
 <regression/test807*.*>: ppx(ppx/pp_gt.native --as-ppx), rectypes

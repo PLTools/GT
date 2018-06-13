@@ -76,7 +76,7 @@ class g args = object(self: 'self)
    *   List.concat_map (super#prepare_fa_arg_types ~loc tdecl)
    *     ~f:(fun t -> [ Typ.sprintf ~loc "string"; t]) *)
 
-  method private string_of_typ ~loc (* ~is_self_rec *) typ =
+  method private string_of_typ ~loc typ =
       let rec string_of_longident = function
       | Lident s -> s
       | Ldot (l, s) ->  string_of_longident l ^ "." ^ s
@@ -93,6 +93,15 @@ class g args = object(self: 'self)
             |> List.fold_right
               ~f:(fun e acc -> Exp.app_list ~loc (Exp.ident ~loc "^") [ e; acc ] )
               ~init:(Exp.string_const ~loc @@ string_of_longident txt)
+        | Ptyp_tuple ts ->
+          List.map ~f:helper ts
+            |> List.fold_right
+              ~f:(fun e acc ->
+                  let ( ** ) a b = Exp.app_list ~loc (Exp.ident ~loc "^") [a; b] in
+                  e ** (Exp.string_const ~loc "*") ** acc
+                 )
+              ~init:(Exp.string_const ~loc "")
+
         |  _ -> assert false
       in
       helper typ
@@ -138,7 +147,8 @@ class g args = object(self: 'self)
        *     ]] *)
 
   method! compose_apply_transformations ~loc ~left right typ =
-    let typ_str = Exp.string_const ~loc "asdf" in
+    (* let typ_str = Exp.string_const ~loc "asdf" in *)
+    let typ_str = self#string_of_typ ~loc typ  in
     Exp.app_list ~loc  left [ typ_str; right ]
 
   method make_typ_of_mutal_trf ~loc mutal_tdecl k =
@@ -194,7 +204,7 @@ let g = (new g :> (Plugin_intf.plugin_args ->
 end
 
 let register () =
-  Expander.notify "registering %s" trait_name;
+  (* Expander.notify "registering %s" trait_name; *)
   Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
 
 let () = register ()

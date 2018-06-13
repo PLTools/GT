@@ -596,24 +596,29 @@ class virtual generator initial_args = object(self: 'self)
       | Ptyp_tuple params ->
         self#abstract_trf ~loc (fun einh esubj ->
             self#app_transformation_expr ~loc
-              Exp.(app_list ~loc
-                 (send ~loc
-                    (access_plugins ~loc
-                       (of_longident ~loc
-                          (Ldot (Lident "GT", Printf.sprintf "tuple%d" (List.length params))))
-                    )
+              (List.fold_left params
+                 ~init:(Exp.send ~loc
+                          (access_plugins ~loc
+                             (Exp.of_longident ~loc
+                                (Ldot (Lident "GT",
+                                       Printf.sprintf "tuple%d" (List.length params))))
+                          )
                     (* [%expr let open GT in
                      *   [%e  Exp.sprintf "tuple%d" (List.length params)
                      *   ].GT.plugins ] *)
                     self#plugin_name
-                 )
-                 (List.map ~f:helper params)
+                       )
+                 ~f:(fun left typ ->
+                     self#compose_apply_transformations ~loc ~left (helper typ) typ
+                   )
               )
               einh esubj
           )
       | Ptyp_constr (_,_) when is_self_rec t ->
         Exp.ident ~loc self_arg_name
       | Ptyp_constr ({txt},params) ->
+        (* HelpersBase.notify "do_typ constr %s"
+         *   (Longident.flatten_exn txt |> String.concat ~sep:"."); *)
           (* in this place it will be easier to have all plugin in single value *)
           let trf_expr =
             match txt with

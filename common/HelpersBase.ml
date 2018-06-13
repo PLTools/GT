@@ -177,3 +177,10 @@ let trait_class_name_for_typ ~trait name =
   class_name_for_typ (if String.equal trait ""
                       then name
                       else Printf.sprintf "%s_%s" trait name)
+
+let notify fmt  =
+  Printf.ksprintf (fun s ->
+      let _cmd = Printf.sprintf "notify-send \"%s\"" s in
+      (* let _:int = Caml.Sys.command _cmd in *)
+      ()
+    ) fmt
