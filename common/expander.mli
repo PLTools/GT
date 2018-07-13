@@ -18,6 +18,12 @@ val sig_type_decl_many_plugins: loc:loc ->
   Ppxlib.rec_flag * Ppxlib.type_declaration list ->
   Sig.t HelpersBase.List.t
 
+val str_type_ext_many_plugins: loc:loc ->
+  Str.t list ->
+  (Base.string * config_plugin) list ->
+  Ppxlib.type_extension ->
+  Str.t HelpersBase.List.t
+
 
 end
 

@@ -44,10 +44,11 @@ let visit_typedecl ~loc
   ?(onmanifest=fun _ -> not_implemented ~loc "manifest")
   ?(onvariant =fun _ -> not_implemented ~loc "variant types")
   ?(onabstract=fun _ -> not_implemented ~loc "abstract types without manifest")
+  ?(onopen    =fun ()-> not_implemented ~loc "open types")
   tdecl =
   match tdecl.ptype_kind with
   | Ptype_record r -> onrecord r
-  | Ptype_open     -> not_implemented ~loc "open types"
+  | Ptype_open     -> onopen ()
   | Ptype_variant cds -> onvariant cds
   | Ptype_abstract ->
       match tdecl.ptype_manifest with

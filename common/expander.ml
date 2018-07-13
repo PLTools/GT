@@ -224,6 +224,9 @@ let make_interface_class ~loc tdecl =
       ~params:(params_of_interface_class ~loc tdecl)
   in
   visit_typedecl ~loc tdecl
+    ~onopen:(fun () ->
+        ans []
+      )
     ~onrecord:(fun _ ->
         ans
           [ Cf.method_virtual ~loc (sprintf "do_%s" tdecl.ptype_name.txt) @@
@@ -419,6 +422,7 @@ let make_gcata_str ~loc tdecl =
          k)
   in
   visit_typedecl ~loc tdecl
+    ~onopen:(fun () -> ans @@ Exp.assert_false ~loc)
     ~onrecord:(fun _labels ->
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         ans @@ Exp.app_list ~loc
@@ -669,6 +673,12 @@ let str_type_decl_many_plugins ~loc si plugins_info declaration =
   | Recursive, ts      -> do_mutal_types ~loc si plugins ts
   | Nonrecursive, decls ->
       List.concat_map ~f:(do_typ ~loc si plugins false) decls
+
+let str_type_ext_many_plugins ~loc si plugins_info extension =
+  (* let ifaceclass = *)
+
+
+  [ Str.single_value ~loc (Pat.any ~loc ()) (Exp.assert_false ~loc) ]
 
 (* let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
  *     use_compare use_eq use_show_type p =
