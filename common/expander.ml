@@ -65,7 +65,7 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          let lhs = Pat.variant ~loc  lab @@
+          let lhs = Pat.variant ~loc  lab.txt @@
             List.map ~f:(fun s -> Pat.var ~loc s) names
           in
           case ~lhs
@@ -195,7 +195,7 @@ let make_interface_class_sig ~loc tdecl =
               let meths =
                 List.concat_map rows ~f:(function
                 | Rtag (lab,_,_,args)  ->
-                  let methname = sprintf "c_%s" lab in
+                  let methname = sprintf "c_%s" lab.txt in
                   [ Ctf.method_ ~loc ~virt:true methname @@
                       (List.fold_right args ~init:(Typ.var ~loc "syn")
                          ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
@@ -304,7 +304,7 @@ let make_interface_class ~loc tdecl =
               ans ~is_poly:true @@
               List.concat_map rows ~f:(function
                 | Rtag (lab,_,_,[]) ->
-                    let methname = sprintf "c_%s" lab in
+                    let methname = sprintf "c_%s" lab.txt in
                     [ Cf.method_virtual ~loc methname @@
                       Typ.(arrow ~loc (var ~loc "inh") (var ~loc "syn"))
                     ]
@@ -314,7 +314,7 @@ let make_interface_class ~loc tdecl =
                         | Ptyp_tuple ts -> ts
                         | _ -> [typ]
                       in
-                      let methname = sprintf "c_%s" lab in
+                      let methname = sprintf "c_%s" lab.txt in
                       [ Cf.method_virtual ~loc methname @@
                           (List.fold_right args ~init:(Typ.var ~loc "syn")
                              ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
@@ -457,7 +457,7 @@ let make_gcata_str ~loc tdecl =
           rows maybe_labels
           ~onrow:(fun cname names ->
               List.fold_left ("inh"::(List.map ~f:fst names))
-                ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname))
+                ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname.txt))
                 ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg) )
             )
             ~onlabel:(fun label patname -> failwith "not implemented")

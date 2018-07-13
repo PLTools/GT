@@ -229,7 +229,7 @@ module Typ = struct
     let vs = fs |> List.map (function
         | Ppxlib.Rinherit core_typ -> PvInh (loc, from_caml core_typ)
         | Rtag (lb, _, is_open, args) ->
-          PvTag (loc, VaVal lb, VaVal is_open, VaVal (List.map from_caml args) )
+          PvTag (loc, VaVal lb.txt, VaVal is_open, VaVal (List.map from_caml args) )
       ) in
     if is_open
     then <:ctyp< [ > $list:vs$ ] >>

@@ -133,7 +133,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          let lhs = ppat_variant ~loc  lab @@ match args with
+          let lhs = ppat_variant ~loc lab.txt @@ match args with
             | [] -> None
             | _  -> Some (ppat_tuple ~loc @@
                           List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s))

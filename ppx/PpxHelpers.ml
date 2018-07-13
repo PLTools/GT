@@ -178,7 +178,7 @@ module Typ = struct
   (* let ground  ~loc s = constr ~loc (Located.mk ~loc s) [] *)
   let class_  ~loc = ptyp_class ~loc
   let object_ ~loc flg xs =
-    ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> Located.mk ~loc l,[],r)) flg
+    ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> Otag (Located.mk ~loc l,[],r)) ) flg
   let package ~loc lident =
     ptyp_package ~loc (lident, [])
   let arrow ~loc l r =

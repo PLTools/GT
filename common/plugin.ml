@@ -23,7 +23,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
             | _ -> failwith "we don't support conjunction types"
           in
           let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          let lhs = Pat.variant ~loc  lab @@ List.map ~f:(Pat.var ~loc) names in
+          let lhs = Pat.variant ~loc lab.txt @@ List.map ~f:(Pat.var ~loc) names in
           case ~lhs ~rhs:(onrow lab @@ List.zip_exn names args)
         | Rinherit typ ->
           match typ.ptyp_desc with
@@ -262,7 +262,7 @@ class virtual generator initial_args = object(self: 'self)
                      )
                      ~fail:(fun () -> assert false)
               | Rtag (lab,_,_, typs) -> begin
-                  Ctf.method_ ~loc (sprintf "c_%s" lab) ~virt:false @@
+                  Ctf.method_ ~loc (sprintf "c_%s" lab.txt) ~virt:false @@
                   match typs with
                   | [] -> Typ.(chain_arrow ~loc
                                  [ self#default_inh ~loc tdecl
@@ -352,10 +352,10 @@ class virtual generator initial_args = object(self: 'self)
 
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
     | Rtag (constr_name,_,_, []) ->
-        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name)
+        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name.txt)
           [] k
     | Rtag (constr_name,_,_, [arg]) ->
-        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name)
+        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name.txt)
           (unfold_tuple arg) k
     | Rtag (constr_name,_,_,args) ->
       (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
@@ -661,7 +661,7 @@ class virtual generator initial_args = object(self: 'self)
             in
             let onrow lab bindings =
               self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-                lab bindings
+                lab.txt bindings
                 (Exp.sprintf ~loc "inh")
                 (fun x -> x)
             in
