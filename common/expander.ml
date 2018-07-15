@@ -32,10 +32,11 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 open AstHelpers
 
-let prepare_patt_match ~loc what constructors make_rhs =
+let prepare_patt_match ~loc ?else_case what constructors make_rhs =
   let on_alg cdts =
     let k cs = Exp.match_ ~loc what cs in
-    k @@ List.map cdts ~f:(fun cd ->
+    k @@
+    List.map cdts ~f:(fun cd ->
         match cd.pcd_args with
         | Pcstr_record _ -> not_implemented "wtf"
         | Pcstr_tuple args ->
@@ -46,6 +47,13 @@ let prepare_patt_match ~loc what constructors make_rhs =
                    )
               ~rhs:(make_rhs cd names)
       )
+    @
+    (match else_case with
+     | None -> []
+     | Some f ->
+       let name = gen_symbol ~prefix:"else" () in
+       [case ~lhs:(Pat.sprintf ~loc "%s" name) ~rhs:(f name)]
+    )
   in
   let on_poly cs =
     assert false
@@ -92,11 +100,11 @@ let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninher
 
 (* let inh_syn_ts ~loc = [ Typ.var ~loc "inh"; Typ.var ~loc "syn" ] *)
 
-let params_of_interface_class ~loc tdecl =
+let params_of_interface_class ~loc params =
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (for polyvar subtyping)
   *)
-  (List.concat @@ map_type_param_names tdecl.ptype_params
+  (List.concat @@ map_type_param_names params
      ~f:(fun s ->
          [ named_type_arg ~loc ("i"^s)
          ; named_type_arg ~loc s
@@ -115,7 +123,7 @@ let make_interface_class_sig ~loc tdecl =
   let k fields =
     Sig.class_ ~loc ~virt:true
       ~name:(class_name_for_typ name.txt)
-      ~params:(params_of_interface_class ~loc tdecl)
+      ~params:(params_of_interface_class ~loc tdecl.ptype_params)
       fields
   in
   visit_typedecl ~loc tdecl
@@ -214,6 +222,28 @@ let make_interface_class_sig ~loc tdecl =
           helper typ
     )
 
+let inherit_iface_class ~loc name params =
+  let inh_params =
+    List.concat_map params ~f:(fun typ ->
+        [ map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+        ; typ
+        ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
+        ]
+      )
+    |> List.map ~f:Typ.from_caml
+  in
+  let inh_params =
+    inh_params @
+    [ Typ.var ~loc "inh"
+    ; Typ.var ~loc Plugin.extra_param_name
+    ; Typ.var ~loc "syn"
+    ]
+  in
+
+  Cf.inherit_ ~loc @@
+  Cl.constr ~loc (map_longident ~f:class_name_for_typ name)
+    inh_params
+
 let make_interface_class ~loc tdecl =
   let params = List.map ~f:fst tdecl.ptype_params in
   let name = tdecl.ptype_name in
@@ -221,7 +251,7 @@ let make_interface_class ~loc tdecl =
   let ans ?(is_poly=false) fields =
     Str.class_single ~loc ~name:(class_name_for_typ name.txt) fields
       ~virt:true
-      ~params:(params_of_interface_class ~loc tdecl)
+      ~params:(params_of_interface_class ~loc tdecl.ptype_params)
   in
   visit_typedecl ~loc tdecl
     ~onopen:(fun () ->
@@ -252,27 +282,7 @@ let make_interface_class ~loc tdecl =
     )
     ~onmanifest:(fun typ ->
         let wrap ?(is_poly=false) name params =
-          let inh_params =
-            List.concat_map params ~f:(fun typ ->
-                [ map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
-                ; typ
-                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
-                ]
-              )
-            |> List.map ~f:Typ.from_caml
-          in
-          let inh_params =
-              inh_params @
-              [ Typ.var ~loc "inh"
-              ; Typ.var ~loc Plugin.extra_param_name
-              ; Typ.var ~loc "syn"
-              ]
-          in
-
-          [ Cf.inherit_ ~loc @@
-            Cl.constr ~loc (map_longident ~f:class_name_for_typ name)
-              inh_params
-          ]
+          [inherit_iface_class ~loc name params]
         in
 
         let rec helper typ = match typ with
@@ -410,6 +420,8 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
   in
   Sig.value ~loc ~name type_
 
+(* let gcata_for_constructors ~loc ?need_else cs k = *)
+
 
 let make_gcata_str ~loc tdecl =
   let gcata_pat =
@@ -418,7 +430,7 @@ let make_gcata_str ~loc tdecl =
   let ans k =
     Str.single_value ~loc
       gcata_pat
-      (Exp.fun_list ~loc [Pat.var ~loc "tr"; Pat.var ~loc "inh"; Pat.var ~loc "subj"]
+      (Exp.fun_list ~loc Pat.[var ~loc "tr"; var ~loc "inh"; var ~loc "subj"]
          k)
   in
   visit_typedecl ~loc tdecl
@@ -471,53 +483,15 @@ let make_gcata_str ~loc tdecl =
                    map_longident cident ~f:(sprintf "gcata_%s"))
                   (List.map ["tr";"inh";patname] ~f:(Exp.sprintf ~loc "%s"))
 
-              )
+)
       | _ -> failwith "not implemented"
       in
       do_typ typ
       )
 
 (* create opened renaming for polymorphic variant *)
-(* Seems that we don't need it no more *)
+(* seems that we don't need it no more *)
 let make_heading_gen ~loc wrap tdecl = []
-
-
-(* Part of old implementation where we are trying to collect all values in t
- * first-class module. But we decided to roll back because we can't write
- * generic function to access it *)
-let name_fcm_mt tdecl = sprintf "MT_%s" tdecl.ptype_name.txt
-(* let gather_module_str tdecl plugins =
- *   let loc = tdecl.ptype_loc in
- *
- *   let body = [%stri let gcata =
- *                       [%e Exp.sprintf "gcata_%s" tdecl.ptype_name.txt] ] ::[]
- *   in
- *   let body = List.fold_left ~init:body plugins
- *       ~f:(fun acc p ->
- *         let expr = Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl in
- *         Str.single_value ~loc (Pat.of_string ~loc p#plugin_name) expr
- *         :: acc
- *       )
- *   in
- *   let expr = Exp.pack_with_constraint ~loc
- *       (Mod.structure ~loc @@ List.rev body)
- *       (Located.lident ~loc (name_fcm_mt tdecl))
- *   in
- *   Str.single_value ~loc (Pat.sprintf "%s" tdecl.ptype_name.txt) expr *)
-
-(* let make_fcm_sig ~loc tdecl plugins =
- *   let fields = List.concat_map plugins ~f:(fun p ->
- *       let name  = p#plugin_name in
- *       let type_ = p#make_trans_function_typ tdecl in
- *       [Sig.value ~loc ~name type_ ]
- *     )
- *   in
- *   Mty.signature ~loc ((make_gcata_sig ~shortname:true ~loc tdecl) :: fields )
- *
- * let prepare_mt ~loc tdecl plugins =
- *     let name = Located.mk ~loc @@ sprintf "MT_%s" tdecl.ptype_name.txt in
- *     let type_ = Some (make_fcm_sig ~loc tdecl plugins) in
- *     Str.modtype ~loc (module_type_declaration ~loc ~name ~type_) *)
 
 
 let collect_plugins_str ~loc tdecl plugins : Str.t =
@@ -533,7 +507,7 @@ let collect_plugins_str ~loc tdecl plugins : Str.t =
     [ Ldot (lident "GT", "gcata"), Exp.sprintf ~loc "gcata_%s" tname
     ; Ldot (lident "GT", "plugins"), Exp.object_ ~loc @@ class_structure
         ~self:(Pat.any ~loc ()) ~fields:plugin_fields
-    ]
+]
 
 let collect_plugins_sig ~loc tdecl plugins =
   Sig.value ~loc ~name:tdecl.ptype_name.txt @@
@@ -576,24 +550,15 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
     ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; [ collect_plugins_sig ~loc tdecl plugins ]
-
     ]
 
 let do_mutal_types_sig ~loc plugins tdecls =
   []
-  (* List.concat_map tdecls ~f:(fun tdecl ->
-   *   make_heading_str ~loc tdecl @
-   *   [ make_interface_class ~loc tdecl
-   *   (\* ; make_gcata_sig ~loc tdecl *\)
-   *   ]
-   * ) @
-   * List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls) *)
 
 let wrap_plugin name = function
-| Skip -> id
-| Use args ->
-  let () = notify "checking '%s'....." name in
-  (* let () = assert false in *)
+  | Skip -> id
+  | Use args ->
+    let () = notify "checking '%s'....." name in
     match List.Assoc.find !registered_plugins name ~equal:String.equal with
       | Some m ->
         let module F = (val m : Plugin_intf.PluginRes) in
@@ -601,11 +566,11 @@ let wrap_plugin name = function
         (* List.cons (p args :> Plugin_intf.Make(AstHelpers).t) *)
         List.cons @@ P.g args
       | None -> failwithf "Plugin '%s' is not registered" name ()
-;;
+
 
 (* let sig_type_decl ~loc ~path si
- *     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
- *     ?(use_compare=Skip) ?(use_eq=Skip)
+ *     ?(use_show=skip) ?(use_gmap=skip) ?(use_foldl=skip) ?(use_show_type=skip)
+ *     ?(use_compare=skip) ?(use_eq=skip)
  *     (rec_flag, tdls) =
  *   let plugins =
  *     wrap_plugin "show"        use_show  @@
@@ -617,11 +582,11 @@ let wrap_plugin name = function
  *     []
  *   in
  *   match rec_flag, tdls with
- *   | Recursive, []      -> []
- *   | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
- *   | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
- *   | Nonrecursive, tdls ->
- *       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls *)
+ *   | recursive, []      -> []
+ *   | recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
+ *   | recursive, ts      -> do_mutal_types_sig ~loc plugins ts
+ *   | nonrecursive, tdls ->
+ *       list.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls *)
 
 let sig_type_decl_many_plugins ~loc si plugins_info declaration =
   let plugins =
@@ -636,29 +601,6 @@ let sig_type_decl_many_plugins ~loc si plugins_info declaration =
   | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
   | Nonrecursive, tdls ->
       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
-
-
-(* let str_type_decl ~loc ~path si
- *     ?(use_show=Skip) ?(use_gmap=Skip) ?(use_foldl=Skip) ?(use_show_type=Skip)
- *     ?(use_compare=Skip) ?(use_eq=Skip)
- *     (rec_flag, tdls)
- *   =
- *   let plugins =
- *     wrap_plugin "show"        use_show  @@
- *     wrap_plugin "compare"     use_compare @@
- *     wrap_plugin "gmap"        use_gmap  @@
- *     wrap_plugin "foldl"       use_foldl @@
- *     wrap_plugin "show_typed"  use_show_type @@
- *     wrap_plugin "eq"          use_eq @@
- *     []
- *   in
- *
- *   match rec_flag, tdls with
- *   | Recursive, []      -> []
- *   | Recursive, [tdecl] -> do_typ         ~loc si plugins true tdecl
- *   | Recursive, ts      -> do_mutal_types ~loc si plugins ts
- *   | Nonrecursive, ts ->
- *       List.concat_map ~f:(do_typ ~loc si plugins false) tdls *)
 
 let str_type_decl_many_plugins ~loc si plugins_info declaration =
   let plugins =
@@ -675,30 +617,113 @@ let str_type_decl_many_plugins ~loc si plugins_info declaration =
       List.concat_map ~f:(do_typ ~loc si plugins false) decls
 
 let str_type_ext_many_plugins ~loc si plugins_info extension =
-  (* let ifaceclass = *)
+  let name = extension.ptyext_path.txt |> Longident.last_exn in
+  let ifaceclass =
+    let meths =
+      List.map extension.ptyext_constructors
+        ~f:(fun {pext_name; pext_kind} ->
+            let methname = sprintf "c_%s" pext_name.txt in
+            match pext_kind with
+            | Pext_decl (Pcstr_tuple ts, _opt) ->
+              Cf.method_virtual ~loc methname @@
+              (List.fold_right ts ~init:Typ.(var ~loc "syn")
+                 ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+               |> Typ.(arrow ~loc (var ~loc "inh") )
+              )
+            | _ -> assert false
+          )
+    in
+    Str.class_single ~loc ~virt:true
+      ~name:(class_name_for_typ name)
+      ~params:(params_of_interface_class ~loc extension.ptyext_params) @@
+      (inherit_iface_class ~loc extension.ptyext_path.txt
+         (List.map ~f:fst extension.ptyext_params)
+      ) :: meths
+  in
 
+  let gcata =
+    let cds = List.map extension.ptyext_constructors
+        ~f:(fun ec ->
+            match ec.pext_kind with
+            | Pext_rebind _ -> failwith "not implemented"
+            | Pext_decl (args, Some _) -> failwith "gadt here not supported"
+            | Pext_decl (args, None) ->
+              constructor_declaration ~loc:extension.ptyext_path.loc ~res:None
+                ~name:(ec.pext_name) ~args
+          )
+    in
+    let ans k =
+      Str.single_value ~loc
+        (Pat.sprintf "gcata_%s" ~loc (Longident.last_exn extension.ptyext_path.txt))
+        (Exp.fun_list ~loc Pat.[var ~loc "tr"; var ~loc "inh"; var ~loc "subj"]
+           k)
+    in
+    ans @@
+    prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
+      ~else_case:(fun patname ->
+          let open Exp in
+          app_list ~loc
+            (of_longident ~loc
+               (map_longident extension.ptyext_path.txt
+                  ~f:(Printf.sprintf "gcata_%s")))
+            [ ident ~loc "tr"; ident ~loc "inh"; ident ~loc "subj"
+            ; ident ~loc patname ]
+        )
+      (fun cd names ->
+         List.fold_left ("inh"::names)
+           ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
+                    ("c_" ^ cd.pcd_name.txt))
+           ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)
+              ))
 
-  [ Str.single_value ~loc (Pat.any ~loc ()) (Exp.assert_false ~loc) ]
+  in
+  let plugins =
+    List.fold_left plugins_info ~init:[]
+      ~f:(fun acc (name,args) ->
+          wrap_plugin name args acc
+        )
+  in
 
-(* let str_type_decl_implicit ~loc ~path info use_show use_gmap use_foldl
- *     use_compare use_eq use_show_type p =
- *   str_type_decl ~loc ~path info
- *     ~use_show ~use_gmap ~use_foldl ~use_show_type ~use_compare ~use_eq
- *     p *)
-
-(* let sig_type_decl_implicit ~loc ~path
- *     extra_decls
- *     use_show use_gmap use_foldl
- *     use_compare use_eq use_show_type  (flg, tdls) =
- *   let wrap f = if f then Use [] else Skip in
- *   sig_type_decl ~loc ~path
- *     extra_decls
- *     ~use_show: (wrap use_show)
- *     ~use_gmap: (wrap use_gmap)
- *     ~use_foldl:(wrap use_foldl)
- *     ~use_compare:(wrap use_compare)
- *     ~use_show_type:(wrap use_show_type)
- *     ~use_eq:(wrap use_eq)
- *     (flg, tdls) *)
-
+  [ ifaceclass
+  ; gcata
+  ; Str.single_value ~loc (Pat.any ~loc ()) (Exp.assert_false ~loc) ]
+  (* @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension)) *)
 end
+
+
+(* part of old implementation where we are trying to collect all values in t
+ * first-class module. but we decided to roll back because we can't write
+ * generic function to access it *)
+let name_fcm_mt tdecl = sprintf "mt_%s" tdecl.ptype_name.txt
+(* let gather_module_str tdecl plugins =
+ *   let loc = tdecl.ptype_loc in
+ *
+ *   let body = [%stri let gcata =
+ *                       [%e exp.sprintf "gcata_%s" tdecl.ptype_name.txt] ] ::[]
+ *   in
+ *   let body = list.fold_left ~init:body plugins
+ *       ~f:(fun acc p ->
+ *         let expr = exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl in
+ *         str.single_value ~loc (pat.of_string ~loc p#plugin_name) expr
+ *         :: acc
+ *       )
+ *   in
+ *   let expr = exp.pack_with_constraint ~loc
+ *       (mod.structure ~loc @@ list.rev body)
+ *       (located.lident ~loc (name_fcm_mt tdecl))
+ *   in
+ *   str.single_value ~loc (pat.sprintf "%s" tdecl.ptype_name.txt) expr *)
+
+(* let make_fcm_sig ~loc tdecl plugins =
+ *   let fields = list.concat_map plugins ~f:(fun p ->
+ *       let name  = p#plugin_name in
+ *       let type_ = p#make_trans_function_typ tdecl in
+ *       [sig.value ~loc ~name type_ ]
+ *     )
+ *   in
+ *   mty.signature ~loc ((make_gcata_sig ~shortname:true ~loc tdecl) :: fields )
+ *
+ * let prepare_mt ~loc tdecl plugins =
+ *     let name = located.mk ~loc @@ sprintf "mt_%s" tdecl.ptype_name.txt in
+ *     let type_ = some (make_fcm_sig ~loc tdecl plugins) in
+ *     str.modtype ~loc (module_type_declaration ~loc ~name ~type_) *)

@@ -147,10 +147,6 @@ and Vb :
     type t
   end
 
-(* type structure = Str.t list
- * type signature = Sig.t list *)
-
-
 val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case
 val class_structure : self:Pat.t -> fields:Cf.t list -> class_structure
