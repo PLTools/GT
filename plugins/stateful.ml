@@ -25,7 +25,7 @@ class g initial_args = object(self: 'self)
     Typ.tuple ~loc [Typ.var ~loc "env"; Typ.var ~loc @@ Gmap.param_name_mangler s]
   method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
-  method! default_syn ~loc tdecl =
+  method! default_syn ~loc  ?extra_path  tdecl =
     Typ.tuple ~loc [self#default_inh ~loc tdecl; super#default_syn ~loc tdecl]
 
   (* the same as in eval *)

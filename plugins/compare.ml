@@ -22,7 +22,7 @@ class g initial_args = object(self: 'self)
 
   method default_inh ~loc = Typ.use_tdecl
   method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))
-  method default_syn  ~loc tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn  ~loc ?extra_path tdecl = self#syn_of_param ~loc "dummy"
 
   method inh_of_param tdecl name =
     let loc = loc_from_caml tdecl.ptype_loc in

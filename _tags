@@ -36,7 +36,8 @@ true: debug, bin_annot, short_paths, annot
 <regression/show_typed_api.*>: use_GT
 #<regression/test*.native>: use_gt
 
-<regression/test807*.*>: ppx(ppx/pp_gt.native --as-ppx), rectypes
+## ppx-based tests
+<regression/test808*.*> or <regression/test807*.*>: ppx(ppx/pp_gt.native --as-ppx), rectypes
 
 <regression/orig/*>: traverse
 

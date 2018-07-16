@@ -74,8 +74,6 @@ class virtual generator initial_args = object(self: 'self)
         Format.printf "%d -> %a\n%!" k Pprintast.expression e
       )
 
-  (* method extra_param_stub ~loc = construct_extra_param ~loc *)
-
   method extra_class_sig_members _ = []
   method extra_class_str_members _ = []
   method cur_name tdecl = tdecl.ptype_name.txt
@@ -400,6 +398,7 @@ class virtual generator initial_args = object(self: 'self)
     )
     ~onvariant:(fun cds -> self#on_variant ~loc ~mutal_names ~is_self_rec tdecl cds id)
     ~onrecord:(self#on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl)
+    ~onopen:(fun () -> [])
 
   method virtual on_record_declaration: loc:loc ->
     is_self_rec:(core_type -> bool) ->
@@ -520,7 +519,6 @@ class virtual generator initial_args = object(self: 'self)
                  class_name tdecl)
           )
       in
-      (* let flag = if List.length mutal_names = 1 then Nonrecursive else Recursive in *)
       Str.values ~loc @@ List.map tdecls ~f:on_tdecl
 
 
@@ -580,6 +578,62 @@ class virtual generator initial_args = object(self: 'self)
     Exp.t -> Exp.t -> Exp.t -> Exp.t
 
   method virtual abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
+
+  method do_typext_str ~loc ({ptyext_path } as extension) =
+    let clas =
+      let is_self_rec _ = false in
+      let cds = List.map extension.ptyext_constructors
+          ~f:(fun ec ->
+              match ec.pext_kind with
+              | Pext_rebind _ -> failwith ""
+              | Pext_decl (args, _) ->
+                Ast_builder.Default.constructor_declaration
+                  ~loc:extension.ptyext_path.loc ~res:None
+                  ~name:(ec.pext_name) ~args
+            )
+      in
+      let tdecl =
+        let open Ast_builder.Default in
+        type_declaration ~loc:extension.ptyext_path.loc
+          ~name:(Located.map Longident.last_exn extension.ptyext_path)
+          ~params:extension.ptyext_params
+          ~private_:Public ~manifest:None ~cstrs:[]
+          ~kind:(Ptype_variant cds)
+      in
+      let fields = self#on_variant ~loc ~is_self_rec ~mutal_names:[]
+          tdecl
+          cds
+          id
+      in
+      let extra_path s = map_longident extension.ptyext_path.txt ~f:(fun _ -> s) in
+      let inh_params =
+        prepare_param_triples ~loc
+          ~inh:(fun ~loc -> self#inh_of_param tdecl)
+          ~syn:self#syn_of_param
+          ~default_syn:(self#default_syn ~loc ~extra_path tdecl)
+          ~default_inh:(self#default_inh ~loc tdecl)
+          ~extra:(Typ.var ~loc extra_param_name)
+          (map_type_param_names tdecl.ptype_params ~f:id)
+      in
+      let parent_plugin_impl =
+        let params =
+          self#prepare_inherit_typ_params_for_alias ~loc tdecl
+            (List.map ~f:fst tdecl.ptype_params)
+        in
+        Cf.inherit_ ~loc @@
+        Cl.apply ~loc
+          (Cl.constr ~loc (extra_path (self#make_class_name tdecl)) params)
+          (Exp.sprintf ~loc "%s" self_arg_name :: (self#apply_fas_in_new_object ~loc tdecl))
+          (* TODO: check that apply_fas_... is what we need *)
+      in
+      (* TODO: It seems that we don't need to inherit interface class for extensible types
+       * because type parameters are no changing but it require some work to disable this
+       * generation. So it is postponed *)
+      self#wrap_class_definition ~loc [] tdecl ~inh_params
+        ((self#extra_class_str_members tdecl) @ parent_plugin_impl :: fields)
+    in
+    [ clas ]
+
 
   (* TODO: decide expression of which type should be returned here *)
   (* do_type_gen will return an expression which after being applied
@@ -682,17 +736,22 @@ class virtual generator initial_args = object(self: 'self)
 
 
   method virtual make_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
-  method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  (* method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> Typ.t *)
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
 
   method virtual make_RHS_typ_of_transformation: loc:AstHelpers.loc ->
          ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
 end
 
-class virtual no_inherit_arg = object(self: 'self)
+class virtual no_inherit_arg =
+  (* let module M = Plugin_intf.Make(AstHelpers) in *)
+  object(self: 'self)
   (* inherit [_] generator as super *)
+    (* inherit M.g *)
 
-  method virtual default_syn : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  method virtual default_syn : loc:loc ->
+      ?extra_path:(Ppxlib__.Import.string -> longident) ->
+      Ppxlib.type_declaration -> Typ.t
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
   method virtual syn_of_param: loc:loc -> string -> Typ.t
 

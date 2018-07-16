@@ -31,7 +31,7 @@ class g args = object(self)
 
   method plugin_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method default_syn ~loc _tdecl = Typ.ident ~loc "string"
+  method default_syn ~loc  ?extra_path  _tdecl = Typ.ident ~loc "string"
 
   method syn_of_param ~loc _     = Typ.ident ~loc "string"
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl

@@ -40,7 +40,7 @@ class g initial_args = object(self: 'self)
 
   method syn_of_param ~loc s = Typ.var ~loc "syn"
   method default_inh  ~loc tdecl = self#default_syn ~loc tdecl
-  method default_syn  ~loc tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn  ~loc  ?extra_path  tdecl = self#syn_of_param ~loc "dummy"
 
   method inh_of_param tdecl _ =
     self#syn_of_param ~loc:(loc_from_caml tdecl.ptype_loc) "dummy"

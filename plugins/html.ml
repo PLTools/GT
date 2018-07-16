@@ -32,7 +32,7 @@ class g args = object(self)
 
   method plugin_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method default_syn ~loc _tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn ~loc ?extra_path _tdecl = self#syn_of_param ~loc "dummy"
 
   method syn_of_param ~loc _     = Typ.of_longident ~loc (Ldot (Lident "View", "viewer"))
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl

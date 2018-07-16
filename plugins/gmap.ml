@@ -49,17 +49,18 @@ class g args = object(self: 'self)
   method inh_of_param tdecl _name =
     self#default_inh ~loc:(loc_from_caml tdecl.ptype_loc) tdecl
 
-  method default_syn ~loc tdecl =
+  method default_syn ~loc ?extra_path  tdecl =
     let param_names,rez_names,find_param,blownup_params =
       hack_params tdecl.ptype_params
     in
     let ans =
-      let cur_name = self#cur_name tdecl in
-      let (ident,args) =
-          (cur_name, rez_names)
+      let ident = match extra_path with
+        | Some f -> f (self#cur_name tdecl)
+        | None   -> Lident (self#cur_name tdecl)
       in
-      Typ.constr ~loc (Lident ident) @@
-      List.map ~f:(Typ.var ~loc) args
+
+      Typ.constr ~loc ident @@
+      List.map ~f:(Typ.var ~loc) rez_names
     in
     if is_polyvariant_tdecl tdecl
     then Typ.alias ~loc (Typ.variant_of_t ~loc ans) Plugin.extra_param_name

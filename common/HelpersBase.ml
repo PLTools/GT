@@ -112,6 +112,7 @@ let is_polyvariant typ =
 let is_polyvariant_tdecl tdecl =
   let loc = tdecl.ptype_loc in
   visit_typedecl ~loc tdecl
+    ~onopen:(fun () -> false)
     ~onrecord:(fun _ -> false)
     ~onvariant:(fun _ -> false)
     ~onabstract:(fun () -> false)

@@ -420,9 +420,6 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
   in
   Sig.value ~loc ~name type_
 
-(* let gcata_for_constructors ~loc ?need_else cs k = *)
-
-
 let make_gcata_str ~loc tdecl =
   let gcata_pat =
      Pat.var ~loc (sprintf "gcata_%s" tdecl.ptype_name.txt)
@@ -434,7 +431,7 @@ let make_gcata_str ~loc tdecl =
          k)
   in
   visit_typedecl ~loc tdecl
-    ~onopen:(fun () -> ans @@ Exp.assert_false ~loc)
+    ~onopen:(fun () -> ans @@ Exp.failwith_ ~loc "Initial gcata for extensible type not yet defined")
     ~onrecord:(fun _labels ->
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         ans @@ Exp.app_list ~loc
@@ -666,7 +663,7 @@ let str_type_ext_many_plugins ~loc si plugins_info extension =
             (of_longident ~loc
                (map_longident extension.ptyext_path.txt
                   ~f:(Printf.sprintf "gcata_%s")))
-            [ ident ~loc "tr"; ident ~loc "inh"; ident ~loc "subj"
+            [ ident ~loc "tr"; ident ~loc "inh"
             ; ident ~loc patname ]
         )
       (fun cd names ->
@@ -682,12 +679,12 @@ let str_type_ext_many_plugins ~loc si plugins_info extension =
       ~f:(fun acc (name,args) ->
           wrap_plugin name args acc
         )
+    |> List.rev
   in
 
   [ ifaceclass
-  ; gcata
-  ; Str.single_value ~loc (Pat.any ~loc ()) (Exp.assert_false ~loc) ]
-  (* @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension)) *)
+  ; gcata ]
+  @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension))
 end
 
 
