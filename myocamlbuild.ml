@@ -59,6 +59,8 @@ let () = dispatch (fun hook ->
      (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
       * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
 
+    flag ["make_pp_mymetaquot"; "link"; "native"] @@
+    S ([ A"mymetaquot/my_metaquot.cmxa"; A"-package"; A"ppxlib" ]);
 
     flag ["make_pp_gt"; "link"; "byte"] @@
     S ([ A"ppx/ppx_deriving_gt.cma"; A"-package"; A"ppxlib" ] @

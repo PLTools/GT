@@ -16,7 +16,7 @@ TESTS_ENVIRONMENT=./test.sh
 .DEFAULT_GOAL :=  all
 
 .PHONY: all syntax lib camlp5 all_plugins ppx bundle samples
-.PHONY: add_common common add_lib lib add_camlp5 camlp5
+.PHONY: add_common common add_lib lib add_camlp5 add_mymetaquot mymetaquot camlp5
 .PHONY: celan clean rebuild clean_tests install uninstall
 .PHONY: tests test regression promote
 
@@ -35,6 +35,10 @@ compile:
 add_common:
 	$(eval OBTARGETS +=  common/GTCommon.cma common/GTCommon.cmxa)
 common: add_common compile
+
+add_mymetaquot:
+	$(eval OBTARGETS +=  mymetaquot/my_metaquot.cmxa mymetaquot/pp_mymetaquot.native)
+mymetaquot: add_mymetaquot compile
 
 add_camlp5: add_common
 	$(eval OBTARGETS += camlp5/pa_gt.cma camlp5/pp5gt.cma)
