@@ -48,67 +48,37 @@ class g args = object(self)
     List.map rhs_args ~f:Typ.from_caml @
     [ Typ.var ~loc Plugin.extra_param_name]
 
-  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-      constr_name bindings einh k =
-    match bindings with
-    | [] -> k @@ Exp.string_const ~loc ("`"^constr_name)
-    | _ ->
-      k @@ List.fold_left
-        bindings
-        ~f:(fun acc (name, typ) -> Exp.app ~loc acc
-               (Exp.app ~loc
-                  (self#do_typ_gen ~loc ~mutal_names ~is_self_rec typ)
-                  (Exp.ident ~loc name))
-           )
-        ~init:Exp.(app ~loc
-                     (of_longident ~loc (Ldot(Lident "Format", "sprintf"))) @@
+  (* Adapted to generate only single method per constructor definition *)
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
+    let constr_name = match constr_info with
+      | `Poly s -> sprintf "`%s" s
+      | `Normal s -> s
+    in
 
-                   let fmt = String.concat ~sep:", " @@ List.map bindings
-                       ~f:(fun _ -> "%s")
-                   in
-                   Exp.string_const ~loc @@ Printf.sprintf "`%s(%s)" constr_name fmt
-                  )
-
-
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
-    k @@
-    [ let methname = sprintf "c_%s" (match constr_info with
-            `Normal s -> s | `Poly s -> s) in
-      let constr_name = match constr_info with
-        | `Poly s -> sprintf "`%s" s
-        | `Normal s -> s
-      in
-      Cf.method_concrete ~loc methname @@
-      Exp.fun_ ~loc (Pat.unit ~loc) @@
-
-        let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
-        Exp.fun_list ~loc
-          (List.map names ~f:(Pat.sprintf ~loc "%s"))
-          (if List.length ts = 0
-           then Exp.string_const ~loc constr_name
-           else
-             List.fold_left
-               (List.zip_exn names ts)
-               ~f:(fun acc (name, typ) ->
-                   Exp.app ~loc acc
-                     (self#app_transformation_expr ~loc
-                        (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                        (Exp.assert_false ~loc)
-                        (Exp.ident ~loc name)
-                     )
+    let names = List.map ts ~f:fst in
+    Exp.fun_list ~loc
+      (List.map names ~f:(Pat.sprintf ~loc "%s"))
+      (if List.length ts = 0
+       then Exp.string_const ~loc constr_name
+       else
+         List.fold_left ts
+           ~f:(fun acc (name, typ) ->
+               Exp.app ~loc acc
+                 (self#app_transformation_expr ~loc
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                    (Exp.assert_false ~loc)
+                    (Exp.ident ~loc name)
                  )
-               ~init:Exp.(app ~loc
-                     (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
+             )
+           ~init:Exp.(app ~loc
+                        (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
 
-                   let fmt = String.concat ~sep:", " @@ List.map names
-                       ~f:(fun _ -> "%s")
-                   in
-                   Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
-                  )
-          )
-
-
-  ]
+                      let fmt = String.concat ~sep:", " @@ List.map names
+                          ~f:(fun _ -> "%s")
+                      in
+                      Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
+                     )
+      )
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     let pat = Pat.record ~loc @@

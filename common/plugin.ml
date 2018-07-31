@@ -350,11 +350,22 @@ class virtual generator initial_args = object(self: 'self)
 
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
     | Rtag (constr_name,_,_, []) ->
-        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name.txt)
-          [] k
+      k [
+        let inhname = gen_symbol ~prefix:"inh_" () in
+        Cf.method_concrete ~loc (meth_name_for_constructor constr_name.txt) @@
+        Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe:(Exp.ident ~loc inhname)
+          (`Poly constr_name.txt) []
+      ]
     | Rtag (constr_name,_,_, [arg]) ->
-        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl (`Poly constr_name.txt)
-          (unfold_tuple arg) k
+      k [
+        let inhname = gen_symbol ~prefix:"inh_" () in
+        let bindings = List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts) in
+        Cf.method_concrete ~loc (meth_name_for_constructor constr_name.txt) @@
+        Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+        self#on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe:(Exp.ident ~loc inhname)
+          (`Poly constr_name.txt) bindings
+      ]
     | Rtag (constr_name,_,_,args) ->
       (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
       failwith "conjunction types are not supported but"
@@ -510,9 +521,6 @@ class virtual generator initial_args = object(self: 'self)
                 ~is_mutal:(not (List.is_empty mutal_names))
                 tdecl
             in
-            (* let arg_transfrs =
-             *   map_type_param_names tdecl.ptype_params ~f:((^)"f")
-             * in *)
             Exp.fun_list ~loc
               (self#prepare_fa_args ~loc tdecl)
               (self#make_trans_function_body ~loc ~rec_typenames:others
@@ -552,24 +560,25 @@ class virtual generator initial_args = object(self: 'self)
   method virtual on_tuple_constr : loc:loc ->
     is_self_rec:(core_type -> bool) ->
     mutal_names:string list ->
-    type_declaration ->
+    inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
-    core_type list -> (Cf.t list -> 'r) -> 'r
+    (string * core_type) list -> Exp.t
 
   method on_variant ~loc tdecl ~mutal_names ~is_self_rec cds k =
     k @@
     List.concat_map cds ~f:(fun cd ->
         match cd.pcd_args with
         | Pcstr_tuple ts ->
+          [ let inhname = gen_symbol ~prefix:"inh_" () in
+            let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
+            Cf.method_concrete ~loc (meth_name_for_constructor cd.pcd_name.txt) @@
+            Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
             self#on_tuple_constr ~loc ~mutal_names ~is_self_rec
-              tdecl (`Normal cd.pcd_name.txt) ts (fun x -> x)
+              ~inhe:(Exp.ident ~loc inhname)
+              (`Normal cd.pcd_name.txt) bindings
+          ]
         | Pcstr_record ls -> self#on_record_constr tdecl cd ls
       )
-
-  method virtual generate_for_polyvar_tag : loc:loc ->
-    is_self_rec:(core_type -> bool) -> mutal_names:(string list) ->
-    string -> (string*core_type) list -> Exp.t ->
-    (Exp.t -> 'x) -> 'x
 
   method generate_for_variable ~loc varname =
     Exp.sprintf ~loc "f%s" varname
@@ -714,10 +723,10 @@ class virtual generator initial_args = object(self: 'self)
               einh esubj
             in
             let onrow lab bindings =
-              self#generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-                lab.txt bindings
-                (Exp.sprintf ~loc "inh")
-                (fun x -> x)
+              self#on_tuple_constr ~loc ~is_self_rec ~mutal_names
+                ~inhe:(Exp.sprintf ~loc "inh")
+                (`Poly lab.txt)
+                bindings
             in
             self#abstract_trf ~loc (fun einh esubj ->
               prepare_patt_match_poly ~loc esubj rows maybe_labels

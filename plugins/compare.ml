@@ -71,9 +71,6 @@ class g initial_args = object(self: 'self)
    *     ; Exp.sprintf ~loc "subj"
    *     ] *)
 
-
-
-
   method chain_exprs ~loc e1 e2 =
     Exp.app_list ~loc
       (Exp.of_longident ~loc (access_GT "chain_compare"))
@@ -96,19 +93,12 @@ class g initial_args = object(self: 'self)
         *)
       ]
 
-
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info args =
     let is_poly,cname =
       match constr_info with
       | `Normal s -> false,  s
       | `Poly   s -> true,   s
     in
-    let methname = sprintf "c_%s" cname in
-    let names     = List.map args ~f:(fun _ -> gen_symbol ()) in
-
-    k @@ [
-      Cf.method_concrete ~loc methname @@
-      Exp.fun_ ~loc (Pat.sprintf ~loc "inh") @@
 
         let main_case =
           let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
@@ -125,7 +115,7 @@ class g initial_args = object(self: 'self)
           in
           let rhs =
             List.fold_left  ~init:(self#chain_init ~loc)
-              (List.map3_exn pat_names names args ~f:(fun a b c -> (a,b,c)))
+              (List.map2_exn pat_names args ~f:(fun a (b,c) -> (a,b,c)))
               ~f:(fun acc (pname, name, typ) ->
                 self#chain_exprs ~loc
                   acc
@@ -148,9 +138,8 @@ class g initial_args = object(self: 'self)
           case ~lhs ~rhs
         in
 
-        Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
-        Exp.match_ ~loc (Exp.ident ~loc "inh") [ main_case; other_case ]
-  ]
+        Exp.fun_list ~loc (List.map args ~f:(fun (s,_) -> Pat.sprintf ~loc "%s" s)) @@
+        Exp.match_ ~loc inhe [ main_case; other_case ]
 
   method app_transformation_expr ~loc trf inh subj =
     Exp.app_list ~loc trf [ inh; subj ]
@@ -159,26 +148,6 @@ class g initial_args = object(self: 'self)
     Exp.fun_list ~loc [Pat.sprintf ~loc "inh"; Pat.sprintf ~loc "subj"] @@
     k (Exp.sprintf ~loc "inh") (Exp.sprintf ~loc "subj")
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
-
-  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-      constr_name bindings einh k =
-    (* TODO: rewrite *)
-    let ctuple =
-      (* match bindings with
-       * | [] -> []
-       * | _  ->
-       *   Some (Exp.tuple ~loc @@ *)
-              List.map bindings
-                ~f:(fun (name, typ) ->
-                    Exp.app_list ~loc
-                      (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                      [ einh
-                      ; Exp.ident ~loc name
-                      ]
-                  )
-
-    in
-    k @@ Exp.variant ~loc constr_name ctuple
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     assert Int.(List.length labs > 0);

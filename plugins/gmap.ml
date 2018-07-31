@@ -117,40 +117,24 @@ class g args = object(self: 'self)
       [Cf.constraint_ ~loc (Typ.var ~loc Plugin.extra_param_name) right ]
     else []
 
-  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-      constr_name bindings  einh k =
-    k @@ Exp.variant ~loc constr_name @@
-    List.map bindings
-      ~f:(fun (name, typ) ->
-          Exp.app ~loc
-            (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-            (Exp.ident ~loc name)
-        )
-
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
-    let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
-    let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
-    k [
-      Cf.method_concrete ~loc methname @@
-      Exp.fun_ ~loc (Pat.sprintf ~loc "_inh") @@
-
-      Exp.fun_list ~loc
-        (List.map names ~f:(Pat.sprintf ~loc "%s"))
-        (let ctuple =
-           List.map (List.zip_exn names ts)
-             ~f:(fun (name, typ) ->
-                 self#app_transformation_expr ~loc
-                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                   (Exp.ident ~loc "_inh")
-                   (Exp.ident ~loc name)
-               )
-        in
-        (match constr_info with `Normal s -> Exp.construct ~loc (lident s)
-                              | `Poly s   -> Exp.variant ~loc s
-        )
-          ctuple
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
+    Exp.fun_list ~loc
+      (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
+      (let ctuple =
+         List.map ts
+           ~f:(fun (name, typ) ->
+               self#app_transformation_expr ~loc
+                 (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                 inhe
+                 (Exp.ident ~loc name)
+             )
+       in
+       (match constr_info with `Normal s -> Exp.construct ~loc (lident s)
+                             | `Poly s   -> Exp.variant ~loc s
        )
-  ]
+         ctuple
+      )
+
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     let pat = Pat.record ~loc @@
@@ -161,17 +145,15 @@ class g args = object(self: 'self)
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
     [ Cf.method_concrete ~loc methname @@
       Exp.fun_ ~loc (Pat.unit ~loc) @@
-
-          Exp.fun_ ~loc pat @@
-          Exp.record ~loc @@ List.map labs
-            ~f:(fun {pld_name; pld_type} ->
-                lident pld_name.txt,
-                self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
-                  (Exp.assert_false ~loc)
-                  (Exp.ident ~loc pld_name.txt)
-
-              )
+      Exp.fun_ ~loc pat @@
+      Exp.record ~loc @@ List.map labs
+        ~f:(fun {pld_name; pld_type} ->
+            lident pld_name.txt,
+            self#app_transformation_expr ~loc
+              (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+              (Exp.assert_false ~loc)
+              (Exp.ident ~loc pld_name.txt)
+          )
     ]
 
 end

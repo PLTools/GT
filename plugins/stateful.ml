@@ -65,24 +65,17 @@ class g initial_args = object(self: 'self)
     [ Typ.var ~loc "env"] @
     [ Typ.var ~loc Plugin.extra_param_name ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info ts k =
-    let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
-    let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
-    k [
-      Cf.method_concrete ~loc methname @@
-      Exp.fun_ ~loc (Pat.sprintf ~loc "env0") @@
-
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
       Exp.fun_list ~loc
-        (List.map names ~f:(Pat.sprintf ~loc "%s"))
+        (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
         (let c = match constr_info with
             | `Normal s -> Exp.construct ~loc (lident s)
             | `Poly s   -> Exp.variant ~loc s
          in
          match ts with
-         | [] -> Exp.tuple ~loc [ Exp.ident ~loc "env0"; c [] ]
+         | [] -> Exp.tuple ~loc [ inhe; c [] ]
          | ts ->
            let res_var_name = sprintf "%s_rez" in
-           let ts = List.zip_exn names ts in
            let ys = List.mapi ~f:(fun n x -> (n,x)) ts in
            List.fold_right ys
              ~init:(Exp.tuple ~loc [ Exp.sprintf ~loc "env%d" (List.length ys)
@@ -97,13 +90,12 @@ class g initial_args = object(self: 'self)
                                    ; Pat.sprintf ~loc "%s" @@ res_var_name name])
                    (self#app_transformation_expr ~loc
                      (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                     (Exp.sprintf ~loc "env%d" i)
+                     (if i=0 then inhe else Exp.sprintf ~loc "env%d" i)
                      (Exp.ident ~loc name)
                    )
                    acc
                )
        )
-  ]
 
   method! on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     failwith "not implemented"

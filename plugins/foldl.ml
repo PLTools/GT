@@ -87,18 +87,6 @@ class g initial_args = object(self: 'self)
       ]
 *)
 
-  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-      constr_name bindings einh k =
-    k @@ Exp.variant ~loc constr_name @@
-    List.map bindings
-      ~f:(fun (name, typ) ->
-                    Exp.app_list ~loc
-                      (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                      [ einh
-                      ; Exp.ident ~loc name
-                      ]
-      )
-
   method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
     List.fold_left ~f:(fun acc (name,typ) ->
         Exp.app_list ~loc
@@ -108,25 +96,12 @@ class g initial_args = object(self: 'self)
         ~init
         xs
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names tdecl constr_info args k =
-    let names = List.map args ~f:(fun _ -> gen_symbol ()) in
-    let methname = sprintf "c_%s" (match constr_info with `Normal s -> s | `Poly s -> s) in
-    k [
-      (* TODO: inh syn stuff *)
-    Cf.method_concrete ~loc methname @@
-    Exp.fun_ ~loc (Pat.sprintf ~loc "inh") @@
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info args =
+    let names = List.map args ~f:fst in
     Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
     self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_names)
-
-    (* List.fold_left ~f:(fun acc (name,typ) ->
-     *     Exp.app_list ~loc
-     *       (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-     *       [ acc; Exp.sprintf ~loc "%s" name]
-     *     ) *)
-        ~init:(Exp.ident ~loc "inh")
-        (List.zip_exn names args)
-
-  ]
+        ~init:inhe
+        args
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
     let pat = Pat.record ~loc @@
@@ -138,7 +113,7 @@ class g initial_args = object(self: 'self)
     [ Cf.method_concrete ~loc methname @@
       Exp.fun_list ~loc
         [ Pat.sprintf ~loc "inh"; pat]
-        (Exp.failwith_ ~loc "not implemented")
+        (Exp.failwith_ ~loc "not implemented. TODO")
 
     ]
 

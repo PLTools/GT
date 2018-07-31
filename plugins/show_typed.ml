@@ -124,28 +124,6 @@ class g args = object(self: 'self)
     in
     (Exp.ident ~loc "fself") :: (List.concat xs)
 
-  method generate_for_polyvar_tag ~loc ~is_self_rec ~mutal_names
-      constr_name bindings  einh k =
-    match bindings with
-    | [] -> k @@ Exp.string_const ~loc ("`"^constr_name)
-    | _ ->
-      assert false
-      (* k @@ List.fold_left
-       *   bindings
-       *   ~f:(fun acc (name, typ) -> Exp.app ~loc acc
-       *          [%expr
-       *            [%e self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ]
-       *            ([%e einh ]: unit)
-       *            [%e Exp.ident ~loc name ]
-       *          ])
-       *   ~init:[%expr Format.sprintf [%e
-       *       let fmt = String.concat ~sep:", " @@ List.map bindings
-       *           ~f:(fun _ -> "%s")
-       *       in
-       *       Exp.constant ~loc @@ const_string @@
-       *       sprintf "`%s(%s)" constr_name fmt
-       *     ]] *)
-
   method! compose_apply_transformations ~loc ~left right typ =
     (* let typ_str = Exp.string_const ~loc "asdf" in *)
     let typ_str = self#string_of_typ ~loc typ  in
