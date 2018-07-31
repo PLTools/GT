@@ -55,6 +55,8 @@ add_lib:
 	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
 lib: add_lib compile
 
+doc:
+	$(OB) GT.docdir/index.html -Is common
 
 celan: clean
 clean: clean_tests

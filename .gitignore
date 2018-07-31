@@ -3,4 +3,5 @@ _build
 *.native
 *.byte
 /Makefile
-
+# documentation directory
+/GT.docdir

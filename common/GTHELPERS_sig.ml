@@ -1,3 +1,7 @@
+(** The first special comment of the file is the comment associated
+     with the whole module.*)
+
+(** for S *)
 module type S = sig
 
 type loc
@@ -11,6 +15,7 @@ type type_arg
 val named_type_arg : loc:loc -> string -> type_arg
 val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 
+(** for Pat *)
 module Pat :
   sig
     type t
