@@ -68,8 +68,8 @@ module Custom =
     let redecorate : 'inh -> ('a -> 'inh -> 'c * 'inh) -> 'a decorated -> 'c decorated =
       fun init f expr ->
       let tr = object(self_p)
-        inherit [ 'a decorated a_expr, 'inh, 'c decorated a_expr * 'inh
-                , 'a, 'inh, 'c
+        inherit [ 'inh, 'a decorated a_expr, 'c decorated a_expr * 'inh
+                , 'inh, 'a, 'c
                 , 'inh, 'c decorated * 'inh, _
                 ] GT.pair_t
 
