@@ -4,12 +4,13 @@
 
 set  +x
 camlp5o camlp5/pp5gt.cma plugins/foldl.cmo plugins/foldr.cmo \
-	plugins/gmap.cmo plugins/show.cmo \
-	plugins/compare.cmo plugins/eq.cmo \
-	plugins/html.cmo \
-	plugins/eval.cmo \
-	plugins/stateful.cmo \
-	plugins/show_typed.cmo \
+	      plugins/gmap.cmo plugins/show.cmo \
+        plugins/fmt.cmo  \
+	      plugins/compare.cmo plugins/eq.cmo \
+	      plugins/html.cmo \
+	      plugins/eval.cmo \
+	      plugins/stateful.cmo \
+	      plugins/show_typed.cmo \
         $@
 exit $?
 

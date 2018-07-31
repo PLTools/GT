@@ -20,7 +20,7 @@ let make_plugins_args ~is_byte =
   (* N.B. Order matters *)
   let names =
     [ "show"; "gmap"; "eval";  "compare"; "eq";  "stateful"; "foldl"; "foldr"
-    ; "show_typed"
+    ; "show_typed"; "fmt"
     ; "html"
     ]
   in
@@ -69,6 +69,7 @@ let () = dispatch (fun hook ->
 
     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
     dep ["compile"; "link_pp5gt"]        ["camlp5/core2.ml"];
+    (* dep ["make_pp_gt"] ["plugins/fmt.cmx"]; *)
     ()
  | _ -> ()
 )

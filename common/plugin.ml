@@ -653,7 +653,7 @@ class virtual generator initial_args = object(self: 'self)
       Exp.acc ~loc e @@
       (Ldot (Lident "GT", "plugins"))
     in
-    let rec helper t =
+    let rec helper ~loc t =
       match t.ptyp_desc with
       | Ptyp_var s -> self#generate_for_variable ~loc s
       | Ptyp_tuple params ->
@@ -737,7 +737,7 @@ class virtual generator initial_args = object(self: 'self)
           end
         | _ -> failwith "Finish it!"
     in
-    helper t
+    helper ~loc t
 
 
   method compose_apply_transformations ~loc ~left right typ =

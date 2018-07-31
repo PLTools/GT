@@ -21,6 +21,14 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
+module Format = struct
+  include Format
+  let pp_print_unit  fmt () = pp_print_string fmt "()"
+  let pp_print_int32 fmt n  = Format.pp_print_string fmt @@ Int32.format "%d" n
+  let pp_print_int64 fmt n  = Format.pp_print_string fmt @@ Int64.format "%d" n
+  let pp_print_nativeint fmt n = Format.pp_print_string fmt @@ Nativeint.format "%d" n
+end
+
 type ('a, 'b) t = {gcata : 'a; plugins : 'b}
 let transform t = t.gcata
 
@@ -106,6 +114,14 @@ class ['a, 'self] show_list_t fself fa =
     inherit [unit, 'a, string, unit, 'self, string] @list
     method c_Nil  _      = ""
     method c_Cons _ x xs = (fa x) ^ (match xs with [] -> "" | _ -> "; " ^ fself xs)
+  end
+class ['a, 'self] fmt_list_t fself fa =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'self, unit] @list
+    constraint 'inh = Format.formatter
+    method c_Nil  _      = ()
+    method c_Cons fmt x xs =
+      Format.fprintf fmt "%a :: %a" fa x fself xs
   end
 
 class ['a, 'sa, 'self] gmap_list_t fself fa =

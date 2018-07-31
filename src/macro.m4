@@ -19,6 +19,11 @@ class ['extra] show_$1_t _fself =
     inherit [unit, 'extra, string] @$1
     method t_$1 inh x = string_of_$1 x
   end
+class ['extra] fmt_$1_t _fself =
+  object
+    inherit [Format.formatter, 'extra, unit] @$1
+    method t_$1 fmt x = Format.pp_print_$1 fmt x
+  end
 class ['extra] gmap_$1_t _fself =
   object
     inherit [unit, 'extra, $1] @$1
@@ -60,6 +65,7 @@ let gcata_$1 tr inh x = tr#t_$1 inh x
 let $1 : (('inh, _, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
           < show    : $1 -> string;
             html    : $1 -> HTML.viewer;
+            fmt     : Format.formatter -> $1 -> unit;
             compare : $1 -> $1 -> comparison;
             eq      : $1 -> $1 -> bool;
             gmap    : $1 -> $1;
@@ -71,6 +77,7 @@ let $1 : (('inh, _, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
    plugins =
       object
         method show    = gcata_$1 (new @$1[show]    (fun _ -> assert false)) ()
+        method fmt     = gcata_$1 (new @$1[fmt]     (fun _ -> assert false))
         method html    = gcata_$1 (new @$1[html]    (fun _ -> assert false)) ()
         method compare = gcata_$1 (new @$1[compare] (fun _ -> assert false))
         method eq      = gcata_$1 (new @$1[eq]      (fun _ -> assert false))

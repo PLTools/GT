@@ -15,8 +15,8 @@ let plugin_name = trait_name
 let access_GT s = Ldot (Lident "GT", s)
 
 class g initial_args = object(self: 'self)
-  inherit P.generator initial_args as super
-  inherit P.with_inherit_arg as super2
+  inherit P.generator initial_args
+  inherit P.with_inherit_arg
 
   method plugin_name = plugin_name
 

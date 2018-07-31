@@ -5,7 +5,9 @@ B ../_build/src
 
 PKG compiler-libs.common
 PKG ppx_import
+PKG ppxlib
+PKG ocaml-migrate-parsetree
 
 FLG -rectypes
 #FLG -ppx "/home/kakadu/.opam/4.04.0+fp+flambda/lib/ppx_deriving/ppx_deriving --as-ppx -deriving-plugin /home/kakadu/asp/gt-ppx/_build/ppx/ppx_deriving_gt.cmxa"
-FLG -ppx "/home/kakadu/.opam/4.04.0+fp+flambda/lib/ppx_deriving/ppx_deriving --as-ppx -deriving-plugin /home/kakadu/prog/asp/gt-ppx/_build/ppx/ppx_deriving_gt.cmxa"
+#FLG -ppx "/home/kakadu/.opam/4.04.0+fp+flambda/lib/ppx_deriving/ppx_deriving --as-ppx -deriving-plugin /home/kakadu/prog/asp/gt-ppx/_build/ppx/ppx_deriving_gt.cmxa"
