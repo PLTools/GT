@@ -86,8 +86,8 @@ let fix0 f t =
   knot := recurse;
   recurse t
 
-
-(** Standart type go there *)
+(* ************************************************************************* *)
+(** Standart types go there *)
 type 'a plist      = 'a list
 type 'a list       = 'a plist
 
@@ -115,6 +115,7 @@ class ['a, 'self] show_list_t fself fa =
     method c_Nil  _      = ""
     method c_Cons _ x xs = (fa x) ^ (match xs with [] -> "" | _ -> "; " ^ fself xs)
   end
+
 class ['a, 'self] fmt_list_t fself fa =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] @list
@@ -187,6 +188,8 @@ class ['a, 'self] compare_list_t fself fa =
 
 let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
             < show    : ('a -> string)      -> 'a list -> string;
+              fmt     : (Format.formatter -> 'a -> unit) ->
+                        Format.formatter -> 'a list -> unit;
               html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
               gmap    : ('a -> 'b) -> 'a list -> 'b list;
               eval    : ('env -> 'a -> 'b) -> 'env -> 'a list -> 'b list;
@@ -203,6 +206,13 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
                    gcata_list (new @list[show] fself fa) ()
                  )
                  l) ^ "]"
+               method fmt fa inh l =
+                 Format.pp_print_string inh "[";
+                 fix0 (fun fself ->
+                     gcata_list (new @list[fmt] fself fa)
+                 ) inh l;
+                 Format.pp_print_string inh "["
+
                method html    fa   =
                  fix0 (fun fself ->
                    gcata_list (new @list[html] fself fa) ()
@@ -350,6 +360,18 @@ class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] option_t =
     method virtual c_Some :   'inh -> 'a  -> 'syn
   end
 
+class ['a, 'self] show_option_t _fself fa =
+  object
+    inherit [ unit, 'a, string, unit, 'self, string] @option
+    method c_None _  = "None"
+    method c_Some _ x = "Some (" ^ fa x ^ ")"
+  end
+class ['a, 'self] fmt_option_t _fself fa =
+  object
+    inherit [ Format.formatter, 'a, unit, Format.formatter, 'self, unit] @option
+    method c_None fmt  = Format.pp_print_string fmt "None"
+    method c_Some fmt x = Format.fprintf fmt "Some (%a)" fa x
+  end
 class ['a] html_option_t _fself fa =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @option
@@ -357,12 +379,6 @@ class ['a] html_option_t _fself fa =
     method c_Some _ x = View.concat (HTML.string "Some") (HTML.ul (fa x))
   end
 
-class ['a, 'self] show_option_t _fself fa =
-  object
-    inherit [ unit, 'a, string, unit, 'self, string] @option
-    method c_None _  = "None"
-    method c_Some _ x = "Some (" ^ fa x ^ ")"
-  end
 
 class ['a, 'sa, 'self] gmap_option_t _fself fa =
   object
@@ -423,6 +439,8 @@ class ['a, 'self] compare_option_t _fself fa =
 
 let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> 'syn,
               < show    : ('a -> string)      -> 'a option -> string;
+                fmt     : (Format.formatter -> 'a -> unit) ->
+                          Format.formatter -> 'a option -> unit;
                 html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
                 gmap    : ('a -> 'b) -> 'a option -> 'b option;
                 stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a option -> 'env * 'b option;
@@ -436,6 +454,7 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
   {gcata   = gcata_option;
    plugins = object
                method show     fa = gcata_option (new @option[show] fself fa) ()
+               method fmt      fa = gcata_option (new @option[fmt] fself fa)
                method html     fa = gcata_option (new @option[html] fself fa) ()
                method gmap     fa = gcata_option (new @option[gmap] fself fa) ()
                method stateful fa = gcata_option (new @option[stateful] fself fa)
@@ -459,6 +478,12 @@ class ['a, 'self] show_free_t _ fa =
   object
     inherit [unit, 'a, string, unit, 'self, string] free_t
     method c_Free () x = "(" ^ fa x ^ ")"
+  end
+class ['a, 'self] fmt_free_t _ fa =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'self, unit] free_t
+    constraint 'inh = Format.formatter
+    method c_Free fmt x = Format.fprintf fmt "(%a)" fa x
   end
 
 class ['a, 'self] html_free_t _ fa =
@@ -512,6 +537,8 @@ class ['a, 'self] compare_free_t _ fa  =
 
 let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               < show    : ('a -> string) -> 'a free -> string;
+                fmt     : (Format.formatter -> 'a -> unit) ->
+                          Format.formatter -> 'a free -> unit;
                 html    : ('a -> HTML.viewer) -> 'a free -> HTML.viewer;
                 gmap    : ('a -> 'c) -> 'a free -> 'c free;
                 eval    : ('env -> 'a -> 'c) -> 'env -> 'a free -> 'c free;
@@ -526,6 +553,7 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
   {gcata   = gcata_free;
    plugins = object
        method show     fa = gcata_free (new show_free_t (fun _ -> assert false) fa) ()
+       method fmt      fa = gcata_free (new @free[fmt]  (fun _ -> assert false) fa)
        method html     fa = gcata_free (new html_free_t (fun _ -> assert false) fa) ()
        method gmap     fa = gcata_free (new gmap_free_t (fun _ -> assert false) fa) ()
        method eval     fa = gcata_free (new @free[eval] (fun _ _ -> assert false) fa)
@@ -553,6 +581,12 @@ class ['a, 'b, 'self] show_pair_t _ fa fb =
   object
     inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] pair_t
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
+  end
+class ['a, 'b, 'self] fmt_pair_t _ fa fb =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] pair_t
+    constraint 'inh = Format.formatter
+    method c_Pair fmt x y = Format.fprintf fmt "(%a,%a)" fa x fb y
   end
 
 class ['a, 'b, 'self] html_pair_t _ fa fb =
@@ -618,6 +652,9 @@ class ['a, 'b, 'self] compare_pair_t _ fa fb  =
 let pair:
   ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, _, 'syn) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
+                fmt     : (Format.formatter -> 'a -> unit) ->
+                          (Format.formatter -> 'b -> unit) ->
+                          Format.formatter -> ('a,'b) pair -> unit;
                 html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) ->
                           ('a, 'b) pair -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair;
@@ -636,6 +673,7 @@ let pair:
   {gcata   = gcata_pair;
    plugins = object
        method show    fa fb = gcata_pair (new show_pair_t (fun _ -> assert false) fa fb) ()
+       method fmt     fa fb = gcata_pair (new @pair[fmt]  (fun _ -> assert false) fa fb)
        method html    fa fb = gcata_pair (new html_pair_t (fun _ -> assert false) fa fb) ()
        method gmap    fa fb = gcata_pair (new gmap_pair_t (fun _ -> assert false) fa fb) ()
        method eval    fa fb = gcata_pair (new @pair[eval] (fun _ -> assert false) fa fb)
@@ -656,6 +694,9 @@ let tuple2 = pair
 (* Just aliases *)
 class ['a, 'b, 'self] show_tuple2_t fself fa fb = object
   inherit [ 'a, 'b, 'self] show_pair_t fself fa fb
+end
+class ['a, 'b, 'self] fmt_tuple2_t fself fa fb = object
+  inherit [ 'a, 'b, 'self] fmt_pair_t fself fa fb
 end
 class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t fself fa fb = object
   inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t fself fa fb
