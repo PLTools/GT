@@ -2,7 +2,7 @@ true: debug, bin_annot, short_paths, annot
 #, strict_sequence
 <sample>: -traverse
 
-<common/*>:  package(ppxlib)
+<common/*>:  package(ppxlib,ocamlgraph,base)
 <common/plugin.*>: package(ppxlib.metaquot)
 <plugins/*>: package(ppxlib)
 #<common/compare.ml> or <ext/plugin.ml>: package(ppxlib.metaquot)
@@ -21,10 +21,10 @@ true: debug, bin_annot, short_paths, annot
 #<ppx/*>: package(ppx_core,ppx_type_conv,ppx_metaquot)
 <ppx/*>: package(ppxlib)
 <ppx/PpxHelpers.*>: package(ppxlib.metaquot)
-<ppx/ppx_deriving_gt.cm*>: linkall
+<ppx/ppx_deriving_gt.cm*>: package(ocamlgraph), linkall
 
 <ppx/pp_gt.cm*>: package(ppxlib.runner)
-<ppx/pp_gt.native>: use_GTCommon, make_pp_gt
+<ppx/pp_gt.native>: use_GTCommon, make_pp_gt, package(ocamlgraph)
 
 ###########################################
 # Regression tests

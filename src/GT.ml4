@@ -72,6 +72,7 @@ let string_of_nativeint = Nativeint.to_string
 GENERIFY(bool)
 GENERIFY(int)
 GENERIFY(string)
+GENERIFY(float)
 GENERIFY(char)
 GENERIFY(unit)
 GENERIFY(int32)
@@ -741,6 +742,13 @@ class ['a, 'b, 'c, 'self] show_triple_t _ fa fb fc =
     method c_Triple () x y z = Printf.sprintf "(%s, %s, %s)"
       (fa x) (fb y) (fc z)
 end
+class ['a, 'b, 'c, 'self] fmt_triple_t _ fa fb fc =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'c, unit, 'inh, 'self, unit] triple_t
+    constraint 'inh = Format.formatter
+    method c_Triple fmt x y z = Format.fprintf fmt "(%a,%a,%a)" fa x fb y fc z
+  end
+
 class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t _ fa fb fc =
   object
     inherit [ unit, 'a, 'a2
@@ -814,7 +822,11 @@ let triple :
     ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'inh, _, 'syn ) #triple_t ->
       'inh -> ('a, 'b, 'c) triple -> 'syn
     , < show    : ('a -> string) -> ('b -> string) ->  ('c -> string) ->
-                       ('a, 'b, 'c) triple  -> string;
+                  ('a, 'b, 'c) triple  -> string;
+        fmt     : (Format.formatter -> 'a -> unit) ->
+                  (Format.formatter -> 'b -> unit) ->
+                  (Format.formatter -> 'c -> unit) ->
+                  Format.formatter -> ('a, 'b, 'c) triple -> unit;
         gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
                   ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
         eval    : ('env -> 'a -> 'd) -> ('env -> 'b -> 'e) -> ('env -> 'c -> 'f) ->
@@ -846,6 +858,8 @@ let triple :
    plugins = object
      method show    fa fb fc =
        gcata_triple (new show_triple_t    (fun _ -> assert false) fa fb fc) ()
+     method fmt     fa fb fc =
+       gcata_triple (new @triple[fmt]     (fun _ -> assert false) fa fb fc)
      method gmap    fa fb fc =
        gcata_triple (new gmap_triple_t    (fun _ -> assert false) fa fb fc) ()
      method eval    fa fb fc =
@@ -865,6 +879,9 @@ let tuple3 = triple
 
 class ['a, 'b, 'c, 'self] show_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'b, 'c, 'self] show_triple_t fself fa fb fc
+end
+class ['a, 'b, 'c, 'self] fmt_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[fmt] fself fa fb fc
 end
 class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_triple_t fself fa fb fc
@@ -887,6 +904,43 @@ end
 class ['a, 'b, 'c, 'syn, 'self] foldr_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'b, 'c, 'syn, 'self] foldr_triple_t fself fa fb fc
 end
+
+(*******************************************************************************)
+(* Tuples of size 3 *)
+type ('a, 'b, 'c, 'd) tuple4 = 'a * 'b * 'c * 'd
+class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'id,'d,'sd, 'inh, 'e, 'syn] tuple4_t =
+object
+  method virtual c_tuple4 : 'inh -> 'a -> 'b -> 'c -> 'd -> 'syn
+end
+let gcata_tuple4 tr inh (a,b,c,d) = tr#c_tuple4 inh a b c d
+
+class ['a, 'b, 'c, 'd, 'self] fmt_tuple4_t _ fa fb fc fd =
+  object
+    inherit [ 'inh, 'a, unit
+            , 'inh, 'b, unit
+            , 'inh, 'c, unit
+            , 'inh, 'd, unit
+            , 'inh, 'self, unit] tuple4_t
+    constraint 'inh = Format.formatter
+    method c_tuple4 fmt a b c d =
+      Format.fprintf fmt "(%a,%a,%a,%a)" fa a fb b fc c fd d
+  end
+
+let tuple4 :
+    ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'id, 'd, 'sd, 'inh, _, 'syn ) #tuple4_t ->
+      'inh -> ('a, 'b, 'c, 'd) tuple4 -> 'syn
+    , < fmt     : (Format.formatter -> 'a -> unit) ->
+                  (Format.formatter -> 'b -> unit) ->
+                  (Format.formatter -> 'c -> unit) ->
+                  (Format.formatter -> 'd -> unit) ->
+                  Format.formatter -> ('a, 'b, 'c, 'd) tuple4 -> unit;
+      >) t =
+  {gcata   = gcata_tuple4;
+   plugins = object
+     method fmt     fa fb fc fd =
+       gcata_tuple4 (new @tuple4[fmt]     (fun _ -> assert false) fa fb fc fd)
+  end
+}
 
 (****************************************************************************)
 let show    t = t.plugins#show

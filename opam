@@ -15,8 +15,9 @@ install: [make "PREFIX=%{prefix}%" "install"]
 remove:  [make "PREFIX=%{prefix}%" "uninstall"]
 
 depends: [
-  "ocamlfind" {build}
+  "ocamlfind"  {build}
   "ocamlbuild" {build}
+  "ocamlgraph" {build}
   "ppxlib"
   "camlp5"
 ]

@@ -4,3 +4,4 @@ B ../_build/src
 PKG base
 PKG ppxlib
 PKG ppxlib.metaquot
+PKG ocamlgraph

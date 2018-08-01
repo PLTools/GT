@@ -3,15 +3,16 @@
 #camlp5o -I `ocamlfind query GT` pa_gt.cmo pr_o.cmo -I plugins show.cmo gmap.cmo foldl.cmo foldr.cmo compare.cmo eq.cmo $@
 
 set  +x
-camlp5o camlp5/pp5gt.cma plugins/foldl.cmo plugins/foldr.cmo \
-	      plugins/gmap.cmo plugins/show.cmo \
-        plugins/fmt.cmo  \
-	      plugins/compare.cmo plugins/eq.cmo \
-	      plugins/html.cmo \
-	      plugins/eval.cmo \
-	      plugins/stateful.cmo \
-	      plugins/show_typed.cmo \
-        $@
+camlp5o `ocamlfind query ocamlgraph`/graph.cma \
+    camlp5/pp5gt.cma plugins/foldl.cmo plugins/foldr.cmo \
+	  plugins/gmap.cmo plugins/show.cmo \
+    plugins/fmt.cmo  \
+	  plugins/compare.cmo plugins/eq.cmo \
+	  plugins/html.cmo \
+	  plugins/eval.cmo \
+	  plugins/stateful.cmo \
+	  plugins/show_typed.cmo \
+    $@
 exit $?
 
 # camlp5o -I `ocamlfind query base` \

@@ -527,24 +527,51 @@ let do_typ ~loc sis plugins is_rec tdecl =
     ; [ collect_plugins_str ~loc tdecl plugins ]
     ]
 
+module G = Graph.Persistent.Digraph.Concrete(String)
+module T = Graph.Topological.Make(G)
+module SM = Caml.Map.Make(String)
+
 let do_mutal_types ~loc sis plugins tdecls =
-  let tdecls =
-    List.sort tdecls ~compare:(fun a b ->
-        let classify = visit_typedecl ~loc
-            ~onrecord:(fun _ -> false)
-            ~onvariant:(fun _ -> false)
-            ~onabstract:(fun _ -> false)
-            ~onopen:(fun _ -> false)
-            ~onmanifest:(fun _ -> true)
-        in
-        let ac = classify a in
-        let bc = classify b in
-        if ac && not bc then 1 else 0
-      )
+  let name_map =
+    List.fold_left ~init:SM.empty tdecls
+      ~f:(fun acc tdecl ->
+          match tdecl with
+          | {ptype_name} -> SM.add ptype_name.txt tdecl acc
+        )
   in
+
+  let g = List.fold_left ~init:G.empty tdecls
+      ~f:(fun acc tdecl ->
+          let acc = G.add_vertex acc tdecl.ptype_name.txt in
+          let info = visit_typedecl ~loc tdecl
+            ~onrecord:(fun _ -> None)
+            ~onvariant:(fun _ -> None)
+            ~onabstract:(fun _ -> None)
+            ~onopen:(fun _ -> None)
+            ~onmanifest:(fun typ ->
+                match typ.ptyp_desc with
+                | Ptyp_constr ({txt=Lident s},_) -> Some s
+                | _ -> None
+              )
+          in
+          match info with
+          | None -> acc
+          | Some s -> begin
+              match SM.find s name_map with
+              | exception Not_found -> acc
+              |  _ -> G.add_edge acc s tdecl.ptype_name.txt
+            end
+          | Some _ -> acc
+        )
+  in
+  let tdecls_new =
+    T.fold (fun s acc -> (SM.find s name_map) :: acc) g []
+    |> List.rev
+  in
+  assert (List.length tdecls = List.length tdecls_new);
   let classes, catas =
     let all =
-      List.map tdecls ~f:(fun tdecl ->
+      List.map tdecls_new ~f:(fun tdecl ->
         (make_interface_class ~loc tdecl, make_gcata_str ~loc tdecl)
       )
     in
@@ -552,9 +579,9 @@ let do_mutal_types ~loc sis plugins tdecls =
   in
 
   sis @
-  [Str.of_class_declarations ~loc classes] @
+  (List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])) @
   catas @
-  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
+  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls_new)
 
 
 (* for signatures *)

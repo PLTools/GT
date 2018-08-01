@@ -98,13 +98,13 @@ end = struct
   and  'b boo = B1 of 'b | B2 of 'b foo
   [@@deriving gt ~options:{show_typed;}]
 
-let () =
-  let sh1 x = show_typed_foo "string" show_typed_string x in
-  let sh2 x = show_typed_boo "string" show_typed_string x in
+  let () =
+    let sh1 x = show_typed_foo "string" show_typed_string x in
+    let sh2 x = show_typed_boo "string" show_typed_string x in
 
-  Printf.printf "%s\n%!" (sh1 @@ F2 (B2 (F1 "asdf")));
-  Printf.printf "%s\n%!" (sh1 @@ F2 (B2 (F2 (B1 "z"))));
-  Printf.printf "%s\n%!" (sh2 @@ B2 (F2 (B2 (F1 "asdf"))) );
-  Printf.printf "%s\n%!" (sh2 @@ B2 (F2 (B2 (F2 (B1 "z")))) );
-  ()
+    Printf.printf "%s\n%!" (sh1 @@ F2 (B2 (F1 "asdf")));
+    Printf.printf "%s\n%!" (sh1 @@ F2 (B2 (F2 (B1 "z"))));
+    Printf.printf "%s\n%!" (sh2 @@ B2 (F2 (B2 (F1 "asdf"))) );
+    Printf.printf "%s\n%!" (sh2 @@ B2 (F2 (B2 (F2 (B1 "z")))) );
+    ()
 end
