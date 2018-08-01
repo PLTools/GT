@@ -316,18 +316,29 @@ class virtual generator initial_args = object(self: 'self)
 
 
   (* When we got declaration of type alias via type application *)
-  method got_constr ~loc ~is_self_rec tdecl do_typ cid cparams k =
+  method got_constr ~loc ~is_self_rec tdecl mutal_names do_typ cid cparams k =
     (* printf "got a constr\n%!"; *)
     (* self#show_args; *)
     let ans args : Cf.t list =
       [ let typ_params = self#prepare_inherit_typ_params_for_alias ~loc tdecl cparams
         in
+        let args,fixident =
+          match cid.txt with
+          | Lident s when List.mem mutal_names s ~equal:String.equal ->
+            (* Only Lident because we ignore types with same name but from another module *)
+            (List.map mutal_names ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name) @ args,
+             (fun s -> s ^ "_stub")
+            )
+          | _ ->  (args, id)
+        in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
           (Cl.constr ~loc
              (map_longident cid.txt
-                ~f:(HelpersBase.trait_class_name_for_typ ~trait:self#plugin_name))
+                ~f:(fun s -> fixident @@
+                    HelpersBase.trait_class_name_for_typ ~trait:self#plugin_name s
+                  ))
              typ_params)
-          (args)
+          args
       ]
     in
 
@@ -345,7 +356,7 @@ class virtual generator initial_args = object(self: 'self)
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
                 (* Hypothesis: it's almost an type alias *)
-                self#got_constr ~loc ~is_self_rec tdecl do_typ cid params k
+                self#got_constr ~loc ~is_self_rec tdecl mutal_names do_typ cid params k
             )
 
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
@@ -393,7 +404,7 @@ class virtual generator initial_args = object(self: 'self)
               else ptyp_var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
-              self#got_constr ~loc ~is_self_rec tdecl
+              self#got_constr ~loc ~is_self_rec tdecl mutal_names
                 (self#do_typ_gen ~mutal_names ~is_self_rec)
                 cid params (fun x -> x)
 
@@ -570,6 +581,7 @@ class virtual generator initial_args = object(self: 'self)
         match cd.pcd_args with
         | Pcstr_tuple ts ->
           [ let inhname = gen_symbol ~prefix:"inh_" () in
+            let loc = loc_from_caml cd.pcd_loc in
             let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
             Cf.method_concrete ~loc (meth_name_for_constructor cd.pcd_name.txt) @@
             Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
@@ -672,7 +684,7 @@ class virtual generator initial_args = object(self: 'self)
                     self#plugin_name
                        )
                  ~f:(fun left typ ->
-                     self#compose_apply_transformations ~loc ~left (helper typ) typ
+                     self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
                    )
               )
               einh esubj
@@ -706,7 +718,7 @@ class virtual generator initial_args = object(self: 'self)
               (List.fold_left params (* (List.map ~f:helper params) *)
                  ~init:trf_expr
                  ~f:(fun left typ ->
-                   self#compose_apply_transformations ~loc ~left (helper typ) typ
+                   self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
                  )
               )
               einh esubj
@@ -718,7 +730,7 @@ class virtual generator initial_args = object(self: 'self)
                 Exp.(of_longident ~loc @@
                      map_longident cident
                        ~f:(Printf.sprintf "%s_%s" self#plugin_name))
-                (List.map typs ~f:helper)
+                (List.map typs ~f:(helper ~loc))
               )
               einh esubj
             in

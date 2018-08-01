@@ -249,6 +249,15 @@ module Typ = struct
 end
 
 type type_declaration = MLast.type_decl
+type class_declaration = class_expr class_infos
+
+let class_declaration  ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fields =
+    let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
+              ciPrm = (loc, Ploc.VaVal params);
+              ciNam = Ploc.VaVal name;
+              ciExp = wrap @@ CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) }
+    in
+    c
 
 module Str = struct
   type t = MLast.str_item
@@ -307,6 +316,10 @@ module Str = struct
             }
     in
     <:str_item< type $list:[t]$ >>
+
+  let of_class_declarations ~loc (lcice: class_declaration list) =
+    <:str_item< class $list:lcice$ >>
+
 end
 
 module Sig = struct

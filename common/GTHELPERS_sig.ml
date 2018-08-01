@@ -7,7 +7,7 @@ module type S = sig
 type loc
 type class_structure
 type case
-
+type class_declaration
 
 val loc_from_caml: Ppxlib.location -> loc
 val noloc: loc
@@ -127,6 +127,7 @@ and Str :
       ?wrap:(Cl.t -> Cl.t) ->
       params:type_arg list -> Cf.t list -> t
     val tdecl : loc:loc -> name:string -> params:string list -> Typ.t -> t
+    val of_class_declarations: loc:loc -> class_declaration list -> t
   end
 and Cl :    (* class_expr *)
   sig
@@ -151,6 +152,12 @@ and Vb :
   sig
     type t
   end
+
+val class_declaration: loc:loc ->
+  name:string ->
+  ?virt:bool ->
+  ?wrap:(Cl.t -> Cl.t) ->
+  params:type_arg list -> Cf.t list -> class_declaration
 
 val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case

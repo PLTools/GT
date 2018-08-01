@@ -21,9 +21,6 @@ let registered_plugins
 
 let get_registered_plugins () = List.map ~f:fst !registered_plugins
 let register_plugin name m =
-  (* ifprintf Stdio.stdout "registering '%s'\n%!" name;
-   * flush stdout; *)
-  notify "'Registering deriver' %s" name;
   let p = (name, m) in
   registered_plugins := p :: !registered_plugins;
   ()
@@ -250,7 +247,7 @@ let make_interface_class ~loc tdecl =
   let name = tdecl.ptype_name in
 
   let ans ?(is_poly=false) fields =
-    Str.class_single ~loc ~name:(class_name_for_typ name.txt) fields
+    class_declaration ~loc ~name:(class_name_for_typ name.txt) fields
       ~virt:true
       ~params:(params_of_interface_class ~loc tdecl.ptype_params)
   in
@@ -520,7 +517,7 @@ let collect_plugins_sig ~loc tdecl plugins =
 (* for structures *)
 let do_typ ~loc sis plugins is_rec tdecl =
   let (_:bool) = is_rec in
-  let intf_class = make_interface_class ~loc tdecl in
+  let intf_class = Str.of_class_declarations ~loc [make_interface_class ~loc tdecl] in
   let gcata = make_gcata_str ~loc tdecl in
 
   List.concat
@@ -531,11 +528,32 @@ let do_typ ~loc sis plugins is_rec tdecl =
     ]
 
 let do_mutal_types ~loc sis plugins tdecls =
+  let tdecls =
+    List.sort tdecls ~compare:(fun a b ->
+        let classify = visit_typedecl ~loc
+            ~onrecord:(fun _ -> false)
+            ~onvariant:(fun _ -> false)
+            ~onabstract:(fun _ -> false)
+            ~onopen:(fun _ -> false)
+            ~onmanifest:(fun _ -> true)
+        in
+        let ac = classify a in
+        let bc = classify b in
+        if ac && not bc then 1 else 0
+      )
+  in
+  let classes, catas =
+    let all =
+      List.map tdecls ~f:(fun tdecl ->
+        (make_interface_class ~loc tdecl, make_gcata_str ~loc tdecl)
+      )
+    in
+    (List.map ~f:fst all, List.map ~f:snd all)
+  in
+
   sis @
-  List.concat_map tdecls ~f:(fun tdecl ->
-      [ make_interface_class ~loc tdecl
-      ; make_gcata_str ~loc tdecl ]
-  ) @
+  [Str.of_class_declarations ~loc classes] @
+  catas @
   List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls)
 
 
@@ -557,7 +575,6 @@ let do_mutal_types_sig ~loc plugins tdecls =
 let wrap_plugin name = function
   | Skip -> id
   | Use args ->
-    let () = notify "checking '%s'....." name in
     match List.Assoc.find !registered_plugins name ~equal:String.equal with
       | Some m ->
         let module F = (val m : Plugin_intf.PluginRes) in

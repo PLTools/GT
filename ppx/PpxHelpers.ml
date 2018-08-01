@@ -203,9 +203,16 @@ module Typ = struct
   let alias ~loc t s = ptyp_alias ~loc t s
 end
 
+type nonrec class_declaration = class_declaration
+let class_declaration ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fields =
+  let open Ast_builder.Default in
+  let virt = if virt then Virtual else Concrete in
+  let params = invariantize params in
+  let pat = [%pat? _] in
+  Ast_helper.Ci.mk ~loc ~virt ~params (Located.mk ~loc name) @@
+  wrap (Ast_helper.Cl.structure ~loc (Ast_helper.Cstr.mk pat fields))
+
 module Str = struct
-  (* open Ast_helper
-   * include Str *)
 
   type t = structure_item
   let single_class ~loc ?(virt=Asttypes.Virtual) ?(pat=[%pat? _])
@@ -214,6 +221,7 @@ module Str = struct
                 wrap (Ast_helper.Cl.structure (Ast_helper.Cstr.mk pat body))
   ]
 
+  let of_class_declarations = pstr_class
   let of_tdecls ~loc decl = Ast_helper.Str.type_ ~loc Recursive [decl]
 
   let tdecl ~loc ~name ~params typ =
@@ -243,6 +251,7 @@ module Str = struct
     pstr_value ~loc flag [value_binding ~loc ~pat ~expr]
   let values ~loc vbs =
     pstr_value ~loc Recursive vbs
+
 end
 
 module Sig = struct
