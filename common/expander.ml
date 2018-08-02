@@ -558,7 +558,7 @@ let do_mutal_types ~loc sis plugins tdecls =
           | None -> acc
           | Some s -> begin
               match SM.find s name_map with
-              | exception Not_found -> acc
+              | exception Caml.Not_found -> acc
               |  _ -> G.add_edge acc s tdecl.ptype_name.txt
             end
           | Some _ -> acc

@@ -57,8 +57,8 @@ class g args = object(self)
     in
 
     (* let names = List.map ts ~f:fst in *)
-    let fmt = List.map ts ~f:(fun _ -> "%a") |> String.concat ~sep:", " in
-    let fmt = sprintf "%s (%s)" constr_name fmt in
+    let fmt = List.map ts ~f:(fun _ -> "%a") |> String.concat ~sep:",@,@ " in
+    let fmt = sprintf "%s@ @[(@,%s@,)@]" constr_name fmt in
 
     Exp.fun_list ~loc
       (List.map ts ~f:(fun (s,_) -> Pat.sprintf ~loc "%s" s))
@@ -86,7 +86,7 @@ class g args = object(self)
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
     let fmt = List.fold_left labs ~init:""
         ~f:(fun acc x ->
-            sprintf "%s %s=%%a;" acc x.pld_name.txt
+            sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc x.pld_name.txt
           )
     in
     let fmt_name = gen_symbol ~prefix:"fmt" () in
@@ -101,7 +101,7 @@ class g args = object(self)
                   ]
               )
             ~init:(app_format_fprintf ~loc (Exp.sprintf "%s" ~loc fmt_name) @@
-                   Exp.string_const ~loc @@ sprintf "{ %s }" fmt
+                   Exp.string_const ~loc @@ sprintf "{@[<hov>%s@]@ }@," fmt
                   )
     ]
 

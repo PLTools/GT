@@ -173,6 +173,7 @@ let map_type_param_names ~f ps =
     | Ptyp_var name -> f name
     | _ -> failwith "bad argument of map_type_param_names")
 
+let self_arg_name = "fself"
 let gcata_name_for_typ name = Printf.sprintf "gcata_%s" name
 let class_name_for_typ name = Printf.sprintf "%s_t" name
 let trait_class_name_for_typ ~trait name =

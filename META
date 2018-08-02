@@ -6,7 +6,7 @@ archive(native) = "GT.cmxa"
 
 package "common" (
   description = ""
-  requires = ""
+  requires = "ocamlgraph"
   archive(byte)    = "GTCommon.cma"
   archive(native)  = "GTCommon.cmxa"
 
@@ -34,7 +34,7 @@ package "expander" (
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
-  requires = "camlp5,ppxlib"
+  requires = "camlp5,ppxlib,ocamlgraph"
   archive(syntax, preprocessor) = "GTCommon.cma pa_gt.cma"
   archive(syntax, toploop) = "GTCommon.cma pa_gt.cma"
 

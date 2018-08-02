@@ -79,7 +79,7 @@ class virtual generator initial_args = object(self: 'self)
   method cur_name tdecl = tdecl.ptype_name.txt
 
   (* preparing class of transformation for [tdecl] *)
-  method make_class ~loc tdecl ~is_rec mutal_names =
+  method make_class ~loc ~is_rec mutal_names tdecl =
     let cur_name = self#cur_name tdecl in
     let k fields =
       let inh_params =
@@ -126,7 +126,7 @@ class virtual generator initial_args = object(self: 'self)
       ~wrap:((* self#extra_class_lets tdecl @@ *) fun body ->
         (* constructor arguments are *)
         let names =
-          List.map mutal_names
+          List.map (List.filter ~f:(String.(<>) tdecl.ptype_name.txt) mutal_names)
             ~f:(Pat.sprintf ~loc "%s_%s" self#plugin_name) @
           [Pat.var ~loc self_arg_name] @
           (self#prepare_fa_args ~loc tdecl)
@@ -195,7 +195,7 @@ class virtual generator initial_args = object(self: 'self)
               let funcs_for_args =
                 let names = map_type_param_names tdecl.ptype_params ~f:id in
                 List.fold_left names
-                  ~init:(fun t -> t)
+                  ~init:id
                   ~f:(fun acc name ->
                       self#make_typ_of_class_argument ~loc tdecl (Cty.arrow ~loc) name
                         (fun f arg -> acc @@ f arg)
@@ -203,7 +203,9 @@ class virtual generator initial_args = object(self: 'self)
                   sign
               in
 
-              List.fold_right mutal_decls
+              List.fold_right
+                (List.filter mutal_decls
+                   ~f:(fun t -> String.(<>) t.ptype_name.txt tdecl.ptype_name.txt))
                 ~init:(Cty.arrow ~loc for_self funcs_for_args)
                 ~f:(fun mut_decl acc ->
                   self#make_typ_of_mutal_trf ~loc mut_decl
@@ -326,10 +328,19 @@ class virtual generator initial_args = object(self: 'self)
           match cid.txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal ->
             (* Only Lident because we ignore types with same name but from another module *)
-            (List.map mutal_names ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name) @ args,
+            let extra_args =
+              List.filter_map mutal_names ~f:(fun name ->
+                  if String.equal name s then None
+                  else
+                    if String.equal name tdecl.ptype_name.txt
+                    then Some (Exp.sprintf ~loc "%s" self_arg_name)
+                    else Some (Exp.sprintf ~loc "%s_%s" self#plugin_name name)
+                )
+            in
+            (extra_args @ args,
              (fun s -> s ^ "_stub")
             )
-          | _ ->  (args, id)
+          | _ -> (args, id)
         in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
           (Cl.constr ~loc
@@ -548,17 +559,14 @@ class virtual generator initial_args = object(self: 'self)
     ]
 
   method do_single ~loc ~is_rec tdecl =
-    [ self#make_class ~loc ~is_rec tdecl []
+    [ self#make_class ~loc ~is_rec [] tdecl
     ; self#make_trans_functions ~loc ~is_rec [] [tdecl]
     ]
 
   method do_mutals ~loc ~is_rec tdecls : Str.t list =
     (* for mutal recursion we need to generate two classes and one function *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
-    List.map tdecls ~f:(fun tdecl ->
-        self#make_class ~loc ~is_rec:true tdecl @@
-        List.filter mut_names ~f:(String.(<>) tdecl.ptype_name.txt)
-      ) @
+    List.map tdecls ~f:(self#make_class ~loc ~is_rec:true mut_names) @
     (self#make_trans_functions ~loc ~is_rec:true mut_names tdecls) ::
     (self#make_shortend_class  ~loc ~is_rec:true mut_names tdecls)
 

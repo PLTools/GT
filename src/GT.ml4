@@ -27,6 +27,7 @@ module Format = struct
   let pp_print_int32 fmt n  = Format.pp_print_string fmt @@ Int32.format "%d" n
   let pp_print_int64 fmt n  = Format.pp_print_string fmt @@ Int64.format "%d" n
   let pp_print_nativeint fmt n = Format.pp_print_string fmt @@ Nativeint.format "%d" n
+  let pp_print_string fmt s = fprintf fmt "\"%s\"" s
 end
 
 type ('a, 'b) t = {gcata : 'a; plugins : 'b}
@@ -123,7 +124,7 @@ class ['a, 'self] fmt_list_t fself fa =
     constraint 'inh = Format.formatter
     method c_Nil  _      = ()
     method c_Cons fmt x xs =
-      Format.fprintf fmt "%a :: %a" fa x fself xs
+      Format.fprintf fmt "%a;@,@ %a" fa x fself xs
   end
 
 class ['a, 'sa, 'self] gmap_list_t fself fa =
@@ -208,11 +209,12 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
                  )
                  l) ^ "]"
                method fmt fa inh l =
-                 Format.pp_print_string inh "[";
-                 fix0 (fun fself ->
+                 Format.fprintf inh "[@[%a@]]@,"
+                   (fix0 (fun fself ->
                      gcata_list (new @list[fmt] fself fa)
-                 ) inh l;
-                 Format.pp_print_string inh "["
+                   ))
+                   l
+
 
                method html    fa   =
                  fix0 (fun fself ->
@@ -370,7 +372,7 @@ class ['a, 'self] show_option_t _fself fa =
 class ['a, 'self] fmt_option_t _fself fa =
   object
     inherit [ Format.formatter, 'a, unit, Format.formatter, 'self, unit] @option
-    method c_None fmt  = Format.pp_print_string fmt "None"
+    method c_None fmt   = Format.fprintf fmt "None"
     method c_Some fmt x = Format.fprintf fmt "Some (%a)" fa x
   end
 class ['a] html_option_t _fself fa =
