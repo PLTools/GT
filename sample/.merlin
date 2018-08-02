@@ -1,4 +1,6 @@
 SRC .
 B _build 
 
-PKG GT, GT.ppx
+PKG GT
+PKG GT.ppx
+PKG compiler-libs.common

@@ -1,4 +1,8 @@
 true: rectypes, debug, package(GT)
 
-<lambdas.*>: predicate(custom_ppx), omp-driver(GT.ppx)
+#<lambdas.*>: predicate(custom_ppx), omp-driver(GT.ppx)
 <decoration.*>: syntax(camlp5o), package(GT.syntax.all,GT), rectypes
+
+<camlast*.*>: package(compiler-libs.common)
+<camlast.*>: ppx(`ocamlfind query ppx_import`/ppx_import), ppx(../../pp_gt.native --as-ppx)
+#<camlast.*>:  predicate(custom_ppx), omp-driver(GT.ppx)
