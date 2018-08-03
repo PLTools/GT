@@ -56,7 +56,7 @@ add_lib:
 lib: add_lib compile
 
 doc:
-	$(OB) GT.docdir/index.html -Is common
+	$(OB) GT.docdir/index.html -Is common -Is plugins
 
 celan: clean
 clean: clean_tests

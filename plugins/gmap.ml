@@ -1,3 +1,13 @@
+(** {i Gmap} plugin (functor).
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [('a -> 'a2) -> ('b -> 'b2) -> ... -> ('a,'b,...) typ -> ('a2,'b2,...) typ ]
+
+    Inherited attributes' type (both default and for type parameters) is [unit].
+*)
+
 (*
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017

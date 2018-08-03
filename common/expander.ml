@@ -3,7 +3,6 @@
  * Copyright (C) 2016-2017
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
- *
  *)
 
 open Base

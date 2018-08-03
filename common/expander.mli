@@ -1,5 +1,16 @@
+(** Expander: base module for Generic Tranformers that utilize plugins.
+  *)
+
+(*
+ * Generic Transformers PPX syntax extension.
+ * Copyright (C) 2016-2017
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
 open Ppxlib
 
+(** Arguments of plugin are empty *)
 type config_plugin = Skip | Use of (longident * expression) list
 
 module Make : functor (Helpers: GTHELPERS_sig.S) -> sig
@@ -27,6 +38,8 @@ val str_type_ext_many_plugins: loc:loc ->
 
 end
 
+(** Registers a plugin. See {! Plugin_intf.PluginRes } for plugin interface. *)
 val register_plugin: string -> (module Plugin_intf.PluginRes) -> unit
+
 val get_registered_plugins: unit -> string list
 

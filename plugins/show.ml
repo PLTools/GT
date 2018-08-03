@@ -1,3 +1,17 @@
+(** {i Show} plugin: converts value to a string.
+
+    Synthetized attributes' type (both default and for type parameters) is [string].
+
+    Inherited attributes' type (both default and for type parameters) is [unit].
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create transformation
+    function with type
+
+    [('a -> string) -> ('b -> string) -> ... -> ('a,'b,...) typ -> string]
+
+    See also: {!Fmt} plugin.
+  *)
+
 (*
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017

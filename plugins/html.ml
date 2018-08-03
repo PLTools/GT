@@ -1,3 +1,19 @@
+(** Html module: converts a value to its html represenation (based on module TODO).
+
+    Work in progress.
+*)
+
+(*
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [(Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ... ->
+     Format.formatter -> ('a,'b,...) typ -> unit ]
+
+    Inherited attributes' type (both default and for type parameters) is [Format.formatter].
+    Synthesized attributes' type (both default and for type parameters) is [unit].
+*)
+
 (*
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017

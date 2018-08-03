@@ -1,9 +1,15 @@
+(** A few base classes for plugins with virtual methods to be implemented.
+
+    See {!Plugin_intf} for complete description of all valuable methods
+  *)
+
 open Base
 open Ppxlib
 open Printf
 open Asttypes
 open HelpersBase
 
+(* TODO: put naming conventions into separate module *)
 let self_arg_name = "fself"
 let extra_param_name = "self"
 
@@ -47,6 +53,11 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   in
   k @@ rs@ls
 
+
+(** Base class for all plugins. Implements {!Plugin_intf.typ_g} interface
+
+    Is subclassed by {!with_inherit_arg} and {!no_inherite_arg}. Use them for convenience.
+*)
 class virtual generator initial_args = object(self: 'self)
   inherit Intf.g
 
@@ -759,10 +770,8 @@ class virtual generator initial_args = object(self: 'self)
     in
     helper ~loc t
 
-
   method compose_apply_transformations ~loc ~left right typ =
     Exp.app ~loc left right
-
 
   method virtual make_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
   (* method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> Typ.t *)
@@ -772,11 +781,10 @@ class virtual generator initial_args = object(self: 'self)
          ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
 end
 
-class virtual no_inherit_arg =
-  (* let module M = Plugin_intf.Make(AstHelpers) in *)
-  object(self: 'self)
-  (* inherit [_] generator as super *)
-    (* inherit M.g *)
+(** Base plugin class where transformation functions doesn't use inherited attribute.
+    See {!Show} and {!Gmap} plugin for examples.
+  *)
+class virtual no_inherit_arg = object(self: 'self)
 
   method virtual default_syn : loc:loc ->
       ?extra_path:(Ppxlib__.Import.string -> longident) ->
@@ -827,6 +835,8 @@ class virtual no_inherit_arg =
 
 end
 
+(** Base plugin class where transformation functions receive inehrited attribute for
+    type parameter *)
 class virtual with_inherit_arg = object(self: 'self)
   inherit no_inherit_arg as super
 

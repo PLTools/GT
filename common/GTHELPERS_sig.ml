@@ -1,7 +1,5 @@
-(** The first special comment of the file is the comment associated
-     with the whole module.*)
+(** Signature of AST building functions that are required to support a new backend *)
 
-(** for S *)
 module type S = sig
 
 type loc

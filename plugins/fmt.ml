@@ -1,3 +1,15 @@
+(** {i Format} module: pretty-prints a value to {!Format.formatter} using {!Format} module.
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [(Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ... ->
+     Format.formatter -> ('a,'b,...) typ -> unit ]
+
+    Inherited attributes' type (both default and for type parameters) is [Format.formatter].
+    Synthesized attributes' type (both default and for type parameters) is [unit].
+*)
+
 (*
  * Generic Transformers: `format` plugin.
  * Copyright (C) 2016-2017
