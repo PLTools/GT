@@ -1,3 +1,5 @@
+open Html_tyxml_api
+
 type t = { a : int; b : string }
 [@@deriving gt ~options:{show; html}]
 

@@ -32,7 +32,7 @@ true: debug, bin_annot, short_paths, annot
 <regression/test0*.*>: use_pa_gt
 <regression/test*.*> or <regression/test*.cm*>: use_GT
 <regression/test090.*>: use_GT
-<regression/show_typed_api.*>: use_GT
+<regression/html_tyxml_api.*> or <regression/show_typed_api.*>: use_GT, package(tyxml)
 #<regression/test*.native>: use_gt
 
 ## ppx-based tests

@@ -10,7 +10,8 @@
     [(Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ... ->
      Format.formatter -> ('a,'b,...) typ -> unit ]
 
-    Inherited attributes' type (both default and for type parameters) is [Format.formatter].
+    Inherited attributes' type (both default and for type parameters) is
+    [Format.formatter].
     Synthesized attributes' type (both default and for type parameters) is [unit].
 *)
 
@@ -43,7 +44,7 @@ let app_format_sprintf ~loc arg =
 
 module H = struct
   type elt = Exp.t
-  let pcdata ~loc s = Exp.app ~loc (Exp.ident ~loc "pcdata") (Exp.string_const ~loc s)
+  let pcdata ~loc s = Exp.(app ~loc (ident ~loc "pcdata") (string_const ~loc s))
   let div ~loc xs =
     Exp.app ~loc (Exp.ident ~loc "div") @@
     Exp.list ~loc xs
@@ -85,23 +86,24 @@ class g args = object(self)
       (if List.length ts = 0
        then Exp.string_const ~loc constr_name
        else
-         List.fold_left ts
-           ~f:(fun acc (name, typ) ->
-               Exp.app ~loc acc
-                 (self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
-                    (Exp.assert_false ~loc)
-                    (Exp.ident ~loc name)
-                 )
-             )
-           ~init:Exp.(app ~loc
-                        (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
+         let ds = List.map ts
+           ~f:(fun (name, typ) ->
+                 self#app_transformation_expr ~loc
+                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                   (Exp.assert_false ~loc)
+                   (Exp.ident ~loc name)
+              )
+         in
+         H.div ~loc ds
 
-                      let fmt = String.concat ~sep:", " @@ List.map names
-                          ~f:(fun _ -> "%s")
-                      in
-                      Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
-                     )
+           (* ~init:Exp.(app ~loc
+            *              (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
+            *
+            *            let fmt = String.concat ~sep:", " @@ List.map names
+            *                ~f:(fun _ -> "%s")
+            *            in
+            *            Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
+            *           ) *)
       )
 
 
