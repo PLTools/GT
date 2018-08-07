@@ -103,10 +103,6 @@ module Exp = struct
     | _  -> pexp_variant ~loc e (Some (pexp_tuple ~loc ts))
 
 
-  (* let make_list ~loc xs =
-   *   List.fold_right xs
-   *     ~f:(fun e acc -> construct ~loc (lident "::") (pexp_tuple ~loc [e; acc])
-   *     ~init:(construct ~loc (lident "[]") None) *)
   let match_ ~loc = pexp_match ~loc
   let new_ ~loc s = pexp_new ~loc (Located.mk ~loc s)
   let object_ ~loc = pexp_object ~loc
@@ -131,6 +127,11 @@ module Exp = struct
   let failwith_ ~loc s = app ~loc [%expr failwith] (string_const ~loc s)
   let true_  ~loc = [%expr true]
   let false_ ~loc = [%expr false]
+  let list ~loc xs =
+    List.fold_right xs
+      ~f:(fun e acc -> construct ~loc (lident "::") [e; acc])
+      ~init:(construct ~loc (lident "[]") [])
+
 end
 
 module Cl = struct

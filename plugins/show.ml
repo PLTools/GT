@@ -121,7 +121,6 @@ class g args = object(self)
             ~init:(app_format_sprintf ~loc @@
                    Exp.string_const ~loc @@ sprintf "{ %s }" fmt
                   )
-
     ]
 
 end

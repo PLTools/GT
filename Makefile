@@ -42,7 +42,11 @@ camlp5: add_camlp5 compile
 
 add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
-ppx: add_ppx compile
+ppx: add_common add_ppx compile
+
+add_metaquot:
+	$(eval OBTARGETS += mymetaquot/mymetaquot.cma mymetaquot/mymetaquot.cmxs mymetaquot/pp_mymetaquot.native)
+metaquot: add_metaquot compile
 
 PLUGINS=compare eq foldl foldr gmap eval stateful fmt show show_typed html
 add_plugins:
@@ -66,7 +70,7 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES := #807 029 037 811 900 809 808 801 802 803 804 806 #807 #805
 # now we add camlp5 tests
-REGRES_CASES += 809 806 807 000 037 081 082 083 086 087 089 029  090 # 808
+REGRES_CASES += 812 809 806 807 000 037 081 082 083 086 087 089 029  090 # 808
 
 TEST_DIR := regression
 define TESTRULES

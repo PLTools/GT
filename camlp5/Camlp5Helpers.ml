@@ -152,6 +152,12 @@ module Exp = struct
   let true_  ~loc = <:expr< True >>
   let false_ ~loc = <:expr< False >>
 
+  let list ~loc xs =
+    let rec helper acc = function
+      | [] -> acc
+      | x::xs -> helper (app_list ~loc <:expr< $uid:"::"$ >> [x; acc]) xs
+    in
+    helper <:expr< $uid:"[]"$ >> (List.rev xs)
 end
 
 module Typ = struct

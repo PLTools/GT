@@ -69,6 +69,7 @@ module rec Exp :
     val failwith_: loc:loc -> string -> t
     val true_ : loc:loc -> t
     val false_: loc:loc -> t
+    val list  : loc:loc -> t list -> t
   end
 and Typ :
   sig

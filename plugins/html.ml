@@ -41,6 +41,14 @@ let app_format_sprintf ~loc arg =
     (Exp.of_longident ~loc (Ldot(Lident "Format", "sprintf")))
     arg
 
+module H = struct
+  type elt = Exp.t
+  let pcdata ~loc s = Exp.app ~loc (Exp.ident ~loc "pcdata") (Exp.string_const ~loc s)
+  let div ~loc xs =
+    Exp.app ~loc (Exp.ident ~loc "div") @@
+    Exp.list ~loc xs
+end
+
 class g args = object(self)
   inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit P.generator args
@@ -66,14 +74,66 @@ class g args = object(self)
     [ Typ.var ~loc Plugin.extra_param_name]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
-        let names = List.map ts ~f:(fun _ -> gen_symbol ()) in
-        Exp.fun_list ~loc
-          (List.map names ~f:(Pat.sprintf ~loc "%s"))
-          (Exp.assert_false ~loc)
+    let constr_name = match constr_info with
+      | `Poly s -> sprintf "`%s" s
+      | `Normal s -> s
+    in
+
+    let names = List.map ts ~f:fst in
+    Exp.fun_list ~loc
+      (List.map names ~f:(Pat.sprintf ~loc "%s"))
+      (if List.length ts = 0
+       then Exp.string_const ~loc constr_name
+       else
+         List.fold_left ts
+           ~f:(fun acc (name, typ) ->
+               Exp.app ~loc acc
+                 (self#app_transformation_expr ~loc
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                    (Exp.assert_false ~loc)
+                    (Exp.ident ~loc name)
+                 )
+             )
+           ~init:Exp.(app ~loc
+                        (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
+
+                      let fmt = String.concat ~sep:", " @@ List.map names
+                          ~f:(fun _ -> "%s")
+                      in
+                      Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
+                     )
+      )
 
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
-    []
+    let pat = Pat.record ~loc @@
+      List.map labs ~f:(fun l ->
+          (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+        )
+    in
+    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    let fmt = List.fold_left labs ~init:""
+        ~f:(fun acc x ->
+            sprintf "%s %s=%%s;" acc x.pld_name.txt
+          )
+    in
+    [ Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+      Exp.fun_ ~loc pat @@
+      List.fold_left labs
+            ~f:(fun acc {pld_name; pld_type} ->
+                Exp.app ~loc acc
+                  (self#app_transformation_expr ~loc
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+                     (Exp.assert_false ~loc)
+                     (Exp.ident ~loc pld_name.txt)
+                  )
+              )
+            ~init:(app_format_sprintf ~loc @@
+                   Exp.string_const ~loc @@ sprintf "{ %s }" fmt
+                  )
+    ]
+
 end
 
 let g = (new g :> (Plugin_intf.plugin_args ->

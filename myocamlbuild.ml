@@ -40,6 +40,14 @@ let () = dispatch (fun hook ->
     flag ["link";    "byte";   "use_GT"]   (S [ A"-I";A"src"; A"GT.cma" ]);
     flag ["link";    "native"; "use_GT"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
 
+    flag ["link";    "native"; "use_mymetaquot"]   (S [
+        A"-linkall"
+      ; A"mymetaquot/mymetaquot.cmxa"
+      ; A"-package"; A"ppxlib.runner"
+      (* ; A"metaquot_lifters/ppxlib_metaquot_lifters.cmxa"
+       * ; A"metaquot/ppxlib_metaquot.cmxa" *)
+      ]);
+
     m4_rules ();
     dep ["use_m4"] ["src/macro.m4"];
     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"../camlp5o_pp.sh" ]);
