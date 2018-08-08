@@ -32,6 +32,7 @@ let () = dispatch (fun hook ->
   | Before_rules -> ()
   | After_rules ->
     ocaml_lib "common/GTCommon";
+    ocaml_lib "mymetaquot/mymetaquot";
     ocaml_lib "src/GT";
     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
@@ -42,7 +43,7 @@ let () = dispatch (fun hook ->
 
     flag ["link";    "native"; "use_mymetaquot"]   (S [
         A"-linkall"
-      ; A"mymetaquot/mymetaquot.cmxa"
+      (* ; A"mymetaquot/mymetaquot.cmxa" *)
       ; A"-package"; A"ppxlib.runner"
       (* ; A"metaquot_lifters/ppxlib_metaquot_lifters.cmxa"
        * ; A"metaquot/ppxlib_metaquot.cmxa" *)
@@ -67,8 +68,11 @@ let () = dispatch (fun hook ->
      (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
       * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
 
-    flag ["make_pp_mymetaquot"; "link"; "native"] @@
-    S ([ A"mymetaquot/my_metaquot.cmxa"; A"-package"; A"ppxlib" ]);
+    (* flag ["make_pp_mymetaquot"; "link"; "native"] @@
+     * S ([ A"mymetaquot/lifters.cmx"; A"mymetaquot/my_metaquot.cmx"
+     *
+     *    ]); *)
+    dep ["mymetaquot/pp_mymetaquot.native"]        ["mymetaquot/mymetaquot.cmxa"];
 
     flag ["make_pp_gt"; "link"; "byte"] @@
     S ([ A"ppx/ppx_deriving_gt.cma"; A"-package"; A"ppxlib" ] @

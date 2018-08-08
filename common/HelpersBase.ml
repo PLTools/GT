@@ -185,6 +185,6 @@ let meth_name_for_constructor = Printf.sprintf "c_%s"
 let notify fmt  =
   Printf.ksprintf (fun s ->
       let _cmd = Printf.sprintf "notify-send \"%s\"" s in
-      (* let _:int = Caml.Sys.command _cmd in *)
+      let _:int = Caml.Sys.command _cmd in
       ()
     ) fmt

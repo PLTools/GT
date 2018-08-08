@@ -1,3 +1,8 @@
-let () = Ppxlib.Driver.standalone ()
+(* module M = My_metaquot
+ *
+ * let () = M.notify "hello from pp_mymetaquot" *)
+let () =
+  print_endline "Hello";
+  failwith "shitty shit"
 
-open My_metaquot
+let () = Ppxlib.Driver.standalone ()

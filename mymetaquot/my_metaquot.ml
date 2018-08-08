@@ -10,10 +10,6 @@ module Make(M : sig
     val location : location -> result
     val attributes : (location -> result) option
     class std_lifters : location -> [result] Ppxlib_traverse_builtins.std_lifters
-    class hack_expr   : location ->
-      (* [result] Ast.lift ->
-       * (extension -> result) -> *)
-      [result] Ppxlib_traverse_builtins.std_lifters
   end) = struct
   let lift loc = object
     inherit [M.result] Ast_traverse.lift as super
@@ -32,9 +28,7 @@ module Make(M : sig
     method! expression e =
       match e.pexp_desc with
       | Pexp_extension ({ txt = "e"; _}, _ as ext)-> M.cast ext
-      | Pexp_constant (Pconst_integer(i,_)) ->
-        [%expr Exp.int [%e eint ~loc (Int.of_string i) ] ]
-      | _ -> super#expression p
+      | _ -> super#expression e
 
     method! pattern p =
       match p.ppat_desc with
@@ -77,7 +71,6 @@ module Expr = Make(struct
     let location loc = evar ~loc "loc"
     let attributes = None
     class std_lifters = Lifters.expression_lifters
-    class hack_expr = Lifters.expression_hack
     let cast ext =
       match snd ext with
       | PStr [{ pstr_desc = Pstr_eval (e, attrs); _}] ->
@@ -93,7 +86,6 @@ module Patt = Make(struct
     let location loc = ppat_any ~loc
     let attributes = Some (fun loc -> ppat_any ~loc)
     class std_lifters = Lifters.pattern_lifters
-    class hack_expr = Lifters.pattern_lifters
     let cast ext =
       match snd ext with
       | PPat (p, None) -> p
@@ -104,6 +96,14 @@ module Patt = Make(struct
         Location.raise_errorf ~loc:(loc_of_attribute ext)
           "pattern expected"
   end)
+
+let notify fmt  =
+  Printf.ksprintf (fun s ->
+      let _cmd = Printf.sprintf "notify-send \"%s\"" s in
+      let _:int = Caml.Sys.command _cmd in
+      ()
+    ) fmt
+
 
 let () =
   let extensions ctx lifter =
@@ -127,7 +127,7 @@ let () =
     extensions Expression Expr.lift @
     extensions Pattern    Patt.lift
   in
-  print_endline "registering transformation";
+  notify "registering mymetaquot";
   Driver.register_transformation
     "mymetaquot"
     ~extensions

@@ -37,7 +37,7 @@ add_common:
 common: add_common compile
 
 add_mymetaquot:
-	$(eval OBTARGETS +=  mymetaquot/my_metaquot.cmxa mymetaquot/pp_mymetaquot.native)
+	$(eval OBTARGETS += mymetaquot/pp_mymetaquot.native)
 mymetaquot: add_mymetaquot compile
 
 add_camlp5: add_common
@@ -47,10 +47,6 @@ camlp5: add_camlp5 compile
 add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 ppx: add_common add_ppx compile
-
-add_metaquot:
-	$(eval OBTARGETS += mymetaquot/mymetaquot.cma mymetaquot/mymetaquot.cmxs mymetaquot/pp_mymetaquot.native)
-metaquot: add_metaquot compile
 
 PLUGINS=compare eq foldl foldr gmap eval stateful fmt show show_typed html
 add_plugins:
