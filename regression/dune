@@ -1,0 +1,17 @@
+(executable
+ (name test081llist)
+ (libraries lwt.unix)
+ (preprocess (action (run  camlp5 %{c_flags.sexp} -I /home/kakadu/.opam/4.06.1+fp+flambda/lib/camlp5 pa_o.cmo pa_op.cmo camlp5/pa_gt.cma %{input-file})) )
+)
+
+(rule
+  (targets test081llist.output)
+  (deps    test081llist.exe)
+  (action  (with-stdout-to %{targets} (run %{deps}))))
+
+(alias
+  (name   runtest)
+  (deps   test081llist.expected test081llist.output)
+  (action (run diff -u test081llist.expected test081llist.output)))
+
+;(test (name test081llist.exe))

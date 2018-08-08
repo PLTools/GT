@@ -1,0 +1,7 @@
+(library
+ (name GTCommon)
+ (public_name GTCommon)
+ (libraries ppxlib ocamlgraph)
+ (modules HelpersBase Expander GTHELPERS_sig Plugin_intf Plugin)
+ (flags ())
+)

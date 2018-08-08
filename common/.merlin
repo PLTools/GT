@@ -1,9 +1,0 @@
-SRC .
-B ../_build/common
-
-PKG base
-PKG ppxlib
-PKG ppxlib.metaquot
-PKG ocamlgraph
-#FLG -warn -13
-
