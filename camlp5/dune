@@ -1,0 +1,10 @@
+(library
+ (name pa_gt)
+ (public_name pa_gt)
+ (modules Camlp5Helpers extension core2)
+ (libraries GTCommon ppxlib ocamlgraph camlp5 )
+ (flags ())
+
+
+ (preprocess (action (run camlp5 -I /home/kakadu/.opam/4.06.1+fp+flambda/lib/camlp5 pa_o.cmo pa_op.cmo pr_o.cmo %{input-file})) )
+)

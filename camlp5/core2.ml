@@ -135,6 +135,7 @@ let get_val loc = function
 module Migr =
   Migrate_parsetree.Convert(Migrate_parsetree.OCaml_current)(Migrate_parsetree.OCaml_408)
 
+open GTCommon
 
 
 let generate_str tdecls loc =
