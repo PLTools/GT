@@ -25,6 +25,10 @@ true: debug, bin_annot, short_paths, annot
 <ppx/pp_gt.cm*>: package(ppxlib.runner)
 <ppx/pp_gt.native>: use_GTCommon, make_pp_gt, package(ocamlgraph)
 
+####
+<mymetaquot/*.*>: package(ppxlib)
+<mymetaquot/my_metaquot.ml> or <mymetaquot/lifters.ml>: package(ppxlib.metaquot)
+<mymetaquot/pp_mymetaquot.*>: make_pp_mymetaquot
 ###########################################
 # Regression tests
 
