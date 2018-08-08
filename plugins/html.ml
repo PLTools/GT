@@ -44,11 +44,14 @@ let app_format_sprintf ~loc arg =
 
 module H = struct
   type elt = Exp.t
-  let pcdata ~loc s = Exp.(app ~loc (ident ~loc "pcdata") (string_const ~loc s))
+  let wrap ~loc s = Exp.of_longident ~loc (Ldot (Lident "Tyxml_html", s))
+  let pcdata ~loc s = Exp.(app ~loc (wrap ~loc "pcdata") (string_const ~loc s))
   let div ~loc xs =
-    Exp.app ~loc (Exp.ident ~loc "div") @@
+    Exp.app ~loc (wrap ~loc "div") @@
     Exp.list ~loc xs
 end
+
+let html_param_name = "html"
 
 class g args = object(self)
   inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
@@ -59,7 +62,9 @@ class g args = object(self)
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
   method default_syn ~loc ?extra_path _tdecl = self#syn_of_param ~loc "dummy"
 
-  method syn_of_param ~loc _     = Typ.of_longident ~loc (Ldot (Lident "View", "viewer"))
+  method syn_of_param ~loc _     =
+    Typ.constr ~loc (Ldot (Lident "Tyxml_html", "elt"))
+      [ Typ.var ~loc "html" ]
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =
@@ -68,11 +73,15 @@ class g args = object(self)
       List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
     in
     ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name
+    ; named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) html_param_name
+    ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc Plugin.extra_param_name]
+    [ Typ.var ~loc Plugin.extra_param_name
+    ; Typ.var ~loc html_param_name
+    ]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
     let constr_name = match constr_info with
@@ -94,16 +103,9 @@ class g args = object(self)
                    (Exp.ident ~loc name)
               )
          in
-         H.div ~loc ds
+         H.div ~loc
+           ([H.pcdata ~loc constr_name; H.pcdata ~loc "("] @ ds @ [ H.pcdata ~loc ")" ])
 
-           (* ~init:Exp.(app ~loc
-            *              (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
-            *
-            *            let fmt = String.concat ~sep:", " @@ List.map names
-            *                ~f:(fun _ -> "%s")
-            *            in
-            *            Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
-            *           ) *)
       )
 
 
@@ -122,18 +124,16 @@ class g args = object(self)
     [ Cf.method_concrete ~loc methname @@
       Exp.fun_ ~loc (Pat.unit ~loc) @@
       Exp.fun_ ~loc pat @@
-      List.fold_left labs
-            ~f:(fun acc {pld_name; pld_type} ->
-                Exp.app ~loc acc
-                  (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
-                     (Exp.assert_false ~loc)
-                     (Exp.ident ~loc pld_name.txt)
-                  )
-              )
-            ~init:(app_format_sprintf ~loc @@
-                   Exp.string_const ~loc @@ sprintf "{ %s }" fmt
-                  )
+
+      let ds = List.map labs
+            ~f:(fun {pld_name; pld_type} ->
+              self#app_transformation_expr ~loc
+                (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+                (Exp.assert_false ~loc)
+                (Exp.ident ~loc pld_name.txt)
+            )
+      in
+      H.div ~loc ds
     ]
 
 end

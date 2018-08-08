@@ -14,6 +14,21 @@ let int =
       method html n = Tyxml_html.pcdata (string_of_int n)
     end
   }
+let float =
+  { GT.gcata = GT.gcata_float;
+    GT.plugins = object
+      method show = GT.float.GT.plugins#show
+      method gmap = GT.float.GT.plugins#gmap
+      method compare = GT.float.GT.plugins#compare
+      method eq      = GT.float.GT.plugins#eq
+      method foldl = GT.float.GT.plugins#foldr
+      method foldr = GT.float.GT.plugins#foldl
+      method stateful = GT.float.GT.plugins#stateful
+      method eval = GT.float.GT.plugins#eval
+      method html n = Tyxml_html.pcdata (string_of_float n)
+    end
+  }
+
 let string =
   { GT.gcata = GT.gcata_string;
     GT.plugins = object
