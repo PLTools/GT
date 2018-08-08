@@ -8,3 +8,11 @@
 
  (preprocess (action (run camlp5 -I /home/kakadu/.opam/4.06.1+fp+flambda/lib/camlp5 pa_o.cmo pa_op.cmo pr_o.cmo %{input-file})) )
 )
+
+
+(library
+ (name pp5gt)
+ (modules)
+ (libraries pa_gt compiler-libs.common ppxlib)
+ (flags (:standard -linkall))
+)

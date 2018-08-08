@@ -1,0 +1,37 @@
+(library
+ (name foldl)
+ (modules foldl)
+ (libraries GTCommon)
+ (flags ())
+)
+(library
+ (name foldr)
+ (modules foldr)
+ (libraries GTCommon)
+ (flags ())
+)
+(library
+ (name show)
+ (modules show)
+ (libraries GTCommon)
+ (flags ())
+)
+
+(library
+ (name eq)
+ (modules eq)
+ (libraries GTCommon)
+ (flags ())
+)
+(library
+ (name eval)
+ (modules eval)
+ (libraries GTCommon)
+ (flags ())
+)
+(library
+ (name fmt)
+ (modules fmt)
+ (libraries GTCommon)
+ (flags ())
+)
