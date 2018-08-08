@@ -16,6 +16,7 @@ B /home/kakadu/.opam/4.06.1+fp+flambda/lib/result
 B /home/kakadu/.opam/4.06.1+fp+flambda/lib/sexplib0
 B /home/kakadu/.opam/4.06.1+fp+flambda/lib/stdio
 B ../_build/default/camlp5/.pa_gt.objs
+B ../_build/default/camlp5/.pp5gt.objs
 B ../_build/default/common/.GTCommon.objs
 S /home/kakadu/.opam/4.06.1+fp+flambda/lib/base
 S /home/kakadu/.opam/4.06.1+fp+flambda/lib/base/caml
@@ -36,4 +37,4 @@ S /home/kakadu/.opam/4.06.1+fp+flambda/lib/sexplib0
 S /home/kakadu/.opam/4.06.1+fp+flambda/lib/stdio
 S .
 S ../common
-FLG -open Pa_gt
+FLG -open Pa_gt -open Pp5gt -w @a-4-29-40-41-42-44-45-48-58-59-60-40 -strict-sequence -strict-formats -short-paths -keep-locs -linkall

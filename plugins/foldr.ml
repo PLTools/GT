@@ -20,7 +20,6 @@
 *)
 
 open Base
-open HelpersBase
 open Ppxlib
 open Printf
 

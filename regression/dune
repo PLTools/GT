@@ -1,7 +1,7 @@
 (executable
  (name test081llist)
  (libraries lwt.unix)
- (preprocess (action (run  camlp5 %{c_flags.sexp} -I /home/kakadu/.opam/4.06.1+fp+flambda/lib/camlp5 pa_o.cmo pa_op.cmo camlp5/pa_gt.cma %{input-file})) )
+ (preprocess (action (run camlp5 %{read-strings:../camlp5.cmd} %{input-file})) )
 )
 
 (rule
