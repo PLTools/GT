@@ -12,7 +12,8 @@
 
 (library
  (name pp5gt)
- (modules)
+ (modules Empty)
  (libraries pa_gt compiler-libs.common ppxlib)
- (flags (:standard -linkall))
+ (library_flags (-linkall))
+ (flags ())
 )
