@@ -145,7 +145,7 @@ class virtual generator initial_args = object(self: 'self)
         Cl.fun_list ~loc names body
       )
       @@
-      [ let parent_name = HelpersBase.class_name_for_typ cur_name in
+      [ let parent_name = Naming.class_name_for_typ cur_name in
         Cf.inherit_ ~loc (Cl.constr ~loc (Lident parent_name) inh_params)
       ] @ fields
 
@@ -155,7 +155,7 @@ class virtual generator initial_args = object(self: 'self)
       let mutal_names = List.filter mutal_names
           ~f:(String.(<>) tdecl.ptype_name.txt) in
       let class_name =
-          trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
+        Naming.trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
       in
       let stub_name = class_name ^ "_stub" in
       (* maybe it should be called proto *)
@@ -253,7 +253,7 @@ class virtual generator initial_args = object(self: 'self)
              **)
             k [Ctf.inherit_ ~loc @@ Cty.constr ~loc
                  (map_longident cid.txt
-                    ~f:(trait_class_name_for_typ ~trait:self#plugin_name))
+                    ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
                  (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
               ]
           | Ptyp_tuple ts ->
@@ -267,7 +267,7 @@ class virtual generator initial_args = object(self: 'self)
                         Ctf.inherit_ ~loc @@
                         Cty.constr ~loc
                           (map_longident  cid.txt
-                             ~f:(trait_class_name_for_typ ~trait:self#plugin_name))
+                             ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
                           (self#prepare_inherit_typ_params_for_alias ~loc
                              tdecl params)
                      )
@@ -357,7 +357,7 @@ class virtual generator initial_args = object(self: 'self)
           (Cl.constr ~loc
              (map_longident cid.txt
                 ~f:(fun s -> fixident @@
-                    HelpersBase.trait_class_name_for_typ ~trait:self#plugin_name s
+                    Naming.trait_class_name_for_typ ~trait:self#plugin_name s
                   ))
              typ_params)
           args
@@ -385,7 +385,7 @@ class virtual generator initial_args = object(self: 'self)
     | Rtag (constr_name,_,_, []) ->
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
-        Cf.method_concrete ~loc (meth_name_for_constructor constr_name.txt) @@
+        Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe:(Exp.ident ~loc inhname)
           (`Poly constr_name.txt) []
@@ -394,7 +394,7 @@ class virtual generator initial_args = object(self: 'self)
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
         let bindings = List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts) in
-        Cf.method_concrete ~loc (meth_name_for_constructor constr_name.txt) @@
+        Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe:(Exp.ident ~loc inhname)
           (`Poly constr_name.txt) bindings
@@ -503,7 +503,7 @@ class virtual generator initial_args = object(self: 'self)
 
   method make_class_name ?(is_mutal=false) tdecl =
     sprintf "%s%s"
-      (HelpersBase.trait_class_name_for_typ ~trait:self#plugin_name
+      (Naming.trait_class_name_for_typ ~trait:self#plugin_name
          tdecl.ptype_name.txt)
       (if is_mutal then "_stub" else "")
 
@@ -578,9 +578,13 @@ class virtual generator initial_args = object(self: 'self)
     (* for mutal recursion we need to generate two classes and one function *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
     List.map tdecls ~f:(self#make_class ~loc ~is_rec:true mut_names) @
-    (self#make_trans_functions ~loc ~is_rec:true mut_names tdecls) ::
-    (self#make_shortend_class  ~loc ~is_rec:true mut_names tdecls)
+    [self#make_trans_functions ~loc ~is_rec:true mut_names tdecls] @
+    (self#make_universal_types  ~loc ~is_rec:true mut_names tdecls)
+    (self#make_shortend_class   ~loc ~is_rec:true mut_names tdecls)
 
+  method make_univeral_types ~loc ~mut_names tdecls =
+    [
+    ]
 
   method on_record_constr : type_declaration -> constructor_declaration ->
     label_declaration list -> 'on_record_result
@@ -602,7 +606,7 @@ class virtual generator initial_args = object(self: 'self)
           [ let inhname = gen_symbol ~prefix:"inh_" () in
             let loc = loc_from_caml cd.pcd_loc in
             let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
-            Cf.method_concrete ~loc (meth_name_for_constructor cd.pcd_name.txt) @@
+            Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
             Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
             self#on_tuple_constr ~loc ~mutal_names ~is_self_rec
               ~inhe:(Exp.ident ~loc inhname)

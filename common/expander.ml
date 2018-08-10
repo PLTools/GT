@@ -10,6 +10,7 @@ open Ppxlib
 open Ppxlib.Ast_builder.Default
 open HelpersBase
 open Printf
+open Naming
 let (@@) = Caml.(@@)
 
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
