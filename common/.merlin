@@ -1,5 +1,5 @@
 SRC .
-B ../_build/src
+B ../_build/common
 
 PKG base
 PKG ppxlib

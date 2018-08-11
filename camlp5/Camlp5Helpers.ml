@@ -1,6 +1,5 @@
 #load "q_MLast.cmo";;
 
-(* open GTCommon *)
 open Ploc
 open MLast
 
@@ -160,6 +159,9 @@ module Exp = struct
     helper <:expr< $uid:"[]"$ >> (List.rev xs)
 end
 
+type lab_decl = (loc * string * bool * ctyp)
+let lab_decl ~loc name is_mut typ = (loc, name, is_mut, typ)
+
 module Typ = struct
   type t = MLast.ctyp
 
@@ -252,6 +254,9 @@ module Typ = struct
       )
       c
       tdecl.ptype_params
+
+  let poly ~loc names t = <:ctyp< ! $list:names$ . $t$ >>
+
 end
 
 type type_declaration = MLast.type_decl
@@ -325,6 +330,10 @@ module Str = struct
 
   let of_class_declarations ~loc (lcice: class_declaration list) =
     <:str_item< class $list:lcice$ >>
+
+  let tdecl_record ~loc ~name ~params llsbt =
+    let t = <:ctyp< { $list:llsbt$ } >> in
+    tdecl ~loc ~name ~params t
 
 end
 

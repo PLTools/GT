@@ -21,6 +21,12 @@ let pexp_pair ?(loc=Location.none) a b = pexp_tuple ~loc [a; b]
 
 let const_string ?wtf s = Pconst_string (s, wtf)
 
+type lab_decl = label_declaration
+let lab_decl ~loc name mut type_ =
+  label_declaration ~loc ~name:(Located.mk ~loc name)
+    ~mutable_:(if mut then Mutable else Immutable)
+    ~type_
+
 module Pat = struct
   type t = pattern
 
@@ -158,7 +164,6 @@ end
 
 module Typ = struct
   open Ast_helper
-  (* include Typ *)
 
   type t = Ppxlib.core_type
   let constr ~loc lident = ptyp_constr ~loc (Located.mk ~loc lident)
@@ -202,6 +207,7 @@ module Typ = struct
 
   let variant_of_t ~loc t = [%type: [> [%t t] ] ]
   let alias ~loc t s = ptyp_alias ~loc t s
+  let poly ~loc names t = ptyp_poly ~loc (List.map names ~f:(Located.mk ~loc)) t
 end
 
 type nonrec class_declaration = class_declaration
@@ -231,6 +237,15 @@ module Str = struct
     [ type_declaration ~loc ~name:(Located.mk ~loc name) ~params
         ~manifest:None
         ~kind:Ptype_abstract
+        ~cstrs:[] ~private_:Public
+    ]
+
+  let tdecl_record ~loc ~name ~params labels =
+    let params = List.map ~f:(fun s -> Typ.var ~loc s, Invariant) params in
+    pstr_type ~loc Nonrecursive @@
+    [ type_declaration ~loc ~name:(Located.mk ~loc name) ~params
+        ~manifest:None
+        ~kind:(Ptype_record labels)
         ~cstrs:[] ~private_:Public
     ]
 

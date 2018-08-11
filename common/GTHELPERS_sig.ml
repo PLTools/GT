@@ -6,6 +6,7 @@ type loc
 type class_structure
 type case
 type class_declaration
+type lab_decl
 
 val loc_from_caml: Ppxlib.location -> loc
 val noloc: loc
@@ -92,6 +93,8 @@ and Typ :
     val variant : loc:loc -> ?is_open:bool -> Ppxlib.row_field list -> t
     val variant_of_t : loc:loc -> t -> t
     val alias : loc:loc -> t -> string -> t
+    val poly  : loc:loc -> string list -> t -> t
+    (* val struct_: loc:loc -> *)
   end
 and Cf :
   sig
@@ -126,6 +129,8 @@ and Str :
       ?wrap:(Cl.t -> Cl.t) ->
       params:type_arg list -> Cf.t list -> t
     val tdecl : loc:loc -> name:string -> params:string list -> Typ.t -> t
+    val tdecl_record: loc:loc -> name:string -> params:string list ->
+      lab_decl list -> t
     val of_class_declarations: loc:loc -> class_declaration list -> t
   end
 and Cl :    (* class_expr *)
@@ -161,6 +166,7 @@ val class_declaration: loc:loc ->
 val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case
 val class_structure : self:Pat.t -> fields:Cf.t list -> class_structure
+val lab_decl: loc:loc -> string -> bool -> Typ.t -> lab_decl
 
 (* if argument is polymorphic variant type then make it open *)
 val openize_poly: Typ.t -> Typ.t

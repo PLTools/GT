@@ -150,7 +150,7 @@ class virtual generator initial_args = object(self: 'self)
       ] @ fields
 
   (* shortened class only used for mutally recursive declarations *)
-  method make_shortend_class ~loc ~is_rec mutal_names tdecls =
+  method make_shortend_class ~loc mutal_names tdecls =
     List.map tdecls ~f:(fun tdecl ->
       let mutal_names = List.filter mutal_names
           ~f:(String.(<>) tdecl.ptype_name.txt) in
@@ -578,13 +578,28 @@ class virtual generator initial_args = object(self: 'self)
     (* for mutal recursion we need to generate two classes and one function *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
     List.map tdecls ~f:(self#make_class ~loc ~is_rec:true mut_names) @
-    [self#make_trans_functions ~loc ~is_rec:true mut_names tdecls] @
-    (self#make_universal_types  ~loc ~is_rec:true mut_names tdecls)
-    (self#make_shortend_class   ~loc ~is_rec:true mut_names tdecls)
+    (* [self#make_trans_functions ~loc ~is_rec:true mut_names tdecls] @ *)
+    (self#make_universal_types  ~loc ~mut_names tdecls) @
+    (* (self#make_shortend_class   ~loc ~is_rec:true mut_names tdecls) *)
+    []
 
-  method make_univeral_types ~loc ~mut_names tdecls =
-    [
-    ]
+  method make_universal_types ~loc ~mut_names tdecls =
+    let (_ : string list) = mut_names in
+    List.concat_map tdecls ~f:(fun tdecl ->
+        let name = tdecl.ptype_name.txt  in
+        [ Str.tdecl_record ~loc
+            ~params:[]
+            ~name:(Naming.typ1_for_class_arg ~plugin_name:self#plugin_name name)
+            [lab_decl ~loc (Naming.typ1_for_class_arg name
+                              ~plugin_name:self#plugin_name)
+               false
+               (Typ.poly ~loc ["a"] @@
+                Typ.constr ~loc
+                  (lident @@ sprintf "%s_%s_stub" self#plugin_name name)
+                  [Typ.var ~loc "a"])
+            ]
+        ]
+      )
 
   method on_record_constr : type_declaration -> constructor_declaration ->
     label_declaration list -> 'on_record_result
