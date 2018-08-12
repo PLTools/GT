@@ -179,4 +179,6 @@ val prepare_param_triples : loc:loc ->
   ?default_syn:  Typ.t ->
   string list -> Typ.t list
 
+val typ_vars_of_typ : Typ.t -> string list
+
 end

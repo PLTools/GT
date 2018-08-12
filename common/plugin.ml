@@ -193,6 +193,11 @@ class virtual generator initial_args = object(self: 'self)
    *           (fun x -> x)
    *       ) *)
 
+  (* returns ('ia -> 'a -> 'sa) -> ... -> 'i -> _ t -> 's -> tail *)
+  method class_typ_simple (* ~loc *) tdecl (* tail *) =
+    let _ : type_declaration = tdecl in
+    1
+
 
   (* signature for a plugin class *)
   method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
@@ -583,21 +588,69 @@ class virtual generator initial_args = object(self: 'self)
     (* (self#make_shortend_class   ~loc ~is_rec:true mut_names tdecls) *)
     []
 
+  method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
+    let names = map_type_param_names tdecl.ptype_params ~f:id in
+    List.fold_left names
+      ~init:id
+      ~f:(fun acc name ->
+          self#make_typ_of_class_argument ~loc tdecl
+            (Typ.arrow ~loc) name
+            (fun f arg -> acc @@ f arg)
+        )
+
   method make_universal_types ~loc ~mut_names tdecls =
     let (_ : string list) = mut_names in
     List.concat_map tdecls ~f:(fun tdecl ->
         let name = tdecl.ptype_name.txt  in
-        [ Str.tdecl_record ~loc
-            ~params:[]
+        [ Str.tdecl_record ~loc ~params:[]
             ~name:(Naming.typ1_for_class_arg ~plugin_name:self#plugin_name name)
             [lab_decl ~loc (Naming.typ1_for_class_arg name
                               ~plugin_name:self#plugin_name)
                false
-               (Typ.poly ~loc ["a"] @@
-                Typ.constr ~loc
-                  (lident @@ sprintf "%s_%s_stub" self#plugin_name name)
-                  [Typ.var ~loc "a"])
+               (let aaa =
+                  self#simple_trf_funcs ~loc tdecl
+                  Typ.(constr ~loc
+                         (lident @@ self#make_class_name ~is_mutal:true tdecl)
+                         (self#plugin_class_params tdecl
+                          |> List.map ~f:(Typ.of_type_arg ~loc))
+                      )
+                in
+                match typ_vars_of_typ aaa with
+                | [] -> aaa
+                | xs -> Typ.poly ~loc xs aaa
+               )
             ]
+        ; Str.tdecl_record ~loc ~params:[]
+            ~name:(Naming.typ2_for_class_arg ~plugin_name:self#plugin_name name)
+            [lab_decl ~loc (Naming.typ1_for_class_arg name
+                              ~plugin_name:self#plugin_name)
+               false
+               (let t = self#make_trans_function_typ ~loc tdecl in
+                match typ_vars_of_typ t with
+                | [] -> t
+                | xs -> Typ.poly ~loc xs t
+               )
+            ]
+        ; Str.tdecl_record ~loc ~params:[]
+            ~name:(Naming.typ3_for_class_arg ~plugin_name:self#plugin_name name)
+            [lab_decl ~loc (Naming.typ1_for_class_arg name
+                              ~plugin_name:self#plugin_name)
+               false
+               (let aaa =
+                  self#simple_trf_funcs ~loc tdecl
+                  Typ.(constr ~loc
+                         (lident @@ self#make_class_name ~is_mutal:true tdecl)
+                         (self#plugin_class_params tdecl
+                          |> List.map ~f:(Typ.of_type_arg ~loc))
+                      )
+                |> Typ.(arrow ~loc (Typ.constr ~loc (lident "unit") [] ))
+                in
+                match typ_vars_of_typ aaa with
+                | [] -> aaa
+                | xs -> Typ.poly ~loc xs aaa
+               )
+            ]
+        ;
         ]
       )
 
@@ -854,7 +907,7 @@ class virtual no_inherit_arg = object(self: 'self)
 
 end
 
-(** Base plugin class where transformation functions receive inehrited attribute for
+(** Base plugin class where transformation functions receive inherited attribute for
     type parameter *)
 class virtual with_inherit_arg = object(self: 'self)
   inherit no_inherit_arg as super

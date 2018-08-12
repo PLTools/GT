@@ -384,3 +384,13 @@ let are_the_same (typ: core_type) (tdecl: type_declaration) =
     false
   )
 
+let typ_vars_of_typ t =
+  let o = object
+    inherit [string list] Ast_traverse.fold as super
+    method! core_type_desc t acc  =
+      match t with
+      | Ptyp_var s -> s::acc
+      | _ -> super#core_type_desc t acc
+  end
+  in
+  List.remove_consecutive_duplicates ~equal:String.equal @@ o#core_type t []

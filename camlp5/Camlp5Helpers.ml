@@ -447,3 +447,5 @@ let prepare_param_triples ~loc ~extra
       names
   in
   ps @ [ default_inh; extra; default_syn]
+
+let typ_vars_of_typ t = []

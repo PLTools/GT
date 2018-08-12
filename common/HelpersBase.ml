@@ -173,7 +173,6 @@ let map_type_param_names ~f ps =
     | Ptyp_var name -> f name
     | _ -> failwith "bad argument of map_type_param_names")
 
-
 let notify fmt  =
   Printf.ksprintf (fun s ->
       let _cmd = Printf.sprintf "notify-send \"%s\"" s in
