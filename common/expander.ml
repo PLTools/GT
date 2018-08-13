@@ -109,7 +109,7 @@ let params_of_interface_class ~loc params =
        )
   )
   @ [ named_type_arg ~loc "inh"
-    ; named_type_arg ~loc Plugin.extra_param_name
+    ; named_type_arg ~loc Naming.extra_param_name
     ; named_type_arg ~loc "syn"
     ]
 
@@ -160,7 +160,7 @@ let make_interface_class_sig ~loc tdecl =
           let inh_params =
               inh_params @
               [ Typ.var ~loc "inh"
-              ; Typ.var ~loc Plugin.extra_param_name
+              ; Typ.var ~loc Naming.extra_param_name
               ; Typ.var ~loc "syn"
               ]
           in
