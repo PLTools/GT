@@ -59,8 +59,7 @@ class g args = object(self)
     [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc Plugin.extra_param_name]
+    List.map rhs_args ~f:Typ.from_caml
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =

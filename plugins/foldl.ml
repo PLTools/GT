@@ -13,24 +13,22 @@ let plugin_name =  trait_name
 let make_dest_param_names  ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
-let hack_params ?(loc=noloc) ps =
-  let param_names = map_type_param_names ps ~f:id in
-  let rez_names = make_dest_param_names ps in
-  let name_migrations = List.zip_exn param_names rez_names in
-  let assoc s =
-    try List.Assoc.find_exn ~equal:String.equal name_migrations s
-    with Caml.Not_found ->
-      raise_errorf "can't find new typ for param `%s" s
-  in
-  let blownup_params =
-    List.concat_map param_names
-      ~f:(fun s1 ->
-           [Typ.var ~loc s1; Typ.var ~loc @@ assoc s1 ]
-         )
-  in
-  (param_names, rez_names, assoc, blownup_params)
-
-(* open Plugin *)
+(* let hack_params ?(loc=noloc) ps =
+ *   let param_names = map_type_param_names ps ~f:id in
+ *   let rez_names = make_dest_param_names ps in
+ *   let name_migrations = List.zip_exn param_names rez_names in
+ *   let assoc s =
+ *     try List.Assoc.find_exn ~equal:String.equal name_migrations s
+ *     with Caml.Not_found ->
+ *       raise_errorf "can't find new typ for param `%s" s
+ *   in
+ *   let blownup_params =
+ *     List.concat_map param_names
+ *       ~f:(fun s1 ->
+ *            [Typ.var ~loc s1; Typ.var ~loc @@ assoc s1 ]
+ *          )
+ *   in
+ *   (param_names, rez_names, assoc, blownup_params) *)
 
 class g initial_args = object(self: 'self)
   inherit P.generator initial_args as super
@@ -55,7 +53,7 @@ class g initial_args = object(self: 'self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
     [ self#default_syn ~loc tdecl
-    ; Typ.var ~loc Plugin.extra_param_name ]
+    ]
 
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->

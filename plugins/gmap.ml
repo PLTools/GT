@@ -93,8 +93,8 @@ class g args = object(self: 'self)
           ; map_core_type t ~onvar:(fun s -> ptyp_var ~loc:t.ptyp_loc (find_param s))  ]
         )
     in
-    (List.map ~f:Typ.from_caml ps) @
-    [ Typ.var ~loc Plugin.extra_param_name ]
+    List.map ~f:Typ.from_caml ps
+
 
   (* TODO: refactor next two functions *)
   method! extra_class_sig_members tdecl =

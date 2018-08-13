@@ -63,8 +63,8 @@ class g args = object(self)
   method default_syn ~loc ?extra_path _tdecl = self#syn_of_param ~loc "dummy"
 
   method syn_of_param ~loc _     =
-    Typ.constr ~loc (Ldot (Lident "Tyxml_html", "elt"))
-      [ Typ.var ~loc "html" ]
+    Typ.constr ~loc (Ldot (Lident "Tyxml_html", "elt")) [ Typ.var ~loc "html" ]
+
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =
@@ -73,14 +73,13 @@ class g args = object(self)
       List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
     in
     ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name
-    ; named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) html_param_name
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) html_param_name
+    ; named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc Plugin.extra_param_name
-    ; Typ.var ~loc html_param_name
+    [ Typ.var ~loc html_param_name
     ]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =

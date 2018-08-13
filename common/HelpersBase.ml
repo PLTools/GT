@@ -88,6 +88,49 @@ let map_core_type ~onvar t =
   in
   helper t
 
+let list_first_some ~f xs =
+  List.fold_left xs ~init:None
+    ~f:(function
+        | None -> f
+        | Some ans -> (fun _ -> Some ans)
+      )
+
+let maybe_specialiaze ~what where =
+  let rec loop t =
+    match t.ptyp_desc with
+    | Ptyp_constr ({txt=(Lident s)}, args) when String.equal s what.ptype_name.txt ->
+      Some (List.map2_exn what.ptype_params args
+              ~f:(fun (param,_) typ ->
+                  match param.ptyp_desc with
+                  | Ptyp_var s -> (s,typ)
+                  | _ -> failwith "should not happen"
+                ))
+    | _ -> assert false
+  in
+  list_first_some ~f:loop where
+
+let specialize_for_tdecl ~what ~where =
+  let loc = where.ptype_name.loc in
+  visit_typedecl ~loc where
+    (* ?(onrecord  =fun _ -> not_implemented ~loc "record types")
+     * ?(onmanifest=fun _ -> not_implemented ~loc "manifest") *)
+    ~onvariant:(fun cstrs ->
+        list_first_some cstrs ~f:(fun c ->
+            match c.pcd_args with
+            | Pcstr_tuple ts ->
+              maybe_specialiaze ~what ts
+            | _ -> assert false
+          )
+      )
+    ~onabstract:(fun _ -> None)
+  |> (function
+      | None -> id
+      | Some map -> map_core_type
+                      ~onvar:(List.Assoc.find_exn ~equal:String.equal map)
+    )
+
+
+
 let with_constr_typ typ ~ok ~fail =
   match typ.ptyp_desc with
   | Ptyp_constr (cid,params) -> ok cid params

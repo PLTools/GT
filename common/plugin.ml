@@ -258,7 +258,7 @@ class virtual generator initial_args = object(self: 'self)
             k [Ctf.inherit_ ~loc @@ Cty.constr ~loc
                  (map_longident cid.txt
                     ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
-                 (self#prepare_inherit_typ_params_for_alias ~loc tdecl params)
+                 (self# final_typ_params_for_alias ~loc tdecl params)
               ]
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
@@ -272,7 +272,7 @@ class virtual generator initial_args = object(self: 'self)
                         Cty.constr ~loc
                           (map_longident  cid.txt
                              ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
-                          (self#prepare_inherit_typ_params_for_alias ~loc
+                          (self# final_typ_params_for_alias ~loc
                              tdecl params)
                      )
                      ~fail:(fun () -> assert false)
@@ -337,7 +337,7 @@ class virtual generator initial_args = object(self: 'self)
     (* printf "got a constr\n%!"; *)
     (* self#show_args; *)
     let ans args : Cf.t list =
-      [ let typ_params = self#prepare_inherit_typ_params_for_alias ~loc tdecl cparams
+      [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams
         in
         let args,fixident =
           match cid.txt with
@@ -575,6 +575,10 @@ class virtual generator initial_args = object(self: 'self)
     ; self#make_trans_functions ~loc ~is_rec [] [tdecl]
     ]
 
+  method final_typ_params_for_alias ~loc tdecl rhs =
+    self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
+    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+
   method do_mutals ~loc ~is_rec tdecls : Str.t list =
     (* for mutal recursion we need to generate two classes and one function *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
@@ -609,7 +613,7 @@ class virtual generator initial_args = object(self: 'self)
                     |> List.map ~f:(Typ.of_type_arg ~loc))
                   )
             in
-            Map.add_exn acc ~key:tdecl.ptype_name.txt ~data:t
+            Map.add_exn acc ~key:tdecl.ptype_name.txt ~data:(tdecl, t)
       )
     in
     List.concat_map tdecls ~f:(fun tdecl ->
@@ -630,7 +634,7 @@ class virtual generator initial_args = object(self: 'self)
             [lab_decl ~loc (Naming.typ1_for_class_arg name
                               ~plugin_name:self#plugin_name)
                false
-               (let t = Map.find_exn obj_typs tdecl.ptype_name.txt in
+               (let (_,t) = Map.find_exn obj_typs tdecl.ptype_name.txt in
                 match typ_vars_of_typ t with
                 | [] -> t
                 | xs -> Typ.poly ~loc xs t
@@ -656,11 +660,16 @@ class virtual generator initial_args = object(self: 'self)
                  let others = Map.filter_keys obj_typs
                      ~f:(fun k -> not (String.equal k tdecl.ptype_name.txt))
                  in
-                 let t = self#make_trans_function_typ ~loc tdecl in
+                 (* let t = self#make_trans_function_typ ~loc tdecl in *)
                  let t = Map.fold_right others
                      ~init:part1
-                     ~f:(fun ~key ~data t ->
-                         Typ.arrow ~loc data t
+                     ~f:(fun ~key ~data:(other_tdecl, otyp) t ->
+                         (* we need to try specialize [other_tdecl] using its
+                            occurances in [tdecl] *)
+
+                         Typ.arrow ~loc
+                           (specialize_for_tdecl ~what:other_tdecl ~where:tdecl otyp)
+                           t
                        )
                  in
                  match typ_vars_of_typ t with
@@ -748,7 +757,7 @@ class virtual generator initial_args = object(self: 'self)
       in
       let parent_plugin_impl =
         let params =
-          self#prepare_inherit_typ_params_for_alias ~loc tdecl
+          self# final_typ_params_for_alias ~loc tdecl
             (List.map ~f:fst tdecl.ptype_params)
         in
         Cf.inherit_ ~loc @@
