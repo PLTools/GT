@@ -54,6 +54,7 @@ module Pat = struct
 
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
+  let record1 ~loc lident expr = record ~loc [lident, expr]
 
   let tuple ~loc ps = <:patt< ($list:ps$) >>
   let variant ~loc name args =
@@ -139,10 +140,11 @@ module Exp = struct
   let record ~loc lpe =
     let lpe = List.map (fun (l,r) -> Pat.of_longident ~loc l, r) lpe in
     <:expr< {$list:lpe$} >>
+  let record1 ~loc lident expr = record ~loc [lident, expr]
+
   let field ~loc e lident = acc ~loc e lident
-  let let_one ~loc pat e1 ewhere =
-    let lpe = [pat, e1] in
-    <:expr< let $list:lpe$ in $ewhere$ >>
+  let let_ ~loc lpe ewhere = <:expr< let $list:lpe$ in $ewhere$ >>
+  let let_one ~loc pat e1 ewhere = let_ ~loc [pat, e1] ewhere
 
   let from_caml e = failwith "not implemented"
   let assert_false ~loc = <:expr< assert False >>
@@ -257,6 +259,7 @@ module Typ = struct
 
   let poly ~loc names t = <:ctyp< ! $list:names$ . $t$ >>
 
+  let map ~onvar t = t
 end
 
 type type_declaration = MLast.type_decl

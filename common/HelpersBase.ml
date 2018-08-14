@@ -68,13 +68,18 @@ let rec map_longident ~f = function
 
 let map_core_type ~onvar t =
   let rec helper t =
+    Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t;
     match t.ptyp_desc with
     | Ptyp_any -> t
-    | Ptyp_var name -> onvar name
+    | Ptyp_var name -> begin
+        Base.Option.value_map (onvar name) ~default:t ~f:id
+      end
     | Ptyp_constr (name, args) ->
       {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
     | Ptyp_tuple args ->
       {t with ptyp_desc= Ptyp_tuple (List.map ~f:helper args) }
+    | Ptyp_arrow (lab, from, to_) ->
+      { t with ptyp_desc= Ptyp_arrow (lab, helper from, helper to_) }
     | Ptyp_variant (rows,flg,opt) ->
       let rows = List.map rows ~f:(function
           | Rinherit t -> Rinherit (helper t)
@@ -84,7 +89,7 @@ let map_core_type ~onvar t =
         )
       in
       {t with ptyp_desc= Ptyp_variant (rows,flg,opt) }
-    | _ -> t
+    | _ -> failwith "not implemented"
   in
   helper t
 
@@ -96,9 +101,16 @@ let list_first_some ~f xs =
       )
 
 let maybe_specialiaze ~what where =
+  Format.printf "maybe specialize: %a\n%!" Pprintast.structure_item
+    {pstr_desc=(Pstr_type (Nonrecursive, [what])); pstr_loc=what.ptype_name.loc };
+  List.iter where ~f:(Format.printf "\t%a\n%!" Pprintast.core_type);
+  print_endline "==";
+
   let rec loop t =
+    Format.printf "loop: %a\n%!" Pprintast.core_type t;
     match t.ptyp_desc with
     | Ptyp_constr ({txt=(Lident s)}, args) when String.equal s what.ptype_name.txt ->
+      (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
       Some (List.map2_exn what.ptype_params args
               ~f:(fun (param,_) typ ->
                   match param.ptyp_desc with
@@ -109,7 +121,7 @@ let maybe_specialiaze ~what where =
   in
   list_first_some ~f:loop where
 
-let specialize_for_tdecl ~what ~where =
+let specialize_for_tdecl ~what ~where wrap =
   let loc = where.ptype_name.loc in
   visit_typedecl ~loc where
     (* ?(onrecord  =fun _ -> not_implemented ~loc "record types")
@@ -124,9 +136,12 @@ let specialize_for_tdecl ~what ~where =
       )
     ~onabstract:(fun _ -> None)
   |> (function
-      | None -> id
-      | Some map -> map_core_type
-                      ~onvar:(List.Assoc.find_exn ~equal:String.equal map)
+      | None -> wrap []
+      | Some map ->
+        Format.printf "Found somethig: %s\n------------\n%!"
+          (List.map map ~f:(fun (s,_) -> Printf.sprintf "(\"%s\",_)" s)
+          |> String.concat " ");
+        wrap map
     )
 
 

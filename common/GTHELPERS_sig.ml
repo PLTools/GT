@@ -46,6 +46,8 @@ module rec Exp :
     val int_const : loc:loc -> int -> t
     val string_const : loc:loc -> string -> t
     val record : loc:loc -> (Ppxlib.longident * t) list -> t
+    val record1: loc:loc -> Ppxlib.longident -> t -> t
+
     val app : loc:loc -> t -> t -> t
     val app_list : loc:loc -> t -> t list -> t
     val acc      : loc:loc -> t -> Ppxlib.longident -> t
@@ -64,6 +66,7 @@ module rec Exp :
     val construct: loc:loc -> Ppxlib.longident -> t list -> t
     val tuple:     loc:loc -> t list -> t
     val let_one:   loc:loc -> Pat.t -> t -> t -> t
+    val let_:      loc:loc -> (Pat.t * t) list -> t -> t
 
     val assert_false: loc:loc -> t
     val objmagic_unit: loc:loc -> t
@@ -94,7 +97,7 @@ and Typ :
     val variant_of_t : loc:loc -> t -> t
     val alias : loc:loc -> t -> string -> t
     val poly  : loc:loc -> string list -> t -> t
-    (* val struct_: loc:loc -> *)
+    val map: onvar:(string -> t option) -> t -> t
   end
 and Cf :
   sig

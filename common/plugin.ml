@@ -246,9 +246,10 @@ class virtual generator initial_args = object(self: 'self)
             map_core_type t ~onvar:(fun as_ ->
               let open Ppxlib.Ast_builder.Default in
               if String.equal as_ aname
-              then ptyp_constr ~loc (Located.lident ~loc tdecl.ptype_name.txt) @@
+              then Option.some @@
+                ptyp_constr ~loc (Located.lident ~loc tdecl.ptype_name.txt) @@
                 List.map tdecl.ptype_params ~f:(fun (t,_) -> t)
-              else ptyp_var ~loc as_
+              else Option.some @@ ptyp_var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
             (* there for type 'a list = ('a,'a list) alist
@@ -424,10 +425,11 @@ class virtual generator initial_args = object(self: 'self)
             let loc = tdecl.ptype_loc in
             map_core_type t ~onvar:(fun as_ ->
               if String.equal as_ aname
-              then ptyp_constr ~loc:t.ptyp_loc
+              then Option.some @@
+                ptyp_constr ~loc:t.ptyp_loc
                   (Located.lident ~loc tdecl.ptype_name.txt)
                   (List.map tdecl.ptype_params ~f:fst)
-              else ptyp_var ~loc as_
+              else Option.some @@ ptyp_var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
               self#got_constr ~loc ~is_self_rec tdecl mutal_names
@@ -585,6 +587,7 @@ class virtual generator initial_args = object(self: 'self)
     List.map tdecls ~f:(self#make_class ~loc ~is_rec:true mut_names) @
     (* [self#make_trans_functions ~loc ~is_rec:true mut_names tdecls] @ *)
     (self#make_universal_types  ~loc ~mut_names tdecls) @
+    [self#make_mutal_fix ~loc tdecls] @
     (* (self#make_shortend_class   ~loc ~is_rec:true mut_names tdecls) *)
     []
 
@@ -597,6 +600,59 @@ class virtual generator initial_args = object(self: 'self)
             (Typ.arrow ~loc) name
             (fun f arg -> acc @@ f arg)
         )
+
+  method make_mutal_fix ~loc tdecls =
+    let names = List.map tdecls ~f:(fun t -> t.ptype_name.txt) in
+    let name = String.concat ~sep:"_" names in
+    Str.single_value ~loc (Pat.sprintf ~loc "fix_%s" name) @@
+    Exp.fun_ ~loc (Pat.tuple ~loc @@ List.map names ~f:(Pat.sprintf ~loc "%s0")) @@
+    Exp.let_ ~loc
+      (List.concat_map tdecls ~f:(fun tdecl ->
+           let typ_name = tdecl.ptype_name.txt in
+           let oname = sprintf "o%s" typ_name in
+           let ofield = sprintf "%s_func" oname in
+           let trf_field = sprintf "%s_func" typ_name in
+           let othernames = List.filter_map tdecls ~f:(fun tdecl ->
+               if String.equal tdecl.ptype_name.txt typ_name then None
+               else Some  tdecl.ptype_name.txt
+             )
+           in
+           let eplugin =
+             let open Exp in
+             fun_list ~loc
+               (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
+             fun_ ~loc (Pat.sprintf ~loc "subj") @@
+             app_list ~loc
+               (ident ~loc @@ Naming.gcata_name_for_typ tdecl.ptype_name.txt)
+               [ app_list ~loc (app ~loc (field ~loc (ident ~loc oname) (lident ofield))
+                                  (unit ~loc))
+                   (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))
+               ; unit ~loc
+               ; sprintf ~loc "subj"
+               ]
+           in
+           let eobj =
+             let open Exp in
+             fun_ ~loc (Pat.unit ~loc) @@
+             fun_list ~loc
+               (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
+             app_list ~loc
+               (field ~loc (sprintf ~loc "%s0" typ_name) (lident trf_field)) @@
+
+
+           in
+           [ Pat.sprintf ~loc "%s_%s" self#plugin_name tdecl.ptype_name.txt,
+             Exp.record1 ~loc (lident @@ sprintf "%s_trf" tdecl.ptype_name.txt) @@
+             eplugin
+           ; Pat.sprintf ~loc "%s" oname,
+             Exp.record1 ~loc (lident @@ sprintf "o%s_func" tdecl.ptype_name.txt) @@
+             eobj
+           ]
+         ))
+      (Exp.assert_false ~loc)
+
+
+
 
   method make_universal_types ~loc ~mut_names tdecls =
     let (_ : string list) = mut_names in
@@ -660,16 +716,21 @@ class virtual generator initial_args = object(self: 'self)
                  let others = Map.filter_keys obj_typs
                      ~f:(fun k -> not (String.equal k tdecl.ptype_name.txt))
                  in
-                 (* let t = self#make_trans_function_typ ~loc tdecl in *)
                  let t = Map.fold_right others
                      ~init:part1
-                     ~f:(fun ~key ~data:(other_tdecl, otyp) t ->
+                     ~f:(fun ~key ~data:(other_tdecl, otyp) acc ->
                          (* we need to try specialize [other_tdecl] using its
                             occurances in [tdecl] *)
-
                          Typ.arrow ~loc
-                           (specialize_for_tdecl ~what:other_tdecl ~where:tdecl otyp)
-                           t
+                           (specialize_for_tdecl ~what:other_tdecl ~where:tdecl
+                              (fun map ->
+                                 Typ.map otyp
+                                   ~onvar:(fun s ->
+                                       Option.map ~f:Typ.from_caml @@
+                                       (List.Assoc.find ~equal:String.equal map s)
+                                   ))
+                           )
+                           acc
                        )
                  in
                  match typ_vars_of_typ t with

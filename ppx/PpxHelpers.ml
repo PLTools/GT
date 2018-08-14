@@ -96,6 +96,7 @@ module Exp = struct
 
   let record ~loc ts =
     pexp_record ~loc (List.map ts ~f:(fun (l,r) -> (Located.mk ~loc l, r))) None
+  let record1 ~loc lident expr = record ~loc [lident,expr]
 
   let construct ~loc lident xs =
     pexp_construct ~loc (Located.mk ~loc lident) @@
@@ -127,6 +128,8 @@ module Exp = struct
 
   let let_one ~loc pat expr ewhere =
     pexp_let ~loc Nonrecursive [value_binding ~loc ~pat ~expr] ewhere
+  let let_ ~loc ps =
+    pexp_let ~loc Recursive (List.map ps ~f:(fun (pat,expr) -> value_binding ~loc ~pat ~expr))
 
   let assert_false ~loc = [%expr assert false]
   let objmagic_unit ~loc = [%expr Obj.magic ()]
@@ -208,6 +211,9 @@ module Typ = struct
   let variant_of_t ~loc t = [%type: [> [%t t] ] ]
   let alias ~loc t s = ptyp_alias ~loc t s
   let poly ~loc names t = ptyp_poly ~loc (List.map names ~f:(Located.mk ~loc)) t
+
+  let map ~onvar t = HelpersBase.map_core_type ~onvar t
+
 end
 
 type nonrec class_declaration = class_declaration

@@ -90,7 +90,7 @@ class g args = object(self: 'self)
       List.concat_map rhs_args ~f:(fun t ->
           let open Ppxlib.Ast_builder.Default in
           [ t
-          ; map_core_type t ~onvar:(fun s -> ptyp_var ~loc:t.ptyp_loc (find_param s))  ]
+          ; map_core_type t ~onvar:(fun s -> Some (ptyp_var ~loc:t.ptyp_loc (find_param s)))]
         )
     in
     List.map ~f:Typ.from_caml ps

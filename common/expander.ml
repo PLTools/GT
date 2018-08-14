@@ -150,9 +150,9 @@ let make_interface_class_sig ~loc tdecl =
         let wrap name params =
           let inh_params =
             List.concat_map params ~f:(fun typ ->
-                [ map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+                [ map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("i"^n)) )
                 ; typ
-                ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
+                ; map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("s"^n)) )
                 ]
               )
             |> List.map ~f:Typ.from_caml
@@ -191,9 +191,8 @@ let make_interface_class_sig ~loc tdecl =
             map_core_type typ ~onvar:(fun as_ ->
                 let open Ppxlib.Ast_builder.Default in
                 if String.equal as_ new_name
-                then ptyp_constr ~loc
-                    (Located.lident ~loc name.txt) params
-                else ptyp_var ~loc as_
+                then Some (ptyp_constr ~loc (Located.lident ~loc name.txt) params)
+                else Some (ptyp_var ~loc as_)
               ) |> helper
           | Ptyp_variant (rows,_,labels) ->
               (* rows go to virtual methods. label goes to inherit fields *)
@@ -223,9 +222,9 @@ let make_interface_class_sig ~loc tdecl =
 let inherit_iface_class ~loc name params =
   let inh_params =
     List.concat_map params ~f:(fun typ ->
-        [ map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("i"^n) )
+        [ map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("i"^n) ))
         ; typ
-        ; map_core_type typ ~onvar:(fun n -> ptyp_var typ.ptyp_loc ("s"^n) )
+        ; map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("s"^n) ))
         ]
       )
     |> List.map ~f:Typ.from_caml
@@ -306,9 +305,8 @@ let make_interface_class ~loc tdecl =
             map_core_type typ ~onvar:(fun as_ ->
                 let open Ppxlib.Ast_builder.Default in
                 if String.equal as_ new_name
-                then ptyp_constr ~loc
-                    (Located.lident ~loc name.txt) params
-                else ptyp_var ~loc as_
+                then Some (ptyp_constr ~loc (Located.lident ~loc name.txt) params)
+                else Some (ptyp_var ~loc as_)
               ) |> helper
           | Ptyp_variant (rows,_,labels) ->
               (* rows go to virtual methods. label goes to inherit fields *)

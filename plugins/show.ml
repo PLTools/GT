@@ -56,7 +56,9 @@ class g args = object(self)
       List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
     in
     ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+      Naming.make_extra_param tdecl.ptype_name.txt
+    ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml

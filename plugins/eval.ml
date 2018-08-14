@@ -53,7 +53,7 @@ class g initial_args = object(self: 'self)
           let open Ppxlib.Ast_builder.Default in
           [ t
           ; HelpersBase.map_core_type t
-              ~onvar:(fun s -> ptyp_var ~loc:t.ptyp_loc (find_param s))
+              ~onvar:(fun s -> Some (ptyp_var ~loc:t.ptyp_loc (find_param s)))
           ]
         )
     in
