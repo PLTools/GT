@@ -611,12 +611,14 @@ class virtual generator initial_args = object(self: 'self)
            let typ_name = tdecl.ptype_name.txt in
            let oname = sprintf "o%s" typ_name in
            let ofield = sprintf "%s_func" oname in
-           let trf_field = sprintf "%s_func" typ_name in
+           let t0field = sprintf "%s_func" typ_name in
+           let trf_field = sprintf "%s_trf" typ_name in
            let othernames = List.filter_map tdecls ~f:(fun tdecl ->
                if String.equal tdecl.ptype_name.txt typ_name then None
                else Some  tdecl.ptype_name.txt
              )
            in
+           let trf_name = sprintf "%s_%s" self#plugin_name typ_name in
            let eplugin =
              let open Exp in
              fun_list ~loc
@@ -637,7 +639,19 @@ class virtual generator initial_args = object(self: 'self)
              fun_list ~loc
                (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
              app_list ~loc
-               (field ~loc (sprintf ~loc "%s0" typ_name) (lident trf_field)) @@
+               (field ~loc (sprintf ~loc "%s0" typ_name) (lident t0field)) @@
+             (* [ Exp.assert_false ~loc ] *)
+             (List.map othernames ~f:(fun s ->
+                  Exp.field ~loc (Exp.sprintf ~loc "o%s" s)
+                    (lident @@ Printf.sprintf "o%s_func" s)
+                )) @
+             [ let argss = map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s") in
+               app_list ~loc
+                 (app_list ~loc (Exp.field ~loc (ident ~loc trf_name) (lident trf_field))
+                    argss)
+                 argss
+             ]
+
 
 
            in
