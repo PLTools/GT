@@ -92,7 +92,7 @@ class g initial_args = object(self: 'self)
         *)
       ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info args =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info args =
     let is_poly,cname =
       match constr_info with
       | `Normal s -> false,  s
@@ -119,7 +119,7 @@ class g initial_args = object(self: 'self)
                 self#chain_exprs ~loc
                   acc
                   (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
                      (Exp.ident ~loc pname)
                      (Exp.ident ~loc name)
                   )
@@ -148,7 +148,7 @@ class g initial_args = object(self: 'self)
     k (Exp.sprintf ~loc "inh") (Exp.sprintf ~loc "subj")
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     assert Int.(List.length labs > 0);
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun {pld_name} ->
@@ -162,7 +162,7 @@ class g initial_args = object(self: 'self)
         [ Pat.sprintf ~loc "inh"; pat] @@
         let wrap lab =
           self#app_transformation_expr ~loc
-            (self#do_typ_gen ~loc ~is_self_rec ~mutal_names lab.pld_type)
+            (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls lab.pld_type)
             (Exp.field ~loc (Exp.ident ~loc "inh") (Lident lab.pld_name.txt))
             (Exp.ident ~loc lab.pld_name.txt )
         in

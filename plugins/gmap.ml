@@ -127,14 +127,14 @@ class g args = object(self: 'self)
       [Cf.constraint_ ~loc (Typ.var ~loc Plugin.extra_param_name) right ]
     else []
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     Exp.fun_list ~loc
       (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
       (let ctuple =
          List.map ts
            ~f:(fun (name, typ) ->
                self#app_transformation_expr ~loc
-                 (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                 (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
                  inhe
                  (Exp.ident ~loc name)
              )
@@ -146,7 +146,7 @@ class g args = object(self: 'self)
       )
 
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
@@ -160,7 +160,7 @@ class g args = object(self: 'self)
         ~f:(fun {pld_name; pld_type} ->
             lident pld_name.txt,
             self#app_transformation_expr ~loc
-              (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+              (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
               (Exp.assert_false ~loc)
               (Exp.ident ~loc pld_name.txt)
           )

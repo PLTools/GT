@@ -82,7 +82,7 @@ class g args = object(self)
     [ Typ.var ~loc html_param_name
     ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     let constr_name = match constr_info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
@@ -97,7 +97,7 @@ class g args = object(self)
          let ds = List.map ts
            ~f:(fun (name, typ) ->
                  self#app_transformation_expr ~loc
-                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
                    (Exp.assert_false ~loc)
                    (Exp.ident ~loc name)
               )
@@ -108,18 +108,13 @@ class g args = object(self)
       )
 
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         )
     in
     let methname = sprintf "do_%s" tdecl.ptype_name.txt in
-    let fmt = List.fold_left labs ~init:""
-        ~f:(fun acc x ->
-            sprintf "%s %s=%%s;" acc x.pld_name.txt
-          )
-    in
     [ Cf.method_concrete ~loc methname @@
       Exp.fun_ ~loc (Pat.unit ~loc) @@
       Exp.fun_ ~loc pat @@
@@ -127,7 +122,7 @@ class g args = object(self)
       let ds = List.map labs
             ~f:(fun {pld_name; pld_type} ->
               self#app_transformation_expr ~loc
-                (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+                (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
                 (Exp.assert_false ~loc)
                 (Exp.ident ~loc pld_name.txt)
             )

@@ -94,14 +94,14 @@ class g initial_args = object(self: 'self)
         ~init
         xs
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info args =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info args =
     let names = List.map args ~f:fst in
     Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
-    self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_names)
+    self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls)
         ~init:inhe
         args
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)

@@ -64,7 +64,7 @@ class g args = object(self)
     List.map rhs_args ~f:Typ.from_caml
 
   (* Adapted to generate only single method per constructor definition *)
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_names ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     let constr_name = match constr_info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
@@ -80,7 +80,7 @@ class g args = object(self)
            ~f:(fun acc (name, typ) ->
                Exp.app ~loc acc
                  (self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_names typ)
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
                     (Exp.assert_false ~loc)
                     (Exp.ident ~loc name)
                  )
@@ -95,7 +95,7 @@ class g args = object(self)
                      )
       )
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_names tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
@@ -114,7 +114,7 @@ class g args = object(self)
             ~f:(fun acc {pld_name; pld_type} ->
                 Exp.app ~loc acc
                   (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_names pld_type)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
                      (Exp.assert_false ~loc)
                      (Exp.ident ~loc pld_name.txt)
                   )
