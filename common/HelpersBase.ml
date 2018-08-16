@@ -68,7 +68,7 @@ let rec map_longident ~f = function
 
 let map_core_type ~onvar t =
   let rec helper t =
-    Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t;
+    (* Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t; *)
     match t.ptyp_desc with
     | Ptyp_any -> t
     | Ptyp_var name -> begin
@@ -101,13 +101,13 @@ let list_first_some ~f xs =
       )
 
 let maybe_specialiaze ~what where =
-  Format.printf "maybe specialize: %a\n%!" Pprintast.structure_item
-    {pstr_desc=(Pstr_type (Nonrecursive, [what])); pstr_loc=what.ptype_name.loc };
-  List.iter where ~f:(Format.printf "\t%a\n%!" Pprintast.core_type);
-  print_endline "==";
+  (* Format.printf "maybe specialize: %a\n%!" Pprintast.structure_item
+   *   {pstr_desc=(Pstr_type (Nonrecursive, [what])); pstr_loc=what.ptype_name.loc };
+   * List.iter where ~f:(Format.printf "\t%a\n%!" Pprintast.core_type);
+   * print_endline "=="; *)
 
   let rec loop t =
-    Format.printf "loop: %a\n%!" Pprintast.core_type t;
+    (* Format.printf "loop: %a\n%!" Pprintast.core_type t; *)
     match t.ptyp_desc with
     | Ptyp_constr ({txt=(Lident s)}, args) when String.equal s what.ptype_name.txt ->
       (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
@@ -138,9 +138,9 @@ let specialize_for_tdecl ~what ~where wrap =
   |> (function
       | None -> wrap []
       | Some map ->
-        Format.printf "Found somethig: %s\n------------\n%!"
-          (List.map map ~f:(fun (s,_) -> Printf.sprintf "(\"%s\",_)" s)
-          |> String.concat " ");
+        (* Format.printf "Found somethig: %s\n------------\n%!"
+         *   (List.map map ~f:(fun (s,_) -> Printf.sprintf "(\"%s\",_)" s)
+         *   |> String.concat " "); *)
         wrap map
     )
 
