@@ -31,10 +31,13 @@ open Ppxlib
 let trf_function trait tdecl = Printf.sprintf "%s_%s" trait tdecl.ptype_name.txt
 let stub_class_name ~plugin tdecl =
   sprintf "%s_%s_t_stub" plugin tdecl.ptype_name.txt
-let make_fix_name ~plugin_name tdecls =
+let make_fix_name ~plugin tdecls =
   assert (List.length tdecls > 0);
   let names = List.map tdecls ~f:(fun t -> t.ptype_name.txt) in
-  String.concat ~sep:"_" (plugin_name :: "fix" :: names)
+  String.concat ~sep:"_" (plugin :: "fix" :: names)
+
+let name_fix_generated_object ~plugin tdecl =
+  sprintf "%s_o_%s" plugin tdecl.ptype_name.txt
 
 let mut_arg_name ~plugin = sprintf "o%s_%s" plugin
 (* let mut_class_stubname ~plugin tdecl =

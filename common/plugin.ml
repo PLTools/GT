@@ -567,7 +567,7 @@ class virtual generator initial_args = object(self: 'self)
     (self#make_universal_types  ~loc ~mut_names tdecls) @
     [self#make_mutal_fix ~loc tdecls] @
     (self#apply_mutal_fix ~loc tdecls) @
-    (self#make_shortend_class ~loc mut_names tdecls)
+    (self#make_shortend_class ~loc tdecls)
 
 
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
@@ -583,7 +583,7 @@ class virtual generator initial_args = object(self: 'self)
   method make_mutal_fix ~loc tdecls =
     let names = List.map tdecls ~f:(fun t -> t.ptype_name.txt) in
     Str.single_value ~loc (Pat.sprintf ~loc "%s" @@
-                           Naming.make_fix_name ~plugin_name:self#plugin_name tdecls) @@
+                           Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
     Exp.fun_ ~loc (Pat.tuple ~loc @@ List.map names ~f:(Pat.sprintf ~loc "%s0")) @@
     Exp.let_ ~loc
       (List.concat_map tdecls ~f:(fun tdecl ->
@@ -648,12 +648,13 @@ class virtual generator initial_args = object(self: 'self)
   method apply_mutal_fix ~loc tdecls =
     [ Str.single_value ~loc
         (Pat.tuple ~loc @@ List.concat_map tdecls ~f:(fun tdecl ->
-             [ Pat.sprintf ~loc "fix_result_%s" tdecl.ptype_name.txt
-             ; Pat.sprintf ~loc "o_%s" tdecl.ptype_name.txt
+             [ Pat.sprintf ~loc "%s" @@ Naming.fix_result tdecl
+             ; Pat.sprintf ~loc "%s" @@
+               Naming.name_fix_generated_object self#plugin_name tdecl
              ]
            ))
         (Exp.app ~loc (Exp.ident ~loc @@
-                       Naming.make_fix_name ~plugin_name:self#plugin_name tdecls) @@
+                       Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
          Exp.tuple ~loc @@
          List.map tdecls ~f:(fun tdecl ->
              Exp.record1 ~loc
@@ -663,7 +664,6 @@ class virtual generator initial_args = object(self: 'self)
                   (lident @@ Naming.stub_class_name ~plugin:self#plugin_name tdecl)
                )
            )
-
         )
     ] @ List.map tdecls ~f:(fun tdecl ->
         Str.single_value ~loc
@@ -767,28 +767,36 @@ class virtual generator initial_args = object(self: 'self)
       )
 
   (* shortened class only used for mutally recursive declarations *)
-  method make_shortend_class ~loc mutal_names tdecls =
+  method make_shortend_class ~loc tdecls =
     List.map tdecls ~f:(fun tdecl ->
-      let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in
+        let mutal_decls = List.filter tdecls
+            ~f:(fun td -> not (String.equal td.ptype_name.txt tdecl.ptype_name.txt))
+        in
+        (* let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in *)
       let class_name =
         Naming.trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
       in
       let stub_name = Naming.stub_class_name ~plugin:self#plugin_name tdecl in
       (* maybe it should be called proto *)
-      let mut_funcs = List.map ~f:(Naming.mut_arg_name ~plugin:self#plugin_name) mutal_names
+      let mut_funcs = List.map mutal_decls ~f:(fun td ->
+          Exp.field ~loc
+            (Exp.ident ~loc @@
+             Naming.name_fix_generated_object ~plugin:self#plugin_name td)
+            (lident @@ Naming.mut_ofield ~plugin:self#plugin_name td.ptype_name.txt)
+        )
       in
 
-      let new_params = self#plugin_class_params tdecl in
+      let params = self#plugin_class_params tdecl in
       Str.class_single ~loc ~name:class_name
         ~wrap:(fun cl ->
             Cl.fun_ ~loc (Pat.sprintf ~loc "%s" Naming.self_arg_name) @@
             Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl
           )
-        ~params:new_params
+        ~params
         [ Cf.inherit_ ~loc @@ Cl.apply ~loc
             (Cl.constr ~loc (Lident stub_name) @@
-             List.map ~f:(Typ.of_type_arg ~loc) new_params)
-            (List.map ~f:(Exp.sprintf ~loc "%s") mut_funcs @
+             List.map ~f:(Typ.of_type_arg ~loc) params)
+            (mut_funcs @
              [Exp.sprintf ~loc "%s" Naming.self_arg_name] @
              (self#apply_fas_in_new_object ~loc tdecl))
         ]
@@ -924,41 +932,37 @@ class virtual generator initial_args = object(self: 'self)
           )
       | Ptyp_constr (_,_) when is_self_rec t ->
         Exp.ident ~loc Naming.self_arg_name
-      | Ptyp_constr ({txt},params) ->
-        (* HelpersBase.notify "do_typ constr %s"
-         *   (Longident.flatten_exn txt |> String.concat ~sep:"."); *)
-          (* in this place it will be easier to have all plugin in single value *)
-          let trf_expr =
-            match txt with
-            | Lident s when List.mem mutal_names s ~equal:String.equal ->
+      | Ptyp_constr ({txt},params) -> begin
+          match txt with
+          | Lident s when List.mem mutal_names s ~equal:String.equal ->
               (* we should use local trf object *)
               self#app_gcata ~loc @@
-              Exp.app ~loc (Exp.sprintf ~loc "%s" @@ Naming.gcata_name_for_typ s) @@
               Exp.app ~loc
-                (Exp.sprintf ~loc "%s" @@ Naming.mut_arg_name ~plugin:self#plugin_name s)
-                (Exp.unit ~loc)
+                (Exp.sprintf ~loc "%s" @@ Naming.gcata_name_for_typ s)
+                (Exp.app_list ~loc
+                   (Exp.ident ~loc @@ Naming.mut_arg_name ~plugin:self#plugin_name s)
+                   ((Exp.unit ~loc) :: (List.map params ~f:(fun typ ->
+                       self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ
+                     )))
+                )
             | _ ->
-                (* [%expr let (module Op) =
-                 *          [%e Exp.ident_of_long txt] in
-                 *   [%e
-                 *     Exp.ident_of_long ~loc @@
-                 *     Ldot (Lident "Op", self#plugin_name) ]
-                 * ] *)
-              Exp.(send ~loc
-                     (access_plugins ~loc (of_longident ~loc txt))
-                     self#plugin_name
-                  )
-          in
-        self#abstract_trf ~loc (fun einh esubj ->
-            self#app_transformation_expr ~loc
-              (List.fold_left params (* (List.map ~f:helper params) *)
-                 ~init:trf_expr
-                 ~f:(fun left typ ->
-                   self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
-                 )
-              )
-              einh esubj
-          )
+              let init =
+                Exp.(send ~loc
+                       (access_plugins ~loc (of_longident ~loc txt))
+                       self#plugin_name
+                    )
+              in
+              self#abstract_trf ~loc (fun einh esubj ->
+                  self#app_transformation_expr ~loc
+                    (List.fold_left params (* (List.map ~f:helper params) *)
+                       ~init
+                       ~f:(fun left typ ->
+                           self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
+                         )
+                    )
+                    einh esubj
+                )
+        end
         | Ptyp_variant (rows, _, maybe_labels) -> begin
           let oninherit einh esubj typs cident varname =
             self#app_transformation_expr
