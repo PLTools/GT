@@ -2,7 +2,7 @@ open Printf
 
 type 'l a = A of b     | C | E of 'l a | D of 'l
 and     b = I of GT.int a | J | K of b
-[@@deriving gt ~options:{show}]
+[@@deriving gt ~options:{show; gmap}]
 
 
 let _ =

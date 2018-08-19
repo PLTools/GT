@@ -11,8 +11,8 @@
 (*
  * OCanren: syntax extension.
  * Copyright (C) 2016-2017
- *   Dmitrii Kosarev aka Kakadu
- * St.Petersburg State University, JetBrains Research
+ *   Dmitrii Kosarev a.k.a. Kakadu
+ * St.Petersburg University, JetBrains Research
  *)
 
 open Base
@@ -73,14 +73,17 @@ class g args = object(self: 'self)
       List.map ~f:(Typ.var ~loc) rez_names
     in
     if is_polyvariant_tdecl tdecl
-    then Typ.alias ~loc (Typ.variant_of_t ~loc ans) Plugin.extra_param_name
+    then Typ.alias ~loc (Typ.variant_of_t ~loc ans) @@
+      Naming.make_extra_param tdecl.ptype_name.txt
     else ans
 
 
   method plugin_class_params tdecl =
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
     blownup_params @
-    [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+      Naming.make_extra_param tdecl.ptype_name.txt
+    ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =

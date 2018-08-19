@@ -1,3 +1,20 @@
+(** {i Compare} plugin.
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [('a -> 'a -> GT.comparison) ->
+     ('b -> 'b -> GT.comparison) -> ... -> ('a,'b,...) typ -> GT.comparison ]
+
+    Inherited attribute' is the same as argument, synthetized attribute is {!GT.comparison}.
+*)
+
+(*
+ * OCanren: syntax extension.
+ * Copyright (C) 2016-2017
+ *   Dmitrii Kosarev a.k.a. Kakadu
+ * St.Petersburg University, JetBrains Research
+ *)
 open Base
 open Ppxlib
 open HelpersBase
@@ -30,7 +47,9 @@ class g initial_args = object(self: 'self)
 
   method plugin_class_params tdecl =
     List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t) @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) Plugin.extra_param_name]
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+      Naming.make_extra_param tdecl.ptype_name.txt
+    ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml

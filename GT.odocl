@@ -14,3 +14,6 @@ plugins/Eq
 plugins/Foldl
 plugins/Foldr
 plugins/Show_typed
+
+src/GT
+

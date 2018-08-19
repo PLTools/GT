@@ -41,8 +41,9 @@ class g initial_args = object(self: 'self)
     let param_names,_,find_param,blownup_params = G.hack_params tdecl.ptype_params in
     let loc = loc_from_caml tdecl.ptype_loc in
     blownup_params @
-    [named_type_arg ~loc "env"] @
-    [named_type_arg ~loc Plugin.extra_param_name]
+    [ named_type_arg ~loc "env" ] @
+    [ named_type_arg ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt
+    ]
 
   method! prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
@@ -59,7 +60,7 @@ class g initial_args = object(self: 'self)
     in
     (List.map ~f:Typ.from_caml ps) @
     [ Typ.var ~loc "env"] @
-    [ Typ.var ~loc Plugin.extra_param_name ]
+    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
 
 end

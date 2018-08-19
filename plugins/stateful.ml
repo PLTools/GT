@@ -62,8 +62,9 @@ class g initial_args = object(self: 'self)
         )
     in
     (List.map ~f:Typ.from_caml ps) @
-    [ Typ.var ~loc "env"] @
-    [ Typ.var ~loc Plugin.extra_param_name ]
+    [ Typ.var ~loc "env" ] @
+    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt
+    ]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
       Exp.fun_list ~loc
