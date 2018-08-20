@@ -121,7 +121,7 @@ let maybe_specialiaze ~what where =
   in
   list_first_some ~f:loop where
 
-let specialize_for_tdecl ~what ~where wrap =
+let specialize_for_tdecl ~what ~where =
   let loc = where.ptype_name.loc in
   visit_typedecl ~loc where
     (* ?(onrecord  =fun _ -> not_implemented ~loc "record types")
@@ -136,12 +136,12 @@ let specialize_for_tdecl ~what ~where wrap =
       )
     ~onabstract:(fun _ -> None)
   |> (function
-      | None -> wrap []
+      | None -> []
       | Some map ->
         (* Format.printf "Found somethig: %s\n------------\n%!"
          *   (List.map map ~f:(fun (s,_) -> Printf.sprintf "(\"%s\",_)" s)
          *   |> String.concat " "); *)
-        wrap map
+        map
     )
 
 

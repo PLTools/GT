@@ -746,13 +746,14 @@ class virtual generator initial_args = object(self: 'self)
                          (* we need to try specialize [other_tdecl] using its
                             occurances in [tdecl] *)
                          Typ.arrow ~loc
-                           (specialize_for_tdecl ~what:other_tdecl ~where:tdecl
-                              (fun map ->
-                                 Typ.map otyp
-                                   ~onvar:(fun s ->
-                                       Option.map ~f:Typ.from_caml @@
-                                       (List.Assoc.find ~equal:String.equal map s)
-                                   ))
+                           (let m = specialize_for_tdecl ~what:other_tdecl ~where:tdecl in
+                            self#specialize other_tdecl otyp m
+                              (* (fun map ->
+                               *    Typ.map otyp
+                               *      ~onvar:(fun s ->
+                               *          Option.map ~f:Typ.from_caml @@
+                               *          (List.Assoc.find ~equal:String.equal map s)
+                               *      )) *)
                            )
                            acc
                        )
@@ -765,6 +766,14 @@ class virtual generator initial_args = object(self: 'self)
         ;
         ]
       )
+
+  method specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
+    let (_:type_declaration) = tdecl in
+    Typ.map typ
+      ~onvar:(fun s ->
+          Option.map ~f:Typ.from_caml @@
+          (List.Assoc.find ~equal:String.equal map s)
+        )
 
   (* shortened class only used for mutally recursive declarations *)
   method make_shortend_class ~loc tdecls =
