@@ -113,6 +113,10 @@ let maybe_specialiaze ~what where =
    * List.iter where ~f:(Format.printf "\t%a\n%!" Pprintast.core_type);
    * print_endline "=="; *)
 
+  let myfold ~f ~init xs =
+    List.fold_left ~init xs ~f:(function Some r -> (fun _ -> Some r)
+                                       | None -> f)
+  in
   let rec loop t =
     (* Format.printf "loop: %a\n%!" Pprintast.core_type t; *)
     match t.ptyp_desc with
@@ -126,11 +130,10 @@ let maybe_specialiaze ~what where =
                 ))
     | Ptyp_tuple args
     | Ptyp_constr (_, args) ->
-      List.fold_left args ~init:None
-        ~f:(function None -> loop
-                   | Some res -> (fun _ -> Some res)
-          )
+      myfold args ~init:None ~f:loop
     | Ptyp_var _ -> None
+    (* | Ptyp_record (labs, _) ->
+     *   myfold labs ~init:None ~f:(fun (_,e) -> loop e) *)
     | _ -> not_implemented "TODO: maybe_specialize %s" (string_of_core_type t)
   in
   list_first_some ~f:loop where
@@ -141,7 +144,10 @@ let maybe_specialiaze ~what where =
 let specialize_for_tdecl ~what ~where =
   let loc = where.ptype_name.loc in
   visit_typedecl ~loc where
-    ~onrecord:(fun _ -> not_implemented ~loc "TODO: record types")
+    ~onrecord:(fun labs ->
+        maybe_specialiaze ~what @@ List.map labs ~f:(fun l -> l.pld_type)
+          (* not_implemented ~loc "TODO: record types" *)
+      )
     (* ~onmanifest:(fun _ -> not_implemented ~loc "TODO: manifest") *)
     ~onmanifest:(fun t -> maybe_specialiaze ~what [t])
     ~onvariant:(fun cstrs ->

@@ -60,10 +60,10 @@ class g args = object(self)
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
+    List.map rhs_args ~f:Typ.from_caml (* @
+     * [ Typ.var ~loc @@
+     *   Naming.make_extra_param tdecl.ptype_name.txt
+     * ] *)
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
