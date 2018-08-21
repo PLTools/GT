@@ -213,7 +213,8 @@ let make_interface_class_sig ~loc tdecl =
                 )
               in
               k meths
-          | Ptyp_extension _ -> failwith "extensions in types not implemented"
+          | Ptyp_extension _ -> not_implemented "extensions in types not implemented: %s"
+                                  (string_of_core_type typ)
           |  _ -> failwith " not implemented"
           in
           helper typ
@@ -338,7 +339,8 @@ let make_interface_class ~loc tdecl =
                         wrap ~is_poly:true txt params
                       | _ -> assert false
                 )
-          | Ptyp_extension _ -> failwith "extensions not implemented"
+          | Ptyp_extension _ -> not_implemented "extensions in types `%s`"
+                                  (string_of_core_type typ)
           | _ -> failwith "not implemented "
           in
           helper typ

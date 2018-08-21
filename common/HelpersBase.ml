@@ -34,6 +34,13 @@ end
 
 open Ppxlib
 
+let string_of_core_type typ =
+  let b = Buffer.create 100 in
+  let fmt = Format.formatter_of_buffer b in
+  Pprintast.core_type fmt typ;
+  Format.pp_print_newline fmt ();
+  Buffer.contents b
+
 let compare_core_type a b =
   String.compare
     (Format.easy_string Pprintast.core_type a)
@@ -117,15 +124,26 @@ let maybe_specialiaze ~what where =
                   | Ptyp_var s -> (s,typ)
                   | _ -> failwith "should not happen"
                 ))
-    | _ -> assert false
+    | Ptyp_tuple args
+    | Ptyp_constr (_, args) ->
+      List.fold_left args ~init:None
+        ~f:(function None -> loop
+                   | Some res -> (fun _ -> Some res)
+          )
+    | Ptyp_var _ -> None
+    | _ -> not_implemented "TODO: maybe_specialize %s" (string_of_core_type t)
   in
   list_first_some ~f:loop where
 
+(* There we iterate over type declaration [where] and check is type [what] is used inside
+   If yes, it returns Some substitution of type parameters of what.
+*)
 let specialize_for_tdecl ~what ~where =
   let loc = where.ptype_name.loc in
   visit_typedecl ~loc where
-    (* ?(onrecord  =fun _ -> not_implemented ~loc "record types")
-     * ?(onmanifest=fun _ -> not_implemented ~loc "manifest") *)
+    ~onrecord:(fun _ -> not_implemented ~loc "TODO: record types")
+    (* ~onmanifest:(fun _ -> not_implemented ~loc "TODO: manifest") *)
+    ~onmanifest:(fun t -> maybe_specialiaze ~what [t])
     ~onvariant:(fun cstrs ->
         list_first_some cstrs ~f:(fun c ->
             match c.pcd_args with
