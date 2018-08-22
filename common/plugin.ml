@@ -602,15 +602,16 @@ class virtual generator initial_args = object(self: 'self)
              let open Exp in
              fun_list ~loc
                (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
-             fun_ ~loc (Pat.sprintf ~loc "subj") @@
-             app_list ~loc
-               (ident ~loc @@ Naming.gcata_name_for_typ tdecl.ptype_name.txt)
-               [ app_list ~loc (app ~loc (field ~loc (ident ~loc oname) (lident ofield))
-                                  (unit ~loc))
-                   (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))
-               ; unit ~loc
-               ; sprintf ~loc "subj"
-               ]
+             self#abstract_trf ~loc @@ fun einh esubj ->
+             self#app_transformation_expr ~loc
+               (self#app_gcata ~loc @@
+                app ~loc
+                  (ident ~loc @@ Naming.gcata_name_for_typ tdecl.ptype_name.txt)
+                  (app_list ~loc (app ~loc (field ~loc (ident ~loc oname) (lident ofield))
+                                    (unit ~loc))
+                     (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))))
+               einh
+               esubj
            in
            let eobj =
              let open Exp in
@@ -748,12 +749,6 @@ class virtual generator initial_args = object(self: 'self)
                          Typ.arrow ~loc
                            (let m = specialize_for_tdecl ~what:other_tdecl ~where:tdecl in
                             self#specialize other_tdecl otyp m
-                              (* (fun map ->
-                               *    Typ.map otyp
-                               *      ~onvar:(fun s ->
-                               *          Option.map ~f:Typ.from_caml @@
-                               *          (List.Assoc.find ~equal:String.equal map s)
-                               *      )) *)
                            )
                            acc
                        )
@@ -781,10 +776,9 @@ class virtual generator initial_args = object(self: 'self)
         let mutal_decls = List.filter tdecls
             ~f:(fun td -> not (String.equal td.ptype_name.txt tdecl.ptype_name.txt))
         in
-        (* let mutal_names = List.filter mutal_names ~f:(String.(<>) tdecl.ptype_name.txt) in *)
-      let class_name =
-        Naming.trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
-      in
+        let class_name =
+          Naming.trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
+        in
       let stub_name = Naming.stub_class_name ~plugin:self#plugin_name tdecl in
       (* maybe it should be called proto *)
       let mut_funcs = List.map mutal_decls ~f:(fun td ->
@@ -1090,13 +1084,15 @@ class virtual with_inherit_arg = object(self: 'self)
   (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
    *   fot a type ('a,'b,....'z) being generated
    **)
-(*
-  method! make_typ_of_class_argument ~loc tdecl name k =
-    k @@
-    super#make_typ_of_class_argument ~loc tdecl name (fun t ->
-        Typ.arrow ~loc (Typ.var ~loc (name^"__")) t
-      )
-    *)
+
+  method make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let inh_t = self#inh_of_param tdecl name in
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      k @@ (fun arg -> chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t) arg)
 
   method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
