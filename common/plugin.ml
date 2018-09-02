@@ -308,12 +308,13 @@ class virtual generator initial_args = object(self: 'self)
 
   (* When we got declaration of type alias via type application *)
   method got_constr ~loc ~is_self_rec tdecl mutal_decls do_typ cid cparams k =
-    let mutal_names = List.filter_map mutal_decls ~f:(fun t ->
-        if String.equal t.ptype_name.txt tdecl.ptype_name.txt
-        then None
-        else Some t.ptype_name.txt
-      )
-    in
+    (* It seems that we can't filter mutal decls because we need to preserve an order *)
+    (* let mutal_names = List.filter_map mutal_decls ~f:(fun t ->
+     *     if String.equal t.ptype_name.txt tdecl.ptype_name.txt
+     *     then None
+     *     else Some t.ptype_name.txt
+     *   )
+     * in *)
     let ans args : Cf.t list =
       [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams
         in
@@ -563,11 +564,13 @@ class virtual generator initial_args = object(self: 'self)
        many structures, fixpoint, etc.
     *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
+    List.map tdecls ~f:(self#make_trf_field_tdecl ~loc) @
     List.map tdecls ~f:(self#make_class ~loc ~is_rec:true tdecls) @
     (self#make_universal_types  ~loc ~mut_names tdecls) @
     [self#make_mutal_fix ~loc tdecls] @
     (self#apply_mutal_fix ~loc tdecls) @
-    (self#make_shortend_class ~loc tdecls)
+    (* (self#make_shortend_class ~loc tdecls) @ *)
+    []
 
 
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
@@ -592,11 +595,13 @@ class virtual generator initial_args = object(self: 'self)
            let ofield = Naming.mut_ofield ~plugin:self#plugin_name typ_name in
            let t0field = Naming.mut_oclass_field ~plugin:self#plugin_name typ_name in
            let trf_field = Naming.trf_field ~plugin:self#plugin_name typ_name in
+           let trf_r_ident = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
            let othernames = List.filter_map tdecls ~f:(fun tdecl ->
                if String.equal tdecl.ptype_name.txt typ_name then None
                else Some  tdecl.ptype_name.txt
              )
            in
+           let trf_struct_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
            let trf_name = sprintf "%s_%s" self#plugin_name typ_name in
            let eplugin =
              let open Exp in
@@ -607,42 +612,29 @@ class virtual generator initial_args = object(self: 'self)
                (self#app_gcata ~loc @@
                 app ~loc
                   (ident ~loc @@ Naming.gcata_name_for_typ tdecl.ptype_name.txt)
-                  (app_list ~loc (app ~loc (field ~loc (ident ~loc oname) (lident ofield))
-                                    (unit ~loc))
-                     (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))))
+                  (app_list ~loc
+                     (field ~loc (sprintf ~loc "%s0" typ_name) (lident t0field))
+                   @@
+                   List.map othernames ~f:(sprintf ~loc "%s_%s" self#plugin_name) @
+                   [ field ~loc (ident ~loc trf_r_ident) (lident trf_field)] @
+                   (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))
+                  )
+                  (* (app_list ~loc (unit ~loc) @@
+                   *  (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))) *)
+               )
                einh
                esubj
            in
-           let eobj =
-             let open Exp in
-             let argss = map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s") in
-             fun_ ~loc (Pat.unit ~loc) @@
-             fun_list ~loc
-               (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
-             app_list ~loc
-               (field ~loc (sprintf ~loc "%s0" typ_name) (lident t0field)) @@
-             List.map othernames ~f:(fun s ->
-                  Exp.field ~loc (Exp.sprintf ~loc "o%s" s)
-                    (lident @@ Naming.mut_ofield ~plugin:self#plugin_name s)
-                ) @
-             [ app_list ~loc (Exp.field ~loc (ident ~loc trf_name) (lident trf_field))  argss
-             ] @
-             argss
-           in
-           [ Pat.sprintf ~loc "%s_%s" self#plugin_name tdecl.ptype_name.txt,
+
+           [ Pat.sprintf ~loc "%s" trf_r_ident,
              Exp.record1 ~loc
                (lident @@ Naming.trf_field ~plugin:self#plugin_name tdecl.ptype_name.txt) @@
              eplugin
-           ; Pat.sprintf ~loc "%s" oname,
-             Exp.record1 ~loc (lident @@ Naming.mut_ofield ~plugin:self#plugin_name
-                                 tdecl.ptype_name.txt) @@
-             eobj
            ]
          ))
       (Exp.tuple ~loc @@
        List.concat_map tdecls ~f:(fun tdecl ->
            [ Exp.sprintf ~loc "%s_%s" self#plugin_name tdecl.ptype_name.txt
-           ; Exp.sprintf ~loc "o%s" tdecl.ptype_name.txt
            ])
       )
 
@@ -650,8 +642,8 @@ class virtual generator initial_args = object(self: 'self)
     [ Str.single_value ~loc
         (Pat.tuple ~loc @@ List.concat_map tdecls ~f:(fun tdecl ->
              [ Pat.sprintf ~loc "%s" @@ Naming.fix_result tdecl
-             ; Pat.sprintf ~loc "%s" @@
-               Naming.name_fix_generated_object self#plugin_name tdecl
+             (* ; Pat.sprintf ~loc "%s" @@
+              *   Naming.name_fix_generated_object self#plugin_name tdecl *)
              ]
            ))
         (Exp.app ~loc (Exp.ident ~loc @@
@@ -682,9 +674,19 @@ class virtual generator initial_args = object(self: 'self)
           (Exp.sprintf ~loc "subj")
       )
 
+  method make_trf_field_tdecl ~loc tdecl =
+    let name = tdecl.ptype_name.txt in
+    Str.tdecl_record ~loc ~params:[]
+      ~name:(Naming.typ1_for_class_arg ~plugin:self#plugin_name name)
+      [lab_decl ~loc (Naming.trf_field name ~plugin:self#plugin_name)
+         false
+         (let t = self#make_trans_function_typ ~loc tdecl in
+          match typ_vars_of_typ t with
+          | [] -> t
+          | xs -> Typ.poly ~loc xs t
+         )
+      ]
   method make_universal_types ~loc ~mut_names tdecls =
-    let (_ : string list) = mut_names in
-
     let obj_typs = List.fold_left tdecls
         ~init:(Map.empty ((module String) : (string, String.comparator_witness) Base.Map.comparator))
         ~f:(fun acc tdecl ->
@@ -701,28 +703,8 @@ class virtual generator initial_args = object(self: 'self)
       )
     in
     List.concat_map tdecls ~f:(fun tdecl ->
-        let name = tdecl.ptype_name.txt  in
+        let name = tdecl.ptype_name.txt in
         [ Str.tdecl_record ~loc ~params:[]
-            ~name:(Naming.typ1_for_class_arg ~plugin_name:self#plugin_name name)
-            [lab_decl ~loc (Naming.trf_field name ~plugin:self#plugin_name)
-               false
-               (let t = self#make_trans_function_typ ~loc tdecl in
-                match typ_vars_of_typ t with
-                | [] -> t
-                | xs -> Typ.poly ~loc xs t
-               )
-            ]
-        ; Str.tdecl_record ~loc ~params:[]
-            ~name:(Naming.typ2_for_class_arg ~plugin_name:self#plugin_name name)
-            [lab_decl ~loc (Naming.mut_ofield ~plugin:self#plugin_name name)
-               false
-               (let (_,t) = Map.find_exn obj_typs tdecl.ptype_name.txt in
-                match typ_vars_of_typ t with
-                | [] -> t
-                | xs -> Typ.poly ~loc xs t
-               )
-            ]
-        ; Str.tdecl_record ~loc ~params:[]
             ~name:(Naming.typ3_for_class_arg ~plugin_name:self#plugin_name name)
             [lab_decl ~loc (Naming.mut_oclass_field ~plugin:self#plugin_name name)
                false
@@ -747,12 +729,14 @@ class virtual generator initial_args = object(self: 'self)
                          (* we need to try specialize [other_tdecl] using its
                             occurances in [tdecl] *)
                          Typ.arrow ~loc
-                           (let m = specialize_for_tdecl ~what:other_tdecl ~where:tdecl in
-                            self#specialize other_tdecl otyp m
+                           (Typ.sprintf ~loc "%s" (Naming.typ1_for_class_arg ~plugin:self#plugin_name key)
+                             (* let m = specialize_for_tdecl ~what:other_tdecl ~where:tdecl in
+                             * self#specialize other_tdecl otyp m *)
                            )
                            acc
                        )
                  in
+
                  match typ_vars_of_typ t with
                  | [] -> t
                  | xs -> Typ.poly ~loc xs t

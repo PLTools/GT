@@ -11,7 +11,7 @@ let trait_class_name_for_typ ~trait name =
 let meth_name_for_constructor = Printf.sprintf "c_%s"
 let fix_name ~plugin_name = sprintf "%s_fix"
 (* 1st structure is planned to contain transformation function *)
-let typ1_for_class_arg ~plugin_name = sprintf "%s_t_%s_1" plugin_name
+let typ1_for_class_arg ~plugin = sprintf "%s_t_%s_1" plugin
 let trf_field ~plugin = sprintf "%s_%s_trf" plugin
 (* Should contain object for transforming mutally declared type *)
 let typ2_for_class_arg ~plugin_name = sprintf "%s_t_%s_2" plugin_name
@@ -39,7 +39,7 @@ let make_fix_name ~plugin tdecls =
 let name_fix_generated_object ~plugin tdecl =
   sprintf "%s_o_%s" plugin tdecl.ptype_name.txt
 
-let mut_arg_name ~plugin = sprintf "o%s_%s" plugin
+let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin
 (* let mut_class_stubname ~plugin tdecl =
  *   sprintf "%s_%s_stub" plugin_name tdecl.ptype_name.txt *)
 
