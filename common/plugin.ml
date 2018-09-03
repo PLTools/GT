@@ -133,10 +133,9 @@ class virtual generator initial_args = object(self: 'self)
       ~wrap:(fun body ->
           (* constructor arguments are *)
           let names =
-            List.filter_map mutal_decls ~f:(fun td ->
-                if String.equal td.ptype_name.txt tdecl.ptype_name.txt then None
-                else Some (Pat.sprintf ~loc "%s" @@
-                           Naming.mut_arg_name ~plugin:self#plugin_name td.ptype_name.txt)
+            List.map mutal_decls ~f:(fun td ->
+                Pat.sprintf ~loc "%s" @@
+                Naming.mut_arg_name ~plugin:self#plugin_name td.ptype_name.txt
               )
           @ [Pat.var ~loc Naming.self_arg_name] @
           (self#prepare_fa_args ~loc tdecl)
@@ -309,12 +308,7 @@ class virtual generator initial_args = object(self: 'self)
   (* When we got declaration of type alias via type application *)
   method got_constr ~loc ~is_self_rec tdecl mutal_decls do_typ cid cparams k =
     (* It seems that we can't filter mutal decls because we need to preserve an order *)
-    (* let mutal_names = List.filter_map mutal_decls ~f:(fun t ->
-     *     if String.equal t.ptype_name.txt tdecl.ptype_name.txt
-     *     then None
-     *     else Some t.ptype_name.txt
-     *   )
-     * in *)
+    let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
     let ans args : Cf.t list =
       [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams
         in
@@ -323,12 +317,8 @@ class virtual generator initial_args = object(self: 'self)
           | Lident s when List.mem mutal_names s ~equal:String.equal ->
             (* Only Lident because we ignore types with same name but from another module *)
             let extra_args =
-              List.filter_map mutal_names ~f:(fun name ->
-                  if String.equal name s then None
-                  else
-                    if String.equal name tdecl.ptype_name.txt
-                    then Some (Exp.sprintf ~loc "%s" Naming.self_arg_name)
-                    else Some (Exp.sprintf ~loc "%s_%s" self#plugin_name name)
+              List.map mutal_names ~f:(fun name ->
+                  Exp.sprintf ~loc "%s_%s" self#plugin_name name
                 )
             in
             (extra_args @ args,
@@ -720,9 +710,7 @@ class virtual generator initial_args = object(self: 'self)
                  let part1 =
                    Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) part1
                  in
-                 let others = Map.filter_keys obj_typs
-                     ~f:(fun k -> not (String.equal k tdecl.ptype_name.txt))
-                 in
+                 let others = Map.filter_keys obj_typs ~f:(fun _k -> true) in
                  let t = Map.fold_right others
                      ~init:part1
                      ~f:(fun ~key ~data:(other_tdecl, otyp) acc ->
@@ -922,16 +910,12 @@ class virtual generator initial_args = object(self: 'self)
       | Ptyp_constr ({txt},params) -> begin
           match txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal ->
-              (* we should use local trf object *)
-              self#app_gcata ~loc @@
-              Exp.app ~loc
-                (Exp.sprintf ~loc "%s" @@ Naming.gcata_name_for_typ s)
-                (Exp.app_list ~loc
-                   (Exp.ident ~loc @@ Naming.mut_arg_name ~plugin:self#plugin_name s)
-                   ((Exp.unit ~loc) :: (List.map params ~f:(fun typ ->
-                       self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ
-                     )))
-                )
+            (* we should use local trf object *)
+            let open Exp in
+            app_list ~loc
+              (field ~loc (ident ~loc @@ Naming.mut_arg_name ~plugin:self#plugin_name s)
+                 (lident @@ Naming.trf_field ~plugin:self#plugin_name s))
+              (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls))
             | _ ->
               let init =
                 Exp.(send ~loc
