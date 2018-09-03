@@ -496,6 +496,4 @@ and case =
   pc_lhs: pattern ;
   pc_guard: expression option ;
   pc_rhs: expression }
-
-
 [@@deriving gt ~options:{ fmt }]

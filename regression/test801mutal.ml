@@ -33,7 +33,21 @@ open Printf
  * type 'a d = 'a GT.list a GT.list  [@@deriving gt ~options:{show;gmap}] *)
 
 
-type ctd = class_type ci
-and class_type = C
-and 'a ci = 'a
-[@@deriving gt ~options:{fmt}]
+(* type ctd = class_type ci
+ * and class_type = C
+ * and 'a ci = 'a
+ * [@@deriving gt ~options:{fmt}] *)
+
+type class_declaration = class_expr class_infos
+and 'a class_infos =
+  {
+  pci_virt: GT.string ;
+  pci_expr: 'a ;
+}
+and class_expr =
+  {
+  pcl_desc: class_expr_desc;
+ }
+and class_expr_desc =
+  | CE
+(* [@@deriving gt ~options:{fmt}] *)

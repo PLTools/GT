@@ -314,12 +314,13 @@ class virtual generator initial_args = object(self: 'self)
         in
         let args,fixident =
           match cid.txt with
-          | Lident s when List.mem mutal_names s ~equal:String.equal ->
+          | Lident s when List.mem mutal_names s ~equal:String.equal
+            ->
             (* Only Lident because we ignore types with same name but from another module *)
             let extra_args =
-              List.map mutal_names ~f:(fun name ->
-                  Exp.sprintf ~loc "%s_%s" self#plugin_name name
-                )
+              List.map mutal_names
+                ~f:(fun name -> Exp.ident ~loc @@
+                     Naming.mut_arg_name ~plugin:self#plugin_name name)
             in
             (extra_args @ args,
              (fun s -> s ^ "_stub")
@@ -550,8 +551,8 @@ class virtual generator initial_args = object(self: 'self)
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
   method do_mutals ~loc ~is_rec tdecls : Str.t list =
-    (* for mutal recursion we need to generate two classes, one transformation function
-       many structures, fixpoint, etc.
+    (* for mutal recursion we need to generate two classes, one transformation
+       function many structures, fixpoint, etc.
     *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
     List.map tdecls ~f:(self#make_trf_field_tdecl ~loc) @
@@ -586,11 +587,7 @@ class virtual generator initial_args = object(self: 'self)
            let t0field = Naming.mut_oclass_field ~plugin:self#plugin_name typ_name in
            let trf_field = Naming.trf_field ~plugin:self#plugin_name typ_name in
            let trf_r_ident = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
-           let othernames = List.filter_map tdecls ~f:(fun tdecl ->
-               if String.equal tdecl.ptype_name.txt typ_name then None
-               else Some  tdecl.ptype_name.txt
-             )
-           in
+           let othernames = List.map tdecls ~f:(fun tdecl -> tdecl.ptype_name.txt) in
            let trf_struct_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
            let trf_name = sprintf "%s_%s" self#plugin_name typ_name in
            let eplugin =
@@ -600,14 +597,20 @@ class virtual generator initial_args = object(self: 'self)
              self#abstract_trf ~loc @@ fun einh esubj ->
              self#app_transformation_expr ~loc
                (self#app_gcata ~loc @@
+                let fas = map_type_param_names tdecl.ptype_params
+                    ~f:(sprintf ~loc "f%s")
+                in
                 app ~loc
                   (ident ~loc @@ Naming.gcata_name_for_typ tdecl.ptype_name.txt)
                   (app_list ~loc
                      (field ~loc (sprintf ~loc "%s0" typ_name) (lident t0field))
                    @@
                    List.map othernames ~f:(sprintf ~loc "%s_%s" self#plugin_name) @
-                   [ field ~loc (ident ~loc trf_r_ident) (lident trf_field)] @
-                   (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))
+                   [ app_list ~loc
+                       (field ~loc (ident ~loc trf_r_ident) (lident trf_field))
+                       fas
+                   ] @
+                   fas
                   )
                   (* (app_list ~loc (unit ~loc) @@
                    *  (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))) *)
@@ -677,9 +680,9 @@ class virtual generator initial_args = object(self: 'self)
          )
       ]
   method make_universal_types ~loc ~mut_names tdecls =
-    let obj_typs = List.fold_left tdecls
-        ~init:(Map.empty ((module String) : (string, String.comparator_witness) Base.Map.comparator))
-        ~f:(fun acc tdecl ->
+    let obj_typs = List.fold_right tdecls
+        ~init:[]
+        ~f:(fun tdecl acc ->
             let t =
               Typ.arrow ~loc (Typ.ident ~loc "unit") @@
               self#simple_trf_funcs ~loc tdecl @@
@@ -689,7 +692,7 @@ class virtual generator initial_args = object(self: 'self)
                     |> List.map ~f:(Typ.of_type_arg ~loc))
                   )
             in
-            Map.add_exn acc ~key:tdecl.ptype_name.txt ~data:(tdecl, t)
+            List.Assoc.add acc ~equal:String.equal tdecl.ptype_name.txt (tdecl, t)
       )
     in
     List.concat_map tdecls ~f:(fun tdecl ->
@@ -710,10 +713,9 @@ class virtual generator initial_args = object(self: 'self)
                  let part1 =
                    Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) part1
                  in
-                 let others = Map.filter_keys obj_typs ~f:(fun _k -> true) in
-                 let t = Map.fold_right others
+                 let t = List.fold_right obj_typs
                      ~init:part1
-                     ~f:(fun ~key ~data:(other_tdecl, otyp) acc ->
+                     ~f:(fun (key,(other_tdecl, otyp)) acc ->
                          (* we need to try specialize [other_tdecl] using its
                             occurances in [tdecl] *)
                          Typ.arrow ~loc
@@ -730,7 +732,6 @@ class virtual generator initial_args = object(self: 'self)
                  | xs -> Typ.poly ~loc xs t
                end
             ]
-        ;
         ]
       )
 
