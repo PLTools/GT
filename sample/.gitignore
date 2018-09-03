@@ -1,4 +1,4 @@
 # test files for OCaml parsetree HTMLizer
 /test.ml
 /out.html
-/out.txt
+/out.fmt.txt

@@ -375,7 +375,7 @@ class ['a, 'self] fmt_option_t _fself fa =
     method c_None fmt   = Format.fprintf fmt "None"
     method c_Some fmt x = Format.fprintf fmt "Some (%a)" fa x
   end
-class ['a] html_option_t _fself fa =
+class ['a, 'self] html_option_t _fself fa =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @option
     method c_None _  = HTML.string "None"
@@ -493,7 +493,7 @@ class ['a, 'self] html_free_t _ fa =
   object
     inherit [unit, 'a, 'syn, unit, 'self, 'syn] free_t
     constraint 'syn = HTML.viewer
-    method c_Free () x = HTML.string "not implemented"
+    method c_Free () x = fa x
   end
 
 class ['a, 'sa, 'self] gmap_free_t _ fa =
@@ -701,6 +701,9 @@ end
 class ['a, 'b, 'self] fmt_tuple2_t fself fa fb = object
   inherit [ 'a, 'b, 'self] fmt_pair_t fself fa fb
 end
+class ['a, 'b, 'self] html_tuple2_t fself fa fb = object
+  inherit [ 'a, 'b, 'self] html_pair_t fself fa fb
+end
 class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t fself fa fb = object
   inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t fself fa fb
 end
@@ -759,6 +762,22 @@ class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t _ fa fb fc =
             , unit, 'self, ('a2,'b2,'c2) triple ] @triple
     method c_Triple () x y z = ( (fa x), (fb y), (fc z) )
 end
+class ['a, 'b, 'c, 'self] html_triple_t _ fa fb fc =
+  object
+    inherit [ unit, 'a, 'syn, unit, 'b, 'syn, unit, 'c, 'syn
+            , unit, 'self, 'syn] triple_t
+    constraint 'syn = HTML.viewer
+    method c_Triple () x y z =
+      List.fold_left View.concat View.empty
+         [ HTML.string "("
+         ; HTML.ul (fa x)
+         ; HTML.string ", "
+         ; HTML.ul (fb y)
+         ; HTML.string ", "
+         ; HTML.ul (fc z)
+         ; HTML.string ")"]
+  end
+
 class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] eval_triple_t _ fa fb fc =
   object
     inherit [ 'env, 'a, 'a2
@@ -831,6 +850,8 @@ let triple :
                   Format.formatter -> ('a, 'b, 'c) triple -> unit;
         gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
                   ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
+        html    : ('a -> HTML.er) -> ('b -> HTML.er) -> ('c -> HTML.er) ->
+                  ('a, 'b, 'c) triple -> HTML.er;
         eval    : ('env -> 'a -> 'd) -> ('env -> 'b -> 'e) -> ('env -> 'c -> 'f) ->
                   'env -> ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
         stateful: ('env -> 'a -> 'env * 'd) ->
@@ -859,11 +880,13 @@ let triple :
   {gcata   = gcata_triple;
    plugins = object
      method show    fa fb fc =
-       gcata_triple (new show_triple_t    (fun _ -> assert false) fa fb fc) ()
+       gcata_triple (new @triple[show]    (fun _ -> assert false) fa fb fc) ()
      method fmt     fa fb fc =
        gcata_triple (new @triple[fmt]     (fun _ -> assert false) fa fb fc)
      method gmap    fa fb fc =
-       gcata_triple (new gmap_triple_t    (fun _ -> assert false) fa fb fc) ()
+       gcata_triple (new @triple[gmap]    (fun _ -> assert false) fa fb fc) ()
+     method html    fa fb fc =
+       gcata_triple (new @triple[html]    (fun _ -> assert false) fa fb fc) ()
      method eval    fa fb fc =
        gcata_triple (new @triple[eval]    (fun _ -> assert false) fa fb fc)
      method stateful    fa fb fc =
@@ -884,6 +907,9 @@ class ['a, 'b, 'c, 'self] show_tuple3_t fself fa fb fc = object
 end
 class ['a, 'b, 'c, 'self] fmt_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'b, 'c, 'self] @triple[fmt] fself fa fb fc
+end
+class ['a, 'b, 'c, 'self] html_tuple3_t fself fa fb fc = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[html] fself fa fb fc
 end
 class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t fself fa fb fc = object
   inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_triple_t fself fa fb fc
@@ -927,6 +953,27 @@ class ['a, 'b, 'c, 'd, 'self] fmt_tuple4_t _ fa fb fc fd =
     method c_tuple4 fmt a b c d =
       Format.fprintf fmt "(%a,%a,%a,%a)" fa a fb b fc c fd d
   end
+class ['a, 'b, 'c, 'd, 'self] html_tuple4_t _ fa fb fc fd =
+  object
+    inherit [ unit, 'a, 'syn
+            , unit, 'b, 'syn
+            , unit, 'c, 'syn
+            , unit, 'd, 'syn
+            , unit, 'self, 'syn] tuple4_t
+    constraint 'syn = HTML.viewer
+    method c_tuple4 () x y z d =
+      List.fold_left View.concat View.empty
+         [ HTML.string "("
+         ; HTML.ul (fa x)
+         ; HTML.string ", "
+         ; HTML.ul (fb y)
+         ; HTML.string ", "
+         ; HTML.ul (fc z)
+         ; HTML.string ")"
+         ; HTML.ul (fd d)
+         ; HTML.string ")"
+         ]
+  end
 
 let tuple4 :
     ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'id, 'd, 'sd, 'inh, _, 'syn ) #tuple4_t ->
@@ -936,11 +983,16 @@ let tuple4 :
                   (Format.formatter -> 'c -> unit) ->
                   (Format.formatter -> 'd -> unit) ->
                   Format.formatter -> ('a, 'b, 'c, 'd) tuple4 -> unit;
+        html    : ('a -> HTML.er) -> ('b -> HTML.er) -> ('c -> HTML.er) ->
+                  ('d -> HTML.er) ->
+                  ('a, 'b, 'c, 'd) tuple4 -> HTML.er;
       >) t =
   {gcata   = gcata_tuple4;
    plugins = object
      method fmt     fa fb fc fd =
        gcata_tuple4 (new @tuple4[fmt]     (fun _ -> assert false) fa fb fc fd)
+     method html    fa fb fc fd =
+       gcata_tuple4 (new @tuple4[html]    (fun _ -> assert false) fa fb fc fd) ()
   end
 }
 

@@ -18,14 +18,7 @@ let implementation ppf sourcefile outputprefix =
   Compmisc.init_path false;
   let modulename = module_of_filename ppf sourcefile outputprefix in
   Env.set_unit_name modulename;
-  let where_to_print = "out.html" in
-  (* let where_to_print =
-   *   match !output_name with
-   *   | Some s -> s
-   *   | None -> failwith "output file is not specified"
-   * in *)
   try
-(*    Format.printf "output prefix = %s, output_name = %s\n%!" !output_name outputprefix;*)
     let untyped =
       Pparse.parse_implementation ~tool_name ppf sourcefile
       ++ print_if ppf Clflags.dump_parsetree Printast.implementation
@@ -34,12 +27,19 @@ let implementation ppf sourcefile outputprefix =
     (* let () = Pprintast.structure Format.std_formatter untyped in *)
 
     let () =
-      let ch = open_out where_to_print in
+      let ch = open_out "out.fmt.txt" in
       let fmt = Format.formatter_of_out_channel ch in
       Format.pp_set_margin fmt 180;
-      (* Pprintast.structure fmt untyped; *)
-      (* Camlast.structure.GT.plugins#fmt fmt untyped; *)
       Camlast.fmt_structure fmt untyped;
+      Format.pp_print_flush fmt ();
+      close_out ch
+    in
+    let () =
+      let ch = open_out "out.html" in
+      let fmt = Format.formatter_of_out_channel ch in
+      Format.pp_set_margin fmt 180;
+      Format.fprintf fmt "%s" @@
+        HTML.toHTML @@ Camlast.html_structure untyped;
       Format.pp_print_flush fmt ();
       close_out ch
     in

@@ -59,8 +59,7 @@ class g initial_args = object(self: 'self)
         )
     in
     (List.map ~f:Typ.from_caml ps) @
-    [ Typ.var ~loc "env"] @
-    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+    [ Typ.var ~loc "env"]
 
 
 end

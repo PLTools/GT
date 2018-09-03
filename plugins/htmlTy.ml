@@ -28,7 +28,7 @@ open Ppxlib
 open HelpersBase
 open Printf
 
-let trait_name = "html"
+let trait_name = "htmlTy"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
@@ -44,12 +44,14 @@ let app_format_sprintf ~loc arg =
 
 module H = struct
   type elt = Exp.t
-  let wrap ~loc s = Exp.of_longident ~loc (Ldot (Lident "HTML", s))
-  let pcdata ~loc s = Exp.(app ~loc (wrap ~loc "string") (string_const ~loc s))
+  let wrap ~loc s = Exp.of_longident ~loc (Ldot (Lident "Tyxml_html", s))
+  let pcdata ~loc s = Exp.(app ~loc (wrap ~loc "pcdata") (string_const ~loc s))
   let div ~loc xs =
-    Exp.app ~loc (wrap ~loc "list") @@
+    Exp.app ~loc (wrap ~loc "div") @@
     Exp.list ~loc xs
 end
+
+let html_param_name = "html"
 
 class g args = object(self)
   inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
@@ -61,7 +63,7 @@ class g args = object(self)
   method default_syn ~loc ?extra_path _tdecl = self#syn_of_param ~loc "dummy"
 
   method syn_of_param ~loc _     =
-    Typ.constr ~loc (Ldot (Lident "HTML", "er")) []
+    Typ.constr ~loc (Ldot (Lident "Tyxml_html", "elt")) [ Typ.var ~loc "html" ]
 
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
 
@@ -71,12 +73,15 @@ class g args = object(self)
       List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
     in
     ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) html_param_name
+    ; named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
       Naming.make_extra_param tdecl.ptype_name.txt
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml
+    List.map rhs_args ~f:Typ.from_caml @
+    [ Typ.var ~loc html_param_name
+    ]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     let constr_name = match constr_info with
@@ -88,7 +93,7 @@ class g args = object(self)
     Exp.fun_list ~loc
       (List.map names ~f:(Pat.sprintf ~loc "%s"))
       (if List.length ts = 0
-       then H.pcdata ~loc constr_name
+       then Exp.string_const ~loc constr_name
        else
          let ds = List.map ts
            ~f:(fun (name, typ) ->

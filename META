@@ -1,8 +1,8 @@
 version = "0.1"
 description = "Generic transformers for algebraic types"
 requires = "ppxlib"
-archive(byte) = "GT.cma"
-archive(native) = "GT.cmxa"
+archive(byte) = "GTlib.cma"
+archive(native) = "GTlib.cmxa"
 
 package "common" (
   description = ""
@@ -17,7 +17,7 @@ package "ppx" (
   requires(ppx_driver)        = "ppxlib"
 
   archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
-  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx show_typed.cmx"
+  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx htmlTy.cmx show_typed.cmx"
   plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
   plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
 
@@ -50,8 +50,14 @@ package "syntax" (
     archive(syntax,preprocessor) = "show.cmo"
     archive(syntax,toploop) = "show.cmo"
   )
+  package "htmlTy" (
+    description = "Plugin 'html' for HTML generation based on TyXML library"
+    requires = "GT.syntax tyxml"
+    archive(syntax,preprocessor) = "htmlTy.cmo"
+    archive(syntax,toploop) = "htmlTy.cmo"
+  )
   package "html" (
-    description = "Plugin 'html'"
+    description = "Plugin 'html' with custom HTML library (legacy)"
     requires = "GT.syntax"
     archive(syntax,preprocessor) = "html.cmo"
     archive(syntax,toploop) = "html.cmo"
@@ -83,7 +89,7 @@ package "syntax" (
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo show_typed.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo show_typed.cmx"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo htmlTy.cmo stateful.cmo show_typed.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo htmlTy.cmo stateful.cmo show_typed.cmx"
   )
 )

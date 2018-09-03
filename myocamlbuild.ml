@@ -21,7 +21,7 @@ let make_plugins_args ~is_byte =
   let names =
     [ "show"; "gmap"; "eval";  "compare"; "eq";  "stateful"; "foldl"; "foldr"
     ; "show_typed"; "fmt"
-    ; "html"
+    ; "html"; "htmlTy"
     ]
   in
   List.map (fun s -> A(Printf.sprintf "plugins/%s.cm%s" s (if is_byte then "o" else "x")) )
@@ -33,13 +33,13 @@ let () = dispatch (fun hook ->
   | After_rules ->
     ocaml_lib "common/GTCommon";
     ocaml_lib "mymetaquot/mymetaquot";
-    ocaml_lib "src/GT";
+    ocaml_lib "src/GTlib";
     (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
     flag ["compile"; "native"; "use_GT"]   (S [ A"-I";A"src" ]);
     flag ["compile"; "byte";   "use_GT"]   (S [ A"-I";A"src" ]);
-    flag ["link";    "byte";   "use_GT"]   (S [ A"-I";A"src"; A"GT.cma" ]);
-    flag ["link";    "native"; "use_GT"]   (S [ A"-I";A"src"; A"GT.cmxa" ]);
+    flag ["link";    "byte";   "use_GT"]   (S [ A"-I";A"src"; A"GTlib.cma" ]);
+    flag ["link";    "native"; "use_GT"]   (S [ A"-I";A"src"; A"GTlib.cmxa" ]);
 
     flag ["compile"; "use_ppx_import"]
       (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx_import"
@@ -68,12 +68,6 @@ let () = dispatch (fun hook ->
         ; A"camlp5/pa_gt.cma"
         ]);
 
-     (* flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
-      *                                        ; A"show.cmo";  A"gmap.cmo"
-      *                                        ; A"foldl.cmo"; A"foldr.cmo"
-      *                                        ; A"compare.cmo"; A"eq.cmo"
-      *                                        ]); *)
-
      (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
       * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
 
@@ -92,7 +86,6 @@ let () = dispatch (fun hook ->
 
     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
     dep ["compile"; "link_pp5gt"]        ["camlp5/core2.ml"];
-    (* dep ["make_pp_gt"] ["plugins/fmt.cmx"]; *)
     ()
  | _ -> ()
 )

@@ -24,20 +24,24 @@ module Location = struct
   class virtual ['inh,'self,'syn] t_t =
     object method virtual  do_t : 'inh -> t -> 'syn end
   let gcata_t tr inh subj = tr#do_t inh subj
-  (* class ['self] html_t_t fself =
-   *   object inherit  [unit,'self,View.viewer] t_t end
-   * let rec html_t subj =
-   *   GT.fix0 (fun self -> gcata_t ((new html_t_t) self) ()) subj *)
+
+  class ['self] html_t_t fself = object
+    inherit  [unit,'self,View.viewer] t_t
+    method do_t () _ = HTML.string "<noloc>"
+  end
+  let html_t subj =
+    GT.fix0 (fun self -> gcata_t ((new html_t_t) self) ()) subj
+
   class ['self] fmt_t_t fself = object
     inherit  [Format.formatter, 'self, unit] t_t
     method do_t = fmt_location
   end
-  let rec fmt_t fmt subj =
+  let fmt_t fmt subj =
     GT.fix0 (fun self -> gcata_t ((new fmt_t_t) self) ) fmt subj
   let t =
     {
       GT.gcata = gcata_t;
-      GT.plugins = (object (* method html = html_t *) method fmt = fmt_t end)
+      GT.plugins = (object method html = html_t method fmt = fmt_t end)
     }
 
   type 'a loc = [%import: 'a Location.loc]
@@ -57,26 +61,26 @@ module Location = struct
 end
 
 module Longident = struct
-  type t = [%import: Longident.t] [@@deriving gt ~options:{ fmt }]
+  type t = [%import: Longident.t] [@@deriving gt ~options:{ fmt; html }]
 end
 
 module Asttypes = struct
-  type rec_flag       = [%import: Asttypes.rec_flag]       [@@deriving gt ~options:{ fmt }]
-  type direction_flag = [%import: Asttypes.direction_flag] [@@deriving gt ~options:{ fmt }]
-  type private_flag   = [%import: Asttypes.private_flag]   [@@deriving gt ~options:{ fmt }]
-  type mutable_flag   = [%import: Asttypes.mutable_flag]   [@@deriving gt ~options:{ fmt }]
-  type virtual_flag   = [%import: Asttypes.virtual_flag]   [@@deriving gt ~options:{ fmt }]
-  type override_flag  = [%import: Asttypes.override_flag]  [@@deriving gt ~options:{ fmt }]
-  type closed_flag    = [%import: Asttypes.closed_flag]    [@@deriving gt ~options:{ fmt }]
+  type rec_flag       = [%import: Asttypes.rec_flag]       [@@deriving gt ~options:{ fmt; html }]
+  type direction_flag = [%import: Asttypes.direction_flag] [@@deriving gt ~options:{ fmt; html }]
+  type private_flag   = [%import: Asttypes.private_flag]   [@@deriving gt ~options:{ fmt; html }]
+  type mutable_flag   = [%import: Asttypes.mutable_flag]   [@@deriving gt ~options:{ fmt; html }]
+  type virtual_flag   = [%import: Asttypes.virtual_flag]   [@@deriving gt ~options:{ fmt; html }]
+  type override_flag  = [%import: Asttypes.override_flag]  [@@deriving gt ~options:{ fmt; html }]
+  type closed_flag    = [%import: Asttypes.closed_flag]    [@@deriving gt ~options:{ fmt; html }]
 
-  type label = string [@@deriving gt ~options:{ fmt }]
-  type arg_label =  [%import: Asttypes.arg_label] [@@deriving gt ~options:{ fmt }]
-  type 'a loc   = [%import: 'a Asttypes.loc]   [@@deriving gt ~options:{ fmt }]
-  type variance = [%import: Asttypes.variance] [@@deriving gt ~options:{ fmt }]
+  type label = string [@@deriving gt ~options:{ fmt; html }]
+  type arg_label =  [%import: Asttypes.arg_label] [@@deriving gt ~options:{ fmt; html }]
+  type 'a loc   = [%import: 'a Asttypes.loc]   [@@deriving gt ~options:{ fmt; html }]
+  type variance = [%import: Asttypes.variance] [@@deriving gt ~options:{ fmt; html }]
 end
 open Asttypes
 
-type constant = [%import: Parsetree.constant] [@@deriving gt ~options:{ fmt }]
+type constant = [%import: Parsetree.constant] [@@deriving gt ~options:{ fmt; html }]
 
 
 type attribute = [%import: Parsetree.attribute]
@@ -138,4 +142,4 @@ and expression_desc = [%import: Parsetree.expression_desc]
 and extension_constructor = [%import: Parsetree.extension_constructor]
 and extension_constructor_kind = [%import: Parsetree.extension_constructor_kind]
 and case = [%import: Parsetree.case]
-[@@deriving gt ~options:{ fmt }]
+[@@deriving gt ~options:{ fmt; html }]

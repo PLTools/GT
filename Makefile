@@ -48,7 +48,7 @@ add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 ppx: add_common add_ppx compile
 
-PLUGINS=compare eq foldl foldr gmap eval stateful fmt show show_typed html
+PLUGINS=compare eq foldl foldr gmap eval stateful fmt show show_typed html htmlTy
 add_plugins:
 	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
@@ -56,7 +56,7 @@ add_plugins:
 plugins: add_plugins compile
 
 add_lib:
-	$(eval OBTARGETS += src/GT.cma src/GT.cmxa )
+	$(eval OBTARGETS += src/GTlib.cma src/GTlib.cmxa )
 lib: add_lib compile
 
 doc:
@@ -134,10 +134,10 @@ INSTALL_TARGETS=META \
 	$(wildcard _build/common/expander.cmi) \
 	_build/camlp5/pa_gt.cma \
 	_build/camlp5/pp5gt.cma \
-	$(wildcard _build/src/GT.cmx)  \
-	$(wildcard _build/src/GT.cma)  \
-	$(wildcard _build/src/GT.cmxa) \
-	$(wildcard _build/src/GT.a)   \
+	$(wildcard _build/src/GTlib.cmx)  \
+	$(wildcard _build/src/GTlib.cma)  \
+	$(wildcard _build/src/GTlib.cmxa) \
+	$(wildcard _build/src/GTlib.a)   \
 	$(wildcard _build/src/View.cmi) \
 	$(wildcard _build/src/HTML.cmi) \
 	$(wildcard _build/src/GT.cmi) \
