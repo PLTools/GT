@@ -49,6 +49,23 @@ module H = struct
   let div ~loc xs =
     Exp.app ~loc (wrap ~loc "list") @@
     Exp.list ~loc xs
+
+  let to_list_e ~loc xs =
+    List.fold_right xs ~init:(Exp.construct ~loc (lident "[]") [])
+      ~f:(fun x acc ->
+          Exp.construct ~loc (lident "::") [x; acc]
+        )
+
+  let li ~loc xs =
+    Exp.app ~loc (wrap ~loc "li") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
+  let ol ~loc xs =
+    Exp.app ~loc (wrap ~loc "ol") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
+  let checkbox ~loc name =
+    let open Exp in
+    app ~loc
+      (app_lab ~loc (wrap ~loc "input")
+         "attrs" (string_const ~loc @@ Printf.sprintf "type=\"checkbox\" id=\"%s\"" name))
+      (app ~loc (wrap ~loc "unit") (unit ~loc))
 end
 
 class g args = object(self)
@@ -88,7 +105,7 @@ class g args = object(self)
     Exp.fun_list ~loc
       (List.map names ~f:(Pat.sprintf ~loc "%s"))
       (if List.length ts = 0
-       then H.pcdata ~loc constr_name
+       then H.(li ~loc [pcdata ~loc constr_name])
        else
          let ds = List.map ts
            ~f:(fun (name, typ) ->
@@ -98,11 +115,15 @@ class g args = object(self)
                    (Exp.ident ~loc name)
               )
          in
-         H.div ~loc
-           ([H.pcdata ~loc constr_name; H.pcdata ~loc "("] @ ds @ [ H.pcdata ~loc ")" ])
+         H.(li ~loc
+              [ H.pcdata ~loc ""
+              ; H.checkbox ~loc "cbx"
+              ; H.ol ~loc ds
+              ])
+         (* H.div ~loc
+          *   ([H.pcdata ~loc constr_name] @ ds) *)
 
       )
-
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     let pat = Pat.record ~loc @@

@@ -26,6 +26,7 @@ module T : sig
   @type 'a u1 = 'a GT.option with show,gmap,foldl,eq,compare,eval,stateful,show_typed,html;;
   @type 'a u2 = 'a GT.Lazy.t with show,gmap,foldl,eq,compare,eval,stateful;;
 
+  @type 'a u2 = {aa: GT.int; bb:GT.string} with show,gmap,foldl,eq,compare,eval,stateful;;
   let () = ()
 end
 

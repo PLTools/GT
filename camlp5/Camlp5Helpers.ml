@@ -114,6 +114,10 @@ module Exp = struct
 
 
   let app ~loc l r = <:expr< $l$ $r$ >>
+  let app_lab ~loc l lab r =
+    let p = Pat.var ~loc lab in
+    let arg = <:expr< ~{$p$ = $r$} >> in
+    <:expr< $l$ $arg$ >>
   let app_list ~loc l xs =
     List.fold_left (app ~loc) l xs
   let match_ ~loc e (xs: case list) =

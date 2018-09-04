@@ -61,6 +61,12 @@ let br = raw "<br>"
 let tag ?(attrs="") s p = 
   seq [raw (sprintf "<%s>" (s ^ (if attrs = "" then "" else " ") ^ attrs)); p; raw (sprintf "</%s>" s)]
 
+let link url =
+  seq
+    [ raw @@
+      sprintf "<link rel=\"stylesheet\" type=\"text/css\" href=\"%s\" media=\"screen\">" url
+    ]
+
 let html  ?(attrs="") = tag "html"  ~attrs:attrs
 let title ?(attrs="") = tag "title" ~attrs:attrs
 let body  ?(attrs="") = tag "body"  ~attrs:attrs

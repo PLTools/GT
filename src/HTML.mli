@@ -125,6 +125,7 @@ val div      : ?attrs:string -> viewer -> viewer
 val radio    : ?attrs:string -> (viewer * string * string) list -> viewer 
 val select   : ?attrs:string -> (viewer * string * string) list -> viewer
 
+val link     : string -> viewer
 (** {2 Multi-page wizard generator} *)
 
 module Wizard :

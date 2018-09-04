@@ -78,6 +78,7 @@ module Exp = struct
   let string_const ~loc s = constant ~loc (Pconst_string (s, None))
 
   let app ~loc l r = pexp_apply ~loc l [(Nolabel, r)]
+  let app_lab ~loc l lab r = pexp_apply ~loc l [(Labelled lab, r)]
   let app_list ~loc e xs = pexp_apply ~loc e (nolabelize xs)
   (* let apply1 ~loc ?(label=Nolabel) f arg = pexp_apply ~loc f [label,arg] *)
   let field ~loc t lident =

@@ -49,6 +49,7 @@ module rec Exp :
     val record1: loc:loc -> Ppxlib.longident -> t -> t
 
     val app : loc:loc -> t -> t -> t
+    val app_lab  : loc:loc -> t -> string -> t -> t
     val app_list : loc:loc -> t -> t list -> t
     val acc      : loc:loc -> t -> Ppxlib.longident -> t
     (* val acc_list : loc:loc -> t -> t list -> t *)

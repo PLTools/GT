@@ -38,8 +38,11 @@ let implementation ppf sourcefile outputprefix =
       let ch = open_out "out.html" in
       let fmt = Format.formatter_of_out_channel ch in
       Format.pp_set_margin fmt 180;
-      Format.fprintf fmt "%s" @@
-        HTML.toHTML @@ Camlast.html_structure untyped;
+      Format.fprintf fmt "%s" @@ HTML.toHTML @@
+        HTML.(tag "head" @@ link "css/_styles.css");
+
+      Format.fprintf fmt "%s" @@ HTML.toHTML @@
+        HTML.ol ~attrs:"class=\"tree\"" @@ Camlast.html_structure untyped;
       Format.pp_print_flush fmt ();
       close_out ch
     in
