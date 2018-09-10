@@ -66,8 +66,8 @@ module rec Exp :
     val variant:   loc:loc -> string -> t list -> t
     val construct: loc:loc -> Ppxlib.longident -> t list -> t
     val tuple:     loc:loc -> t list -> t
-    val let_one:   loc:loc -> Pat.t -> t -> t -> t
-    val let_:      loc:loc -> (Pat.t * t) list -> t -> t
+    val let_one:   loc:loc -> ?rec_:bool -> Pat.t -> t -> t -> t
+    val let_:      loc:loc -> ?rec_:bool -> (Pat.t * t) list -> t -> t
 
     val assert_false: loc:loc -> t
     val objmagic_unit: loc:loc -> t

@@ -83,7 +83,7 @@ class virtual ['loc, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = object
     'str list
 
   (** Generate structure items a type extension. Beta feature. *)
-  method virtual do_typext_str: loc:'loc -> Ppxlib.type_extension -> 'str list
+  (* method virtual do_typext_str: loc:'loc -> Ppxlib.type_extension -> 'str list *)
 
   (** Generate name for transformation function. *)
   method virtual make_trans_function_name: Ppxlib.type_declaration -> string

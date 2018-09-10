@@ -164,12 +164,6 @@ class virtual generator initial_args = object(self: 'self)
    *           (fun x -> x)
    *       ) *)
 
-  (* returns ('ia -> 'a -> 'sa) -> ... -> 'i -> _ t -> 's -> tail *)
-  method class_typ_simple (* ~loc *) tdecl (* tail *) =
-    let _ : type_declaration = tdecl in
-    1
-
-
   (* signature for a plugin class *)
   method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
     let k fields =
@@ -204,6 +198,7 @@ class virtual generator initial_args = object(self: 'self)
     in
     visit_typedecl ~loc tdecl
       ~onabstract:(fun () -> k [])
+      ~onrecord:(fun _fields -> failwith "TODO: records in intereface are not yet implemented")
       ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
@@ -579,17 +574,17 @@ class virtual generator initial_args = object(self: 'self)
     Str.single_value ~loc (Pat.sprintf ~loc "%s" @@
                            Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
     Exp.fun_ ~loc (Pat.tuple ~loc @@ List.map names ~f:(Pat.sprintf ~loc "%s0")) @@
-    Exp.let_ ~loc
+    Exp.let_ ~loc ~rec_:true
       (List.concat_map tdecls ~f:(fun tdecl ->
            let typ_name = tdecl.ptype_name.txt in
-           let oname = sprintf "o%s" typ_name in
-           let ofield = Naming.mut_ofield ~plugin:self#plugin_name typ_name in
+           (* let oname = sprintf "o%s" typ_name in
+            * let ofield = Naming.mut_ofield ~plugin:self#plugin_name typ_name in *)
            let t0field = Naming.mut_oclass_field ~plugin:self#plugin_name typ_name in
            let trf_field = Naming.trf_field ~plugin:self#plugin_name typ_name in
            let trf_r_ident = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
            let othernames = List.map tdecls ~f:(fun tdecl -> tdecl.ptype_name.txt) in
-           let trf_struct_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
-           let trf_name = sprintf "%s_%s" self#plugin_name typ_name in
+           (* let trf_struct_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
+            * let trf_name = sprintf "%s_%s" self#plugin_name typ_name in *)
            let eplugin =
              let open Exp in
              fun_list ~loc
@@ -815,61 +810,61 @@ class virtual generator initial_args = object(self: 'self)
 
   method virtual abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
 
-  method do_typext_str ~loc ({ptyext_path } as extension) =
-    let clas =
-      let is_self_rec _ = false in
-      let cds = List.map extension.ptyext_constructors
-          ~f:(fun ec ->
-              match ec.pext_kind with
-              | Pext_rebind _ -> failwith ""
-              | Pext_decl (args, _) ->
-                Ast_builder.Default.constructor_declaration
-                  ~loc:extension.ptyext_path.loc ~res:None
-                  ~name:(ec.pext_name) ~args
-            )
-      in
-      let tdecl =
-        let open Ast_builder.Default in
-        type_declaration ~loc:extension.ptyext_path.loc
-          ~name:(Located.map Longident.last_exn extension.ptyext_path)
-          ~params:extension.ptyext_params
-          ~private_:Public ~manifest:None ~cstrs:[]
-          ~kind:(Ptype_variant cds)
-      in
-      let fields = self#on_variant ~loc ~is_self_rec ~mutal_decls:[]
-          tdecl
-          cds
-          id
-      in
-      let extra_path s = map_longident extension.ptyext_path.txt ~f:(fun _ -> s) in
-      let inh_params =
-        prepare_param_triples ~loc
-          ~inh:(fun ~loc -> self#inh_of_param tdecl)
-          ~syn:self#syn_of_param
-          ~default_syn:(self#default_syn ~loc ~extra_path tdecl)
-          ~default_inh:(self#default_inh ~loc tdecl)
-          ~extra:(Typ.var ~loc @@
-                  sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
-          (map_type_param_names tdecl.ptype_params ~f:id)
-      in
-      let parent_plugin_impl =
-        let params =
-          self# final_typ_params_for_alias ~loc tdecl
-            (List.map ~f:fst tdecl.ptype_params)
-        in
-        Cf.inherit_ ~loc @@
-        Cl.apply ~loc
-          (Cl.constr ~loc (extra_path (self#make_class_name tdecl)) params)
-          (Exp.sprintf ~loc "%s" Naming.self_arg_name :: (self#apply_fas_in_new_object ~loc tdecl))
-          (* TODO: check that apply_fas_... is what we need *)
-      in
-      (* TODO: It seems that we don't need to inherit interface class for extensible types
-       * because type parameters are no changing but it require some work to disable this
-       * generation. So it is postponed *)
-      self#wrap_class_definition ~loc [] tdecl ~inh_params
-        ((self#extra_class_str_members tdecl) @ parent_plugin_impl :: fields)
-    in
-    [ clas ]
+  (* method do_typext_str ~loc ({ptyext_path } as extension) =
+   *   let clas =
+   *     let is_self_rec _ = false in
+   *     let cds = List.map extension.ptyext_constructors
+   *         ~f:(fun ec ->
+   *             match ec.pext_kind with
+   *             | Pext_rebind _ -> failwith ""
+   *             | Pext_decl (args, _) ->
+   *               Ast_builder.Default.constructor_declaration
+   *                 ~loc:extension.ptyext_path.loc ~res:None
+   *                 ~name:(ec.pext_name) ~args
+   *           )
+   *     in
+   *     let tdecl =
+   *       let open Ast_builder.Default in
+   *       type_declaration ~loc:extension.ptyext_path.loc
+   *         ~name:(Located.map Longident.last_exn extension.ptyext_path)
+   *         ~params:extension.ptyext_params
+   *         ~private_:Public ~manifest:None ~cstrs:[]
+   *         ~kind:(Ptype_variant cds)
+   *     in
+   *     let fields = self#on_variant ~loc ~is_self_rec ~mutal_decls:[]
+   *         tdecl
+   *         cds
+   *         id
+   *     in
+   *     let extra_path s = map_longident extension.ptyext_path.txt ~f:(fun _ -> s) in
+   *     let inh_params =
+   *       prepare_param_triples ~loc
+   *         ~inh:(fun ~loc -> self#inh_of_param tdecl)
+   *         ~syn:self#syn_of_param
+   *         ~default_syn:(self#default_syn ~loc ~extra_path tdecl)
+   *         ~default_inh:(self#default_inh ~loc tdecl)
+   *         ~extra:(Typ.var ~loc @@
+   *                 sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
+   *         (map_type_param_names tdecl.ptype_params ~f:id)
+   *     in
+   *     let parent_plugin_impl =
+   *       let params =
+   *         self# final_typ_params_for_alias ~loc tdecl
+   *           (List.map ~f:fst tdecl.ptype_params)
+   *       in
+   *       Cf.inherit_ ~loc @@
+   *       Cl.apply ~loc
+   *         (Cl.constr ~loc (extra_path (self#make_class_name tdecl)) params)
+   *         (Exp.sprintf ~loc "%s" Naming.self_arg_name :: (self#apply_fas_in_new_object ~loc tdecl))
+   *         (\* TODO: check that apply_fas_... is what we need *\)
+   *     in
+   *     (\* TODO: It seems that we don't need to inherit interface class for extensible types
+   *      * because type parameters are no changing but it require some work to disable this
+   *      * generation. So it is postponed *\)
+   *     self#wrap_class_definition ~loc [] tdecl ~inh_params
+   *       ((self#extra_class_str_members tdecl) @ parent_plugin_impl :: fields)
+   *   in
+   *   [ clas ] *)
 
 
   (* TODO: decide expression of which type should be returned here *)

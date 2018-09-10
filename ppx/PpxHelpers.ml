@@ -127,10 +127,12 @@ module Exp = struct
     pexp_constraint ~loc (pexp_pack ~loc me) @@
     ptyp_package ~loc (typname, [])
 
-  let let_one ~loc pat expr ewhere =
-    pexp_let ~loc Nonrecursive [value_binding ~loc ~pat ~expr] ewhere
-  let let_ ~loc ps =
-    pexp_let ~loc Recursive (List.map ps ~f:(fun (pat,expr) -> value_binding ~loc ~pat ~expr))
+  let let_one ~loc ?(rec_=false) pat expr ewhere =
+    pexp_let ~loc (if rec_ then Recursive else Nonrecursive)
+      [value_binding ~loc ~pat ~expr] ewhere
+  let let_ ~loc ?(rec_=false) ps =
+    pexp_let ~loc (if rec_ then Recursive else Nonrecursive)
+      (List.map ps ~f:(fun (pat,expr) -> value_binding ~loc ~pat ~expr))
 
   let assert_false ~loc = [%expr assert false]
   let objmagic_unit ~loc = [%expr Obj.magic ()]

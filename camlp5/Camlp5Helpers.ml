@@ -147,8 +147,11 @@ module Exp = struct
   let record1 ~loc lident expr = record ~loc [lident, expr]
 
   let field ~loc e lident = acc ~loc e lident
-  let let_ ~loc lpe ewhere = <:expr< let $list:lpe$ in $ewhere$ >>
-  let let_one ~loc pat e1 ewhere = let_ ~loc [pat, e1] ewhere
+  let let_ ~loc ?(rec_=false) lpe ewhere =
+    if rec_
+    then <:expr< let rec $list:lpe$ in $ewhere$ >>
+    else <:expr< let $list:lpe$ in $ewhere$ >>
+  let let_one ~loc ?(rec_=false) pat e1 ewhere = let_ ~loc ~rec_ [pat, e1] ewhere
 
   let from_caml e = failwith "not implemented"
   let assert_false ~loc = <:expr< assert False >>
@@ -453,6 +456,21 @@ let prepare_param_triples ~loc ~extra
       [ inh ~loc s; Typ.var ~loc s; syn ~loc s])
       names
   in
-  ps @ [ default_inh; extra; default_syn]
+  ps @ [ default_inh; extra; default_syn ]
 
-let typ_vars_of_typ t = []
+let typ_vars_of_typ t =
+  let open Base in
+  let rec helper acc = function
+    | <:ctyp< ( $list:lt$ ) >> -> List.fold ~init:acc ~f:helper lt
+    | <:ctyp< '$s$ >> -> s :: acc
+    | <:ctyp< $t1$ $t2$ >> -> helper (helper acc t1) t2
+    | <:ctyp< $t1$ . $t2$ >> -> helper acc t2
+    | <:ctyp< $t1$ -> $t2$ >> -> helper (helper acc t1) t2
+    | <:ctyp< $lid:s$ >>      -> acc
+    | <:ctyp< [ $list:llslt$ ] >>  -> failwith "sum"
+    | <:ctyp< { $list:llsbt$ } >>  ->
+      List.fold ~init:acc ~f:(fun acc (_,_,_,t) -> helper acc t) llsbt
+    | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented 2"
+
+  in
+  List.dedup ~compare:String.compare @@ helper [] t

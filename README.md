@@ -37,12 +37,16 @@ To preprocess only the code in this library (for example, a test) use the comman
 # Dependencies
 
   * ppxlib
-  * The [fork](https://github.com/Kakadu/camlp5/tree/ast2pt.cmi) of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. We hope that it will be merged to upstream eventually 
+  * The [fork](https://github.com/Kakadu/camlp5/tree/ast2pt.cmi) of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. It was merged to master. (TODO: check that it was already released)
   
 # Compilation
 
 * `make` to compile whole library.
 * `make && make tests` to compile regression tests too.
+
+In case some of the tests do not compile use following commands to see generated code:
+* with camlp5 use `(cd _build && ../camlp5o_pp.sh pr_o.cmo regression/testname.ml)`
+* with PPX use `./pp_gt.native -pretty regression/testname.ml`
 
   
 # This branch adds PPX support for Generic Transformers.

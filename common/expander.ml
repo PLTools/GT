@@ -660,77 +660,78 @@ let str_type_decl_many_plugins ~loc si plugins_info declaration =
       List.concat_map ~f:(do_typ ~loc si plugins false) decls
 
 let str_type_ext_many_plugins ~loc si plugins_info extension =
-  let name = extension.ptyext_path.txt |> Longident.last_exn in
-  let ifaceclass =
-    let meths =
-      List.map extension.ptyext_constructors
-        ~f:(fun {pext_name; pext_kind} ->
-            let methname = sprintf "c_%s" pext_name.txt in
-            match pext_kind with
-            | Pext_decl (Pcstr_tuple ts, _opt) ->
-              Cf.method_virtual ~loc methname @@
-              (List.fold_right ts ~init:Typ.(var ~loc "syn")
-                 ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-               |> Typ.(arrow ~loc (var ~loc "inh") )
-              )
-            | _ -> assert false
-          )
-    in
-    Str.class_single ~loc ~virt:true
-      ~name:(class_name_for_typ name)
-      ~params:(params_of_interface_class ~loc extension.ptyext_params) @@
-      (inherit_iface_class ~loc extension.ptyext_path.txt
-         (List.map ~f:fst extension.ptyext_params)
-      ) :: meths
-  in
-
-  let gcata =
-    let cds = List.map extension.ptyext_constructors
-        ~f:(fun ec ->
-            match ec.pext_kind with
-            | Pext_rebind _ -> failwith "not implemented"
-            | Pext_decl (args, Some _) -> failwith "gadt here not supported"
-            | Pext_decl (args, None) ->
-              constructor_declaration ~loc:extension.ptyext_path.loc ~res:None
-                ~name:(ec.pext_name) ~args
-          )
-    in
-    let ans k =
-      Str.single_value ~loc
-        (Pat.sprintf "gcata_%s" ~loc (Longident.last_exn extension.ptyext_path.txt))
-        (Exp.fun_list ~loc Pat.[var ~loc "tr"; var ~loc "inh"; var ~loc "subj"]
-           k)
-    in
-    ans @@
-    prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
-      ~else_case:(fun patname ->
-          let open Exp in
-          app_list ~loc
-            (of_longident ~loc
-               (map_longident extension.ptyext_path.txt
-                  ~f:(Printf.sprintf "gcata_%s")))
-            [ ident ~loc "tr"; ident ~loc "inh"
-            ; ident ~loc patname ]
-        )
-      (fun cd names ->
-         List.fold_left ("inh"::names)
-           ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                    ("c_" ^ cd.pcd_name.txt))
-           ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)
-              ))
-
-  in
-  let plugins =
-    List.fold_left plugins_info ~init:[]
-      ~f:(fun acc (name,args) ->
-          wrap_plugin name args acc
-        )
-    |> List.rev
-  in
-
-  [ ifaceclass
-  ; gcata ]
-  @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension))
+  []
+  (* let name = extension.ptyext_path.txt |> Longident.last_exn in
+   * let ifaceclass =
+   *   let meths =
+   *     List.map extension.ptyext_constructors
+   *       ~f:(fun {pext_name; pext_kind} ->
+   *           let methname = sprintf "c_%s" pext_name.txt in
+   *           match pext_kind with
+   *           | Pext_decl (Pcstr_tuple ts, _opt) ->
+   *             Cf.method_virtual ~loc methname @@
+   *             (List.fold_right ts ~init:Typ.(var ~loc "syn")
+   *                ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+   *              |> Typ.(arrow ~loc (var ~loc "inh") )
+   *             )
+   *           | _ -> assert false
+   *         )
+   *   in
+   *   Str.class_single ~loc ~virt:true
+   *     ~name:(class_name_for_typ name)
+   *     ~params:(params_of_interface_class ~loc extension.ptyext_params) @@
+   *     (inherit_iface_class ~loc extension.ptyext_path.txt
+   *        (List.map ~f:fst extension.ptyext_params)
+   *     ) :: meths
+   * in
+   * 
+   * let gcata =
+   *   let cds = List.map extension.ptyext_constructors
+   *       ~f:(fun ec ->
+   *           match ec.pext_kind with
+   *           | Pext_rebind _ -> failwith "not implemented"
+   *           | Pext_decl (args, Some _) -> failwith "gadt here not supported"
+   *           | Pext_decl (args, None) ->
+   *             constructor_declaration ~loc:extension.ptyext_path.loc ~res:None
+   *               ~name:(ec.pext_name) ~args
+   *         )
+   *   in
+   *   let ans k =
+   *     Str.single_value ~loc
+   *       (Pat.sprintf "gcata_%s" ~loc (Longident.last_exn extension.ptyext_path.txt))
+   *       (Exp.fun_list ~loc Pat.[var ~loc "tr"; var ~loc "inh"; var ~loc "subj"]
+   *          k)
+   *   in
+   *   ans @@
+   *   prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
+   *     ~else_case:(fun patname ->
+   *         let open Exp in
+   *         app_list ~loc
+   *           (of_longident ~loc
+   *              (map_longident extension.ptyext_path.txt
+   *                 ~f:(Printf.sprintf "gcata_%s")))
+   *           [ ident ~loc "tr"; ident ~loc "inh"
+   *           ; ident ~loc patname ]
+   *       )
+   *     (fun cd names ->
+   *        List.fold_left ("inh"::names)
+   *          ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
+   *                   ("c_" ^ cd.pcd_name.txt))
+   *          ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)
+   *             ))
+   * 
+   * in
+   * let plugins =
+   *   List.fold_left plugins_info ~init:[]
+   *     ~f:(fun acc (name,args) ->
+   *         wrap_plugin name args acc
+   *       )
+   *   |> List.rev
+   * in
+   * 
+   * [ ifaceclass
+   * ; gcata ]
+   * @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension)) *)
 end
 
 
