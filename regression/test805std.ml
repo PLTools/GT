@@ -30,6 +30,8 @@ module T : sig
 
   (* TODO: implement stateful for records *)
   type 'a u3 = {aa: GT.int; bb:GT.string} [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
+
+  type 'a r1 = 'a ref [@@deriving gt ~options:{fmt; html}]
   let () = ()
 end
 

@@ -997,6 +997,49 @@ let tuple4 :
 }
 
 (****************************************************************************)
+type 'a ref2 = 'a ref
+type 'a ref = 'a ref2
+class virtual ['ia,'a,'sa, 'inh, 'e, 'syn] ref_t =
+object
+  method virtual c_ref : 'inh -> 'a -> 'syn
+end
+let gcata_ref tr inh r = tr#c_ref inh !r 
+
+class ['a, 'self] fmt_ref_t _ fa =
+  object
+    inherit [ 'inh, 'a, unit
+            , 'inh, 'self, unit] ref_t
+    constraint 'inh = Format.formatter
+    method c_ref fmt a =
+      Format.fprintf fmt "!(%a)" fa a
+  end
+class ['a, 'self] html_ref_t _ fa =
+  object
+    inherit [ 'inh, 'a, 'syn
+            , 'inh, 'self, 'syn] ref_t
+    constraint 'syn = HTML.viewer
+    constraint 'inh = unit
+    method c_ref () a = fa a
+  end
+
+let ref:
+    ( ('ia, 'a, 'sa, 'inh, _, 'syn ) #ref_t ->
+      'inh -> 'a ref -> 'syn
+    , < fmt     : (Format.formatter -> 'a -> unit) ->
+                  Format.formatter -> 'a ref -> unit;
+        html    : ('a -> HTML.er) ->
+                  'a ref -> HTML.er;
+      >) t =
+  {gcata   = gcata_ref;
+   plugins = object
+     method fmt     fa =
+       gcata_ref (new @ref[fmt]     (fun _ -> assert false) fa)
+     method html    fa =
+       gcata_ref (new @ref[html]    (fun _ -> assert false) fa) ()
+  end
+}
+
+(****************************************************************************)
 let show    t = t.plugins#show
 let html    t = t.plugins#html
 let gmap    t = t.plugins#gmap

@@ -8,6 +8,9 @@ all: camlast
 camlast:
 	OCAMLPATH=`pwd`/../_build/bundle $(BUILD) camlastrun.native
 
+tast:
+	OCAMLPATH=`pwd`/../_build/bundle $(BUILD) tastrun.native
+
 clean:
 	$(RM) -r _build *.native
 

@@ -25,6 +25,8 @@ module Pat :
     val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
     val of_longident : loc:loc -> Ppxlib.longident -> t
     val constr : loc:loc -> string -> t list -> t
+    val constr_record : loc:loc -> string -> (string*t) list -> t
+
     (* val variant: loc:loc -> string -> t option -> t *)
     val variant: loc:loc -> string -> t list -> t
     val tuple:   loc:loc -> t list -> t

@@ -45,7 +45,7 @@ module Location = struct
     }
 
   type 'a loc = [%import: 'a Location.loc]
-  [@@deriving gt ~options:{fmt}]
+  [@@deriving gt ~options:{fmt; html}]
 
   (* class virtual ['ia,'a,'sa,'inh,'self,'syn] loc_t =
    *   object method virtual  do_loc : 'inh -> 'a loc -> 'syn end
@@ -65,6 +65,7 @@ module Longident = struct
 end
 
 module Asttypes = struct
+  type constant       = [%import: Asttypes.constant]       [@@deriving gt ~options:{ fmt; html }]
   type rec_flag       = [%import: Asttypes.rec_flag]       [@@deriving gt ~options:{ fmt; html }]
   type direction_flag = [%import: Asttypes.direction_flag] [@@deriving gt ~options:{ fmt; html }]
   type private_flag   = [%import: Asttypes.private_flag]   [@@deriving gt ~options:{ fmt; html }]
@@ -141,5 +142,5 @@ and expression = [%import: Parsetree.expression]
 and expression_desc = [%import: Parsetree.expression_desc]
 and extension_constructor = [%import: Parsetree.extension_constructor]
 and extension_constructor_kind = [%import: Parsetree.extension_constructor_kind]
-and case = [%import: Parsetree.case]
+and case                       = [%import: Parsetree.case]
 [@@deriving gt ~options:{ fmt; html }]

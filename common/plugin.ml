@@ -773,33 +773,47 @@ class virtual generator initial_args = object(self: 'self)
         ]
     )
 
-  method on_record_constr : type_declaration -> constructor_declaration ->
-    label_declaration list -> 'on_record_result
-    = fun _ _ _ ->
-    failwith "not_implemented"
+  method virtual on_record_constr: loc:loc ->
+    is_self_rec:(core_type -> bool) ->
+    mutal_decls:type_declaration list ->
+    inhe:Exp.t ->
+    [ `Normal of string | `Poly of string ] ->
+    (string * core_type) list ->
+    label_declaration list -> 
+    Exp.t
 
   method virtual on_tuple_constr : loc:loc ->
     is_self_rec:(core_type -> bool) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
-    (string * core_type) list -> Exp.t
+    (string * core_type) list ->
+    Exp.t
 
   method on_variant ~loc tdecl ~mutal_decls ~is_self_rec cds k =
     k @@
-    List.concat_map cds ~f:(fun cd ->
+    List.map cds ~f:(fun cd ->
         match cd.pcd_args with
         | Pcstr_tuple ts ->
-          [ let inhname = gen_symbol ~prefix:"inh_" () in
+          let inhname = gen_symbol ~prefix:"inh_" () in
+          let loc = loc_from_caml cd.pcd_loc in
+          let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
+          Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
+          Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+          self#on_tuple_constr ~loc ~mutal_decls ~is_self_rec
+            ~inhe:(Exp.ident ~loc inhname)
+            (`Normal cd.pcd_name.txt) bindings
+        | Pcstr_record ls ->
+            let inhname = gen_symbol ~prefix:"inh_" () in
             let loc = loc_from_caml cd.pcd_loc in
-            let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
+            let bindings = List.map ls ~f:(fun l -> gen_symbol (), l.pld_type) in
             Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
             Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
-            self#on_tuple_constr ~loc ~mutal_decls ~is_self_rec
+            self#on_record_constr ~loc ~mutal_decls ~is_self_rec
               ~inhe:(Exp.ident ~loc inhname)
-              (`Normal cd.pcd_name.txt) bindings
-          ]
-        | Pcstr_record ls -> self#on_record_constr tdecl cd ls
+              (`Normal cd.pcd_name.txt)
+              bindings
+              ls
       )
 
   method generate_for_variable ~loc varname =
@@ -975,6 +989,7 @@ end
   *)
 class virtual no_inherit_arg = object(self: 'self)
 
+  method virtual plugin_name: string
   method virtual default_syn : loc:loc ->
       ?extra_path:(Ppxlib__.Import.string -> longident) ->
       Ppxlib.type_declaration -> Typ.t
@@ -1024,6 +1039,17 @@ class virtual no_inherit_arg = object(self: 'self)
 
   method app_gcata ~loc egcata =
     Exp.app ~loc egcata (Exp.unit ~loc)
+
+  method on_record_constr: loc:loc ->
+    is_self_rec:(core_type -> bool) ->
+    mutal_decls:type_declaration list ->
+    inhe:Exp.t ->
+    [ `Normal of string | `Poly of string ] ->
+    (string * core_type) list ->
+    label_declaration list -> 
+    Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe _ _ _ ->
+    failwithf "handling record constructors in plugin `%s`" self#plugin_name ()
+
 end
 
 (** Base plugin class where transformation functions receive inherited attribute for

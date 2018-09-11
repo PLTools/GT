@@ -121,6 +121,29 @@ class g args = object(self)
                   )
     ]
 
+  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe info bindings labs =
+    let cname = match info with
+      | `Normal s -> s
+      | `Poly s -> s
+    in 
+    let fmt = List.fold_left labs ~init:""
+        ~f:(fun acc l ->
+            sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc l.pld_name.txt
+          )
+    in
+    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s)) @@
+    List.fold_left bindings
+      ~f:(fun acc (name,typ) ->
+        Exp.app_list ~loc acc
+          [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ
+          ; Exp.ident ~loc name
+          ]
+      )
+      ~init:(app_format_fprintf ~loc inhe @@
+        Exp.string_const ~loc @@ sprintf "%s {@[<hov>%s@]@ }@," cname fmt
+      )
+  
+
 end
 
 let g = (new g :> (Plugin_intf.plugin_args ->

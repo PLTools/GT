@@ -18,11 +18,15 @@ let implementation ppf sourcefile outputprefix =
   Compmisc.init_path false;
   let modulename = module_of_filename ppf sourcefile outputprefix in
   Env.set_unit_name modulename;
+  let env = Compmisc.initial_env() in
   try
-    let untyped =
+    let (typedtree,_) =
       Pparse.parse_implementation ~tool_name ppf sourcefile
       ++ print_if ppf Clflags.dump_parsetree Printast.implementation
       ++ print_if ppf Clflags.dump_source Pprintast.structure
+      ++ Typemod.type_implementation sourcefile outputprefix modulename env
+      ++ print_if ppf Clflags.dump_typedtree
+          Printtyped.implementation_with_coercion
     in
     (* let () = Pprintast.structure Format.std_formatter untyped in *)
 
@@ -30,7 +34,7 @@ let implementation ppf sourcefile outputprefix =
       let ch = open_out "out.fmt.txt" in
       let fmt = Format.formatter_of_out_channel ch in
       Format.pp_set_margin fmt 180;
-      Camlast.fmt_structure fmt untyped;
+      Tast.fmt_structure fmt typedtree;
       Format.pp_print_flush fmt ();
       close_out ch
     in
@@ -45,7 +49,7 @@ let implementation ppf sourcefile outputprefix =
 <LINK REL="stylesheet" HREF="mktree.css">
 <script language="javascript">
 document.addEventListener("DOMContentLoaded", function(event) { 
-        document.body.firstChild.class = "mktree";
+        document.body.firstChild.nextSibling.class = "mktree";
         convertTrees();
 });
 </script>
@@ -54,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 |};
 
       Format.fprintf fmt "%s" @@ HTML.toHTML @@
-      HTML.body @@ Camlast.html_structure untyped;
+      HTML.body @@ Tast.html_structure typedtree;
       Format.fprintf fmt "%s" {|</body>|};
 
       Format.pp_print_flush fmt ();

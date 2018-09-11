@@ -39,6 +39,7 @@ module Pat = struct
     in
     helper lident
   let constraint_ ~loc = ppat_constraint ~loc
+
   let constr      ~loc lident ps =
     let lident = Located.lident ~loc lident in
     ppat_construct ~loc lident @@
@@ -59,6 +60,9 @@ module Pat = struct
   let type_ ~loc lident = ppat_type ~loc (Located.mk ~loc lident)
   let record ~loc ps =
     ppat_record ~loc (List.map ~f:(fun (l,t) -> (Located.mk ~loc l, t)) ps) Closed
+  let constr_record      ~loc lident ps =
+    constr ~loc lident [record ~loc (List.map ~f:(fun (l,x) -> (Lident l, x)) ps)]
+
 end
 
 module Exp = struct

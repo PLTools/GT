@@ -34,9 +34,16 @@ let prepare_patt_match ~loc ?else_case what constructors make_rhs =
     let k cs = Exp.match_ ~loc what cs in
     k @@
     List.map cdts ~f:(fun cd ->
-        match cd.pcd_args with
-        | Pcstr_record _ -> not_implemented "wtf"
-        | Pcstr_tuple args ->
+      match cd.pcd_args with
+      | Pcstr_record ls ->
+        let names = List.map ls ~f:(fun _ -> gen_symbol ()) in
+        case
+          ~lhs:(Pat.constr_record ~loc cd.pcd_name.txt @@
+            List.map2_exn ls names
+              ~f:(fun l s -> (l.pld_name.txt, Pat.var ~loc s))
+          )
+          ~rhs:(make_rhs cd names)
+      | Pcstr_tuple args ->
             let names = List.map args ~f:(fun _ -> gen_symbol ()) in
             case
               ~lhs:(Pat.constr ~loc cd.pcd_name.txt @@
@@ -59,7 +66,7 @@ let prepare_patt_match ~loc ?else_case what constructors make_rhs =
   | `Algebraic cdts -> on_alg cdts
   | `PolyVar cs -> on_poly cs
 
-let prepare_patt_match_poly ~(loc:loc) what rows labels ~onrow ~onlabel ~oninherit =
+let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
     List.map rows ~f:(function
@@ -135,15 +142,15 @@ let make_interface_class_sig ~loc tdecl =
       k @@
       List.map cds ~f:(fun cd ->
         let methname = sprintf "c_%s" cd.pcd_name.txt in
-        match cd.pcd_args with
-        | Pcstr_record _ -> not_implemented "record constructors"
-        | Pcstr_tuple ts ->
-          (* Abstract out the type below  *)
-            Ctf.method_ ~loc methname ~virt:true
-              (List.fold_right ts ~init:(Typ.var ~loc "syn")
-                 ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-                |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
-               )
+        let typs = match cd.pcd_args with
+          | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+          | Pcstr_tuple ts -> ts
+        in
+        Ctf.method_ ~loc methname ~virt:true
+          (List.fold_right typs ~init:(Typ.var ~loc "syn")
+             ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+           |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+          )
       )
     )
     ~onmanifest:(fun typ ->
@@ -268,14 +275,15 @@ let make_interface_class ~loc tdecl =
       ans @@
       List.map cds ~f:(fun cd ->
         let methname = sprintf "c_%s" cd.pcd_name.txt in
-        match cd.pcd_args with
-        | Pcstr_record _ -> not_implemented "record constructors"
-        | Pcstr_tuple ts ->
-            Cf.method_virtual ~loc methname @@
-            (List.fold_right ts ~init:Typ.(var ~loc "syn")
-               ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-             |> Typ.(arrow ~loc (var ~loc "inh") )
-            )
+        let typs = match cd.pcd_args with
+          | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+          | Pcstr_tuple ts -> ts
+        in
+        Cf.method_virtual ~loc methname @@
+          (List.fold_right typs ~init:(Typ.var ~loc "syn")
+             ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+           |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+          )
       )
     )
     ~onmanifest:(fun typ ->
@@ -581,7 +589,8 @@ let do_mutal_types ~loc sis plugins tdecls =
   sis @
   (List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])) @
   catas @
-  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls_new)
+  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls_new) @
+  List.map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
 
 
 (* for signatures *)

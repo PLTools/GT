@@ -60,6 +60,8 @@ module H = struct
     Exp.app ~loc (wrap ~loc "li") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
   let ol ~loc xs =
     Exp.app ~loc (wrap ~loc "ol") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
+  let ul ~loc xs =
+    Exp.app ~loc (wrap ~loc "ul") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
   let checkbox ~loc name =
     let open Exp in
     app ~loc
@@ -105,7 +107,7 @@ class g args = object(self)
     Exp.fun_list ~loc
       (List.map names ~f:(Pat.sprintf ~loc "%s"))
       (if List.length ts = 0
-       then H.(li ~loc [pcdata ~loc constr_name])
+       then H.(ul ~loc [pcdata ~loc constr_name])
        else
          let ds = List.map ts
            ~f:(fun (name, typ) ->
@@ -115,14 +117,8 @@ class g args = object(self)
                    (Exp.ident ~loc name)
               )
          in
-         H.(li ~loc
-              [ H.pcdata ~loc ""
-              ; H.checkbox ~loc "cbx"
-              ; H.ol ~loc ds
-              ])
-         (* H.div ~loc
-          *   ([H.pcdata ~loc constr_name] @ ds) *)
-
+         H.ul ~loc @@
+         (H.pcdata ~loc constr_name) :: ds
       )
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
@@ -137,15 +133,38 @@ class g args = object(self)
       Exp.fun_ ~loc pat @@
 
       let ds = List.map labs
-            ~f:(fun {pld_name; pld_type} ->
-              self#app_transformation_expr ~loc
-                (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
-                (Exp.assert_false ~loc)
-                (Exp.ident ~loc pld_name.txt)
+          ~f:(fun {pld_name; pld_type} ->
+            H.li ~loc
+              [ H.pcdata ~loc pld_name.txt
+              ; self#app_transformation_expr ~loc
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
+                  (Exp.assert_false ~loc)
+                  (Exp.ident ~loc pld_name.txt)
+              ]
             )
       in
-      H.div ~loc ds
+      H.ul ~loc @@ (H.pcdata ~loc tdecl.ptype_name.txt) :: ds
     ]
+
+  method! on_record_constr: loc:loc ->
+    is_self_rec:(core_type -> bool) ->
+    mutal_decls:type_declaration list ->
+    inhe:Exp.t ->
+    [ `Normal of string | `Poly of string ] ->
+    (string * core_type) list ->
+    label_declaration list ->
+    Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe info bindings labs ->
+
+    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_) -> Pat.sprintf ~loc "%s" s)) @@
+    let ds = List.map bindings
+        ~f:(fun (name,typ) ->
+          self#app_transformation_expr ~loc
+            (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+            (Exp.assert_false ~loc)
+            (Exp.ident ~loc name)
+        )
+    in
+    H.ul ~loc ds
 
 end
 
