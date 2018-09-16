@@ -44,22 +44,24 @@ let implementation ppf sourcefile outputprefix =
       Format.pp_set_margin fmt 180;
       Format.fprintf fmt "%s"
         {|
+<html>
 <head>
+<meta charset="utf-8"/>
 <SCRIPT SRC="mktree.js" LANGUAGE="JavaScript"></SCRIPT>
 <LINK REL="stylesheet" HREF="mktree.css">
 <script language="javascript">
 document.addEventListener("DOMContentLoaded", function(event) { 
-        document.body.firstChild.nextSibling.class = "mktree";
+        document.body.firstChild.class = "mktree";
         convertTrees();
 });
 </script>
 </head>
-<body>
+
 |};
 
       Format.fprintf fmt "%s" @@ HTML.toHTML @@
       HTML.body @@ Tast.html_structure typedtree;
-      Format.fprintf fmt "%s" {|</body>|};
+      Format.fprintf fmt "%s" {|</html>|};
 
       Format.pp_print_flush fmt ();
       close_out ch
