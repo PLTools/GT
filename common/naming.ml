@@ -34,7 +34,7 @@ let fix_result_record trait tdecls =
   let name = (List.hd_exn tdecls).ptype_name.txt in
   String.concat ~sep:"_" [trait; "fix"; name]
 
-let trf_function trait tdecl = Printf.sprintf "%s_%s" trait tdecl.ptype_name.txt
+let trf_function trait s = Printf.sprintf "%s_%s" trait s
 let stub_class_name ~plugin tdecl =
   sprintf "%s_%s_t_stub" plugin tdecl.ptype_name.txt
 
@@ -46,8 +46,9 @@ let make_fix_name ~plugin tdecls =
 
 let name_fix_generated_object ~plugin tdecl =
   sprintf "%s_o_%s" plugin tdecl.ptype_name.txt
-
-let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin
+let prereq_name ~plugin tail = sprintf "%s_%s_prereq" plugin tail
+let mut_arg_composite = "mut_trfs_here"
+(* let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin *)
 (* let mut_class_stubname ~plugin tdecl =
  *   sprintf "%s_%s_stub" plugin_name tdecl.ptype_name.txt *)
 
