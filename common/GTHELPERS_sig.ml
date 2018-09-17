@@ -58,7 +58,8 @@ module rec Exp :
 
     val field : loc:loc -> t -> Ppxlib.longident -> t
     val fun_ : loc:loc -> Pat.t -> t -> t
-    val fun_list : loc:loc -> Pat.t list -> t -> t
+    val fun_list   : loc:loc -> Pat.t list -> t -> t
+    val fun_list_l : loc:loc -> (string * Exp.t) list -> t -> t
     val match_  : loc:loc -> t -> case list -> t
     val object_ : loc:loc -> class_structure -> t
     val record :  loc:loc -> (Ppxlib.longident * t) list -> t

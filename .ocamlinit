@@ -1,0 +1,7 @@
+#use "topfind";;
+#rectypes;;
+#require "compiler-libs.common";;
+#directory "_build/src";;
+#directory "_build/regression";;
+#load_rec "_build/src/GTlib.cma";;
+

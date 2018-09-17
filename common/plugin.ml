@@ -570,21 +570,27 @@ class virtual generator initial_args = object(self: 'self)
         )
 
   method make_mutal_fix ~loc tdecls =
-    let names = List.map tdecls ~f:(fun t -> t.ptype_name.txt) in
     Str.single_value ~loc (Pat.sprintf ~loc "%s" @@
                            Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
-    Exp.fun_ ~loc (Pat.tuple ~loc @@ List.map names ~f:(Pat.sprintf ~loc "%s0")) @@
+    Exp.fun_list_l ~loc (List.map tdecls ~f:(fun tdecl ->
+        ( tdecl.ptype_name.txt ^ "0"
+        , Exp.record1 ~loc
+            (lident @@ Naming.mut_oclass_field ~plugin:self#plugin_name
+               tdecl.ptype_name.txt)
+            (Exp.new_ ~loc
+               (lident @@ Naming.stub_class_name ~plugin:self#plugin_name tdecl)
+            )
+        (* , Pat.sprintf ~loc "%s0" tdecl.ptype_name.txt *)
+        )
+      )) @@
+    Exp.fun_ ~loc (Pat.unit ~loc) @@
     Exp.let_ ~loc ~rec_:true
       (List.concat_map tdecls ~f:(fun tdecl ->
            let typ_name = tdecl.ptype_name.txt in
-           (* let oname = sprintf "o%s" typ_name in
-            * let ofield = Naming.mut_ofield ~plugin:self#plugin_name typ_name in *)
            let t0field = Naming.mut_oclass_field ~plugin:self#plugin_name typ_name in
            let trf_field = Naming.trf_field ~plugin:self#plugin_name typ_name in
            let trf_r_ident = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
            let othernames = List.map tdecls ~f:(fun tdecl -> tdecl.ptype_name.txt) in
-           (* let trf_struct_name = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
-            * let trf_name = sprintf "%s_%s" self#plugin_name typ_name in *)
            let eplugin =
              let open Exp in
              fun_list ~loc
@@ -607,8 +613,6 @@ class virtual generator initial_args = object(self: 'self)
                    ] @
                    fas
                   )
-                  (* (app_list ~loc (unit ~loc) @@
-                   *  (map_type_param_names tdecl.ptype_params ~f:(sprintf ~loc "f%s"))) *)
                )
                einh
                esubj
@@ -620,31 +624,24 @@ class virtual generator initial_args = object(self: 'self)
              eplugin
            ]
          ))
-      (Exp.tuple ~loc @@
-       List.concat_map tdecls ~f:(fun tdecl ->
-           [ Exp.sprintf ~loc "%s_%s" self#plugin_name tdecl.ptype_name.txt
-           ])
+      (Exp.record ~loc @@
+       List.map tdecls ~f:(fun tdecl ->
+           (lident @@ Naming.trf_function self#plugin_name tdecl,
+            Exp.ident ~loc @@ Naming.trf_function self#plugin_name tdecl
+           )
+         )
       )
 
   method apply_mutal_fix ~loc tdecls =
     [ Str.single_value ~loc
-        (Pat.tuple ~loc @@ List.concat_map tdecls ~f:(fun tdecl ->
-             [ Pat.sprintf ~loc "%s" @@ Naming.fix_result tdecl
-             (* ; Pat.sprintf ~loc "%s" @@
-              *   Naming.name_fix_generated_object self#plugin_name tdecl *)
-             ]
+        (Pat.record ~loc @@ List.map tdecls ~f:(fun tdecl ->
+           (lident @@ Naming.trf_function self#plugin_name tdecl,
+            Pat.sprintf ~loc "%s" @@ Naming.fix_result tdecl
+           )
            ))
         (Exp.app ~loc (Exp.ident ~loc @@
                        Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
-         Exp.tuple ~loc @@
-         List.map tdecls ~f:(fun tdecl ->
-             Exp.record1 ~loc
-               (lident @@ Naming.mut_oclass_field ~plugin:self#plugin_name
-                  tdecl.ptype_name.txt)
-               (Exp.new_ ~loc
-                  (lident @@ Naming.stub_class_name ~plugin:self#plugin_name tdecl)
-               )
-           )
+         Exp.unit ~loc
         )
     ] @ List.map tdecls ~f:(fun tdecl ->
         Str.single_value ~loc
@@ -713,30 +710,37 @@ class virtual generator initial_args = object(self: 'self)
                      ~f:(fun (key,(other_tdecl, otyp)) acc ->
                          (* we need to try specialize [other_tdecl] using its
                             occurances in [tdecl] *)
+                         (* TODO: rewrite this piece of code *)
                          Typ.arrow ~loc
-                           (Typ.sprintf ~loc "%s" (Naming.typ1_for_class_arg ~plugin:self#plugin_name key)
-                             (* let m = specialize_for_tdecl ~what:other_tdecl ~where:tdecl in
-                             * self#specialize other_tdecl otyp m *)
-                           )
+                           (Typ.sprintf ~loc "%s"  @@
+                            Naming.typ1_for_class_arg ~plugin:self#plugin_name key)
                            acc
                        )
                  in
-
                  match typ_vars_of_typ t with
                  | [] -> t
                  | xs -> Typ.poly ~loc xs t
                end
             ]
         ]
-      )
-
-  method specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
-    let (_:type_declaration) = tdecl in
-    Typ.map typ
-      ~onvar:(fun s ->
-          Option.map ~f:Typ.from_caml @@
-          (List.Assoc.find ~equal:String.equal map s)
+      ) @ [
+      Str.tdecl_record ~loc ~params:[]
+        ~name:(Naming.fix_result_record self#plugin_name tdecls) @@
+      List.map tdecls ~f:(fun tdecl ->
+          lab_decl ~loc (Naming.trf_function self#plugin_name tdecl)
+            false
+            Typ.(ident ~loc @@
+                 Naming.typ1_for_class_arg ~plugin:self#plugin_name tdecl.ptype_name.txt)
         )
+    ]
+
+  (* method specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
+   *   let (_:type_declaration) = tdecl in
+   *   Typ.map typ
+   *     ~onvar:(fun s ->
+   *         Option.map ~f:Typ.from_caml @@
+   *         (List.Assoc.find ~equal:String.equal map s)
+   *       ) *)
 
   (* shortened class only used for mutally recursive declarations *)
   method make_shortend_class ~loc tdecls =

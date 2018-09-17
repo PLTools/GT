@@ -51,7 +51,7 @@ let implementation ppf sourcefile outputprefix =
 <LINK REL="stylesheet" HREF="mktree.css">
 <script language="javascript">
 document.addEventListener("DOMContentLoaded", function(event) { 
-        document.body.firstChild.class = "mktree";
+        document.body.firstChild.classList.add("mktree");
         convertTrees();
 });
 </script>

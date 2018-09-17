@@ -30,7 +30,7 @@ package "expander" (
   archive(native) = "ppx_gt_expander.cmxa"
   requires = "ppx_core"
 )
-
+# TODO: maybe plugins aren't requiring GT.syntax since we support PPX too?
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
@@ -54,6 +54,7 @@ package "syntax" (
     description = "Plugin 'html' for HTML generation based on TyXML library"
     requires = "GT.syntax tyxml"
     archive(syntax,preprocessor) = "htmlTy.cmo"
+    exists_if               = "htmlTy.cmo"
     archive(syntax,toploop) = "htmlTy.cmo"
   )
   package "html" (

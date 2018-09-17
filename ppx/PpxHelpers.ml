@@ -91,11 +91,18 @@ module Exp = struct
   let acc ~loc l r = pexp_field ~loc l (Located.mk ~loc r)
   let acc_list ~loc l xs = assert false
   let fun_ ~loc = pexp_fun ~loc Nolabel None
+
+  let fun_list_l ~loc args e =
+    if List.is_empty args then e
+    else List.fold_right args
+        ~init:e
+        ~f:(fun (l, opt) -> pexp_fun ~loc (Optional l) (Some opt) (Pat.var ~loc l))
+
   let fun_list ~loc args e =
     if List.is_empty args then e
     else List.fold_right args
         ~init:e
-        ~f:(fun arg acc -> pexp_fun ~loc Nolabel None arg acc)
+        ~f:(fun arg -> pexp_fun ~loc Nolabel None arg)
 
   let case ?guard lhs rhs = case ~lhs ~rhs ~guard
 

@@ -23,7 +23,8 @@ let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), None)
 module Pat = struct
   type t = MLast.patt
   let any ~loc () = <:patt< _ >>
-  let var ~loc s  = <:patt< $lid:s$ >>
+  let lid ~loc s  = <:patt< $lid:s$ >>
+  let var = lid
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt
   let of_longident ~loc lid =
     let open Ppxlib.Longident in
@@ -72,7 +73,8 @@ module Pat = struct
     let right = <:patt< $lid:name$ >> in
     <:patt< ($p1$ as $right$) >>
 
-  let unit ~loc =     <:patt< () >> (* constr ~loc "()" [] *)
+  let optional ~loc p1 e = <:patt< ?{$p1$ = $e$} >>
+  let unit ~loc = <:patt< () >>
 end
 
 
@@ -130,6 +132,12 @@ module Exp = struct
     <:expr< fun [ $list:[ (pat,Ploc.VaVal None,e) ]$ ] >>
   let fun_list ~loc pats body =
     List.fold_right (fun x acc -> fun_ ~loc x acc) pats body
+
+  let fun_list_l ~loc pats body =
+    List.fold_right (fun (lab,opt) acc ->
+        <:expr< fun [ $list:[ (Pat.optional ~loc (Pat.lid ~loc lab) opt, Ploc.VaVal None, acc) ]$ ] >>
+      ) pats body
+
 
   let construct ~loc lident args =
     app_list ~loc (of_longident ~loc lident) args

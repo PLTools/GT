@@ -98,24 +98,24 @@ class g args = object(self: 'self)
     in
     List.map ~f:Typ.from_caml ps
 
-  method! specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
-    let param_names,rez_names,_find_param,_blownup_params =
-      hack_params tdecl.ptype_params
-    in
-    let map =
-      List.map2_exn param_names rez_names ~f:(fun a b -> (a,b))
-      |> List.fold_left ~init:map
-        ~f:(fun acc (l, r) ->
-            match List.Assoc.find_exn acc ~equal:String.equal l with
-            | exception Caml.Not_found -> acc
-            | t -> List.Assoc.add acc ~equal:String.equal r t
-          )
-    in
-    Typ.map typ
-      ~onvar:(fun s ->
-          Option.map ~f:Typ.from_caml @@
-          (List.Assoc.find ~equal:String.equal map s)
-        )
+  (* method! specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
+   *   let param_names,rez_names,_find_param,_blownup_params =
+   *     hack_params tdecl.ptype_params
+   *   in
+   *   let map =
+   *     List.map2_exn param_names rez_names ~f:(fun a b -> (a,b))
+   *     |> List.fold_left ~init:map
+   *       ~f:(fun acc (l, r) ->
+   *           match List.Assoc.find_exn acc ~equal:String.equal l with
+   *           | exception Caml.Not_found -> acc
+   *           | t -> List.Assoc.add acc ~equal:String.equal r t
+   *         )
+   *   in
+   *   Typ.map typ
+   *     ~onvar:(fun s ->
+   *         Option.map ~f:Typ.from_caml @@
+   *         (List.Assoc.find ~equal:String.equal map s)
+   *       ) *)
 
 
 
