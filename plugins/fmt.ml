@@ -131,9 +131,9 @@ class g args = object(self)
             sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc l.pld_name.txt
           )
     in
-    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s)) @@
+    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.var ~loc s)) @@
     List.fold_left bindings
-      ~f:(fun acc (name,typ) ->
+      ~f:(fun acc (name, _, typ) ->
         Exp.app_list ~loc acc
           [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ
           ; Exp.ident ~loc name

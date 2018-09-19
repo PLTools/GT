@@ -58,8 +58,8 @@ module H = struct
 
   let li ~loc xs =
     Exp.app ~loc (wrap ~loc "li") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
-  let ol ~loc xs =
-    Exp.app ~loc (wrap ~loc "ol") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
+  (* let ol ~loc xs =
+   *   Exp.app ~loc (wrap ~loc "ol") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs *)
   let ul ~loc xs =
     Exp.app ~loc (wrap ~loc "ul") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
   let checkbox ~loc name =
@@ -109,16 +109,17 @@ class g args = object(self)
       (if List.length ts = 0
        then H.(ul ~loc [pcdata ~loc constr_name])
        else
-         let ds = List.map ts
-           ~f:(fun (name, typ) ->
-                 self#app_transformation_expr ~loc
-                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
-                   (Exp.assert_false ~loc)
-                   (Exp.ident ~loc name)
-              )
-         in
-         H.ul ~loc @@
-         (H.pcdata ~loc constr_name) :: ds
+         H.ul ~loc @@ (
+           (H.li ~loc [H.pcdata ~loc constr_name]) ::
+           (List.map ts ~f:(fun (name, typ) ->
+              H.li ~loc
+                [ self#app_transformation_expr ~loc
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                    (Exp.assert_false ~loc)
+                    (Exp.ident ~loc name)
+                ]
+              ))
+         )
       )
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
@@ -151,20 +152,29 @@ class g args = object(self)
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
-    (string * core_type) list ->
+    (string * _ * core_type) list ->
     label_declaration list ->
     Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe info bindings labs ->
-
-    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_) -> Pat.sprintf ~loc "%s" s)) @@
-    let ds = List.map bindings
-        ~f:(fun (name,typ) ->
-          self#app_transformation_expr ~loc
-            (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
-            (Exp.assert_false ~loc)
-            (Exp.ident ~loc name)
-        )
+    let constr_name = match info with
+      | `Poly s -> sprintf "`%s" s
+      | `Normal s -> s
     in
-    H.ul ~loc ds
+
+    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@
+    let open H  in
+    ul ~loc @@
+    [pcdata ~loc constr_name] @
+    List.map bindings
+      ~f:(fun (pname, lname, typ) ->
+          H.li ~loc
+              [ H.pcdata ~loc lname
+              ; self#app_transformation_expr ~loc
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                  (Exp.assert_false ~loc)
+                  (Exp.ident ~loc pname)
+              ]
+        )
+
 
 end
 

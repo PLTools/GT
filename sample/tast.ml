@@ -50,6 +50,19 @@ module Types = struct
   and  commutable       = [%import: Types.commutable]
   [@@deriving gt ~options:{ fmt; html }]
 
+  class ['self] type_expr_hack prereq fself = object
+    inherit ['self] html_type_expr_t_stub prereq fself
+    method! do_type_expr () t =
+      HTML.string "type_expr"
+  end
+
+  let html_type_expr subj =
+    let { html_type_expr } = html_fix_abbrev_memo
+      ~type_expr0:({ html_type_expr_func = new type_expr_hack })
+      ()
+    in
+    html_type_expr.html_type_expr_trf subj
+
   module Parsetree = Camlast
   module Meths = struct
     type 'a t = [%import: 'a Types.Meths.t] 
@@ -67,7 +80,9 @@ module Types = struct
       { GT.gcata = (fun _ _ -> failwith "vars not implemented")
       ; GT.plugins = object
           method fmt _fa fmt s = Format.fprintf fmt "<vars>%!"
-          method html _fa s = HTML.string "vars HERE"
+          method html _fa s =
+            HTML.unit ()
+              (* HTML.string "vars HERE" *)
         end
       }
   end
@@ -81,7 +96,9 @@ module Types = struct
     let t =
       { GT.gcata = (fun _ _ -> assert false)
       ; GT.plugins = object
-          method html _ = HTML.string "Types.variance"
+          method html _ =
+            HTML.unit ()
+              (* HTML.string "Types.variance" *)
           method fmt fmt _ = Format.fprintf fmt "'some variance'"
         end
       }
@@ -105,7 +122,9 @@ module Types = struct
       { GT.gcata = (fun _ _ -> failwith "concr not implemented")
       ; GT.plugins = object
           method fmt fmt s = Format.fprintf fmt "<concr>%!"
-          method html s = HTML.string "concr HERE"
+          method html s =
+            HTML.unit ()
+              (* HTML.string "concr HERE" *)
         end
       }
   end
@@ -147,7 +166,7 @@ module Env = struct
       { GT.gcata = (fun _ _ -> failwith "env not implemented")
       ; GT.plugins = object
           method fmt fmt s = Format.fprintf fmt "<env>%!"
-          method html s = HTML.string "env HERE"
+          method html s =  HTML.unit () (* HTML.string "env HERE" *)
         end
       }
 end
@@ -224,5 +243,40 @@ and class_declaration = [%import: Typedtree.class_declaration]
 and class_description = [%import: Typedtree.class_description]
 and class_type_declaration = [%import: Typedtree.class_type_declaration]
 and 'a class_infos = [%import: 'a Typedtree.class_infos]
-[@@deriving gt ~options:{ fmt; html }]
+[@@deriving gt ~options:{ html; fmt }]
 
+class ['self] expression_desc_hack mut_trfs_here fself = object
+  inherit ['self] html_expression_desc_t_stub mut_trfs_here fself
+end
+class ['self] type_declaration_hack prereq fself = object
+  inherit ['self] html_type_declaration_t_stub prereq fself
+  method! do_type_declaration () t =
+    HTML.string "some type declaration"
+end
+
+class ['self] expression_hack prereq fself = object
+  inherit ['self] html_expression_t_stub prereq fself as super
+
+  method! do_expression () e =
+    let loc = e.exp_loc in
+    let open Ppxlib in
+    let open Ppxlib.Ast_builder.Default in
+    match e.exp_desc with
+    | Texp_ident (p,_,_) ->
+      (* HTML.anchor "asdf" @@ *)
+      super#do_expression () e
+    | _ ->     super#do_expression () e
+
+end
+
+
+(* TODO: we need a hack to specify name of generated fix function *)
+
+let html_structure subj =
+  let { html_structure } = html_fix_case
+      (* ~expression_desc0:({ html_expression_desc_func = new expression_desc_hack }) *)
+      ~expression0:({ html_expression_func = new expression_hack })
+      ~type_declaration0:({ html_type_declaration_func = new type_declaration_hack })
+      ()
+  in
+  html_structure.html_structure_trf subj

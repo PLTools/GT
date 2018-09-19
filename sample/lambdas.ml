@@ -1,13 +1,10 @@
-(* Opening runtime module to avoid explicit qualification *)
-open GT
-
 (* Set/map of strings *)
 module S = Set.Make (String)
 module M = Map.Make (String)
 
 (* Name generator for alpha-conversion *)
 let generator s = 
-  let s = ref s in
+  let s = Pervasives.ref s in
   let rec gen x =
     let n = x ^ "'" in
     if S.mem n !s 
@@ -33,6 +30,9 @@ type lam =
 | Var of GT.string
 | App of lam * lam
 | Lam of GT.string * lam [@@deriving gt ~show ~foldl]
+
+(* Opening runtime module to avoid explicit qualification *)
+open GT
 
 (* ``show'' function *)
 (* let show = transform(lam) (new @lam[show]) () *)

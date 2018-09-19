@@ -6,10 +6,10 @@ all: tast
 .PHONY: tast
 
 tast:
-	OCAMLPATH=`pwd`/../_build/bundle $(BUILD) tastrun.native
+	OCAMLPATH=`pwd`/../_build/bundle $(BUILD) tastrun.byte
 
 tast_run:
-	./tastrun.native a.ml
+	./tastrun.byte a.ml
 	$(RM) -r *.cmi
 
 clean:

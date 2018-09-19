@@ -812,7 +812,8 @@ class virtual generator initial_args = object(self: 'self)
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
-    (string * core_type) list ->
+    (* pattern variable, label name, typ of label *)
+    (string * string * core_type) list ->
     label_declaration list -> 
     Exp.t
 
@@ -840,7 +841,9 @@ class virtual generator initial_args = object(self: 'self)
         | Pcstr_record ls ->
             let inhname = gen_symbol ~prefix:"inh_" () in
             let loc = loc_from_caml cd.pcd_loc in
-            let bindings = List.map ls ~f:(fun l -> gen_symbol (), l.pld_type) in
+            let bindings =
+              List.map ls ~f:(fun l -> gen_symbol (), l.pld_name.txt, l.pld_type)
+            in
             Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
             Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
             self#on_record_constr ~loc ~mutal_decls ~is_self_rec
@@ -1081,7 +1084,7 @@ class virtual no_inherit_arg = object(self: 'self)
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
-    (string * core_type) list ->
+    (string * string * core_type) list ->
     label_declaration list -> 
     Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe _ _ _ ->
     failwithf "handling record constructors in plugin `%s`" self#plugin_name ()

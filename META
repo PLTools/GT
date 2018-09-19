@@ -90,7 +90,7 @@ package "syntax" (
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo htmlTy.cmo stateful.cmo show_typed.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo htmlTy.cmo stateful.cmo show_typed.cmx"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo show_typed.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo show_typed.cmx"
   )
 )
