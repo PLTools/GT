@@ -5,6 +5,7 @@ true: rectypes, debug, package(GT)
 
 <camlast*.*>: package(compiler-libs.common)
 <camlast.*>: ppx(`ocamlfind query ppx_import`/ppx_import), ppx(../../pp_gt.native --as-ppx)
+<tast*.*>: package(compiler-libs.common)
 <tast.*>: ppx(`ocamlfind query ppx_import`/ppx_import), ppx(../../pp_gt.native --as-ppx)
 #<tast.*>: ppx(../../pp_gt.native --as-ppx)
 #<camlast.*>:  predicate(custom_ppx), omp-driver(GT.ppx)

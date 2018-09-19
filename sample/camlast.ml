@@ -11,15 +11,27 @@ module Location = struct
     else fprintf f "%s[%d,%d+%d]" fname l.pos_lnum l.pos_bol
         (l.pos_cnum - l.pos_bol)
 
+  let print_compact = Location.print_compact
   type      t = [%import:    Location.t]
-  (* [@@deriving gt ~options:{show; html}] *)
 
-  let fmt_location f loc =
+  let fmt_location ppf loc =
     let open Format in
-    let p_2nd_name = loc.loc_start.pos_fname <> loc.loc_end.pos_fname in
-    fprintf f "(%a..%a)" (fmt_position true) loc.loc_start
-      (fmt_position p_2nd_name) loc.loc_end;
-    if loc.loc_ghost then fprintf f " ghost";
+    (* let p_2nd_name = loc.loc_start.pos_fname <> loc.loc_end.pos_fname in
+     * fprintf f "(%a..%a)" (fmt_position true) loc.loc_start
+     *   (fmt_position p_2nd_name) loc.loc_end;
+     * if loc.loc_ghost then fprintf f " ghost"; *)
+    let (file, line, startchar) = Location.get_pos_info loc.loc_start in
+    let endchar = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum + startchar in
+    fprintf ppf "%s_%i" file line;
+    if startchar >= 0 then fprintf ppf "_%i__%i" startchar endchar;
+    pp_print_flush ppf ()
+
+  let show_location loc =
+    let b = Buffer.create 10 in
+    let fmt = Format.formatter_of_buffer b in
+    fmt_location fmt loc;
+    Format.pp_print_flush fmt ();
+    Buffer.contents b
 
   class virtual ['inh,'self,'syn] t_t =
     object method virtual  do_t : 'inh -> t -> 'syn end
@@ -27,7 +39,12 @@ module Location = struct
 
   class ['self] html_t_t fself = object
     inherit  [unit,'self,View.viewer] t_t
-    method do_t () _ = HTML.string "<noloc>"
+    method do_t () l =
+      let b = Buffer.create 10 in
+      let fmt = Format.formatter_of_buffer b in
+      Location.print_compact fmt l;
+      Format.pp_print_flush fmt ();
+      HTML.string @@ Buffer.contents b
   end
   let html_t subj =
     GT.fix0 (fun self -> gcata_t ((new html_t_t) self) ()) subj
@@ -61,7 +78,7 @@ module Location = struct
 end
 
 module Longident = struct
-  type t = [%import: Longident.t] [@@deriving gt ~options:{ fmt; html }]
+  type t = [%import: Longident.t] [@@deriving gt ~options:{ fmt; html; show }]
 end
 
 module Asttypes = struct

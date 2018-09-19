@@ -108,7 +108,11 @@ class ['a, 'self] html_list_t fself fa =
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @list
     method c_Nil  _      = View.empty
     method c_Cons _ x xs =
-      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself xs))
+
+      HTML.ul @@ HTML.seq (
+        [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa x) (x::xs)
+        )
+(*      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself xs)) *)
   end
 
 class ['a, 'self] show_list_t fself fa =
@@ -598,11 +602,9 @@ class ['a, 'b, 'self] html_pair_t _ fa fb =
     constraint 'syn = HTML.viewer
     method c_Pair () x y =
       List.fold_left View.concat View.empty
-         [ HTML.string "("
-         ; HTML.ul (fa x)
-         ; HTML.string ", "
+         [ HTML.ul (fa x)
          ; HTML.ul (fb y)
-         ; HTML.string ")"]
+         ]
   end
 
 class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t _ (fa: 'a -> 'sa) fb =

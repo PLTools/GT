@@ -20,16 +20,15 @@ let implementation ppf sourcefile outputprefix =
   Env.set_unit_name modulename;
   let env = Compmisc.initial_env() in
   try
+    let parsed = Pparse.parse_implementation ~tool_name ppf sourcefile in
     let (typedtree,_) =
-      Pparse.parse_implementation ~tool_name ppf sourcefile
+      parsed
       ++ print_if ppf Clflags.dump_parsetree Printast.implementation
       ++ print_if ppf Clflags.dump_source Pprintast.structure
       ++ Typemod.type_implementation sourcefile outputprefix modulename env
       ++ print_if ppf Clflags.dump_typedtree
           Printtyped.implementation_with_coercion
     in
-    (* let () = Pprintast.structure Format.std_formatter untyped in *)
-
     let () =
       let ch = open_out "out.fmt.txt" in
       let fmt = Format.formatter_of_out_channel ch in
@@ -51,13 +50,16 @@ let implementation ppf sourcefile outputprefix =
 <LINK REL="stylesheet" HREF="mktree.css">
 <script language="javascript">
 document.addEventListener("DOMContentLoaded", function(event) { 
-        document.body.firstChild.classList.add("mktree");
+        document.body.firstChild.nextSibling.nextSibling.nextSibling.classList.add("mktree");
         convertTrees();
 });
 </script>
 </head>
 
 |};
+      Format.fprintf fmt "<pre>\n";
+      Pprintast.structure fmt parsed;
+      Format.fprintf fmt "</pre><hr>\n";
 
       Format.fprintf fmt "%s" @@ HTML.toHTML @@
       HTML.body @@ Tast.html_structure typedtree;
