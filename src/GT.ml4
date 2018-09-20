@@ -1040,6 +1040,47 @@ let ref:
        gcata_ref (new @ref[html]    (fun _ -> assert false) fa) ()
   end
 }
+(*** arrays *****************************************************************)
+type 'a parray      = 'a array
+type 'a array       = 'a parray
+
+class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] array_t = object
+  method virtual do_array  : 'inh -> 'a array -> 'syn
+end
+
+let gcata_array tr inh subj = tr#do_array inh subj
+
+class ['a, 'self] html_array_t fself fa =
+  object
+    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @array
+    method do_array () arr =
+      HTML.ul @@ HTML.seq (
+        [ HTML.string "array" ] @ List.map (fun x -> HTML.li @@ fa x) @@ Array.to_list arr
+        )
+  end
+
+class ['a, 'self] show_array_t fself fa = object
+  inherit [unit, 'a, string, unit, 'self, string] @array
+  method do_array () arr =
+    "[|" ^ (Array.fold_right (fun x s -> Printf.sprintf "%a; %s" fa x s) arr " |]")
+end
+
+class ['a, 'self] fmt_array_t fself fa = object
+  inherit [Format.formatter, 'a, unit, Format.formatter, 'self, unit] @array
+
+  method do_array fmt arr =
+    Format.fprintf fmt "[| ";
+    Array.iter (fun x -> Format.fprintf fmt "%a; " fa x) arr;
+    Format.fprintf fmt " |]"
+end
+
+let array =
+  { gcata = (fun _ _ -> failwith "arrays not implemented")
+  ; plugins = object
+      method fmt _fa fmt s = Format.fprintf fmt "<array>%!"
+      method html _fa s = HTML.string "array HERE"
+    end
+  }
 
 (****************************************************************************)
 let show    t = t.plugins#show
