@@ -1,25 +1,11 @@
 open GT
 
 module Location = struct
-  (* from Printast module *)
-  let fmt_position with_name f l =
-    let open Format in
-    let open Lexing in
-    let fname = if with_name then l.pos_fname else "" in
-    if l.pos_lnum = -1
-    then fprintf f "%s[%d]" fname l.pos_cnum
-    else fprintf f "%s[%d,%d+%d]" fname l.pos_lnum l.pos_bol
-        (l.pos_cnum - l.pos_bol)
-
   let print_compact = Location.print_compact
   type      t = [%import:    Location.t]
 
   let fmt_location ppf loc =
     let open Format in
-    (* let p_2nd_name = loc.loc_start.pos_fname <> loc.loc_end.pos_fname in
-     * fprintf f "(%a..%a)" (fmt_position true) loc.loc_start
-     *   (fmt_position p_2nd_name) loc.loc_end;
-     * if loc.loc_ghost then fprintf f " ghost"; *)
     let (file, line, startchar) = Location.get_pos_info loc.loc_start in
     let endchar = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum + startchar in
     fprintf ppf "%s_%i" file line;
@@ -39,12 +25,7 @@ module Location = struct
 
   class ['self] html_t_t fself = object
     inherit  [unit,'self,View.viewer] t_t
-    method do_t () l =
-      let b = Buffer.create 10 in
-      let fmt = Format.formatter_of_buffer b in
-      Location.print_compact fmt l;
-      Format.pp_print_flush fmt ();
-      HTML.string @@ Buffer.contents b
+    method do_t () l = HTML.string @@ show_location l
   end
   let html_t subj =
     GT.fix0 (fun self -> gcata_t ((new html_t_t) self) ()) subj
@@ -63,17 +44,6 @@ module Location = struct
 
   type 'a loc = [%import: 'a Location.loc]
   [@@deriving gt ~options:{fmt; html}]
-
-  (* class virtual ['ia,'a,'sa,'inh,'self,'syn] loc_t =
-   *   object method virtual  do_loc : 'inh -> 'a loc -> 'syn end
-   * class ['a,'self] show_loc_t fself  fa =  object
-   *   inherit  [unit,'a,string,unit,'self,string] loc_t
-   *   method do_loc () { txt; loc } =
-   *     Format.sprintf "{  txt=%s; loc=%s; }" (fa txt)
-   *       ((fun subj -> (t.GT.plugins)#show subj) loc)
-   * end
-   * let rec show_loc fa subj =
-   *   GT.fix0 (fun self -> gcata_loc ((new show_loc_t) self fa) ()) subj *)
 
 end
 

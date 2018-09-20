@@ -2,22 +2,8 @@ module Pervasives = struct include Pervasives let ref = GT.ref end
 
 open GT
 
-  let array =
-    { GT.gcata = (fun _ _ -> failwith "arrays not implemented")
-    ; GT.plugins = object
-        method fmt _fa fmt s = Format.fprintf fmt "<array>%!"
-        method html _fa s = HTML.string "array HERE"
-      end
-    }
-
 module Location = Camlast.Location
-
-
-
-module Longident = struct
-  type t = [%import: Longident.t] [@@deriving gt ~options:{ fmt; html; show }]
-end
-
+module Longident = Camlast.Longident
 module Asttypes = Camlast.Asttypes
 
 module Ident = struct
@@ -28,43 +14,24 @@ module Path = struct
 end
 
 module Primitive = struct
-  type boxed_integer = [%import: Primitive.boxed_integer] [@@deriving gt ~options:{ fmt; html }]
-  type native_repr   = [%import: Primitive.native_repr]   [@@deriving gt ~options:{ fmt; html }]
-  type description   = [%import: Primitive.description]   [@@deriving gt ~options:{ fmt; html }]
+  type boxed_integer = [%import: Primitive.boxed_integer]
+  [@@deriving gt ~options:{ fmt; html }]
+  type native_repr   = [%import: Primitive.native_repr]
+  [@@deriving gt ~options:{ fmt; html }]
+  type description   = [%import: Primitive.description]
+  [@@deriving gt ~options:{ fmt; html }]
 end
 
 module Types = struct
-
-
-  type type_expr        = [%import: Types.type_expr]  
-  and  row_desc         = [%import: Types.row_desc]   
-  and  type_desc        = [%import: Types.type_desc]  
-  and  row_field        = [%import: Types.row_field]  
+  type type_expr        = [%import: Types.type_expr]
+  and  row_desc         = [%import: Types.row_desc]
+  and  type_desc        = [%import: Types.type_desc]
+  and  row_field        = [%import: Types.row_field]
   and  abbrev_memo      = [%import: Types.abbrev_memo]
-  and  field_kind       = [%import: Types.field_kind] 
+  and  field_kind       = [%import: Types.field_kind]
   and  commutable       = [%import: Types.commutable]
   [@@deriving gt ~options:{ fmt; html }]
 
-  class ['self] type_expr_hack prereq fself = object
-    inherit ['self] html_type_expr_t_stub prereq fself
-    method! do_type_expr () t =
-      HTML.string "type_expr"
-  end
-
-  let html_type_expr subj =
-    let { html_type_expr } = html_fix_abbrev_memo
-      ~type_expr0:({ html_type_expr_func = new type_expr_hack })
-      ()
-    in
-    html_type_expr.html_type_expr_trf subj
-
-  let type_expr =
-    { GT.gcata = gcata_type_expr
-    ; GT.plugins = object
-        method html = html_type_expr
-        method fmt  = fmt_type_expr
-      end
-    }
   module Parsetree = Camlast
   module Meths = struct
     type 'a t = [%import: 'a Types.Meths.t] 
@@ -82,9 +49,7 @@ module Types = struct
       { GT.gcata = (fun _ _ -> failwith "vars not implemented")
       ; GT.plugins = object
           method fmt _fa fmt s = Format.fprintf fmt "<vars>%!"
-          method html _fa s =
-            HTML.string ""
-              (* HTML.string "vars HERE" *)
+          method html _fa s = HTML.string ""
         end
       }
   end
@@ -98,9 +63,7 @@ module Types = struct
     let t =
       { GT.gcata = (fun _ _ -> assert false)
       ; GT.plugins = object
-          method html _ =
-            HTML.string ""
-              (* HTML.string "Types.variance" *)
+          method html _ = HTML.string ""
           method fmt fmt _ = Format.fprintf fmt "'some variance'"
         end
       }
@@ -124,9 +87,7 @@ module Types = struct
       { GT.gcata = (fun _ _ -> failwith "concr not implemented")
       ; GT.plugins = object
           method fmt fmt s = Format.fprintf fmt "<concr>%!"
-          method html s =
-            HTML.string ""
-              (* HTML.string "concr HERE" *)
+          method html s = HTML.string ""
         end
       }
   end
@@ -150,16 +111,12 @@ module Types = struct
   and ext_status = [%import: Types.ext_status]
   [@@deriving gt ~options:{ fmt; html }]
 
-  (* type value_description = [%import: Types.value_description] [@@deriving gt ~options:{ fmt; html }]
-   * and value_kind   = [%import: Types.value_kind] [@@deriving gt ~options:{ fmt; html }] *)
   type constructor_description = [%import: Types.constructor_description]
   and constructor_tag = [%import: Types.constructor_tag]
   [@@deriving gt ~options:{ fmt; html }]
 
-  (* let (_:int) = Pervasives.array *)
   type label_description = [%import: Types.label_description]
   [@@deriving gt ~options:{ fmt; html }]
-
 end
 
 module Env = struct
@@ -175,12 +132,10 @@ end
 
 module Parsetree = Camlast
 open Parsetree
-open GT
 
 type partial = [%import: Typedtree.partial]   [@@deriving gt ~options:{ fmt; html }]
 type attribute = [%import: Camlast.attribute]   [@@deriving gt ~options:{ fmt; html }]
 type attributes = attribute GT.list   [@@deriving gt ~options:{ fmt; html }]
-
 
 type pattern = [%import: Typedtree.pattern]
 and pat_extra = [%import: Typedtree.pat_extra]
@@ -247,66 +202,36 @@ and class_type_declaration = [%import: Typedtree.class_type_declaration]
 and 'a class_infos = [%import: 'a Typedtree.class_infos]
 [@@deriving gt ~options:{ html; fmt }]
 
-class ['self] pattern_desc_hack mut_trfs_here fself = object
-  inherit ['self] html_pattern_desc_t_stub mut_trfs_here fself as super
-  method! c_Tpat_var () ident nameloc =
+class ['self] pattern_desc_with_link mut_trfs_here fself = object
+  inherit ['self] html_pattern_desc_t_stub mut_trfs_here fself
+  method! c_Tpat_var () { Ident.name } nameloc =
     let loc_str = Location.show_location nameloc.Asttypes.loc in
-    HTML.ul (* ~attrs:(Printf.sprintf "name=%S" loc_str) *) @@
+    HTML.ul @@
     HTML.seq
       [ HTML.anchor loc_str @@
-        HTML.string @@ Printf.sprintf "%S  from %s" (ident.Ident.name) loc_str
+        HTML.string @@ Printf.sprintf "%S  from %s" name loc_str
       ]
-    (* HTML.seq
-     *   [ HTML.anchor (Location.show_location nameloc.Asttypes.loc) @@ HTML.string ""
-     *   ; super#c_Tpat_var () ident nameloc
-     *   ] *)
-end
-class ['self] type_declaration_hack prereq fself = object
-  inherit ['self] html_type_declaration_t_stub prereq fself
-  method! do_type_declaration () t =
-    HTML.string "some type declaration"
 end
 
-
-
-
-class ['self] expression_hack prereq fself = object
+class ['self] expression_with_link prereq fself = object
   inherit ['self] html_expression_t_stub prereq fself as super
 
   method! do_expression () e =
-    let loc = e.exp_loc in
-    let printl = Location.fmt_location in
-    let show_longident = Longident.show_t in
-    let open Ppxlib in
-    let open Ppxlib.Ast_builder.Default in
     match e.exp_desc with
     | Texp_ident (p,lloc,vd) ->
-      let where =
-        let b = Buffer.create 10 in
-        Buffer.add_string b "#";
-        let fmt = Format.formatter_of_buffer b in
-        printl fmt (Ocaml_common.Env.find_value p e.exp_env).val_loc;
-        Format.pp_print_flush fmt ();
-        Buffer.contents b
-      in
-      (* HTML.ul  @@ *)
-      HTML.ref where @@ HTML.string @@
-      Printf.sprintf "%s  from %s" (show_longident lloc.txt) where
-      (* HTML.seq
-       *   [ HTML.ref where (HTML.string "definition")
-       *   ; super#do_expression () e
-       *   ] *)
-    | _ ->     super#do_expression () e
-
+      let where = Camlast.Location.show_location
+          (Ocaml_common.Env.find_value p e.exp_env).val_loc in
+      HTML.ref ("#" ^ where) @@ HTML.string @@
+      Printf.sprintf "%s  from %s" (Camlast.Longident.show_t lloc.txt) where
+    | _ -> super#do_expression () e
 end
 
-(* TODO: we need a hack to specify name of generated fix function *)
-
-let html_structure subj =
+let html_structure =
   let { html_structure } = html_fix_case
-      ~expression0:({ html_expression_func = new expression_hack })
-      ~type_declaration0:({ html_type_declaration_func = new type_declaration_hack })
-      ~pattern_desc0:({ html_pattern_desc_func = new pattern_desc_hack })
+      ~expression0:({ html_expression_func = new expression_with_link })
+      ~pattern_desc0:({ html_pattern_desc_func = new pattern_desc_with_link })
       ()
   in
-  html_structure.html_structure_trf subj
+  html_structure.html_structure_trf
+
+(* TODO: we need a hack to specify name of generated fix function *)

@@ -41,22 +41,23 @@ let implementation ppf sourcefile outputprefix =
       let ch = open_out "out.html" in
       let fmt = Format.formatter_of_out_channel ch in
       Format.pp_set_margin fmt 180;
-      Format.fprintf fmt "%s"
-        {|
-<html>
-<head>
-<meta charset="utf-8"/>
-<SCRIPT SRC="mktree.js" LANGUAGE="JavaScript"></SCRIPT>
-<LINK REL="stylesheet" HREF="mktree.css">
-<script language="javascript">
-document.addEventListener("DOMContentLoaded", function(event) { 
-        document.body.firstChild.nextSibling.nextSibling.nextSibling.classList.add("mktree");
-        convertTrees();
-});
-</script>
-</head>
+      Format.fprintf fmt "%s" {| <html><head><meta charset="utf-8"/></head> |};
 
-|};
+      (* Format.fprintf fmt "%s"
+ *         {|
+ * <html>
+ * <head>
+ * <SCRIPT SRC="mktree.js" LANGUAGE="JavaScript"></SCRIPT>
+ * <LINK REL="stylesheet" HREF="mktree.css">
+ * <script language="javascript">
+ * document.addEventListener("DOMContentLoaded", function(event) {
+ *         document.body.firstChild.nextSibling.nextSibling.nextSibling.classList.add("mktree");
+ *         convertTrees();
+ * });
+ * </script>
+ *
+ * </head>
+ * |}; *)
       Format.fprintf fmt "<pre>\n";
       Pprintast.structure fmt parsed;
       Format.fprintf fmt "</pre><hr>\n";
