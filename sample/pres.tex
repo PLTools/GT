@@ -8,6 +8,10 @@
 \usepackage{color}
 \usepackage{tcolorbox}
 
+\usepackage{DejaVuSansMono}
+\renewcommand*\familydefault{\ttdefault} 
+\usepackage[T1]{fontenc}
+
 \newcommand{\lstfont}[1]{\color{#1}\scriptsize\ttfamily}
 %-------------------------------------------------------
 % DEFFINING AND REDEFINING COMMANDS
@@ -37,50 +41,21 @@
 %     breaklines=true
 % }
 \lstdefinelanguage{ocaml}{
-    showstringspaces=false,
-    %backgroundcolor=\color{black!90},
-    basicstyle=\lstfont{black},
-    identifierstyle=\lstfont{black},
-    keywordstyle=\lstfont{orange!40},
-    numberstyle=\lstfont{black},
-    stringstyle=\lstfont{green},
-    commentstyle=\lstfont{darkgreen!30},
-    emph={
-        cudaMalloc, cudaFree,
-        __global__, __shared__, __device__, __host__,
-        __syncthreads,
-    },
-    emphstyle={\lstfont{green!60!white}},
+    showstringspaces=true,
+    keywords={let, begin, end, in, match, type, and, fun, 
+    function, try, with, class, object, method, of, rec, repeat, until,
+    while, not, do, done, as, val, inherit, module, sig, @type, struct, 
+    if, then, else, open, virtual, new, fresh},
+    sensitive=true,
     breaklines=true
 }
 \lstset{
-basicstyle=\small,
 identifierstyle=\ttfamily,
-keywordstyle=\bfseries,
-commentstyle=\scriptsize\rmfamily,
-basewidth={0.5em,0.5em},
+keywordstyle=\ttfamily\bfseries,
 fontadjust=true,
-%escapechar=$,
 language=ocaml
 }
-% \lstset{
-%     language=[ANSI]C++,
-%     showstringspaces=false,
-%     %backgroundcolor=\color{black!90},
-%     basicstyle=\lstfont{white},
-%     identifierstyle=\lstfont{white},
-%     keywordstyle=\lstfont{magenta!40},
-%     numberstyle=\lstfont{white},
-%     stringstyle=\lstfont{cyan},
-%     commentstyle=\lstfont{yellow!30},
-%     emph={
-%         cudaMalloc, cudaFree,
-%         __global__, __shared__, __device__, __host__,
-%         __syncthreads,
-%     },
-%     emphstyle={\lstfont{green!60!white}},
-%     breaklines=true
-% }
+
 % colored hyperlinks
 \newcommand{\chref}[2]{
   \href{#1}{{\usebeamercolor[bg]{Feather}#2}}
@@ -108,92 +83,47 @@ language=ocaml
 \institute[]
 {
       SPbSU
-  
-  %there must be an empty line above this line - otherwise some unwanted space is added between the university and the country (I do not know why;( )
 }
 
 \date{\today}
 
-%-------------------------------------------------------
-% THE BODY OF THE PRESENTATION
-%-------------------------------------------------------
-
 \begin{document}
 
-%-------------------------------------------------------
-% THE TITLEPAGE
-%-------------------------------------------------------
-
-
-% \begin{frame}[fragile]{111}
-% \begin{lstlisting}
-% __global__
-% void foo()
-% {}
-% 
-% foo<<<n,m>>>();
-% \end{lstlisting}
-% \end{frame}
-
-% % this is the name of the PDF file for the background
-\begin{frame}[plain,noframenumbering] % the plain option removes the header from the title page, noframenumbering removes the numbering of this frame only
-  \titlepage % call the title page information from above
-\end{frame}
-
-\begin{frame}[fragile]{111}
-\begin{lstlisting}[ language=caml] 
-class ['self] pattern_desc_with_link mut_trfs_here fself = object
-  inherit ['self] html_pattern_desc_t_stub mut_trfs_here fself as super
+\begin{frame}[fragile]{Patterns (links destination)}
+\begin{lstlisting}[language=ocaml] 
+class ['self] pattern_desc_link mut_trfs fself = 
+object
+  inherit ['self] html_pattern_desc_t_stub mut_trfs fself
   method! c_Tpat_var () { Ident.name } nameloc =
-    let loc_str = Location.show_location nameloc.Asttypes.loc in
-    HTML.ul @@
-    HTML.seq
-      [ HTML.anchor loc_str @@
-        HTML.string @@ Printf.sprintf "%S  from %s" name loc_str
-      ]
+    let loc_str = 
+      Location.show_location nameloc.Asttypes.loc 
+    in
+    HTML.ul @@ HTML.seq
+        [ HTML.anchor loc_str @@ HTML.string @@ 
+          sprintf "%S from %s" name loc_str
+        ]
 end
 \end{lstlisting}
-
 \end{frame}
 
-% \begin{frame}{User Interface}{Loading the Theme and Theme Options}
-% 
-%   \begin{block}{The Color Theme}
-%     Also you can load only the color theme by writing in the preamble of the {\tt tex} file 
-%     
-%     \vspace{5pt} 
-%     
-%     \begin{itemize}
-%     \item {\tt \textbackslash usecolortheme\{Feather\}}
-%     \end{itemize}
-%     
-%     \vspace{5pt}
-%     
-%     ...or to change the colors of the various elements in the theme
-%     
-%     \vspace{5pt} 
-%     \begin{itemize}
-%     \item Change the bar colors: \\    
-%     {\tt \textbackslash setbeamercolor \{Feather\}\{fg=<color>, bg=<color>\}}
-%     
-%     \vspace{2pt} 
-%     
-%     \item Change the color of the structural elements: \\    
-%     {\tt \textbackslash setbeamercolor\{structure\}\{fg=<color>\}}
-%     
-%     \vspace{2pt} 
-%     
-%     \item Change the frame title text color:\\
-%     {\tt \textbackslash setbeamercolor\{frametitle\}\{fg=<color>\}}
-%     
-%     \vspace{2pt} 
-%     
-%     \item Change the normal text color background:    
-%     {\tt \textbackslash setbeamercolor\{normal text\}\{fg=<color>, bg=<color>\}}
-%     \end{itemize}
-%   \end{block}
-% \end{frame}
+\begin{frame}[fragile]{Identifiers (links sources)}
+\begin{lstlisting}[language=ocaml] 
+class ['self] expression_with_link mut_trfs fself = 
+object
+  inherit ['self] html_expression_t_stub mut_trfs fself as super
 
+  method! do_expression () e =
+    match e.exp_desc with
+    | Texp_ident (p,lloc,vd) ->
+      let where = Location.show_t
+        (Ocaml_common.Env.find_value p e.exp_env).val_loc 
+      in
+      HTML.ref ("#" ^ where) @@ HTML.string @@
+      sprintf "%s  from %s" (Longident.show_t lloc.txt) where
+    | _ -> super#do_expression () e
+end
+\end{lstlisting}
+\end{frame}
 
 \end{document}
 
