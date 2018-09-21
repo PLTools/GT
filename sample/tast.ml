@@ -178,9 +178,7 @@ and core_type = [%import: Typedtree.core_type]
 and core_type_desc = [%import: Typedtree.core_type_desc]
 and package_type = [%import: Typedtree.package_type]
 and row_field = [%import: Typedtree.row_field]
-(* and row_field_desc = [%import: Typedtree.row_field_desc] *)
 and object_field = [%import: Typedtree.object_field]
-(* and object_field_desc = [%import: Typedtree.object_field_desc] *)
 and value_description = [%import: Typedtree.value_description]
 and type_declaration = [%import: Typedtree.type_declaration]
 and type_kind = [%import: Typedtree.type_kind]
@@ -188,7 +186,6 @@ and label_declaration = [%import: Typedtree.label_declaration]
 and constructor_declaration = [%import: Typedtree.constructor_declaration]
 and constructor_arguments = [%import: Typedtree.constructor_arguments]
 and type_extension = [%import: Typedtree.type_extension]
-(* and type_exception = [%import: Typedtree.type_exception] *)
 and extension_constructor = [%import: Typedtree.extension_constructor]
 and extension_constructor_kind = [%import: Typedtree.extension_constructor_kind]
 and class_type = [%import: Typedtree.class_type]
@@ -228,9 +225,11 @@ end
 
 let html_structure =
   let { html_structure } = html_fix_case
-      ~expression0:({ html_expression_func = new expression_with_link })
-      ~pattern_desc0:({ html_pattern_desc_func = new pattern_desc_with_link })
-      ()
+    ~expression0:
+      { html_expression_func = new expression_with_link }
+    ~pattern_desc0:
+      { html_pattern_desc_func = new pattern_desc_with_link }
+    ()
   in
   html_structure.html_structure_trf
 

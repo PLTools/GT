@@ -89,6 +89,25 @@ language=ocaml
 
 \begin{document}
 
+
+\begin{frame}[fragile]{Importing types}
+\begin{lstlisting}[language=ocaml] 
+type pattern = [%import: Typedtree.pattern]
+and pat_extra = [%import: Typedtree.pat_extra]
+and pattern_desc= [%import: Typedtree.pattern_desc]
+and expression = [%import: Typedtree.expression]
+and expression_desc = [%import: Typedtree.expression_desc]
+and exp_extra = [%import: Typedtree.exp_extra]
+... 
+(* 60 mutally recursive types from Typedtree module 
+ *)
+...
+and 'a class_infos = 
+  [%import: 'a Typedtree.class_infos]
+[@@deriving gt ~options:{ html; fmt }]
+\end{lstlisting}
+\end{frame}
+
 \begin{frame}[fragile]{Patterns (links destination)}
 \begin{lstlisting}[language=ocaml] 
 class ['self] pattern_desc_link mut_trfs fself = 
@@ -122,6 +141,20 @@ object
       sprintf "%s  from %s" (Longident.show_t lloc.txt) where
     | _ -> super#do_expression () e
 end
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Using fixpoint}
+\begin{lstlisting}[language=ocaml] 
+let html_structure =
+  let { html_structure } = html_fix_case
+    ~expression0:
+      { html_expression_func = new expression_with_link }
+    ~pattern_desc0:
+      { html_pattern_desc_func = new pattern_desc_with_link }
+    ()
+  in
+  html_structure.html_structure_trf
 \end{lstlisting}
 \end{frame}
 
