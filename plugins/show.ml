@@ -124,6 +124,15 @@ class g args = object(self)
                   )
     ]
 
+  method treat_type_specially t =
+    Option.map ~f:(fun _ ->
+      let loc = loc_from_caml t.ptyp_loc in
+      Exp.fun_ ~loc (Pat.any ~loc ()) @@
+      Exp.string_const ~loc "\"<opaque>\""
+      ) @@
+    List.find t.ptyp_attributes ~f:(fun ({txt},_) -> String.equal txt "opaque")
+
+
 end
 
 let g = (new g :> (Plugin_intf.plugin_args ->

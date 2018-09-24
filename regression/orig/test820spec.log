@@ -1,1 +1,2 @@
 Just(<fun>)
+{  a=5; b="<opaque>"; }

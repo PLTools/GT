@@ -38,7 +38,8 @@ To preprocess only the code in this library (for example, a test) use the comman
 
   * ppxlib
   * The [fork](https://github.com/Kakadu/camlp5/tree/ast2pt.cmi) of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. It was merged to master. (TODO: check that it was already released)
-  
+  * ocamlgraph for topological sorting
+
 # Compilation
 
 * `make` to compile whole library.

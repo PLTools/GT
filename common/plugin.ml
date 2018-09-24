@@ -1014,7 +1014,12 @@ class virtual generator initial_args = object(self: 'self)
           end
         | _ -> failwith "unsupported case in do_typ"
     in
-    helper ~loc t
+    match self#treat_type_specially t with
+    | None -> helper ~loc t
+    | Some e -> e
+
+  (* should be used only in concrete plugins  *)
+  method treat_type_specially t = None
 
   method compose_apply_transformations ~loc ~left right typ =
     Exp.app ~loc left right
