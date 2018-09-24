@@ -1,10 +1,13 @@
-Testing Show
+Testing show_a
 E(C)
 A(I(C))
+Testing show_b
 I(A(J))
 K(J)
-Testing Show with fixed b
-I{A(J)}
+Testing show_b with fixed b
+I {A(J)}
 K {J}
-Testing Gmap
+Testing gmap_a
 D(7)
+Testing show_all with fixed b
+A(K(J))

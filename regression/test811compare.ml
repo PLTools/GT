@@ -1,6 +1,6 @@
 module T1 = struct
-type ('a,'b) t = A of 'a | B of 'b * int
-[@@deriving gt ~show ~compare]
+type ('a,'b) t = A of 'a | B of 'b * GT.int
+[@@deriving gt ~options:{ compare}]
 
 let () =
   let cmp1 x y = compare_t (GT.compare GT.int) (GT.compare GT.string) x y in
@@ -14,8 +14,8 @@ end
 
 (* testing polymorphic variants *)
 module T2 = struct
-type 'b t2 = [ `A | `B of 'b * int ]
-[@@deriving gt ~show ~compare]
+type 'b t2 = [ `A | `B of 'b * GT.int ]
+[@@deriving gt ~options:{ show; compare}]
 
 let () =
   let cmp1 x y = compare_t2 (GT.compare GT.string) x y in
@@ -29,8 +29,8 @@ let () =
 end
 
 module T3 = struct
-  type 'a t = { q: int; w: string; e: 'a GT.list }
-  [@@deriving gt ~show ~compare ~eq]
+  type 'a t = { q: GT.int; w: GT.string; e: 'a GT.list }
+[@@deriving gt ~options:{ show; compare; eq}]
 
   let ()  =
     let cmp1 x y = compare_t (GT.compare GT.string) x y in
@@ -46,7 +46,8 @@ end
 
 
 module T4 = struct
-  type 'a t = ('a * 'a) T3.t   [@@deriving gt ~show ~compare ~eq]
+  type 'a t = ('a * 'a) T3.t
+  [@@deriving gt ~options:{ show; compare; eq}]
 
   let ()  =
     let a = { T3.q=5; w="asd"; e= ["",""] } in
@@ -62,5 +63,4 @@ module T4 = struct
     assert (not(eq1 a b));
     assert (not(eq1 b c));
     ()
-
 end

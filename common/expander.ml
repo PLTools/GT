@@ -540,6 +540,12 @@ module T = Graph.Topological.Make(G)
 module SM = Caml.Map.Make(String)
 
 let do_mutal_types ~loc sis plugins tdecls =
+  (* TODO: we need topological sorting because in case
+   *   type y = int x
+   *   type 'a x = ....
+   * we need to declare class for x before class for y
+   * due to inheritance
+  *)
   let name_map =
     List.fold_left ~init:SM.empty tdecls
       ~f:(fun acc tdecl ->
@@ -547,7 +553,6 @@ let do_mutal_types ~loc sis plugins tdecls =
           | {ptype_name} -> SM.add ptype_name.txt tdecl acc
         )
   in
-
   let g = List.fold_left ~init:G.empty tdecls
       ~f:(fun acc tdecl ->
           let acc = G.add_vertex acc tdecl.ptype_name.txt in
@@ -569,7 +574,6 @@ let do_mutal_types ~loc sis plugins tdecls =
               | exception Caml.Not_found -> acc
               |  _ -> G.add_edge acc s tdecl.ptype_name.txt
             end
-          | Some _ -> acc
         )
   in
   let tdecls_new =

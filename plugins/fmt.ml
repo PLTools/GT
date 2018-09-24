@@ -72,7 +72,6 @@ class g args = object(self)
       | `Normal s -> s
     in
 
-    (* let names = List.map ts ~f:fst in *)
     let fmt = List.map ts ~f:(fun _ -> "%a") |> String.concat ~sep:",@,@ " in
     let fmt = sprintf "%s@ @[(@,%s@,)@]" constr_name fmt in
 

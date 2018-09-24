@@ -20,4 +20,5 @@ depends: [
   "ocamlgraph" {build}
   "ppxlib"
   "camlp5"
+  "ppx_import" {test}
 ]

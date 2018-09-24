@@ -2,3 +2,9 @@
 /test.ml
 /out.html
 /out.fmt.txt
+*.aux
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb

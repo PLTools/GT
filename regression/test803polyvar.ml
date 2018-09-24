@@ -2,10 +2,10 @@ let id x = x
 
 module PV : sig
   type ('a, 'b) pv = [ `A of 'a | `B of 'b ]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end = struct
   type ('a, 'b) pv = [ `A of 'a | `B of 'b ]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end
 
 let _ =
@@ -17,10 +17,10 @@ let _ =
 
 module PVExt : sig
   type ('a, 'b) pv_ext = [ ('a, 'b) PV.pv | `C of 'a]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end = struct
   type ('a, 'b) pv_ext = [ ('a, 'b) PV.pv | `C of 'a]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end
 
 let _ =
@@ -40,10 +40,10 @@ let _ =
 
 module PVExt2 : sig
   type ('a, 'b) pv_ext2 = [ ('a, 'b) PVExt.pv_ext | `D of 'a]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end = struct
   type ('a, 'b) pv_ext2 = [ ('a, 'b) PVExt.pv_ext | `D of 'a]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end
 
 let () =
@@ -64,17 +64,16 @@ let () =
 
 module PVExt3 : sig
   type ('a, 'b, 'c) pv_ext3 = [ ('a, 'b) PVExt2.pv_ext2 | `E of 'c]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end = struct
   type ('a, 'b, 'c) pv_ext3 = [ ('a, 'b) PVExt2.pv_ext2 | `E of 'c]
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; gmap}]
 end
 
 let () =
   let open PVExt2 in
   let open PVExt3 in
 
-  (* let (_:int) = show_pv_ext3 in *)
   Printf.printf "****************************\n%!";
   Printf.printf "Original pv_ext2: %s\n" @@
       show_pv_ext2  id id (`D "1");

@@ -8,7 +8,7 @@ and   all = (GT.int a) GT.list
 class ['self_b] show_b_hack prereq  fself = object
   inherit ['self_b] show_b_t_stub prereq fself
   method c_I inh___037_ _x__038_ =
-    Printf.sprintf "I{%s}"
+    Printf.sprintf "I {%s}"
       (prereq.show_a.show_a_trf (GT.int.GT.plugins)#show _x__038_)
   method c_K () x = Printf.sprintf "K {%s}" (fself x)
 end
@@ -39,37 +39,3 @@ let _ =
 
   ()
 
-(* let b =
- *   {
- *     GT.gcata = gcata_b;
- *     GT.plugins = (object method gmap = gmap_b method show = show_b end)
- *   }
- * let a =
- *   {
- *     GT.gcata = gcata_a;
- *     GT.plugins = (object method gmap = gmap_a method show = show_a end)
- *   } *)
-
-(* ************************************ *)
-(* type c = b GT.list [@@deriving gt ~options:{show;gmap}]
- * type 'a d = 'a GT.list a GT.list  [@@deriving gt ~options:{show;gmap}] *)
-
-
-(* type ctd = class_type ci
- * and class_type = C
- * and 'a ci = 'a
- * [@@deriving gt ~options:{fmt}] *)
-
-type class_declaration = class_expr class_infos
-and 'a class_infos =
-  {
-  pci_virt: GT.string ;
-  pci_expr: 'a ;
-}
-and class_expr =
-  {
-  pcl_desc: class_expr_desc;
- }
-and class_expr_desc =
-  | CE
-(* [@@deriving gt ~options:{fmt}] *)

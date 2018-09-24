@@ -25,14 +25,22 @@ let str_type_decl : (_, _) Deriving.Generator.t =
     (fun ~loc ~path info options ->
        let module H = Expander.Make(PpxHelpers) in
        (* Expander.notify "with annotations %s" (String.concat "," info); *)
+
        let generator_f si =
          H.str_type_decl_many_plugins ~loc si
            (match options with
             | None -> []
             | Some xs ->
               List.map (function
-                  | (Lident name, e) ->
-                    (name,Expander.Use [])
+                  | (Lident name, e) -> begin
+                      let extra =
+                        match e.pexp_desc with
+                        | Pexp_record (xs,_) -> List.map (fun ({txt},b) -> txt,b) xs
+                        | Pexp_ident {txt = Lident s} when s = name -> []
+                        | _ -> failwith "bad argument of a plugin"
+                      in
+                      (name,Expander.Use extra)
+                  end
                   | _ -> failwith "only lowercase identifiers are allowed"
                 ) xs
            )
@@ -52,8 +60,14 @@ let str_type_ext : (_, _) Deriving.Generator.t =
             | None -> []
             | Some xs ->
               List.map (function
-                  | (Lident name, e) ->
-                    (name,Expander.Use [])
+                  | (Lident name, e) -> begin
+                      let extra =
+                        match e.pexp_desc with
+                        | Pexp_record (xs,_) -> List.map (fun ({txt},b) -> txt,b) xs
+                        | _ -> failwith "asdf"
+                      in
+                      (name,Expander.Use extra)
+                  end
                   | _ -> failwith "only lowercase identifiers are allowed"
                 ) xs
            )

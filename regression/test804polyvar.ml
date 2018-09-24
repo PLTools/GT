@@ -1,10 +1,10 @@
 open GT
 
 type 'a maybe = Just of 'a | Nothing
-[@@deriving gt ~show ~gmap]
+[@@deriving gt ~options:{show; fmt }]
 
 type 'a pv = [ `A of 'a ]
-[@@deriving gt ~show ~gmap]
+[@@deriving gt ~options:{show; fmt}]
 
 
 let () =
@@ -14,12 +14,11 @@ let () =
 
 include (struct
   type 'a wtf = [ `C of 'a | 'a pv ] maybe
-  [@@deriving gt ~show ~gmap]
+  [@@deriving gt ~options:{show; fmt}]
 end : sig
-  type 'a wtf = [ `C of 'a | 'a pv ] maybe
-  [@@deriving gt ~show ~gmap]
-
-end)
+   type 'a wtf = [ `C of 'a | 'a pv ] maybe
+   [@@deriving gt ~options:{show; fmt}]
+ end)
 
 let () =
   let sh x = show_wtf (fun x -> x) x in

@@ -54,15 +54,6 @@ class g initial_args = object(self: 'self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml
 
-    (* rhs_args @ [self#extra_param_stub ~loc] *)
-
-  (* method! make_typ_of_self_trf ~loc tdecl =
-   *   Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl) *)
-
-  (* old type is:  'a -> comparison
-   * new type is:  'a -> 'a -> comparison
-  *)
-
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
@@ -72,23 +63,6 @@ class g initial_args = object(self: 'self)
       let inh_t = subj_t in
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
-  (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
-   *   (\* TODO: last argument should be either name of argument or core_type *\)
-   *   let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
-   *   let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
-   *   Typ.arrow ~loc (self#default_inh ~loc tdecl)
-   *     (super2#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl) *)
-
-  (* method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
-   *   let body = make_gcata_of_class (Exp.ident ~loc "self") in
-   *   Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
-   *   Exp.app_list ~loc
-   *     (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
-   *     [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
-   *     ; Exp.sprintf ~loc "the_init"
-   *     ; Exp.sprintf ~loc "subj"
-   *     ] *)
-
   method chain_exprs ~loc e1 e2 =
     Exp.app_list ~loc
       (Exp.of_longident ~loc (access_GT "chain_compare"))
@@ -97,7 +71,7 @@ class g initial_args = object(self: 'self)
       ]
   (* [%expr GT.chain_compare [%e e1] (fun () -> [%e e2]) ] *)
 
-  method chain_init ~loc = Exp.of_longident ~loc (access_GT "EQ")
+  method chain_init ~loc = Exp.construct ~loc (access_GT "EQ") []
 
   method on_different_constructors ~loc is_poly other_name cname arg_typs =
     Exp.app_list ~loc

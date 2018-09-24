@@ -68,9 +68,9 @@ clean: clean_tests
 
 
 ######################## Tests related stuff  ##########################
-REGRES_CASES := #807 029 037 811 900 809 808 801 802 803 804 806 #807 #805
+REGRES_CASES :=  801 803 804 805 806 810 811 812 820 821 809 # 808
 # now we add camlp5 tests
-REGRES_CASES += 804 810 812 805 806 801 000 037 081 082 083 086 087 089 029  090 809 # 808
+REGRES_CASES += 000 037 081 082 083 086 087 089 029  090
 
 TEST_DIR := regression
 define TESTRULES

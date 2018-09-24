@@ -64,7 +64,8 @@ class virtual generator initial_args = object(self: 'self)
     let check_name s =
       try Caml.Scanf.sscanf s "_%d" (fun n -> Some n)
       with Caml.Scanf.Scan_failure _ ->
-        (* printf "can't parse it\n%!"; *) None
+        (* Stdio.printf "can't parse it\n%!"; *)
+        None
     in
     let ans =
       List.fold_left initial_args ~init:[]
@@ -79,6 +80,7 @@ class virtual generator initial_args = object(self: 'self)
     ans
 
   method show_args =
+    (* Stdio.printf "showing %d args\n%!" (List.length reinterpreted_args); *)
     List.iter reinterpreted_args ~f:(fun (k,e) ->
         Format.printf "%d -> %a\n%!" k Pprintast.expression e
       )
@@ -291,7 +293,7 @@ class virtual generator initial_args = object(self: 'self)
   method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
     let args =
       List.mapi cparams ~f:(fun i t ->
-          (* printf "checking for arg with index (%d+1)\n%!" i; *)
+          (* Stdio.printf "checking for arg with index (%d+1)\n%!" i; *)
           try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal (i+1)
             |> Exp.from_caml
           with Caml.Not_found -> do_typ ~loc t
@@ -974,7 +976,7 @@ class virtual generator initial_args = object(self: 'self)
               in
               self#abstract_trf ~loc (fun einh esubj ->
                   self#app_transformation_expr ~loc
-                    (List.fold_left params (* (List.map ~f:helper params) *)
+                    (List.fold_left params
                        ~init
                        ~f:(fun left typ ->
                            self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
@@ -995,19 +997,22 @@ class virtual generator initial_args = object(self: 'self)
               einh esubj
             in
             let onrow lab bindings =
-              self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls
-                ~inhe:(Exp.sprintf ~loc "inh")
-                (`Poly lab.txt)
-                bindings
+              Exp.app_list ~loc
+                (self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls
+                   ~inhe:(Exp.sprintf ~loc "inh")
+                   (`Poly lab.txt)
+                   bindings)
+              @@
+              List.map bindings ~f:(fun (s,_) -> Exp.ident ~loc s)
             in
             self#abstract_trf ~loc (fun einh esubj ->
               prepare_patt_match_poly ~loc esubj rows maybe_labels
                 ~onrow
-                ~onlabel:(fun _ _ -> Exp.int_const ~loc 1)
+                ~onlabel:(fun _ _ -> Exp.assert_false ~loc)
                 ~oninherit:(oninherit ~loc einh esubj)
             )
           end
-        | _ -> failwith "Finish it!"
+        | _ -> failwith "unsupported case in do_typ"
     in
     helper ~loc t
 
@@ -1034,7 +1039,7 @@ class virtual no_inherit_arg = object(self: 'self)
       Ppxlib.type_declaration -> Typ.t
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
   method virtual syn_of_param: loc:loc -> string -> Typ.t
-
+  method virtual inh_of_param: type_declaration -> string -> Typ.t
 
   (* almost the same as `make_typ_of_class_argument` *)
   method make_typ_of_self_trf ~loc tdecl =
