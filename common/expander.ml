@@ -141,7 +141,7 @@ let make_interface_class_sig ~loc tdecl =
     ~onvariant:(fun cds ->
       k @@
       List.map cds ~f:(fun cd ->
-        let methname = sprintf "c_%s" cd.pcd_name.txt in
+        let methname = Naming.meth_name_for_constructor cd.pcd_name.txt in
         let typs = match cd.pcd_args with
           | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
           | Pcstr_tuple ts -> ts
@@ -149,6 +149,7 @@ let make_interface_class_sig ~loc tdecl =
         Ctf.method_ ~loc methname ~virt:true
           (List.fold_right typs ~init:(Typ.var ~loc "syn")
              ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+           |> (Typ.arrow ~loc (Typ.use_tdecl tdecl))
            |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
           )
       )
@@ -259,9 +260,7 @@ let make_interface_class ~loc tdecl =
       ~params:(params_of_interface_class ~loc tdecl.ptype_params)
   in
   visit_typedecl ~loc tdecl
-    ~onopen:(fun () ->
-        ans []
-      )
+    ~onopen:(fun () -> ans [])
     ~onrecord:(fun _ ->
         ans
           [ Cf.method_virtual ~loc (sprintf "do_%s" tdecl.ptype_name.txt) @@
@@ -280,9 +279,10 @@ let make_interface_class ~loc tdecl =
           | Pcstr_tuple ts -> ts
         in
         Cf.method_virtual ~loc methname @@
-          (List.fold_right typs ~init:(Typ.var ~loc "syn")
-             ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-           |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+          Typ.(List.fold_right typs ~init:(var ~loc "syn")
+             ~f:(fun t -> arrow ~loc (from_caml t))
+           |> (arrow ~loc (use_tdecl tdecl))
+           |> (arrow ~loc (var ~loc "inh"))
           )
       )
     )

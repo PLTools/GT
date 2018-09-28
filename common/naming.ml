@@ -1,6 +1,8 @@
 open Base
 open Printf
 
+let meth_of_constr = sprintf "c_%s"
+
 let self_arg_name = "fself"
 let gcata_name_for_typ name = Printf.sprintf "gcata_%s" name
 let class_name_for_typ name = Printf.sprintf "%s_t" name
