@@ -1,24 +1,29 @@
-opam-version: "1.2"
-
+opam-version: "2.0"
 name: "GT"
-authors: [ "https://github.com/dboulytchev" "https://github.com/Kakadu" ]
 version: "0.0.1"
-maintainer: "kakadu.hafanana@gmail.com"
-homepage:    "https://github.com/dboulytchev/GT"
+maintainer: "Dmitrii.Kosarev@protonmail.ch"
+authors: ["https://github.com/dboulytchev" "https://github.com/Kakadu"]
+homepage: "https://github.com/dboulytchev/GT"
 bug-reports: "https://github.com/dboulytchev/GT/issues"
-dev-repo:    "https://github.com/dboulytchev/GT.git"
-
-build: [make ]
-build-test: [make "test"]
-
-install: [make "PREFIX=%{prefix}%" "install"]
-remove:  [make "PREFIX=%{prefix}%" "uninstall"]
 
 depends: [
-  "ocamlfind"  {build}
+  "ocaml"
+  "ocamlfind" {build}
   "ocamlbuild" {build}
   "ocamlgraph" {build}
   "ppxlib"
   "camlp5"
-  "ppx_import" {test}
+  "ppx_import" {with-test}
 ]
+build: [
+  [make]
+  [make "test"] {with-test}
+]
+
+install: [make "PREFIX=%{prefix}%" "install"]
+remove: [make "PREFIX=%{prefix}%" "uninstall"]
+dev-repo: "git+https://github.com/dboulytchev/GT.git"
+url {
+  src: "git+file:///home/kakadu/asp/gt-ppx#ppx"
+}
+

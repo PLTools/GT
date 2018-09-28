@@ -126,7 +126,7 @@ let get_val loc = function
  *   (args, name, convert t.tdDef) *)
 
 module Migr =
-  Migrate_parsetree.Convert(Migrate_parsetree.OCaml_current)(Migrate_parsetree.OCaml_405)
+  Migrate_parsetree.Convert(Migrate_parsetree.OCaml_current)(Migrate_parsetree.OCaml_407)
 
 
 
@@ -144,8 +144,8 @@ let generate_str tdecls loc =
     let () = assert (List.length caml_ast = 1) in
     match (List.hd caml_ast).pstr_desc with
     | Pstr_type (flg, tds) ->
-       (* let copied = List.map Migr.copy_type_declaration tds in *)
-       let copied = tds in
+       let copied = List.map Migr.copy_type_declaration tds in
+       (* let copied = tds in *)
        generator_f [sis] (Recursive, copied)
     |  _ -> failwith "type declaration expected"
   in
@@ -169,8 +169,8 @@ let generate_sig tdecls loc =
      assert (List.length caml_ast  =  1);
      match (List.hd caml_ast).psig_desc with
      | Psig_type (flg, [td]) ->
-       (* let copied = Migr.copy_type_declaration td in *)
-       let copied = td in
+       let copied = Migr.copy_type_declaration td in
+       (* let copied = td in *)
        generator_f [sis] (Recursive, [copied])
      | _ -> assert false
    ) tdecls
