@@ -21,13 +21,16 @@ open HelpersBase
 open Printf
 
 let trait_name = "compare"
+
 (* Compare plugin where we pass another value of the same type as 'inh
  * and return GT.comparison as 'syn
  *)
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
+
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
-let plugin_name = trait_name
+
+let trait_name = trait_name
 
 let access_GT s = Ldot (Lident "GT", s)
 
@@ -35,7 +38,7 @@ class g initial_args = object(self: 'self)
   inherit P.generator initial_args
   inherit P.with_inherit_arg
 
-  method plugin_name = plugin_name
+  method trait_name = trait_name
 
   method default_inh ~loc = Typ.use_tdecl
   method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))

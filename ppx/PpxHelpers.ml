@@ -30,7 +30,7 @@ let lab_decl ~loc name mut type_ =
 module Pat = struct
   type t = pattern
 
-  let any ~loc () = ppat_any ~loc
+  let any ~loc = ppat_any ~loc
   let unit ~loc = [%pat? () ]
   let of_longident ~loc lident =
     let rec helper = function

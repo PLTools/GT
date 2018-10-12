@@ -9,7 +9,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module P = Plugin.Make(AstHelpers)
 
-let plugin_name =  trait_name
+let trait_name =  trait_name
 let make_dest_param_names  ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
@@ -17,8 +17,8 @@ class g initial_args = object(self: 'self)
   inherit P.generator initial_args as super
   inherit P.with_inherit_arg  as super2
 
-  method plugin_name = "foldl"
-
+  method trait_name = trait_name
+  
   method syn_of_param ~loc s = Typ.var ~loc "syn"
   method default_inh  ~loc tdecl = self#default_syn ~loc tdecl
   method default_syn  ~loc  ?extra_path  tdecl = self#syn_of_param ~loc "dummy"

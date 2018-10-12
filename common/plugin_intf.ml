@@ -32,9 +32,10 @@ class virtual ['loc, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = object
 
   (* They are very likely will need to be implemented when new plugin is added. *)
 
-  (** Name of a plugin. Is used for constructing new classes and functions related to plugin.
+  (** Name of a trait (and a plugintoo). It is used for constructing new classes and 
+    * functions related to plugin.
     *)
-  method virtual plugin_name : string
+  method virtual trait_name : string
 
   (** Inherited attribute for whole type declaration. Is is defined by plugin kind. *)
   method virtual default_inh : loc:'loc -> Ppxlib.type_declaration -> 'typ
@@ -112,6 +113,6 @@ module type PluginRes =
   functor (AstHelpers : GTHELPERS_sig.S) ->
   sig
     open AstHelpers
-    val plugin_name : string
+    val trait_name : string
     val g : plugin_args -> (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
   end

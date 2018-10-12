@@ -13,7 +13,7 @@ let _ =
   Printf.printf "Original PV: %s\nMapped PV: %s\n"
       (show_pv id             id (`A "1"))
       (show_pv string_of_int  id @@
-       gmap_pv int_of_string  id  (`A "1"))
+       gmap_pv int_of_string  id (`A "1"))
 
 module PVExt : sig
   type ('a, 'b) pv_ext = [ ('a, 'b) PV.pv | `C of 'a]

@@ -10,7 +10,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 module G = Gmap.Make(AstHelpers)
 module P = Plugin.Make(AstHelpers)
 
-let plugin_name = trait_name
+let trait_name = trait_name
 open AstHelpers
 
 class g initial_args = object(self: 'self)
@@ -18,7 +18,7 @@ class g initial_args = object(self: 'self)
   inherit G.g initial_args as super
   inherit P.with_inherit_arg as super2
 
-  method plugin_name = trait_name
+  method trait_name = trait_name
 
   method! default_inh ~loc _tdecl = Typ.var ~loc "env"
   method! syn_of_param ~loc s =

@@ -2,7 +2,6 @@ open Base
 open Ppxlib
 open Printf
 
-(* Should be renamed to gmap later *)
 let trait_name = "eval"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
@@ -10,15 +9,15 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 module G = Gmap.Make(AstHelpers)
 module P = Plugin.Make(AstHelpers)
 
-let plugin_name = trait_name
+(* Should be renamed to gmap later *)
+let trait_name = trait_name
 open AstHelpers
 
 class g initial_args = object(self: 'self)
-  (* inherit P.generator initial_args as super *)
   inherit G.g initial_args as super
   inherit P.with_inherit_arg as super2
 
-  method plugin_name = trait_name
+  method trait_name = trait_name
 
   method! default_inh ~loc _tdecl = Typ.var ~loc "env"
   method inh_of_param tdecl _name =

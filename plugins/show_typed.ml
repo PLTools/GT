@@ -13,7 +13,7 @@ open Printf
 let trait_name = "show_typed"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
-let plugin_name = trait_name
+let trait_name = trait_name
 module S = Show.Make(AstHelpers)
 open AstHelpers
 module P = Plugin.Make(AstHelpers)
@@ -23,7 +23,7 @@ class g args = object(self: 'self)
   inherit S.g args as super
   inherit P.no_inherit_arg
 
-  method plugin_name = plugin_name
+  method trait_name = trait_name
 
 
   (* TODO: next functions were required for previous implemntation.

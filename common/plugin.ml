@@ -59,6 +59,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
 class virtual generator initial_args = object(self: 'self)
   inherit Intf.g
 
+  method plugin_name = self#trait_name
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
     let check_name s =
@@ -170,7 +171,7 @@ class virtual generator initial_args = object(self: 'self)
    *       ) *)
 
   (* signature for a plugin class *)
-  method make_class_sig ~loc tdecl ~is_rec (mutal_decls: type_declaration list) =
+  method make_class_sig ~loc tdecl ~is_rec mutal_decls =
     let k fields =
       [ Sig.class_ ~loc
           ~params:(self#plugin_class_params tdecl)
@@ -230,8 +231,8 @@ class virtual generator initial_args = object(self: 'self)
              **)
             k [Ctf.inherit_ ~loc @@ Cty.constr ~loc
                  (map_longident cid.txt
-                    ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
-                 (self# final_typ_params_for_alias ~loc tdecl params)
+                    ~f:(Naming.trait_class_name_for_typ ~trait:self#trait_name))
+                 (self#final_typ_params_for_alias ~loc tdecl params)
               ]
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
@@ -253,18 +254,21 @@ class virtual generator initial_args = object(self: 'self)
                   Ctf.method_ ~loc (sprintf "c_%s" lab.txt) ~virt:false @@
                   match typs with
                   | [] -> Typ.(chain_arrow ~loc
-                                 [ self#default_inh ~loc tdecl
-                                 ; self#default_syn ~loc tdecl]
+                                [ self#default_inh ~loc tdecl
+                                ; self#use_tdecl tdecl
+                                ; self#default_syn ~loc tdecl]
                               )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
-                             [self#default_inh ~loc tdecl] @
+                             [ self#default_inh ~loc tdecl
+                             ; self#use_tdecl tdecl ] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
                              [self#default_syn ~loc tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
-                             [self#default_inh ~loc tdecl] @
+                             [ self#default_inh ~loc tdecl
+                             ; self#use_tdecl tdecl ] @
                              (List.map ~f:Typ.from_caml typs) @
                              [self#default_syn ~loc tdecl]
                           )
@@ -282,7 +286,7 @@ class virtual generator initial_args = object(self: 'self)
               match cd.pcd_args with
               | Pcstr_record _ -> assert false
               | Pcstr_tuple ts ->
-                Ctf.method_ ~loc ~virt:false ("c_"^cd.pcd_name.txt) @@
+                Ctf.method_ ~loc ~virt:false (Naming.meth_of_constr cd.pcd_name.txt) @@
                 List.fold_right ~init:(self#default_syn ~loc tdecl)
                   (self#default_inh ~loc tdecl :: (List.map ~f:Typ.from_caml ts))
                   ~f:(Typ.arrow ~loc)
@@ -357,13 +361,14 @@ class virtual generator initial_args = object(self: 'self)
                 (* Hypothesis: it's almost an type alias *)
                 self#got_constr ~loc ~is_self_rec tdecl mutal_decls do_typ cid params k
             )
-
+    (* TODO: Do something with copy paste. *)
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
     | Rtag (constr_name,_,_, []) ->
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
         Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+        Exp.fun_ ~loc (Pat.any ~loc) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe:(Exp.ident ~loc inhname)
           (`Poly constr_name.txt) []
       ]
@@ -373,6 +378,7 @@ class virtual generator initial_args = object(self: 'self)
         let bindings = List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts) in
         Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+        Exp.fun_ ~loc (Pat.any ~loc) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe:(Exp.ident ~loc inhname)
           (`Poly constr_name.txt) bindings
       ]
@@ -837,6 +843,7 @@ class virtual generator initial_args = object(self: 'self)
           let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
           Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
           Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+          Exp.fun_ ~loc (Pat.any ~loc) @@
           self#on_tuple_constr ~loc ~mutal_decls ~is_self_rec
             ~inhe:(Exp.ident ~loc inhname)
             (`Normal cd.pcd_name.txt) bindings
@@ -1045,6 +1052,8 @@ class virtual no_inherit_arg = object(self: 'self)
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
   method virtual syn_of_param: loc:loc -> string -> Typ.t
   method virtual inh_of_param: type_declaration -> string -> Typ.t
+
+  method use_tdecl = Typ.use_tdecl
 
   (* almost the same as `make_typ_of_class_argument` *)
   method make_typ_of_self_trf ~loc tdecl =

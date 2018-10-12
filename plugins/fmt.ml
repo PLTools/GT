@@ -26,7 +26,7 @@ let trait_name = "fmt"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-let plugin_name = trait_name
+let trait_name = trait_name
 
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
@@ -41,7 +41,7 @@ class g args = object(self)
   inherit P.generator args
   inherit P.with_inherit_arg
 
-  method plugin_name = trait_name
+  method trait_name = trait_name
   method default_inh ~loc _tdecl =
     Typ.of_longident ~loc (Ldot (Lident"Format", "formatter"))
   method default_syn ~loc  ?extra_path  _tdecl = Typ.ident ~loc "unit"
@@ -124,7 +124,7 @@ class g args = object(self)
     let cname = match info with
       | `Normal s -> s
       | `Poly s -> s
-    in 
+    in
     let fmt = List.fold_left labs ~init:""
         ~f:(fun acc l ->
             sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc l.pld_name.txt

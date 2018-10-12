@@ -22,7 +22,7 @@ let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), None)
 
 module Pat = struct
   type t = MLast.patt
-  let any ~loc () = <:patt< _ >>
+  let any ~loc = <:patt< _ >>
   let lid ~loc s  = <:patt< $lid:s$ >>
   let var = lid
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt

@@ -32,7 +32,7 @@ let trait_name = "html"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-let plugin_name = trait_name
+let trait_name = trait_name
 
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
@@ -75,7 +75,7 @@ class g args = object(self)
   inherit P.generator args
   inherit P.no_inherit_arg
 
-  method plugin_name = trait_name
+  method trait_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
   method default_syn ~loc ?extra_path _tdecl = self#syn_of_param ~loc "dummy"
 

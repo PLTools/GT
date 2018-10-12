@@ -211,7 +211,8 @@ let make_interface_class_sig ~loc tdecl =
                   [ Ctf.method_ ~loc ~virt:true methname @@
                       (List.fold_right args ~init:(Typ.var ~loc "syn")
                          ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-                       |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+                        |> (Typ.arrow ~loc (Typ.use_tdecl tdecl))
+                        |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
                       )
                   ]
                 | Rinherit typ -> match typ.ptyp_desc with
@@ -273,7 +274,7 @@ let make_interface_class ~loc tdecl =
     ~onvariant:(fun cds ->
       ans @@
       List.map cds ~f:(fun cd ->
-        let methname = sprintf "c_%s" cd.pcd_name.txt in
+        let methname = Naming.meth_of_constr cd.pcd_name.txt in
         let typs = match cd.pcd_args with
           | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
           | Pcstr_tuple ts -> ts
@@ -334,9 +335,12 @@ let make_interface_class ~loc tdecl =
                       in
                       let methname = sprintf "c_%s" lab.txt in
                       [ Cf.method_virtual ~loc methname @@
-                          (List.fold_right args ~init:(Typ.var ~loc "syn")
-                             ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-                           |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+                          let open Typ in
+                          (List.fold_right args ~init:(var ~loc "syn")
+                             ~f:(fun t -> arrow ~loc (from_caml t))
+                            (* |> (Typ.arrow ~loc (Typ.use_tdecl tdecl)) *)
+                            |> (arrow ~loc (use_tdecl tdecl))
+                            |> (arrow ~loc (var ~loc "inh"))
                           )
                       ]
                     | Rtag (_,_,_,_args) ->
@@ -440,17 +444,21 @@ let make_gcata_str ~loc tdecl =
   visit_typedecl ~loc tdecl
     ~onopen:(fun () -> ans @@ Exp.failwith_ ~loc "Initial gcata for extensible type not yet defined")
     ~onrecord:(fun _labels ->
+        (* TODO: Subj ident has to be passed as an argument *)
+        let subj_id = Exp.ident ~loc "subj" in 
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
-        ans @@ Exp.app_list ~loc
-          (Exp.send ~loc (Exp.ident ~loc "tr")  methname)
-          [Exp.ident ~loc "inh"; Exp.ident ~loc "subj"]
+        ans @@ Exp.(app_list ~loc
+                  (send ~loc (ident ~loc "tr") methname)
+                  [ident ~loc "inh"; subj_id; ident ~loc "subj"])
       )
     ~onvariant:(fun cds ->
         ans @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
           (fun cd names ->
-             List.fold_left ("inh"::names)
+            (* TODO: Subj ident has to be passed as an argument *)
+            let subj = "subj" in
+            List.fold_left ("inh"::subj::names)
                ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                        ("c_" ^ cd.pcd_name.txt))
+                        (Naming.meth_of_constr cd.pcd_name.txt))
                ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
         )
       )
@@ -473,10 +481,11 @@ let make_gcata_str ~loc tdecl =
         do_typ @@ constr_of_tuple ~loc:t.ptyp_loc ts
 
       | Ptyp_variant (rows,_,maybe_labels) ->
-        ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc "subj")
+        let subj_s = "subj" in
+        ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc subj_s)
           rows maybe_labels
           ~onrow:(fun cname names ->
-              List.fold_left ("inh"::(List.map ~f:fst names))
+              List.fold_left ("inh"::subj_s::(List.map ~f:fst names))
                 ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname.txt))
                 ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg) )
             )
@@ -484,7 +493,7 @@ let make_gcata_str ~loc tdecl =
             ~oninherit:(fun params cident patname ->
                 Exp.app_list ~loc
                   (Exp.of_longident ~loc  @@
-                   map_longident cident ~f:(sprintf "gcata_%s"))
+                   map_longident cident ~f:(gcata_name_for_typ))
                   (List.map ["tr";"inh";patname] ~f:(Exp.sprintf ~loc "%s"))
 
 )
@@ -501,7 +510,7 @@ let make_heading_gen ~loc wrap tdecl = []
 let collect_plugins_str ~loc tdecl plugins : Str.t =
   let plugin_fields =
     List.map plugins ~f:(fun p ->
-      Cf.method_concrete ~loc p#plugin_name @@
+      Cf.method_concrete ~loc p#trait_name @@
       Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl)
   in
 
@@ -510,7 +519,7 @@ let collect_plugins_str ~loc tdecl plugins : Str.t =
   Exp.record ~loc
     [ Ldot (lident "GT", "gcata"), Exp.sprintf ~loc "gcata_%s" tname
     ; Ldot (lident "GT", "plugins"), Exp.object_ ~loc @@ class_structure
-        ~self:(Pat.any ~loc ()) ~fields:plugin_fields
+        ~self:(Pat.any ~loc) ~fields:plugin_fields
 ]
 
 let collect_plugins_sig ~loc tdecl plugins =
@@ -518,7 +527,7 @@ let collect_plugins_sig ~loc tdecl plugins =
   Typ.constr ~loc (Ldot (lident "GT", "t"))
     [ make_gcata_typ ~loc tdecl
     ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
-        (p#plugin_name, p#make_trans_function_typ ~loc tdecl)
+        (p#trait_name, p#make_trans_function_typ ~loc tdecl)
       )
     ]
 

@@ -3,14 +3,16 @@ open Ppxlib
 open Printf
 
 let trait_name = "eq"
-(* Compare plugin where we pass another value of the same type as 'inh
+(* Eq trait is a Compare trait where we pass another value of the same type as 'inh
  * and return true or false
 *)
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
+let trait_name = trait_name
+
 module C = Compare.Make(AstHelpers)
-let plugin_name = trait_name
+
 open AstHelpers
 
 class g initial_args = object(self: 'self)

@@ -18,7 +18,7 @@ val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 module Pat :
   sig
     type t
-    val any : loc:loc -> unit -> t
+    val any : loc:loc -> t
     val unit: loc:loc -> t
     val var : loc:loc -> string -> t
     val alias:  loc:loc -> t -> string -> t

@@ -7,10 +7,10 @@ and   all = (GT.int a) GT.list
 
 class ['self_b] show_b_hack prereq  fself = object
   inherit ['self_b] show_b_t_stub prereq fself
-  method c_I inh___037_ _x__038_ =
+  method c_I inh___037_ _ _x__038_ =
     Printf.sprintf "I {%s}"
       (prereq.show_a.show_a_trf (GT.int.GT.plugins)#show _x__038_)
-  method c_K () x = Printf.sprintf "K {%s}" (fself x)
+  method c_K () _ x = Printf.sprintf "K {%s}" (fself x)
 end
 
 let show_all2, show_b2 =

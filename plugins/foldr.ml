@@ -5,17 +5,16 @@ open Printf
 
 let trait_name = "foldr"
 
-
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module P = Foldl.Make(AstHelpers)
 
-let plugin_name =  trait_name
+let trait_name =  trait_name
 
 class g initial_args = object(self: 'self)
   inherit P.g initial_args as super
 
-  method plugin_name = trait_name
+  method trait_name = trait_name
 
   method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
     List.fold_left ~f:(fun acc (name,typ) ->

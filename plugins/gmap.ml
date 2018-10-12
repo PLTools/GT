@@ -26,7 +26,7 @@ let param_name_mangler = sprintf "%s_2"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
-let plugin_name = trait_name
+let trait_name = trait_name
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
 
@@ -52,7 +52,7 @@ class g args = object(self: 'self)
   inherit P.generator args
   inherit P.no_inherit_arg
 
-  method plugin_name = plugin_name
+  method trait_name = trait_name
 
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
   method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
@@ -97,6 +97,10 @@ class g args = object(self: 'self)
         )
     in
     List.map ~f:Typ.from_caml ps
+
+  (* method! use_tdecl td =
+   *   Typ.var ~loc:(loc_from_caml td.ptype_loc) @@
+   *   Naming.make_extra_param td.ptype_name.txt *)
 
   (* method! specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
    *   let param_names,rez_names,_find_param,_blownup_params =
@@ -151,6 +155,7 @@ class g args = object(self: 'self)
     else []
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
+    Exp.fun_ ~loc (Pat.any ~loc) @@
     Exp.fun_list ~loc
       (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
       (let ctuple =
