@@ -31,7 +31,17 @@ module Format = struct
 end
 
 type ('a, 'b) t = {gcata : 'a; plugins : 'b}
-let transform t = t.gcata
+let transform1 bundle make_obj inh subj =
+  let rec obj = lazy (make_obj fself)
+  and fself inh x = bundle.gcata (Lazy.force obj) inh x in
+  fself inh subj
+
+let transform_gc gcata make_obj subj =
+  let rec obj = lazy (make_obj fself)
+  and fself x = gcata (Lazy.force obj) () x in
+  fself subj
+
+let transform bundle = transform_gc bundle.gcata
 
 type comparison = LT | EQ | GT
 
@@ -103,7 +113,7 @@ let gcata_list tr inh = function
 | []    -> tr#c_Nil inh
 | x::xs -> tr#c_Cons inh x xs
 
-class ['a, 'self] html_list_t fself fa =
+class ['a, 'self] html_list_t fa fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @list
     method c_Nil  _      = View.empty
@@ -115,14 +125,14 @@ class ['a, 'self] html_list_t fself fa =
 (*      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself xs)) *)
   end
 
-class ['a, 'self] show_list_t fself fa =
+class ['a, 'self] show_list_t fa fself =
   object
     inherit [unit, 'a, string, unit, 'self, string] @list
     method c_Nil  _      = ""
     method c_Cons _ x xs = (fa x) ^ (match xs with [] -> "" | _ -> "; " ^ fself xs)
   end
 
-class ['a, 'self] fmt_list_t fself fa =
+class ['a, 'self] fmt_list_t fa fself =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] @list
     constraint 'inh = Format.formatter
@@ -131,19 +141,19 @@ class ['a, 'self] fmt_list_t fself fa =
       Format.fprintf fmt "%a;@,@ %a" fa x fself xs
   end
 
-class ['a, 'sa, 'self] gmap_list_t fself fa =
+class ['a, 'sa, 'self] gmap_list_t fa fself =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa list] @list
     method c_Nil  _ = []
     method c_Cons _ x xs = (fa x) :: (fself xs)
   end
-class ['a, 'sa, 'env, 'self] eval_list_t fself fa =
+class ['a, 'sa, 'env, 'self] eval_list_t fa fself =
   object
     inherit ['env, 'a, 'sa, 'env, 'self, 'sa list] @list
     method c_Nil  _ = []
     method c_Cons env x xs = (fa env x) :: (fself env xs)
   end
-class ['a, 'sa, 'env, 'self] stateful_list_t fself fa =
+class ['a, 'sa, 'env, 'self] stateful_list_t fa fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa list] @list
     method c_Nil  env = (env, [])
@@ -153,20 +163,20 @@ class ['a, 'sa, 'env, 'self] stateful_list_t fself fa =
       env2, (h::tl)
   end
 
-class ['a, 'syn, 'self] foldl_list_t fself fa =
+class ['a, 'syn, 'self] foldl_list_t fa fself =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @list
     method c_Nil  s = s
     method c_Cons s x xs = fself  (fa s x) xs
   end
 
-class ['a, 'syn, 'self] foldr_list_t fself fa =
+class ['a, 'syn, 'self] foldr_list_t fa fself =
   object
     inherit ['a, 'syn, 'self] @list[foldl] fself fa
     method c_Cons s x xs = fa (fself s xs) x
   end
 
-class ['a, 'self] eq_list_t fself fa =
+class ['a, 'self] eq_list_t fa fself =
   object
     inherit ['a, 'a, bool, 'a list, 'self, bool] @list
     method c_Nil inh  = (inh = [])
@@ -176,7 +186,7 @@ class ['a, 'self] eq_list_t fself fa =
       | _ -> false
   end
 
-class ['a, 'self] compare_list_t fself fa =
+class ['a, 'self] compare_list_t fa fself =
   object
     inherit ['a, 'a, comparison, 'a list, 'self, comparison] @list
     method c_Nil inh =
@@ -207,11 +217,7 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
             >) t =
   {gcata   = gcata_list;
    plugins = object
-               method show    fa l = "[" ^ (
-                 fix0 (fun fself ->
-                   gcata_list (new @list[show] fself fa) ()
-                 )
-                 l) ^ "]"
+               method show fa l = "[" ^ (transform_gc gcata_list (new @list[show] fa) l) ^ "]"
                method fmt fa inh l =
                  Format.fprintf inh "[@[%a@]]@,"
                    (fix0 (fun fself ->
@@ -308,7 +314,7 @@ module Lazy =
         method t_t inh subj = fa inh @@ Lazy.force subj
       end
 
-    class ['a, 'syn, 'self ] foldr_t_t fself fa =
+    class ['a, 'syn, 'self ] foldr_t_t fa fself =
       object
         inherit ['a, 'syn, 'self ] @t[foldl] fself fa
       end
@@ -319,7 +325,7 @@ module Lazy =
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
-    class ['a, 'self ] compare_t_t fself fa =
+    class ['a, 'self ] compare_t_t fa fself =
       object
         inherit ['a, 'a, comparison, 'a t, 'self, comparison ] @t
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
@@ -1050,7 +1056,7 @@ end
 
 let gcata_array tr inh subj = tr#do_array inh subj
 
-class ['a, 'self] html_array_t fself fa =
+class ['a, 'self] html_array_t fa fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @array
     method do_array () arr =
@@ -1059,14 +1065,14 @@ class ['a, 'self] html_array_t fself fa =
         )
   end
 
-class ['a, 'self] show_array_t fself fa = object
+class ['a, 'self] show_array_t fa fself = object
   inherit [unit, 'a, string, unit, 'self, string] @array
   method do_array () arr =
     "[|" ^ (Array.fold_right
               (fun x s -> Printf.sprintf "%a; %s" (fun () -> fa) x s) arr " |]")
 end
 
-class ['a, 'self] fmt_array_t fself fa = object
+class ['a, 'self] fmt_array_t fa fself = object
   inherit [Format.formatter, 'a, unit, Format.formatter, 'self, unit] @array
 
   method do_array fmt arr =
