@@ -265,6 +265,13 @@ module Typ = struct
 
   let variant_of_t ~loc typ =
     <:ctyp< [ > $list:[PvInh (loc, typ)]$ ] >>
+
+  let openize ~loc ?as_ t =
+    let ans = variant_of_t ~loc t in
+    match as_ with
+    | Some name -> alias ~loc ans name
+    | None ->  ans
+
   let use_tdecl tdecl =
     let loc = loc_from_caml tdecl.Ppxlib.ptype_loc in
     let c = ident ~loc tdecl.ptype_name.txt in

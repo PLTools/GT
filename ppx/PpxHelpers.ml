@@ -228,6 +228,12 @@ module Typ = struct
 
   let map ~onvar t = HelpersBase.map_core_type ~onvar t
 
+  let openize ~loc ?as_ t =
+    let ans = variant_of_t ~loc t in
+    match as_ with
+    | Some name -> alias ~loc ans name
+    | None ->  ans
+
 end
 
 type nonrec class_declaration = class_declaration

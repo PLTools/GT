@@ -1,4 +1,4 @@
-true: debug, bin_annot, short_paths, annot
+true: debug, bin_annot, short_paths
 <sample>: -traverse
 
 <common/*>:  package(ppxlib,ocamlgraph,base)

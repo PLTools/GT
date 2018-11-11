@@ -102,6 +102,8 @@ and Typ :
     val alias : loc:loc -> t -> string -> t
     val poly  : loc:loc -> string list -> t -> t
     val map: onvar:(string -> t option) -> t -> t
+    (* Inherit type using [> t ] with optional as annotation *)
+    val openize: loc:loc -> ?as_:string -> t -> t
   end
 and Cf :
   sig

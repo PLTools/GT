@@ -1044,7 +1044,8 @@ class virtual generator initial_args = object(self: 'self)
          ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
 end
 
-(** Base plugin class where transformation functions doesn't use inherited attribute.
+(** Base plugin class where transformation functions doesn't use inherited
+    attribute.
     See {!Show} and {!Gmap} plugin for examples.
   *)
 class virtual no_inherit_arg = object(self: 'self)
@@ -1063,7 +1064,7 @@ class virtual no_inherit_arg = object(self: 'self)
   method make_typ_of_self_trf ~loc tdecl =
     let is_poly = is_polyvariant_tdecl tdecl in
     let openize_poly typ =
-      if is_poly then Typ.variant ~loc ~is_open:true [Rinherit typ]
+      if is_poly then Typ.openize ~loc (Typ.from_caml typ)
       else Typ.from_caml typ
     in
 

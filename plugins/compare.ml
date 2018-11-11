@@ -40,7 +40,13 @@ class g initial_args = object(self: 'self)
 
   method trait_name = trait_name
 
-  method default_inh ~loc = Typ.use_tdecl
+  method default_inh ~loc tdecl =
+    let ans = Typ.use_tdecl tdecl in
+    if is_polyvariant_tdecl tdecl
+    then Typ.alias ~loc (Typ.variant_of_t ~loc ans) @@
+      Naming.make_extra_param tdecl.ptype_name.txt
+    else ans
+
   method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))
   method default_syn  ~loc ?extra_path tdecl = self#syn_of_param ~loc "dummy"
 
