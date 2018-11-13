@@ -1062,7 +1062,8 @@ class ['a, 'self] html_array_t fself fa =
 class ['a, 'self] show_array_t fself fa = object
   inherit [unit, 'a, string, unit, 'self, string] @array
   method do_array () arr =
-    "[|" ^ (Array.fold_right (fun x s -> Printf.sprintf "%a; %s" fa x s) arr " |]")
+    "[|" ^ (Array.fold_right
+              (fun x s -> Printf.sprintf "%a; %s" (fun () -> fa) x s) arr " |]")
 end
 
 class ['a, 'self] fmt_array_t fself fa = object
@@ -1074,11 +1075,92 @@ class ['a, 'self] fmt_array_t fself fa = object
     Format.fprintf fmt " |]"
 end
 
+class ['a, 'sa, 'self] gmap_array_t fself fa =
+  object
+    inherit [unit, 'a, 'sa, unit, 'self, 'sa array] @array
+    method do_array () arr = Array.map fa arr
+  end
+class ['a, 'sa, 'env, 'self] eval_array_t fself fa =
+  object
+    inherit ['env, 'a, 'sa, 'env, 'self, 'sa array] @array
+    method do_array env arr = Array.map (fa env) arr
+  end
+class ['a, 'sa, 'env, 'self] stateful_array_t fself fa =
+  object
+    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa array] @array
+    method do_array env0 arr =
+      let n = Array.length arr in
+      if n = 0 then ([||], env0)
+      else
+        let (x1,env1) = fa env0 (Array.get arr 0) in
+        let env = Pervasives.ref env1 in
+        let ans = Array.make n x1 in
+        for i=1 to n - 1 do
+          let (x,env2) = fa !env (Array.get arr i) in
+          env := env2;
+          Array.set ans i x
+        done;
+        (!env, ans)
+  end
+
+class ['a, 'syn, 'self] foldl_array_t fself fa =
+  object
+    inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @array
+    method do_array env arr = Array.fold_left fa env arr
+  end
+
+class ['a, 'syn, 'self] foldr_array_t fself fa =
+  object
+    inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @array
+    method do_array env arr = Array.fold_right (fun x acc -> fa acc x) arr env
+  end
+
+class ['a, 'self] eq_array_t fself fa =
+  object
+    inherit ['a, 'a, bool, 'a array, 'self, bool] @array
+    method do_array env arr =
+      let n = Array.length arr in
+      (Array.length env = n) &&
+      (let ans = Pervasives.ref true in
+       for i=0 to n do
+         ans := !ans && (fa (Array.get env i) (Array.get arr i) )
+       done;
+       !ans
+      )
+  end
+
+class ['a, 'self] compare_array_t fself fa =
+  object
+    inherit ['a, 'a, comparison, 'a array, 'self, comparison] @array
+    method do_array env arr =
+      let n = Array.length arr in
+      if Array.length env < n then LT else
+      (let ans = Pervasives.ref EQ in
+       for i=0 to n do
+         ans := chain_compare !ans (fun () -> fa (Array.get env i) (Array.get arr i))
+       done;
+       !ans
+      )
+  end
+
 let array =
-  { gcata = (fun _ _ -> failwith "arrays not implemented")
-  ; plugins = object
-      method fmt _fa fmt s = Format.fprintf fmt "<array>%!"
-      method html _fa s = HTML.string "array HERE"
+  { gcata = gcata_array
+  ; plugins =
+      let tr  obj   fa s = gcata_array (obj (fun _ -> assert false) fa) () s in
+      let tr1 obj i fa s = gcata_array (obj (fun _ -> assert false) fa) i  s in
+      object
+        method show   = tr (new @array[show])
+        method gmap   = tr (new @array[gmap])
+        method html   = tr (new @array[html])
+
+        method fmt    = tr1 (new @array[fmt])
+
+        method eval   = tr1 (new @array[eval])
+        method stateful = tr1 (new @array[stateful])
+        method compare  = tr1 (new @array[compare])
+        method eq       = tr1 (new @array[eq])
+        method foldl    = tr1 (new @array[foldl])
+        method foldr    = tr1 (new @array[foldr])
     end
   }
 

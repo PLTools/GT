@@ -33,6 +33,9 @@ module T : sig
 
   type 'a r1 = 'a ref [@@deriving gt ~options:{fmt; html}]
   let () = ()
+
+  type ('a,'b) arr1 = ('a * 'b) array [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
+
 end
 
 
