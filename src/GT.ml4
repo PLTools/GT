@@ -1164,6 +1164,99 @@ let array =
     end
   }
 
+(*** bytes *****************************************************************)
+type bytes = Bytes.t
+
+class virtual ['inh, 'self, 'syn] bytes_t = object
+  method virtual do_bytes  : 'inh -> bytes -> 'syn
+end
+
+let gcata_bytes tr inh subj = tr#do_bytes inh subj
+
+class ['self] html_bytes_t fself =
+  object
+    inherit [unit, 'self, HTML.viewer] @bytes
+    method do_bytes () arr =
+      HTML.string @@ Bytes.to_string arr
+  end
+
+class ['self] show_bytes_t fself = object
+  inherit [ unit, 'self, string] @bytes
+  method do_bytes () = Bytes.to_string
+end
+
+class ['self] fmt_bytes_t fself = object
+  inherit [Format.formatter, 'self, unit] @bytes
+
+  method do_bytes fmt arr =
+    Format.fprintf fmt "%S" (Bytes.to_string arr)
+end
+
+class ['self] gmap_bytes_t fself =
+  object
+    inherit [unit, 'self, bytes] @bytes
+    method do_bytes () arr = arr
+  end
+class ['env, 'self] eval_bytes_t fself =
+  object
+    inherit [ 'env, 'self, bytes] @bytes
+    method do_bytes env arr = arr
+  end
+class ['env, 'self] stateful_bytes_t fself =
+  object
+    inherit ['env, 'self, 'env * bytes] @bytes
+    method do_bytes env0 arr = (env0,arr)
+  end
+
+class ['syn, 'self] foldl_bytes_t fself =
+  object
+    inherit ['syn, 'self, 'syn] @bytes
+    method do_bytes env _ = env
+  end
+
+class ['syn, 'self] foldr_bytes_t fself =
+  object
+    inherit ['syn, 'self, 'syn] @bytes
+    method do_bytes env _ = env
+  end
+
+class ['self] eq_bytes_t fself =
+  object
+    inherit [bytes, 'self, bool] @bytes
+    method do_bytes env arr = (Bytes.compare env arr = 0)
+  end
+
+class ['self] compare_bytes_t fself =
+  object
+    inherit [bytes, 'self, comparison] @bytes
+    method do_bytes env arr =
+      let c = Bytes.compare env arr in
+      if c < 0 then LT
+      else if c = 0 then EQ
+      else GT
+  end
+
+let bytes =
+  { gcata = gcata_bytes
+  ; plugins =
+      let tr  obj    s = gcata_bytes (obj (fun _ -> assert false) ) () s in
+      let tr1 obj i  s = gcata_bytes (obj (fun _ -> assert false) ) i  s in
+      object
+        method show   = tr (new @bytes[show])
+        method gmap   = tr (new @bytes[gmap])
+        method html   = tr (new @bytes[html])
+
+        method fmt    = tr1 (new @bytes[fmt])
+
+        method eval   = tr1 (new @bytes[eval])
+        method stateful = tr1 (new @bytes[stateful])
+        method compare  = tr1 (new @bytes[compare])
+        method eq       = tr1 (new @bytes[eq])
+        method foldl    = tr1 (new @bytes[foldl])
+        method foldr    = tr1 (new @bytes[foldr])
+    end
+  }
+
 (****************************************************************************)
 let show    t = t.plugins#show
 let html    t = t.plugins#html

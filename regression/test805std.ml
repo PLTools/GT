@@ -8,6 +8,8 @@ module T : sig
 
   type 'a t3 = GT.int * 'a * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
 
+  type 'a t4 = GT.bytes [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
+
   type 'a t1 = 'a [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
 
   type bindings = (GT.string * GT.int) GT.list [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
@@ -20,6 +22,8 @@ module T : sig
    type t2 = GT.int * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
 
   type 'a t3 = GT.int * 'a * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
+
+  type 'a t4 = GT.bytes [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
 
   type 'a t1 = 'a [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
 
