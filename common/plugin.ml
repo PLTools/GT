@@ -143,8 +143,8 @@ class virtual generator initial_args = object(self: 'self)
              *     Pat.sprintf ~loc "%s" @@
              *     Naming.mut_arg_name ~plugin:self#plugin_name td.ptype_name.txt
              *   ) *)
-          @ [Pat.var ~loc Naming.self_arg_name] @
-          (self#prepare_fa_args ~loc tdecl)
+            @ (self#prepare_fa_args ~loc tdecl)
+            @ [Pat.var ~loc Naming.self_arg_name]
           in
           Cl.fun_list ~loc names body
       )
@@ -187,13 +187,13 @@ class virtual generator initial_args = object(self: 'self)
                       self#make_typ_of_class_argument ~loc tdecl (Cty.arrow ~loc) name
                         (fun f arg -> acc @@ f arg)
                     )
-                  sign
+                  (Cty.arrow ~loc for_self sign)
               in
 
               List.fold_right
                 (List.filter mutal_decls
                    ~f:(fun t -> String.(<>) t.ptype_name.txt tdecl.ptype_name.txt))
-                ~init:(Cty.arrow ~loc for_self funcs_for_args)
+                ~init:funcs_for_args
                 ~f:(fun mut_decl acc ->
                   self#make_typ_of_mutal_trf ~loc mut_decl
                     (fun t -> Cty.arrow ~loc t acc)
@@ -310,8 +310,7 @@ class virtual generator initial_args = object(self: 'self)
     in
     (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
-    (* TODO: make consistent with self_arg_name *)
-    (self#generate_for_variable ~loc "self") :: args
+    args (* @ [ Exp.sprintf ~loc "%s" Naming.self_arg_name] *)
 
 
   (* When we got declaration of type alias via type application *)
@@ -352,7 +351,8 @@ class virtual generator initial_args = object(self: 'self)
 
     let class_args =
       (* TODO: maybe we should hardcode fself here and skip it in plugins *)
-      self#make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams
+      (self#make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams)
+      @ [Exp.ident ~loc Naming.self_arg_name]
     in
     k @@ ans class_args
 
@@ -493,13 +493,15 @@ class virtual generator initial_args = object(self: 'self)
          tdecl.ptype_name.txt)
       (if is_mutal then "_stub" else "")
 
-  method wrap_tr_function_str ~loc tdecl gcata_on_new_expr =
-    let body = gcata_on_new_expr (Exp.sprintf ~loc "self") in
+  method wrap_tr_function_str ~loc tdecl make_new_obj =
+    let body = make_new_obj in
 
     Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
     Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")) )
-      [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") (Exp.app ~loc body @@ Exp.unit ~loc )
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")) )
+      [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
+      ; make_new_obj
+      (* ; Exp.fun_ ~loc (Pat.sprintf ~loc "self") (Exp.app ~loc body @@ Exp.unit ~loc ) *)
       ; Exp.sprintf ~loc "subj"
       ]
     (* [%expr fun subj -> GT.fix0 (fun self ->
@@ -514,12 +516,9 @@ class virtual generator initial_args = object(self: 'self)
   (* let <plugin-name> fa ... fz = <this body> *)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
     self#wrap_tr_function_str ~loc tdecl
-      (fun eself ->
-         Exp.app ~loc (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt) @@
-         Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
+      (  Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
          (
           List.map rec_typenames ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name)
-          @ [eself]
           @ (self#apply_fas_in_new_object ~loc tdecl)
          )
       )
@@ -978,7 +977,7 @@ class virtual generator initial_args = object(self: 'self)
                     (lident @@ Naming.trf_function self#plugin_name s))
                  (lident @@ Naming.trf_field ~plugin:self#plugin_name s))
               (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls))
-            | _ ->
+          | _ ->
               let init =
                 Exp.(send ~loc
                        (access_plugins ~loc (of_longident ~loc txt))
@@ -1120,13 +1119,14 @@ end
 class virtual with_inherit_arg = object(self: 'self)
   inherit no_inherit_arg as super
 
-  method wrap_tr_function_str ~loc (_tdelcl: type_declaration) make_gcata_of_class =
+  method wrap_tr_function_str ~loc (tdecl: type_declaration) make_gcata_of_class =
     (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
-    let body = make_gcata_of_class (Exp.ident ~loc "self") in
+    let body = make_gcata_of_class in
     Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
     Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
-      [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform1_gc")))
+      [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
+      ; body
       ; Exp.sprintf ~loc "the_init"
       ; Exp.sprintf ~loc "subj"
       ]

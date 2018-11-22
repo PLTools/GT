@@ -110,10 +110,8 @@ class g args = object(self: 'self)
     let trfs = super#make_inherit_args_for_alias ~loc ~is_self_rec
         tdecl do_typ cid cparams
     in
-    assert (List.length trfs = 1 + (List.length cparams));
-    let trf_others = List.tl_exn trfs in
-    (* TODO: fix hack *)
-    let xs = List.map2_exn trf_others cparams
+    assert (List.length trfs = List.length cparams);
+    let xs = List.map2_exn trfs cparams
         ~f:(fun rez typ ->
           match typ.ptyp_desc with
           | Ptyp_var s -> [Exp.sprintf ~loc "typ_%s" s; Exp.sprintf ~loc "f%s" s ]
@@ -122,7 +120,7 @@ class g args = object(self: 'self)
           | _ -> [ self#string_of_typ ~loc typ; rez]
         )
     in
-    (Exp.ident ~loc "fself") :: (List.concat xs)
+    List.concat xs
 
   method! compose_apply_transformations ~loc ~left right typ =
     (* let typ_str = Exp.string_const ~loc "asdf" in *)

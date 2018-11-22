@@ -334,7 +334,7 @@ let make_interface_class ~loc tdecl =
                     let methname = sprintf "c_%s" lab.txt in
                     [ Cf.method_virtual ~loc methname @@
                       Typ.( var ~loc "syn"
-                            |> (arrow ~loc @@ openize ~loc ~as_:"self" @@
+                            |> (arrow ~loc @@
                                 use_tdecl tdecl)
                             |> arrow ~loc (var ~loc "inh")
                           )
@@ -351,7 +351,7 @@ let make_interface_class ~loc tdecl =
                           (List.fold_right args ~init:(var ~loc "syn")
                              ~f:(fun t -> arrow ~loc (from_caml t))
                             (* |> (Typ.arrow ~loc (Typ.use_tdecl tdecl)) *)
-                           |> (arrow ~loc @@ openize ~loc ~as_:"self" @@
+                           |> (arrow ~loc @@
                                use_tdecl tdecl)
                             |> (arrow ~loc (var ~loc "inh"))
                           )

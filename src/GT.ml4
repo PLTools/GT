@@ -900,7 +900,7 @@ let triple :
 
 let tuple3 = triple
 
-class ['a, 'b, 'c, 'self] show_tuple3_t fa fb fself fc = object
+class ['a, 'b, 'c, 'self] show_tuple3_t fa fb fc fself = object
   inherit [ 'a, 'b, 'c, 'self] show_triple_t fa fb fc fself
 end
 class ['a, 'b, 'c, 'self] fmt_tuple3_t fa fb fc fself = object

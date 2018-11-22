@@ -30,22 +30,31 @@ let string =
     end
   }
 
-class ['a, 'b, 'self] show_typed_tuple2_t _ _typa fa _typb fb =
+class ['a, 'b, 'self] show_typed_tuple2_t _typa fa _typb fb _fself =
   object
     inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] GT.pair_t
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
   end
 
-class ['a, 'self] show_typed_free_t fself _typa fa =
+class ['a, 'b, 'c, 'self] show_typed_tuple3_t _typa fa _typb fb  _typc fc _fself =
   object
-    inherit ['a, 'self] GT.show_free_t fself fa
+    inherit [ unit, 'a, string
+            , unit, 'b, string
+            , unit, 'c, string
+            , unit, 'self, string] GT.tuple3_t
+    method c_Triple () x y z = "(" ^ fa x ^ ", " ^ fb y ^ ", " ^ fc z ^ ")"
   end
 
-class ['a, 'self] show_typed_list_t fself _typa fa = object
-  inherit ['a, 'self] GT.show_list_t fself fa
+class ['a, 'self] show_typed_free_t  _typa fa fself=
+  object
+    inherit ['a, 'self] GT.show_free_t fa fself
+  end
+
+class ['a, 'self] show_typed_list_t _typa fa fself = object
+  inherit ['a, 'self] GT.show_list_t fa fself
 end
 class ['a, 'self] show_typed_option_t fself _typa fa = object
-  inherit ['a, 'self] GT.show_option_t fself fa
+  inherit ['a, 'self] GT.show_option_t fa fself
 end
 
 (* module Lazy = struct
@@ -55,28 +64,21 @@ end
  *   end
  * end *)
 
-class ['a, 'b, 'c, 'self] show_typed_tuple3_t fself _typa fa _typb fb _typc fc =
-  object
-    inherit ['a, 'b, 'c, 'self] GT.show_tuple3_t fself fa fb fc
-  end
-
 let tuple2 =
   { GT.gcata = GT.gcata_pair;
     GT.plugins = object
-      method show = GT.tuple2.GT.plugins#show
-      method html = GT.tuple2.GT.plugins#html
-      method gmap = GT.tuple2.GT.plugins#gmap
+      method show    = GT.tuple2.GT.plugins#show
+      method html    = GT.tuple2.GT.plugins#html
+      method gmap    = GT.tuple2.GT.plugins#gmap
       method compare = GT.tuple2.GT.plugins#compare
       method eq      = GT.tuple2.GT.plugins#eq
-      method foldl = GT.tuple2.GT.plugins#foldr
-      method foldr = GT.tuple2.GT.plugins#foldl
+      method foldl   = GT.tuple2.GT.plugins#foldr
+      method foldr   = GT.tuple2.GT.plugins#foldl
       method stateful = GT.tuple2.GT.plugins#stateful
-      method eval = GT.tuple2.GT.plugins#eval
+      method eval     = GT.tuple2.GT.plugins#eval
       method show_typed _typa fa _typb fb x =
         GT.transform(GT.pair)
-          (new show_typed_tuple2_t (fun _ _ -> assert false)
-            _typa fa _typb fb
-          )
-          () x
+          (new show_typed_tuple2_t _typa fa _typb fb)
+           x
     end
   }
