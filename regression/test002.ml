@@ -15,7 +15,7 @@ module Expr = struct
         method c_Binop _ _ _ s x y = "(" ^ (fself () x) ^ s ^ (fself () y) ^ ")"
       end
 
-    class ['a] eval (fself: _ -> 'a t -> _) do_var =
+    class ['a] eval do_var (fself: _ -> 'a t -> _) =
       object
         inherit [ unit, 'a, int, unit, _, int] t_t
         method c_Var   _ _ x       = do_var x
@@ -26,8 +26,8 @@ module Expr = struct
   end
 
 let _ =
-  let rec toString () e = transform0(Expr.t) (new Expr.toString toString) () e in
-  let rec eval   s i e = transform0(Expr.t) (new Expr.eval (eval s) s) i e in
+  let rec toString () e = GT.transform(Expr.t) (new Expr.toString) () e in
+  let rec eval    s i e = GT.transform(Expr.t) (new Expr.eval   s) i e in
   let e = `Binop ((+), "+", `Const 1, `Var "a") in
 
   let s = toString () e in

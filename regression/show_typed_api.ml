@@ -76,8 +76,8 @@ let tuple2 =
       method foldr   = GT.tuple2.GT.plugins#foldl
       method stateful = GT.tuple2.GT.plugins#stateful
       method eval     = GT.tuple2.GT.plugins#eval
-      method show_typed _typa fa _typb fb x =
-        GT.transform(GT.pair)
+      method show_typed (_typa: string) fa (_typb:string) fb x =
+        GT.transform0(GT.pair)
           (new show_typed_tuple2_t _typa fa _typb fb)
            x
     end

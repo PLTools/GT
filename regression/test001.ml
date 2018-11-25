@@ -45,9 +45,9 @@ class resolve fa _ =
 let resolve p =
   let symbols = Pervasives.ref [] in
   let p = Array.mapi (fun i (s, c) -> if s != "" then symbols := (s, i) :: !symbols; c) p in
-  Array.map (fun i -> transform(t) (new resolve (fun i -> List.assoc i !symbols)) i) p
+  Array.map (fun i -> transform0(t) (new resolve (fun i -> List.assoc i !symbols)) i) p
 
-let toString i  = transform(t) (new toString string_of_int) i
+let toString i  = transform0(t) (new toString string_of_int) i
 
 type env  = int list * (string -> int) * int list * int list * int
 

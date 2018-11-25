@@ -117,7 +117,7 @@ class ['extra] de_bruijn fself = object
   inherit [named, nameless, 'extra] LetRec.de_bruijn fself
 end
 
-let convert term = GT.transform1(t) (new de_bruijn) [] term
+let convert term = GT.transform(t) (new de_bruijn) [] term
 
 
 class ['extra] import fself =
@@ -130,7 +130,7 @@ object
 end
 
 let import term =
-  snd @@ GT.transform1(t) (new import) (new enumerator) term
+  snd @@ GT.transform(t) (new import) (new enumerator) term
 
 let _ =
   let l = `App (`Abs ("x", `Var "x"), `Abs ("y", `Var "y")) in

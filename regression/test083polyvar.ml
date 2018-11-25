@@ -2,8 +2,10 @@ let id x = x
 
 module PV : sig
   @type ('a, 'b) pv = [ `A of 'a | `B of 'b ] with show,gmap
+
 end = struct
   @type ('a, 'b) pv = [ `A of 'a | `B of 'b ] with show,gmap
+
 end
 
 let _ =
@@ -78,3 +80,13 @@ let () =
   Printf.printf "Mapped PV_ext3 and showed as a pv_ext3: %s\n" @@
     show_pv_ext3 id  id string_of_float @@
     gmap_pv_ext3 id  id float_of_string (`E "1.0");
+
+module PVSum = struct
+  @type ('a,'b) s = [ ('a,'b) PV.pv | ('a,'b) PVExt.pv_ext ] with show,gmap
+end
+module XXX = struct
+  @type 'a xxx = [ `XXX of 'a ] with show,gmap
+end
+module YYY = struct
+  @type 'a yyy = [ 'a XXX.xxx | ('a,'a) PV.pv ] with show,gmap
+end

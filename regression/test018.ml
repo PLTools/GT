@@ -3,14 +3,10 @@
 let _ =
   let x = A 1 in
   let y = B "2" in
-  let z = C "4" in  
-  let compare x y = 
-    match 
-      GT.transform(t) 
-        GT.compare_primitive
-        GT.compare_primitive
-        GT.compare_primitive
-	new @t[compare] x y 
+  let z = C "4" in
+  let compare x y =
+    match GT.transform(t)
+     (new @t[compare] GT.compare_primitive GT.compare_primitive GT.compare_primitive) x y
     with
     | GT.EQ -> "EQ"
     | GT.LT -> "LT"

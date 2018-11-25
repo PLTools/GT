@@ -18,7 +18,7 @@ end
 
 @type 'a lambda = [var | `Abs of string * 'a | `App of 'a * 'a] 
 
-class ['self] lambda_eval fa = object
+class ['self] lambda_eval fa fself = object
   inherit [ (string * 'self) list,  'self, 'self
           , (string * 'self) list,  'self, 'self
           ] @lambda
@@ -37,11 +37,11 @@ class ['self] lambda_eval fa = object
 
 (* let (_: _ -> int) = new lambda_eval *)
 
-let rec eval1 s e = GT.transform0(lambda) (new lambda_eval eval1) s e;;
+let rec eval1 s e = GT.transform(lambda) (new lambda_eval eval1) s e;;
 
 @type 'a var_expr = [var | `Num of int | `Add of 'a * 'a | `Mult of 'a * 'a] 
 
-class [ 'self ] var_expr_eval fa = object
+class [ 'self ] var_expr_eval fa fself = object
   inherit [ (string * 'self) list, 'self, 'self
           , (string * 'self) list, 'self, 'self
           ] @var_expr
@@ -59,7 +59,7 @@ class [ 'self ] var_expr_eval fa = object
     | x, y           -> `Mult (x, y)
  end
 
-let rec eval2 s e = GT.transform0(var_expr)  (new var_expr_eval eval2) s e;;
+let rec eval2 s e = GT.transform(var_expr)  (new var_expr_eval eval2) s e;;
 
 @type 'a expr = ['a lambda | 'a var_expr]
 
@@ -67,12 +67,12 @@ class ['a, 'self] expr_eval fself = object
   inherit [ (string * 'self) list, 'a,    'self
           , (string * 'self) list, 'self, 'self
           ] @expr
-  inherit ['self] lambda_eval fself
-  inherit ['self] var_expr_eval fself
+  inherit ['self]   lambda_eval fself fself
+  inherit ['self] var_expr_eval fself fself
   constraint 'self = [> 'a var_expr | 'a lambda ]
 end 
 
-let rec eval3 s e = GT.transform1(expr) (new expr_eval) s e
+let rec eval3 s e = GT.transform(expr) (new expr_eval) s e
 
 let _ =
   Printf.printf "%s\n" @@

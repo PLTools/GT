@@ -91,7 +91,7 @@ class g args = object(self)
                       let fmt = String.concat ~sep:", " @@ List.map names
                           ~f:(fun _ -> "%s")
                       in
-                      Exp.string_const ~loc @@ Printf.sprintf "%s(%s)" constr_name fmt
+                      Exp.string_const ~loc @@ Printf.sprintf "%s (%s)" constr_name fmt
                      )
       )
 

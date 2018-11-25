@@ -53,7 +53,7 @@ module H = struct
   let to_list_e ~loc xs =
     List.fold_right xs ~init:(Exp.construct ~loc (lident "[]") [])
       ~f:(fun x acc ->
-          Exp.construct ~loc (lident "::") [x; acc]
+          Exp.app_list ~loc (Exp.of_longident ~loc (Ldot (Lident "List", "cons"))) [x; acc]
         )
 
   let li ~loc xs =
