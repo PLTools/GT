@@ -101,7 +101,7 @@ class g args = object(self)
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         )
     in
-    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    let methname = Naming.meth_name_for_record tdecl in
     let fmt = List.fold_left labs ~init:""
         ~f:(fun acc x ->
             sprintf "%s %s=%%s;" acc x.pld_name.txt

@@ -132,7 +132,16 @@ let make_interface_class_sig ~loc tdecl =
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _labels ->
-        k []
+        (* almost the same as plugin#get_class_sig*)
+          k [ Ctf.method_ ~loc (Naming.meth_name_for_record tdecl) ~virt:true @@
+              Typ.chain_arrow ~loc @@
+              let open Typ in
+              [ var ~loc "inh"
+              ; use_tdecl tdecl
+              ; var ~loc "syn" ]
+            ]
+
+
       )
     ~onabstract:(fun () ->
         (* For purely abstract type we can only generate interface class without methods *)
@@ -146,12 +155,17 @@ let make_interface_class_sig ~loc tdecl =
           | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
           | Pcstr_tuple ts -> ts
         in
-        Ctf.method_ ~loc methname ~virt:true
-          (List.fold_right typs ~init:(Typ.var ~loc "syn")
-             ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-           |> (Typ.arrow ~loc (Typ.use_tdecl tdecl))
-           |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
-          )
+        Ctf.method_ ~loc methname ~virt:true @@
+        Typ.chain_arrow ~loc @@
+        [ Typ.var ~loc "inh"
+        ; Typ.use_tdecl tdecl ] @
+        (List.map typs ~f:Typ.from_caml) @
+        [ Typ.var ~loc "syn" ]
+          (* (List.fold_right typs ~init:(Typ.var ~loc "syn")
+           *    ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
+           *  |> (Typ.arrow ~loc (Typ.use_tdecl tdecl))
+           *  |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
+           * ) *)
       )
     )
     ~onmanifest:(fun typ ->

@@ -53,7 +53,7 @@ class ['a, 'self] show_typed_free_t  _typa fa fself=
 class ['a, 'self] show_typed_list_t _typa fa fself = object
   inherit ['a, 'self] GT.show_list_t fa fself
 end
-class ['a, 'self] show_typed_option_t fself _typa fa = object
+class ['a, 'self] show_typed_option_t _typa fa fself = object
   inherit ['a, 'self] GT.show_option_t fa fself
 end
 

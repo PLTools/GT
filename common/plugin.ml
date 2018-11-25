@@ -204,7 +204,15 @@ class virtual generator initial_args = object(self: 'self)
     in
     visit_typedecl ~loc tdecl
       ~onabstract:(fun () -> k [])
-      ~onrecord:(fun _fields -> failwith "TODO: records in intereface are not yet implemented")
+      ~onrecord:(fun _fields ->
+          k [ Ctf.method_ ~loc (Naming.meth_name_for_record tdecl) ~virt:false @@
+              Typ.chain_arrow ~loc @@
+              let open Typ in
+              [ self#default_inh ~loc tdecl
+              ; use_tdecl tdecl ] @
+              [ self#default_syn ~loc tdecl ]
+            ]
+        )
       ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
@@ -639,11 +647,12 @@ class virtual generator initial_args = object(self: 'self)
                           sprintf ~loc "%s_%s" self#plugin_name s
                          )
                        )
-                   ; app_list ~loc
+                   ] @
+                   fas @
+                   [ app_list ~loc
                        (field ~loc (ident ~loc trf_r_ident) (lident trf_field))
                        fas
-                   ] @
-                   fas
+                   ]
                   )
                )
                einh
@@ -736,16 +745,17 @@ class virtual generator initial_args = object(self: 'self)
                false
                begin
                  let part1 =
-                     self#simple_trf_funcs ~loc tdecl @@
-                     Typ.(constr ~loc
+                   self#simple_trf_funcs ~loc tdecl @@
+                   Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) @@
+                   Typ.(constr ~loc
                             (lident @@ self#make_class_name ~is_mutal:true tdecl)
                             (self#plugin_class_params tdecl
                              |> List.map ~f:(Typ.of_type_arg ~loc))
                          )
                  in
-                 let part1 =
-                   Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) part1
-                 in
+                 (* let part1 =
+                  *   Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) part1
+                  * in *)
 
                  (* let t = List.fold_right obj_typs
                   *     ~init:part1

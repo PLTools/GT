@@ -261,15 +261,15 @@ module Lazy =
     let gcata_t tr inh subj = tr#t_t inh subj
     let gcata_lazy = gcata_t
 
-    class ['a, 'self ] html_t_t fa _fself =
-      object
-        inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer ] @t
-        method t_t inh subj = fa @@ Lazy.force subj
-      end
-
     class ['a, 'self ] show_t_t fa _fself =
       object
         inherit [unit, 'a, string, unit, 'self, string ] @t
+        method t_t inh subj = fa @@ Lazy.force subj
+      end
+
+    class ['a, 'self ] html_t_t fa _fself =
+      object
+        inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer ] @t
         method t_t inh subj = fa @@ Lazy.force subj
       end
 
@@ -344,60 +344,59 @@ module Lazy =
       }
   end
 
-
+(* ************************************************************************* *)
 type 'a poption = 'a option
 type 'a option = 'a poption
 
-let gcata_option tr inh subj =
-  match subj with
-  | None -> tr#c_None inh
-  | Some x -> tr#c_Some inh x
-
 class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] option_t =
   object
-    method virtual c_None :   'inh -> 'syn
-    method virtual c_Some :   'inh -> 'a  -> 'syn
+    method virtual c_None :   'inh -> 'a option       -> 'syn
+    method virtual c_Some :   'inh -> 'a option -> 'a -> 'syn
   end
+
+let gcata_option tr inh subj =
+  match subj with
+  | None   -> tr#c_None inh subj
+  | Some x -> tr#c_Some inh subj x
 
 class ['a, 'self] show_option_t fa _fself =
   object
     inherit [ unit, 'a, string, unit, 'self, string] @option
-    method c_None _  = "None"
-    method c_Some _ x = "Some (" ^ fa x ^ ")"
-  end
-class ['a, 'self] fmt_option_t fa _fself =
-  object
-    inherit [ Format.formatter, 'a, unit, Format.formatter, 'self, unit] @option
-    method c_None fmt   = Format.fprintf fmt "None"
-    method c_Some fmt x = Format.fprintf fmt "Some (%a)" fa x
+    method c_None () _   = "None"
+    method c_Some () _ x = "Some (" ^ fa x ^ ")"
   end
 class ['a, 'self] html_option_t fa _fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @option
-    method c_None _  = HTML.string "None"
-    method c_Some _ x = View.concat (HTML.string "Some") (HTML.ul (fa x))
+    method c_None () _   = HTML.string "None"
+    method c_Some () _ x = View.concat (HTML.string "Some") (HTML.ul (fa x))
   end
-
-
 class ['a, 'sa, 'self] gmap_option_t fa _fself =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa option] @option
-    method c_None _ = None
-    method c_Some _ x = Some (fa x)
+    method c_None () _ = None
+    method c_Some () _ x = Some (fa x)
+  end
+
+class ['a, 'self] fmt_option_t fa _fself =
+  object
+    inherit [ Format.formatter, 'a, unit, Format.formatter, 'self, unit] @option
+    method c_None fmt _   = Format.fprintf fmt "None"
+    method c_Some fmt _ x = Format.fprintf fmt "Some (%a)" fa x
   end
 
 class ['a, 'sa, 'env, 'self] eval_option_t fa _fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'sa option] @option
-    method c_None _ = None
-    method c_Some env x = Some (fa env x)
+    method c_None _   _   = None
+    method c_Some env _ x = Some (fa env x)
   end
 
 class ['a, 'sa, 'env, 'self] stateful_option_t fa _fself =
   object
     inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa option] @option
-    method c_None env = (env,None)
-    method c_Some env x =
+    method c_None env _   = (env,None)
+    method c_Some env _ x =
       let env1,r = fa env x in
       (env1, Some r)
   end
@@ -405,8 +404,8 @@ class ['a, 'sa, 'env, 'self] stateful_option_t fa _fself =
 class ['a, 'syn, 'self] foldl_option_t fa _fself =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @option
-    method c_None s = s
-    method c_Some s x = fa s x
+    method c_None s _   = s
+    method c_Some s _ x = fa s x
   end
 
 class ['a, 'syn, 'self] foldr_option_t fa _fself =
@@ -417,8 +416,8 @@ class ['a, 'syn, 'self] foldr_option_t fa _fself =
 class ['a, 'self] eq_option_t fa _fself =
   object
     inherit ['a, 'a, bool, 'a option, 'self, bool] @option
-    method c_None inh = inh = None
-    method c_Some inh x =
+    method c_None inh _   = (inh = None)
+    method c_Some inh _ x =
       match inh with
       | Some y -> fa y x
       | _ -> false
@@ -427,10 +426,10 @@ class ['a, 'self] eq_option_t fa _fself =
 class ['a, 'self] compare_option_t fa _fself =
   object
     inherit ['a, 'a, comparison, 'a option, 'self, comparison] @option
-    method c_None = function
+    method c_None inh _ = match inh with
       | None -> EQ
       | _  -> GT
-    method c_Some inh x =
+    method c_Some inh _ x =
       match inh with
       | None -> LT
       | Some y -> fa y x
@@ -469,69 +468,69 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
 (* Antiphantom type *)
 type 'a free = 'a
 class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] free_t = object
-  method virtual c_Free : 'inh -> 'a -> 'syn
+  method virtual c_Free : 'inh -> 'a free -> 'a -> 'syn
 end
-let gcata_free tr = tr#c_Free
+let gcata_free tr inh subj = tr#c_Free inh subj subj
 
 class ['a, 'self] show_free_t fa _ =
   object
     inherit [unit, 'a, string, unit, 'self, string] free_t
-    method c_Free () x = "(" ^ fa x ^ ")"
+    method c_Free () _ x = "(" ^ fa x ^ ")"
   end
 class ['a, 'self] fmt_free_t fa _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] free_t
     constraint 'inh = Format.formatter
-    method c_Free fmt x = Format.fprintf fmt "(%a)" fa x
+    method c_Free fmt _ x = Format.fprintf fmt "(%a)" fa x
   end
 
 class ['a, 'self] html_free_t fa _ =
   object
     inherit [unit, 'a, 'syn, unit, 'self, 'syn] free_t
     constraint 'syn = HTML.viewer
-    method c_Free () x = fa x
+    method c_Free () _ x = fa x
   end
 
 class ['a, 'sa, 'self] gmap_free_t fa _ =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa free] free_t
-    method c_Free () x = fa x
+    method c_Free () _ x = fa x
   end
 class ['a, 'sa, 'env, 'self] eval_free_t fa _ =
   object
     inherit ['emv, 'a, 'sa, 'env, 'self, 'sa free] free_t
-    method c_Free env x = fa env x
+    method c_Free env _ x = fa env x
   end
 
 class ['a, 'sa, 'env, 'self] stateful_free_t fa _ =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa free] free_t
-    method c_Free env x = fa env x
+    method c_Free env _ x = fa env x
   end
 
 class ['a, 'syn, 'self] foldl_free_t fa _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] free_t
-    method c_Free inh x = fa inh x
+    method c_Free inh _ x = fa inh x
   end
 
 class ['a, 'syn, 'self] foldr_free_t fa _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] free_t
-    method c_Free inh x = fa inh x
+    method c_Free inh _ x = fa inh x
   end
 
 class ['a, 'self] eq_free_t fa _ =
   object
     inherit ['a, 'a, bool, 'a free, 'self, bool] free_t
-    method c_Free inh x = fa inh x
+    method c_Free inh _ x = fa inh x
   end
 
 class ['a, 'self] compare_free_t fa _ =
   object
     inherit ['a, 'a, 'syn, 'a free, 'self, 'syn] free_t
     constraint 'syn = comparison
-    method c_Free z x = fa z x
+    method c_Free z _ x = fa z x
   end
 
 let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,

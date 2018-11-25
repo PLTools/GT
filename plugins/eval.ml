@@ -33,7 +33,6 @@ class g initial_args = object(self: 'self)
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
   method! app_transformation_expr ~loc trf inh subj =
-    (* assert false; *)
     Exp.app_list ~loc trf [ inh; subj ]
 
   method! plugin_class_params tdecl =
@@ -60,6 +59,27 @@ class g initial_args = object(self: 'self)
     (List.map ~f:Typ.from_caml ps) @
     [ Typ.var ~loc "env"]
 
+  (* very similar as gmap but uses sgninfficant inherited attribute*)
+  (* TODO: refactor somehow ??? *)
+  method! on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+    let pat = Pat.record ~loc @@
+      List.map labs ~f:(fun l ->
+          (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+        )
+    in
+    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    [ Cf.method_concrete ~loc methname @@
+      Exp.fun_ ~loc (Pat.sprintf ~loc "env") @@
+      Exp.fun_ ~loc pat @@
+      Exp.record ~loc @@ List.map labs
+        ~f:(fun {pld_name; pld_type} ->
+            lident pld_name.txt,
+            self#app_transformation_expr ~loc
+              (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
+              (Exp.ident ~loc "env")
+              (Exp.ident ~loc pld_name.txt)
+          )
+    ]
 
 end
 

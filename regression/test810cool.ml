@@ -1,12 +1,13 @@
 module Types =
   struct
-    module Pervasives = struct include Pervasives
-                               let ref = GT.ref end
-    type type_expr = Types.type_expr =
-      {
-      mutable desc: type_desc ;
-      mutable level: int ;
-      id: int }[@@deriving gt]
+    module Pervasives = struct include Pervasives let ref = GT.ref end
+    (* TODO: ise ppx_import here *)
+    type type_expr = Types.type_expr = {
+      mutable desc : Types.type_desc;
+      mutable level : int;
+      mutable scope : int option;
+      id : int;
+    }[@@deriving gt]
     and row_desc = Types.row_desc =
       {
       row_fields: (Asttypes.label * row_field) list ;

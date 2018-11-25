@@ -32,6 +32,8 @@ let make_extra_param = sprintf "%s_%s" extra_param_name
 
 open Ppxlib
 
+let meth_name_for_record tdecl = sprintf "do_%s" tdecl.ptype_name.txt
+
 let fix_result_record trait tdecls =
   assert (List.length tdecls > 0);
   let name = (List.hd_exn tdecls).ptype_name.txt in

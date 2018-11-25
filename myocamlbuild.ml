@@ -43,11 +43,11 @@ let () = dispatch (fun hook ->
     flag ["link";    "native"; "use_GT"]   (S [ A"-I";A"src"; A"GTlib.cmxa" ]);
 
     flag ["compile"; "use_ppx_import"]
-      (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx_import"
+      (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx.exe --as-ppx"
          ; A"-ppx"; A"ppx/pp_gt.native --as-ppx"
          ]);
     flag ["ocamldep"; "use_ppx_import"]
-      (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx_import"
+      (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx.exe --as-ppx"
          ; A"-ppx"; A"ppx/pp_gt.native --as-ppx"
          ]);
 
