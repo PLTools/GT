@@ -155,7 +155,6 @@ class g args = object(self: 'self)
     else []
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
-    Exp.fun_ ~loc (Pat.any ~loc) @@
     Exp.fun_list ~loc
       (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
       (let ctuple =

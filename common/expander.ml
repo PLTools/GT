@@ -325,7 +325,10 @@ let make_interface_class ~loc tdecl =
                 | Rtag (lab,_,_,[]) ->
                     let methname = sprintf "c_%s" lab.txt in
                     [ Cf.method_virtual ~loc methname @@
-                      Typ.(arrow ~loc (var ~loc "inh") (var ~loc "syn"))
+                      Typ.( var ~loc "syn"
+                            |> (arrow ~loc (use_tdecl tdecl))
+                            |> arrow ~loc (var ~loc "inh")
+                          )
                     ]
                 | Rtag (lab,_,_,[typ]) ->
                       (* print_endline "HERE"; *)
@@ -386,14 +389,20 @@ let make_gcata_typ ~loc tdecl =
       ~onvariant:(fun cds ->
           Typ.object_ ~loc Open @@
           List.map cds
-            ~f:(fun cd -> match cd.pcd_args with
-                | Pcstr_tuple ts ->
-                  let new_ts = (List.map ts ~f:Typ.from_caml) @ [Typ.var ~loc "syn"]
-                  in
-                  let new_ts = Typ.var ~loc "inh" :: new_ts in
-                  (sprintf "c_%s" cd.pcd_name.txt, Typ.chain_arrow ~loc new_ts)
-              | Pcstr_record _ -> assert false
-            )
+            ~f:(fun cd ->
+                let typs = match cd.pcd_args with
+                  | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+                  | Pcstr_tuple ts -> ts
+                in
+                let new_ts =
+                  let open Typ in
+                  [ var ~loc "inh"
+                  ; use_tdecl tdecl ] @
+                  (List.map typs ~f:Typ.from_caml) @
+                  [Typ.var ~loc "syn"]
+                in
+                (Naming.meth_of_constr cd.pcd_name.txt, Typ.chain_arrow ~loc new_ts)
+              )
         )
       ~onmanifest:(fun t ->
           let rec helper typ =
@@ -444,12 +453,10 @@ let make_gcata_str ~loc tdecl =
   visit_typedecl ~loc tdecl
     ~onopen:(fun () -> ans @@ Exp.failwith_ ~loc "Initial gcata for extensible type not yet defined")
     ~onrecord:(fun _labels ->
-        (* TODO: Subj ident has to be passed as an argument *)
-        let subj_id = Exp.ident ~loc "subj" in 
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         ans @@ Exp.(app_list ~loc
                   (send ~loc (ident ~loc "tr") methname)
-                  [ident ~loc "inh"; subj_id; ident ~loc "subj"])
+                  [ident ~loc "inh"; ident ~loc "subj"])
       )
     ~onvariant:(fun cds ->
         ans @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)

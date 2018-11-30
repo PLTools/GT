@@ -18,7 +18,7 @@ open AstHelpers
 class g initial_args = object(self: 'self)
   inherit C.g initial_args as super
 
-  method plugin_name = trait_name
+  method! trait_name = trait_name
 
   (* method default_inh = core_type_of_type_declaration *)
   method syn_of_param ~loc s = Typ.sprintf ~loc "bool"

@@ -255,20 +255,20 @@ class virtual generator initial_args = object(self: 'self)
                   match typs with
                   | [] -> Typ.(chain_arrow ~loc
                                 [ self#default_inh ~loc tdecl
-                                ; self#use_tdecl tdecl
+                                ; use_tdecl tdecl
                                 ; self#default_syn ~loc tdecl]
                               )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
                              [ self#default_inh ~loc tdecl
-                             ; self#use_tdecl tdecl ] @
+                             ; use_tdecl tdecl ] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
                              [self#default_syn ~loc tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
                              [ self#default_inh ~loc tdecl
-                             ; self#use_tdecl tdecl ] @
+                             ; use_tdecl tdecl ] @
                              (List.map ~f:Typ.from_caml typs) @
                              [self#default_syn ~loc tdecl]
                           )
@@ -281,16 +281,21 @@ class virtual generator initial_args = object(self: 'self)
         helper typ
     )
     ~onvariant:(fun cds ->
-        k @@ List.map cds
-          ~f:(fun cd ->
-              match cd.pcd_args with
-              | Pcstr_record _ -> assert false
-              | Pcstr_tuple ts ->
-                Ctf.method_ ~loc ~virt:false (Naming.meth_of_constr cd.pcd_name.txt) @@
-                List.fold_right ~init:(self#default_syn ~loc tdecl)
-                  (self#default_inh ~loc tdecl :: (List.map ~f:Typ.from_caml ts))
-                  ~f:(Typ.arrow ~loc)
+        k @@ List.map cds ~f:(fun cd ->
+              let typs = match cd.pcd_args with
+                | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+                | Pcstr_tuple ts -> ts
+              in
+              let new_ts =
+                let open Typ in
+                [ self#default_inh ~loc tdecl
+                ; use_tdecl tdecl ] @
+                (List.map typs ~f:Typ.from_caml) @
+                [ self#default_syn ~loc tdecl ]
+              in
 
+              Ctf.method_ ~loc ~virt:false (Naming.meth_of_constr cd.pcd_name.txt) @@
+              Typ.chain_arrow ~loc new_ts
           )
     )
 
@@ -855,6 +860,7 @@ class virtual generator initial_args = object(self: 'self)
             in
             Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
             Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+            Exp.fun_ ~loc (Pat.any ~loc) @@
             self#on_record_constr ~loc ~mutal_decls ~is_self_rec
               ~inhe:(Exp.ident ~loc inhname)
               (`Normal cd.pcd_name.txt)

@@ -10,7 +10,7 @@ let trait_class_name_for_typ ~trait name =
   class_name_for_typ (if String.equal trait ""
                       then name
                       else Printf.sprintf "%s_%s" trait name)
-let meth_name_for_constructor = Printf.sprintf "c_%s"
+let meth_name_for_constructor = meth_of_constr
 let fix_name ~plugin_name = sprintf "%s_fix"
 (* 1st structure is planned to contain transformation function *)
 let typ1_for_class_arg ~plugin = sprintf "%s_t_%s_1" plugin

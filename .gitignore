@@ -5,3 +5,6 @@ _build
 /Makefile
 # documentation directory
 /GT.docdir
+/_esy
+/.vscode
+
