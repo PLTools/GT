@@ -27,7 +27,7 @@ let mut_oclass_field ~plugin = sprintf "%s_%s_func" plugin
 
 let extra_param_name = "self"
 let self_arg_name = "fself"
-
+let all_trfs_together = "all_trfs_together"
 let make_extra_param = sprintf "%s_%s" extra_param_name
 
 open Ppxlib

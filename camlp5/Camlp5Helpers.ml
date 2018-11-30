@@ -508,16 +508,29 @@ let prepare_param_triples ~loc ~extra
 let typ_vars_of_typ t =
   let open Base in
   let rec helper acc = function
-    | <:ctyp< ( $list:lt$ ) >> -> List.fold ~init:acc ~f:helper lt
-    | <:ctyp< '$s$ >> -> s :: acc
+    | <:ctyp< $t1$ . $t2$ >>  -> helper acc t2
+    | <:ctyp< $t1$ as $t2$ >> -> helper acc t1 (* ??? *)
+    | <:ctyp< _ >>            -> acc
     | <:ctyp< $t1$ $t2$ >> -> helper (helper acc t1) t2
-    | <:ctyp< $t1$ . $t2$ >> -> helper acc t2
     | <:ctyp< $t1$ -> $t2$ >> -> helper (helper acc t1) t2
-    | <:ctyp< $lid:s$ >>      -> acc
-    | <:ctyp< [ $list:llslt$ ] >>  -> failwith "sum"
+    | <:ctyp< # $list:ls$  >> -> acc (* I'm not sure *)
+    | <:ctyp<  ~$s$:$t$   >> -> helper acc t
+    | <:ctyp< $lid:s$      >> -> acc
+    | <:ctyp< $t1$ == private $t2$ >>
+    | <:ctyp< $t1$ ==  $t2$        >> -> helper (helper acc t1) t2
+    | <:ctyp< < $list:lst$ $flag:b$ > >> ->
+      List.fold ~init:acc ~f:(fun acc (_,t) -> helper acc t) lst
+    | <:ctyp< ?$s$: $t$     >> -> helper acc t
+    | <:ctyp< (module $mt$) >> -> acc
+    | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented"
+    | <:ctyp< '$s$ >> -> s :: acc
     | <:ctyp< { $list:llsbt$ } >>  ->
       List.fold ~init:acc ~f:(fun acc (_,_,_,t) -> helper acc t) llsbt
+    | <:ctyp< [ $list:llslt$ ] >> -> failwith "sum"
+    | <:ctyp< ( $list:lt$ )    >> -> List.fold ~init:acc ~f:helper lt
     | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented 2"
-
+    | <:ctyp< $uid:s$ >>           -> acc
+    | <:ctyp< [ = $list:lpv$ ] >>  -> failwith "polyvariant"
+    | _ -> acc (* This could be wrong *)
   in
   List.dedup ~compare:String.compare @@ helper [] t

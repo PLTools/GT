@@ -586,9 +586,7 @@ class virtual generator initial_args = object(self: 'self)
     (self#make_universal_types  ~loc ~mut_names tdecls) @
     [self#make_mutal_fix ~loc tdecls] @
     (self#apply_mutal_fix ~loc tdecls) @
-    (* (self#make_shortend_class ~loc tdecls) @ *)
-    []
-
+    (self#make_shortend_class ~loc tdecls)
 
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
     let names = map_type_param_names tdecl.ptype_params ~f:id in
@@ -669,11 +667,14 @@ class virtual generator initial_args = object(self: 'self)
 
   method apply_mutal_fix ~loc tdecls =
     [ Str.single_value ~loc
-        (Pat.record ~loc @@ List.map tdecls ~f:(fun tdecl ->
+        (Pat.alias ~loc
+          (Pat.record ~loc @@ List.map tdecls ~f:(fun tdecl ->
            (lident @@ Naming.trf_function self#plugin_name tdecl.ptype_name.txt,
             Pat.sprintf ~loc "%s" @@ Naming.fix_result tdecl
            )
-           ))
+             ))
+          Naming.all_trfs_together
+        )
         (Exp.app ~loc (Exp.ident ~loc @@
                        Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
          Exp.unit ~loc
@@ -788,21 +789,18 @@ class virtual generator initial_args = object(self: 'self)
   (* shortened class only used for mutally recursive declarations *)
   method make_shortend_class ~loc tdecls =
     List.map tdecls ~f:(fun tdecl ->
-        let mutal_decls = List.filter tdecls
-            ~f:(fun td -> not (String.equal td.ptype_name.txt tdecl.ptype_name.txt))
-        in
+        let typname = tdecl.ptype_name.txt in
+        (* let mutal_decls = List.filter tdecls
+         *     ~f:(fun td -> not (String.equal td.ptype_name.txt typname))
+         * in *)
         let class_name =
-          Naming.trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt
+          Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
         in
-      let stub_name = Naming.stub_class_name ~plugin:self#plugin_name tdecl in
-      (* maybe it should be called proto *)
-      let mut_funcs = List.map mutal_decls ~f:(fun td ->
-          Exp.field ~loc
-            (Exp.ident ~loc @@
-             Naming.name_fix_generated_object ~plugin:self#plugin_name td)
-            (lident @@ Naming.mut_ofield ~plugin:self#plugin_name td.ptype_name.txt)
-        )
-      in
+        let stub_name = Naming.stub_class_name ~plugin:self#plugin_name tdecl in
+        (* maybe it should be called proto *)
+        let mut_funcs =
+          [Exp.ident ~loc Naming.all_trfs_together]
+        in
 
       let params = self#plugin_class_params tdecl in
       Str.class_single ~loc ~name:class_name
