@@ -15,7 +15,7 @@ val named_type_arg : loc:loc -> string -> type_arg
 val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 
 (** for Pat *)
-module Pat :
+module rec Pat :
   sig
     type t
     val any : loc:loc -> t
@@ -26,6 +26,7 @@ module Pat :
     val of_longident : loc:loc -> Ppxlib.longident -> t
     val constr : loc:loc -> string -> t list -> t
     val constr_record : loc:loc -> string -> (string*t) list -> t
+    val constraint_ : loc:loc -> t -> Typ.t -> t
 
     (* val variant: loc:loc -> string -> t option -> t *)
     val variant: loc:loc -> string -> t list -> t
@@ -33,8 +34,7 @@ module Pat :
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
-
-module rec Exp :
+and Exp :
   sig
     type t
     val from_caml: Ppxlib.expression -> t
@@ -57,6 +57,7 @@ module rec Exp :
     (* val acc_list : loc:loc -> t -> t list -> t *)
 
     val field : loc:loc -> t -> Ppxlib.longident -> t
+    (* val function_: loc:loc -> (Pat.t * t) list -> t *)
     val fun_ : loc:loc -> Pat.t -> t -> t
     val fun_list   : loc:loc -> Pat.t list -> t -> t
     val fun_list_l : loc:loc -> (string * Exp.t) list -> t -> t

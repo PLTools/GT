@@ -46,7 +46,7 @@ let transform_gc gcata make_obj subj =
   fself subj
 
 let transform  bundle = transform_gc bundle.gcata
-let transform0 bundle = bundle.gcata
+let transform0 bundle = transform_gc bundle.gcata
 
 type comparison = LT | EQ | GT
 
@@ -448,7 +448,6 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
                 eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool;
                 compare : ('a -> 'a -> comparison) -> 'a option -> 'a option -> comparison;
               >) t =
-  let fself _ = assert false in (* because nonrecursive type *)
   {gcata   = gcata_option;
    plugins = object
                method show     fa = gcata_option (new @option[show] fself fa) ()

@@ -1,5 +1,5 @@
 PKGNAME=GT
-MKDIR ?= mkdir -vp
+MKDIR ?= mkdir -p
 CP    ?= cp
 
 OB=ocamlbuild -use-ocamlfind #-classic-display #-plugin-tag "package(ocaml-migrate-parsetree-ocamlbuild)" #-classic-display -ignore Test025
@@ -27,7 +27,7 @@ OBPARAMS=
 all: common
 	$(MAKE) add_plugins add_camlp5 add_ppx compile
 	$(MAKE) add_lib compile
-	$(MAKE) bundle #standalone_rewriter bundle
+	@$(MAKE) bundle
 
 compile:
 	$(OB) $(OBPARAMS) $(OBTARGETS)
@@ -70,8 +70,8 @@ clean: clean_tests
 ######################## Tests related stuff  ##########################
 REGRES_CASES :=
 # now we add camlp5 tests
-#REGRES_CASES += 000 001 002 003 006 007 008 009 010 012 013 014 015 106 017 018 019 020 021 022 023 024 025 029 030 031 032 036 037 038 #001 004 005
-#REGRES_CASES += 040
+REGRES_CASES += 000 001 002 003 006 007 008 009 010 012 014 015 016 017 018 019 020 022 023 029 030 031 032 037 038 #001 004 005
+REGRES_CASES +=  013 #021 024 025 036 040
 REGRES_CASES += 081 082 083 086 087 089 090
 # PPX based tests
 REGRES_CASES += 801 803 804 805 806 810 811 812 820 821 809 # 808

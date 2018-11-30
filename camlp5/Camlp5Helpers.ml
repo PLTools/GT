@@ -41,6 +41,8 @@ module Pat = struct
     in
     helper lid
 
+  let constraint_ ~loc p t = <:patt< ($p$ : $t$) >>
+
   let constr_record ~loc uid ps =
     failwith "Record constructors are not available for camlp5"
 

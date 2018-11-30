@@ -322,7 +322,8 @@ class virtual generator initial_args = object(self: 'self)
 
 
   (* When we got declaration of type alias via type application *)
-  method got_constr ~loc ~is_self_rec tdecl mutal_decls do_typ cid cparams k =
+  method got_constr ~loc ~is_self_rec ?(fix_self_app=id) tdecl mutal_decls
+      do_typ cid cparams k =
     (* It seems that we can't filter mutal decls because we need to preserve an order *)
     let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
     let ans args : Cf.t list =
@@ -358,9 +359,8 @@ class virtual generator initial_args = object(self: 'self)
     in
 
     let class_args =
-      (* TODO: maybe we should hardcode fself here and skip it in plugins *)
       (self#make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams)
-      @ [Exp.ident ~loc Naming.self_arg_name]
+      @ [fix_self_app @@ Exp.ident ~loc Naming.self_arg_name]
     in
     k @@ ans class_args
 
@@ -373,6 +373,19 @@ class virtual generator initial_args = object(self: 'self)
             ~ok:(fun cid params ->
                 (* Hypothesis: it's almost an type alias *)
                 self#got_constr ~loc ~is_self_rec tdecl mutal_decls do_typ cid params k
+                  ~fix_self_app:(fun eself ->
+                      self#abstract_trf ~loc (fun einh esubj ->
+                          match typ.ptyp_desc with
+                          | Ptyp_constr ({txt},_) ->
+                            Exp.match_ ~loc esubj
+                              [case
+                                 ~lhs:(Pat.alias ~loc (Pat.type_ ~loc txt) "subj")
+                                 ~rhs:(self#app_transformation_expr ~loc eself einh
+                                         (Exp.ident ~loc "subj"))
+                              ]
+                          | _ -> failwith "should not happen"
+                        )
+                    )
             )
     (* TODO: Do something with copy paste. *)
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
@@ -502,19 +515,13 @@ class virtual generator initial_args = object(self: 'self)
       (if is_mutal then "_stub" else "")
 
   method wrap_tr_function_str ~loc tdecl make_new_obj =
-    let body = make_new_obj in
-
     Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
     Exp.app_list ~loc
       (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")) )
       [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
       ; make_new_obj
-      (* ; Exp.fun_ ~loc (Pat.sprintf ~loc "self") (Exp.app ~loc body @@ Exp.unit ~loc ) *)
       ; Exp.sprintf ~loc "subj"
       ]
-    (* [%expr fun subj -> GT.fix0 (fun self ->
-     *     [%e body] ()) subj
-     * ] *)
 
   method apply_fas_in_new_object ~loc tdecl =
     (* very similar to self#make_inherit_args_for_alias but the latter
@@ -1071,10 +1078,11 @@ class virtual no_inherit_arg = object(self: 'self)
 
   (* almost the same as `make_typ_of_class_argument` *)
   method make_typ_of_self_trf ~loc tdecl =
-    let is_poly = is_polyvariant_tdecl tdecl in
     let openize_poly typ =
-      if is_poly then Typ.openize ~loc (Typ.from_caml typ)
-      else Typ.from_caml typ
+      let ans = Typ.from_caml typ in
+      (* let is_poly = is_polyvariant_tdecl tdecl in
+       * if is_poly then Typ.openize ~loc ans else *)
+        ans
     in
 
     let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
