@@ -4,6 +4,6 @@
 
 let _ =
   let x = X (A 1, [Y (A "2", []); X (A 2, []); Y (A "3", [])]) in
-  let y = GT.transform(t) (fun _ x -> string_of_int x) (fun _ x -> int_of_string x) new @t[gmap] () x in
-  Printf.printf "%s\n" (GT.transform(t) (fun _ x -> string_of_int x) (fun _ x -> x) new @t[show] () x);
-  Printf.printf "%s\n" (GT.transform(t) (fun _ x -> x) (fun _ x -> string_of_int x) new @t[show] () y)
+  let y = gmap_t string_of_int int_of_string x in
+  Printf.printf "%s\n" @@ show_t string_of_int (fun x -> x) x;
+  Printf.printf "%s\n" @@ show_t (fun x -> x) string_of_int y

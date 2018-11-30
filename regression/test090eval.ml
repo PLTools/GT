@@ -23,19 +23,19 @@ module Abs = struct
   @type ('name, 'term) t = [`Abs of 'name * 'term ] with show,eval,stateful
   class ['term, 'term2, 'extra] de_bruijn ft =
     object
-      inherit [string, unit, 'term, 'term2, 'env, 'extra] eval_t_t
+      inherit [string, unit, 'term, 'term2, 'env, 'extra] @t[eval]
           (fun _ -> assert false)
           (fun _ _ -> ())
           ft
       constraint 'env = string list
       constraint 'extra = [> (unit, 'term2) t]
-      method c_Abs env name term = `Abs ((), ft (name :: env) term)
+      method c_Abs env _ name term = `Abs ((), ft (name :: env) term)
     end
 
   class ['me, 'me', 'extra] import ft =
     object
       inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful] unused lookup ft
-      method c_Abs env name term =
+      method c_Abs env _ name term =
         let env', i = env#add name in
         let env2, t = ft env' term in
         (env2,`Abs (i, t))
@@ -51,18 +51,18 @@ end
 module Let = struct
   @type ('name, 'term) t = [`Let of 'name * 'term * 'term] with show,eval,stateful
   class ['me, 'term2, 'extra] de_bruijn ft = object
-    inherit [string, unit, 'me, 'term2, 'env, 'extra] eval_t_t
+    inherit [string, unit, 'me, 'term2, 'env, 'extra] @t[eval]
         (fun _ -> assert false)
         (fun _ _ -> ())
         ft
     constraint 'env = string list
     constraint 'extra = [> (unit, 'term2) t]
-    method c_Let env name bnd term = `Let ((), ft env bnd,  ft (name :: env) term)
+    method c_Let env _ name bnd term = `Let ((), ft env bnd,  ft (name :: env) term)
   end
   class ['me, 'me', 'extra] import ft =
     object
       inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful] unused lookup ft
-      method c_Let env0 name bnd term =
+      method c_Let env0 _ name bnd term =
         let env1, i = env0#add name in
         let env2, l = ft env1 bnd in
         let env3, r = ft env2 term in
@@ -74,12 +74,12 @@ module LetRec = struct
   @type ('name, 'term) t = [`LetRec of 'name * 'term * 'term] with show,eval,stateful
 
   class ['me, 'me2, 'extra] de_bruijn ft = object
-    inherit [string, unit, 'me, 'me2, string list, 'extra] eval_t_t
+    inherit [string, unit, 'me, 'me2, string list, 'extra] @t[eval]
         (fun _ -> assert false)
         (fun _ _ -> ())
         ft
     constraint 'extra = [> (unit, 'term2) t]
-    method c_LetRec env name bnd term =
+    method c_LetRec env _ name bnd term =
       let env' = name :: env in
       `LetRec ((), ft env' bnd,  ft env' term)
   end
@@ -88,7 +88,7 @@ module LetRec = struct
     object
       inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful] unused lookup ft
                 as super
-      method c_LetRec env name bnd term =
+      method c_LetRec env _ name bnd term =
         let env0, i = env#add name in
         let (env1, l) = ft env0 bnd in
         let (env2, r) = ft env1 term in

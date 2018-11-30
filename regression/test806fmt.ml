@@ -1,5 +1,5 @@
 type t = {a : GT.int; b: GT.string} [@@deriving gt ~options:{fmt}]
-type t2 = (* RRR of {asdf:int} *)
+type t2 =
   | QQQ of GT.string
   | LLL of GT.int GT.list
  [@@deriving gt ~options:{fmt}]
