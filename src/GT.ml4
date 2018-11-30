@@ -21,6 +21,8 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
+open Printf
+
 module Format = struct
   include Format
   let pp_print_unit  fmt () = pp_print_string fmt "()"
@@ -31,17 +33,20 @@ module Format = struct
 end
 
 type ('a, 'b) t = {gcata : 'a; plugins : 'b}
-let transform1 bundle make_obj inh subj =
+let transform1_gc gcata make_obj inh subj =
   let rec obj = lazy (make_obj fself)
-  and fself inh x = bundle.gcata (Lazy.force obj) inh x in
+  and fself inh x = gcata (Lazy.force obj) inh x in
   fself inh subj
+
+let transform1 bundle = transform1_gc bundle.gcata
 
 let transform_gc gcata make_obj subj =
   let rec obj = lazy (make_obj fself)
   and fself x = gcata (Lazy.force obj) () x in
   fself subj
 
-let transform bundle = transform_gc bundle.gcata
+let transform  bundle = transform_gc bundle.gcata
+let transform0 bundle = bundle.gcata
 
 type comparison = LT | EQ | GT
 
@@ -172,7 +177,7 @@ class ['a, 'syn, 'self] foldl_list_t fa fself =
 
 class ['a, 'syn, 'self] foldr_list_t fa fself =
   object
-    inherit ['a, 'syn, 'self] @list[foldl] fself fa
+    inherit ['a, 'syn, 'self] @list[foldl] fa fself
     method c_Cons s x xs = fa (fself s xs) x
   end
 
@@ -217,47 +222,28 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
             >) t =
   {gcata   = gcata_list;
    plugins = object
-               method show fa l = "[" ^ (transform_gc gcata_list (new @list[show] fa) l) ^ "]"
+               method show fa l =
+                 sprintf "[%s]" (transform_gc gcata_list (new @list[show] fa) l)
                method fmt fa inh l =
                  Format.fprintf inh "[@[%a@]]@,"
-                   (fix0 (fun fself ->
-                     gcata_list (new @list[fmt] fself fa)
-                   ))
-                   l
-
+                   (transform1_gc gcata_list (new @list[fmt] fa)) l
 
                method html    fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[html] fself fa) ()
-                 )
+                 transform_gc gcata_list (new @list[html] fa)
                method gmap    fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[gmap] fself fa) ()
-                 )
+                 transform_gc gcata_list (new @list[gmap] fa)
                method stateful fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[stateful] fself fa)
-                 )
+                 transform1_gc gcata_list (new @list[stateful] fa)
                method eval    fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[eval] fself fa)
-                 )
+                 transform1_gc gcata_list (new @list[eval] fa)
                method eq      fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[eq] fself fa)
-                 )
+                 transform1_gc gcata_list (new @list[eq] fa)
                method compare fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[compare] fself fa)
-                 )
+                 transform1_gc gcata_list (new @list[compare] fa)
                method foldl   fa   =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[foldl] fself fa)
-                 )
+                 transform1_gc gcata_list (new @list[foldl] fa)
                method foldr   fa  =
-                 fix0 (fun fself ->
-                   gcata_list (new @list[foldr] fself fa)
-                 )
+                 transform1_gc gcata_list (new @list[foldr] fa)
              end
   }
 
@@ -275,31 +261,31 @@ module Lazy =
     let gcata_t tr inh subj = tr#t_t inh subj
     let gcata_lazy = gcata_t
 
-    class ['a, 'self ] html_t_t _fself fa =
+    class ['a, 'self ] html_t_t fa _fself =
       object
         inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer ] @t
         method t_t inh subj = fa @@ Lazy.force subj
       end
 
-    class ['a, 'self ] show_t_t _fself fa =
+    class ['a, 'self ] show_t_t fa _fself =
       object
         inherit [unit, 'a, string, unit, 'self, string ] @t
         method t_t inh subj = fa @@ Lazy.force subj
       end
 
-    class ['a, 'sa, 'self ] gmap_t_t _fself fa =
+    class ['a, 'sa, 'self ] gmap_t_t fa _fself =
       object
         inherit [unit, 'a, 'sa, unit, 'self, 'sa t ] @t
         method t_t inh subj = lazy (fa @@ Lazy.force subj)
       end
 
-    class ['a, 'sa, 'env, 'self ] eval_t_t _fself fa =
+    class ['a, 'sa, 'env, 'self ] eval_t_t fa _fself =
       object
         inherit ['env, 'a, 'sa, 'env, 'self, 'sa t ] @t
         method t_t env subj = lazy (fa env @@ Lazy.force subj)
       end
 
-    class ['a, 'sa, 'env, 'self ] stateful_t_t _fself fa =
+    class ['a, 'sa, 'env, 'self ] stateful_t_t fa _fself =
       object
         inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa t ] @t
         method t_t env subj =
@@ -308,7 +294,7 @@ module Lazy =
           (* THE SAME AS eval *)
       end
 
-    class ['a, 'syn, 'self ] foldl_t_t _fself fa =
+    class ['a, 'syn, 'self ] foldl_t_t fa _fself =
       object
         inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn ] @t
         method t_t inh subj = fa inh @@ Lazy.force subj
@@ -319,7 +305,7 @@ module Lazy =
         inherit ['a, 'syn, 'self ] @t[foldl] fself fa
       end
 
-    class ['a, 'self ] eq_t_t _fself fa =
+    class ['a, 'self ] eq_t_t fa _fself =
       object
         inherit ['a, 'a, bool, 'a t, 'self, bool ] @t
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
@@ -373,19 +359,19 @@ class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] option_t =
     method virtual c_Some :   'inh -> 'a  -> 'syn
   end
 
-class ['a, 'self] show_option_t _fself fa =
+class ['a, 'self] show_option_t fa _fself =
   object
     inherit [ unit, 'a, string, unit, 'self, string] @option
     method c_None _  = "None"
     method c_Some _ x = "Some (" ^ fa x ^ ")"
   end
-class ['a, 'self] fmt_option_t _fself fa =
+class ['a, 'self] fmt_option_t fa _fself =
   object
     inherit [ Format.formatter, 'a, unit, Format.formatter, 'self, unit] @option
     method c_None fmt   = Format.fprintf fmt "None"
     method c_Some fmt x = Format.fprintf fmt "Some (%a)" fa x
   end
-class ['a, 'self] html_option_t _fself fa =
+class ['a, 'self] html_option_t fa _fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @option
     method c_None _  = HTML.string "None"
@@ -393,21 +379,21 @@ class ['a, 'self] html_option_t _fself fa =
   end
 
 
-class ['a, 'sa, 'self] gmap_option_t _fself fa =
+class ['a, 'sa, 'self] gmap_option_t fa _fself =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa option] @option
     method c_None _ = None
     method c_Some _ x = Some (fa x)
   end
 
-class ['a, 'sa, 'env, 'self] eval_option_t _fself fa =
+class ['a, 'sa, 'env, 'self] eval_option_t fa _fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'sa option] @option
     method c_None _ = None
     method c_Some env x = Some (fa env x)
   end
 
-class ['a, 'sa, 'env, 'self] stateful_option_t _fself fa =
+class ['a, 'sa, 'env, 'self] stateful_option_t fa _fself =
   object
     inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa option] @option
     method c_None env = (env,None)
@@ -416,19 +402,19 @@ class ['a, 'sa, 'env, 'self] stateful_option_t _fself fa =
       (env1, Some r)
   end
 
-class ['a, 'syn, 'self] foldl_option_t _fself fa =
+class ['a, 'syn, 'self] foldl_option_t fa _fself =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @option
     method c_None s = s
     method c_Some s x = fa s x
   end
 
-class ['a, 'syn, 'self] foldr_option_t _fself fa =
+class ['a, 'syn, 'self] foldr_option_t fa _fself =
   object
-    inherit ['a, 'syn, 'self] @option[foldl] _fself fa
+    inherit ['a, 'syn, 'self] @option[foldl] fa _fself
   end
 
-class ['a, 'self] eq_option_t _fself fa =
+class ['a, 'self] eq_option_t fa _fself =
   object
     inherit ['a, 'a, bool, 'a option, 'self, bool] @option
     method c_None inh = inh = None
@@ -438,7 +424,7 @@ class ['a, 'self] eq_option_t _fself fa =
       | _ -> false
   end
 
-class ['a, 'self] compare_option_t _fself fa =
+class ['a, 'self] compare_option_t fa _fself =
   object
     inherit ['a, 'a, comparison, 'a option, 'self, comparison] @option
     method c_None = function
@@ -471,11 +457,11 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
                method html     fa = gcata_option (new @option[html] fself fa) ()
                method gmap     fa = gcata_option (new @option[gmap] fself fa) ()
                method stateful fa = gcata_option (new @option[stateful] fself fa)
-               method eval    fa = gcata_option (new @option[eval] fself fa)
-               method eq      fa = gcata_option (new @option[eq] fself fa)
-               method compare fa = gcata_option (new @option[compare] fself fa)
-               method foldl   fa = gcata_option (new @option[foldl] fself fa)
-               method foldr   fa = gcata_option (new @option[foldr] fself fa)
+               method eval     fa = gcata_option (new @option[eval] fself fa)
+               method eq       fa = gcata_option (new @option[eq] fself fa)
+               method compare  fa = gcata_option (new @option[compare] fself fa)
+               method foldl    fa = gcata_option (new @option[foldl] fself fa)
+               method foldr    fa = gcata_option (new @option[foldr] fself fa)
              end
   }
 
@@ -487,61 +473,61 @@ class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] free_t = object
 end
 let gcata_free tr = tr#c_Free
 
-class ['a, 'self] show_free_t _ fa =
+class ['a, 'self] show_free_t fa _ =
   object
     inherit [unit, 'a, string, unit, 'self, string] free_t
     method c_Free () x = "(" ^ fa x ^ ")"
   end
-class ['a, 'self] fmt_free_t _ fa =
+class ['a, 'self] fmt_free_t fa _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] free_t
     constraint 'inh = Format.formatter
     method c_Free fmt x = Format.fprintf fmt "(%a)" fa x
   end
 
-class ['a, 'self] html_free_t _ fa =
+class ['a, 'self] html_free_t fa _ =
   object
     inherit [unit, 'a, 'syn, unit, 'self, 'syn] free_t
     constraint 'syn = HTML.viewer
     method c_Free () x = fa x
   end
 
-class ['a, 'sa, 'self] gmap_free_t _ fa =
+class ['a, 'sa, 'self] gmap_free_t fa _ =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa free] free_t
     method c_Free () x = fa x
   end
-class ['a, 'sa, 'env, 'self] eval_free_t _ fa =
+class ['a, 'sa, 'env, 'self] eval_free_t fa _ =
   object
     inherit ['emv, 'a, 'sa, 'env, 'self, 'sa free] free_t
     method c_Free env x = fa env x
   end
 
-class ['a, 'sa, 'env, 'self] stateful_free_t _ fa =
+class ['a, 'sa, 'env, 'self] stateful_free_t fa _ =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa free] free_t
     method c_Free env x = fa env x
   end
 
-class ['a, 'syn, 'self] foldl_free_t _ fa  =
+class ['a, 'syn, 'self] foldl_free_t fa _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] free_t
     method c_Free inh x = fa inh x
   end
 
-class ['a, 'syn, 'self] foldr_free_t _ fa  =
+class ['a, 'syn, 'self] foldr_free_t fa _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] free_t
     method c_Free inh x = fa inh x
   end
 
-class ['a, 'self] eq_free_t _ fa  =
+class ['a, 'self] eq_free_t fa _ =
   object
     inherit ['a, 'a, bool, 'a free, 'self, bool] free_t
     method c_Free inh x = fa inh x
   end
 
-class ['a, 'self] compare_free_t _ fa  =
+class ['a, 'self] compare_free_t fa _ =
   object
     inherit ['a, 'a, 'syn, 'a free, 'self, 'syn] free_t
     constraint 'syn = comparison
@@ -565,16 +551,16 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               >) t =
   {gcata   = gcata_free;
    plugins = object
-       method show     fa = gcata_free (new show_free_t (fun _ -> assert false) fa) ()
-       method fmt      fa = gcata_free (new @free[fmt]  (fun _ -> assert false) fa)
-       method html     fa = gcata_free (new html_free_t (fun _ -> assert false) fa) ()
-       method gmap     fa = gcata_free (new gmap_free_t (fun _ -> assert false) fa) ()
-       method eval     fa = gcata_free (new @free[eval] (fun _ _ -> assert false) fa)
-       method stateful fa = gcata_free (new @free[stateful] (fun _ _ -> assert false) fa)
-       method eq       fa = gcata_free (new eq_free_t   (fun _ -> assert false) fa)
-       method compare  fa = gcata_free (new compare_free_t(fun _ -> assert false) fa)
-       method foldl    fa = gcata_free (new foldl_free_t (fun _ -> assert false) fa)
-       method foldr    fa = gcata_free (new foldr_free_t (fun _ -> assert false) fa)
+       method show     fa = transform_gc gcata_free (new @free[show] fa)
+       method gmap     fa = transform_gc gcata_free (new @free[gmap] fa)
+       method html     fa = transform_gc  gcata_free (new @free[html] fa)
+       method fmt      fa = transform1_gc gcata_free (new @free[fmt] fa)
+       method eval     fa = transform1_gc gcata_free (new @free[eval]  fa)
+       method stateful fa = transform1_gc gcata_free (new @free[stateful] fa)
+       method eq       fa = transform1_gc gcata_free (new @free[eq] fa)
+       method compare  fa = transform1_gc gcata_free (new @free[compare] fa)
+       method foldl    fa = transform1_gc gcata_free (new @free[foldl] fa)
+       method foldr    fa = transform1_gc gcata_free (new @free[foldr] fa)
   end
   }
 
@@ -590,19 +576,19 @@ class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t =
     (* method t_pair fa fb = transform pair fa fb this *)
   end
 
-class ['a, 'b, 'self] show_pair_t _ fa fb =
+class ['a, 'b, 'self] show_pair_t fa fb _ =
   object
     inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] pair_t
     method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
   end
-class ['a, 'b, 'self] fmt_pair_t _ fa fb =
+class ['a, 'b, 'self] fmt_pair_t fa fb _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] pair_t
     constraint 'inh = Format.formatter
     method c_Pair fmt x y = Format.fprintf fmt "(%a,%a)" fa x fb y
   end
 
-class ['a, 'b, 'self] html_pair_t _ fa fb =
+class ['a, 'b, 'self] html_pair_t fa fb _ =
   object
     inherit [unit, 'a, 'syn, unit, 'b, 'syn, unit, 'self, 'syn] pair_t
     constraint 'syn = HTML.viewer
@@ -613,18 +599,18 @@ class ['a, 'b, 'self] html_pair_t _ fa fb =
          ]
   end
 
-class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t _ (fa: 'a -> 'sa) fb =
+class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t (fa: 'a -> 'sa) fb _ =
   object
     inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, ('sa, 'sb) pair] pair_t
     method c_Pair () x y = (fa x, fb y)
   end
 
-class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_pair_t _ fa fb =
+class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_pair_t fa fb _ =
   object
     inherit ['env, 'a, 'sa, 'env, 'b, 'sb, 'env, 'self, ('sa, 'sb) pair] pair_t
     method c_Pair env x y = (fa env x, fb env y)
   end
-class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t _ fa fb =
+class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t fa fb _ =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * ('sa, 'sb) pair] pair_t
     method c_Pair env x y =
@@ -633,19 +619,19 @@ class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t _ fa fb =
       env, (l,r)
   end
 
-class ['a, 'b, 'syn, 'self] foldl_pair_t _ fa fb  =
+class ['a, 'b, 'syn, 'self] foldl_pair_t fa fb _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] pair_t
     method c_Pair s x y = fb (fa s x) y
   end
 
-class ['a, 'b, 'syn, 'self] foldr_pair_t _ fa fb  =
+class ['a, 'b, 'syn, 'self] foldr_pair_t fa fb _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] pair_t
     method c_Pair s x y = fa (fb s y) x
   end
 
-class ['a, 'b, 'self] eq_pair_t _ fa fb  =
+class ['a, 'b, 'self] eq_pair_t fa fb _ =
   object
     inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, 'self, bool] pair_t
     method c_Pair inh x y =
@@ -653,7 +639,7 @@ class ['a, 'b, 'self] eq_pair_t _ fa fb  =
       (z, t) -> fa z x && fb t y
   end
 
-class ['a, 'b, 'self] compare_pair_t _ fa fb  =
+class ['a, 'b, 'self] compare_pair_t fa fb _ =
   object
     inherit ['a, 'a, 'syn, 'b, 'b, 'syn, ('a, 'b) pair, 'self, 'syn] pair_t
     constraint 'syn = comparison
@@ -663,12 +649,12 @@ class ['a, 'b, 'self] compare_pair_t _ fa fb  =
 let pair:
   ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, _, 'syn) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
               < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
-                fmt     : (Format.formatter -> 'a -> unit) ->
-                          (Format.formatter -> 'b -> unit) ->
-                          Format.formatter -> ('a,'b) pair -> unit;
                 html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) ->
                           ('a, 'b) pair -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair;
+                fmt     : (Format.formatter -> 'a -> unit) ->
+                          (Format.formatter -> 'b -> unit) ->
+                          Format.formatter -> ('a,'b) pair -> unit;
                 stateful: ('env -> 'a -> 'env * 'c) ->
                           ('env -> 'b -> 'env * 'd) ->
                           'env -> ('a, 'b) pair -> 'env * ('c, 'd) pair;
@@ -682,19 +668,22 @@ let pair:
                           ('a, 'b) pair -> ('a, 'b) pair -> comparison;
               >) t =
   {gcata   = gcata_pair;
-   plugins = object
-       method show    fa fb = gcata_pair (new show_pair_t (fun _ -> assert false) fa fb) ()
-       method fmt     fa fb = gcata_pair (new @pair[fmt]  (fun _ -> assert false) fa fb)
-       method html    fa fb = gcata_pair (new html_pair_t (fun _ -> assert false) fa fb) ()
-       method gmap    fa fb = gcata_pair (new gmap_pair_t (fun _ -> assert false) fa fb) ()
-       method eval    fa fb = gcata_pair (new @pair[eval] (fun _ -> assert false) fa fb)
-       method stateful fa fb= gcata_pair (new @pair[stateful] (fun _ _ -> assert false) fa fb)
-       method eq      fa fb = gcata_pair (new eq_pair_t   (fun _ -> assert false) fa fb)
-       method compare fa fb = gcata_pair (new compare_pair_t(fun _ -> assert false) fa fb)
-       method foldl   fa fb = gcata_pair (new foldl_pair_t (fun _ -> assert false) fa fb)
-       method foldr   fa fb = gcata_pair (new foldr_pair_t (fun _ -> assert false) fa fb)
+   plugins =
+     let tr  obj subj     = transform_gc  gcata_pair obj subj in
+     let tr1 obj inh subj = transform1_gc gcata_pair obj inh subj in
+     object
+       method show     fa fb = tr  (new @pair[show] fa fb)
+       method html     fa fb = tr  (new @pair[html] fa fb)
+       method gmap     fa fb = tr  (new @pair[gmap] fa fb)
+       method fmt      fa fb = tr1 (new @pair[fmt]  fa fb)
+       method eval     fa fb = tr1 (new @pair[eval] fa fb)
+       method stateful fa fb = tr1 (new @pair[stateful] fa fb)
+       method eq       fa fb = tr1 (new @pair[eq]   fa fb)
+       method compare  fa fb = tr1 (new @pair[compare] fa fb)
+       method foldl    fa fb = tr1 (new @pair[foldl] fa fb)
+       method foldr    fa fb = tr1 (new @pair[foldr] fa fb)
   end
-  }
+ }
 
 class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] tuple2_t = object
       inherit ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t
@@ -703,35 +692,35 @@ let gcata_tuple2 = gcata_pair
 let tuple2 = pair
 
 (* Just aliases *)
-class ['a, 'b, 'self] show_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'self] show_pair_t fself fa fb
+class ['a, 'b, 'self] show_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] show_pair_t fa fb fself
 end
-class ['a, 'b, 'self] fmt_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'self] fmt_pair_t fself fa fb
+class ['a, 'b, 'self] fmt_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] fmt_pair_t fa fb fself
 end
-class ['a, 'b, 'self] html_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'self] html_pair_t fself fa fb
+class ['a, 'b, 'self] html_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] html_pair_t fa fb fself
 end
-class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t fself fa fb = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t fself fa fb
+class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t fa fb fself
 end
-class ['a, 'a2, 'b, 'b2, 'env, 'self] eval_tuple2_t fself fa fb = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] eval_pair_t fself fa fb
+class ['a, 'a2, 'b, 'b2, 'env, 'self] eval_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] eval_pair_t fa fb fself
 end
-class ['a, 'a2, 'b, 'b2, 'env, 'self] stateful_tuple2_t fself fa fb = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] stateful_pair_t fself fa fb
+class ['a, 'a2, 'b, 'b2, 'env, 'self] stateful_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] stateful_pair_t fa fb fself
 end
-class ['a, 'b, 'self] compare_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'self] compare_pair_t fself fa fb
+class ['a, 'b, 'self] compare_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] compare_pair_t fa fb fself
 end
-class ['a, 'b, 'self] eq_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'self] eq_pair_t fself fa fb
+class ['a, 'b, 'self] eq_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] eq_pair_t fa fb fself
 end
-class ['a, 'b, 'syn, 'self] foldl_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'syn, 'self] foldl_pair_t fself fa fb
+class ['a, 'b, 'syn, 'self] foldl_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'syn, 'self] foldl_pair_t fa fb fself
 end
-class ['a, 'b, 'syn, 'self] foldr_tuple2_t fself fa fb = object
-  inherit [ 'a, 'b, 'syn, 'self] foldr_pair_t fself fa fb
+class ['a, 'b, 'syn, 'self] foldr_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'syn, 'self] foldr_pair_t fa fb fself
 end
 
 (*******************************************************************************)
@@ -746,7 +735,7 @@ end
 let gcata_triple tr inh (a,b,c) = tr#c_Triple inh a b c
 let gcata_tuple3 = gcata_triple
 
-class ['a, 'b, 'c, 'self] show_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'self] show_triple_t fa fb fc _ =
   object
     inherit [ unit, 'a, string
             , unit, 'b, string
@@ -755,14 +744,14 @@ class ['a, 'b, 'c, 'self] show_triple_t _ fa fb fc =
     method c_Triple () x y z = Printf.sprintf "(%s, %s, %s)"
       (fa x) (fb y) (fc z)
 end
-class ['a, 'b, 'c, 'self] fmt_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'self] fmt_triple_t fa fb fc _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'c, unit, 'inh, 'self, unit] triple_t
     constraint 'inh = Format.formatter
     method c_Triple fmt x y z = Format.fprintf fmt "(%a,%a,%a)" fa x fb y fc z
   end
 
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t _ fa fb fc =
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t fa fb fc _ =
   object
     inherit [ unit, 'a, 'a2
             , unit, 'b, 'b2
@@ -770,7 +759,7 @@ class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t _ fa fb fc =
             , unit, 'self, ('a2,'b2,'c2) triple ] @triple
     method c_Triple () x y z = ( (fa x), (fb y), (fc z) )
 end
-class ['a, 'b, 'c, 'self] html_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'self] html_triple_t fa fb fc _ =
   object
     inherit [ unit, 'a, 'syn, unit, 'b, 'syn, unit, 'c, 'syn
             , unit, 'self, 'syn] triple_t
@@ -786,7 +775,7 @@ class ['a, 'b, 'c, 'self] html_triple_t _ fa fb fc =
          ; HTML.string ")"]
   end
 
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] eval_triple_t _ fa fb fc =
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] eval_triple_t fa fb fc _ =
   object
     inherit [ 'env, 'a, 'a2
             , 'env, 'b, 'b2
@@ -794,7 +783,7 @@ class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] eval_triple_t _ fa fb fc =
             , 'env, 'self, ('a2,'b2,'c2) triple ] @triple
     method c_Triple e x y z = ( (fa e x), (fb e y), (fc e z) )
 end
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] stateful_triple_t _ fa fb fc =
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] stateful_triple_t fa fb fc _ =
   object
     inherit [ 'env, 'a, 'env * 'a2
             , 'env, 'b, 'env * 'b2
@@ -806,7 +795,7 @@ class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] stateful_triple_t _ fa fb fc =
       let env3,c = fc env2 z in
       env3, (a,b,c)
 end
-class ['a, 'b, 'c, 'self] compare_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'self] compare_triple_t fa fb fc _ =
   object
     inherit [ 'a, 'a, 'syn
             , 'b, 'b, 'syn
@@ -820,7 +809,7 @@ class ['a, 'b, 'c, 'self] compare_triple_t _ fa fb fc =
        (fc c z)
 end
 
-class ['a, 'b, 'c, 'self] eq_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'self] eq_triple_t fa fb fc _ =
   object
     inherit [ 'a, 'a, bool
             , 'b, 'b, bool
@@ -831,14 +820,14 @@ class ['a, 'b, 'c, 'self] eq_triple_t _ fa fb fc =
       (a, b, c) -> fa a x && fb b y && fc c z
   end
 
-class ['a, 'b, 'c, 'syn, 'self] foldl_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'syn, 'self] foldl_triple_t fa fb fc _ =
   object
     inherit [ 'syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'c, 'syn
             , 'syn, 'self, 'syn] @triple
     method c_Triple s x y z = fc (fb (fa s x) y) z
   end
 
-class ['a, 'b, 'c, 'syn, 'self] foldr_triple_t _ fa fb fc =
+class ['a, 'b, 'c, 'syn, 'self] foldr_triple_t fa fb fc _ =
   object
     inherit [ 'syn, 'a, 'syn
             , 'syn, 'b, 'syn
@@ -884,61 +873,62 @@ let triple :
                   'syn ->
                   ('a, 'b, 'c) triple ->
                   'syn;
+        foldr   : ('syn -> 'a -> 'syn) ->
+                  ('syn -> 'b -> 'syn) ->
+                  ('syn -> 'c -> 'syn) ->
+                  'syn ->
+                  ('a, 'b, 'c) triple ->
+                  'syn;
       >) t =
   {gcata   = gcata_triple;
-   plugins = object
-     method show    fa fb fc =
-       gcata_triple (new @triple[show]    (fun _ -> assert false) fa fb fc) ()
-     method fmt     fa fb fc =
-       gcata_triple (new @triple[fmt]     (fun _ -> assert false) fa fb fc)
-     method gmap    fa fb fc =
-       gcata_triple (new @triple[gmap]    (fun _ -> assert false) fa fb fc) ()
-     method html    fa fb fc =
-       gcata_triple (new @triple[html]    (fun _ -> assert false) fa fb fc) ()
-     method eval    fa fb fc =
-       gcata_triple (new @triple[eval]    (fun _ -> assert false) fa fb fc)
-     method stateful    fa fb fc =
-       gcata_triple (new @triple[stateful] (fun _ _ -> assert false) fa fb fc)
-     method compare fa fb fc inh =
-       gcata_triple (new compare_triple_t (fun _ -> assert false) fa fb fc) inh
-     method eq      fa fb fc inh =
-       gcata_triple (new eq_triple_t (fun _ -> assert false) fa fb fc) inh
-     method foldl fa fb fc inh =
-       gcata_triple (new foldl_triple_t (fun _ -> assert false) fa fb fc) inh
+   plugins =
+     let tr  obj subj     = transform_gc  gcata_triple obj subj in
+     let tr1 obj inh subj = transform1_gc gcata_triple obj inh subj in
+     object
+       method show     fa fb fc = tr  (new @triple[show] fa fb fc)
+       method html     fa fb fc = tr  (new @triple[html] fa fb fc)
+       method gmap     fa fb fc = tr  (new @triple[gmap] fa fb fc)
+       method fmt      fa fb fc = tr1 (new @triple[fmt]  fa fb fc)
+       method eval     fa fb fc = tr1 (new @triple[eval] fa fb fc)
+       method stateful fa fb fc = tr1 (new @triple[stateful] fa fb fc)
+       method eq       fa fb fc = tr1 (new @triple[eq]   fa fb fc)
+       method compare  fa fb fc = tr1 (new @triple[compare] fa fb fc)
+       method foldl    fa fb fc = tr1 (new @triple[foldl] fa fb fc)
+       method foldr    fa fb fc = tr1 (new @triple[foldr] fa fb fc)
   end
-}
+ }
 
 let tuple3 = triple
 
-class ['a, 'b, 'c, 'self] show_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'self] show_triple_t fself fa fb fc
+class ['a, 'b, 'c, 'self] show_tuple3_t fa fb fself fc = object
+  inherit [ 'a, 'b, 'c, 'self] show_triple_t fa fb fc fself
 end
-class ['a, 'b, 'c, 'self] fmt_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'self] @triple[fmt] fself fa fb fc
+class ['a, 'b, 'c, 'self] fmt_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[fmt] fa fb fc fself
 end
-class ['a, 'b, 'c, 'self] html_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'self] @triple[html] fself fa fb fc
+class ['a, 'b, 'c, 'self] html_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[html] fa fb fc fself
 end
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_triple_t fself fa fb fc
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] @triple[gmap] fa fb fc fself
 end
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] eval_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] eval_triple_t fself fa fb fc
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] eval_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[eval] fa fb fc fself
 end
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] stateful_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] stateful_triple_t fself fa fb fc
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] stateful_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[stateful] fa fb fc fself
 end
-class ['a, 'b, 'c, 'self] compare_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'self] compare_triple_t fself fa fb fc
+class ['a, 'b, 'c, 'self] compare_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] compare_triple_t fa fb fc fself
 end
-class ['a, 'b, 'c, 'self] eq_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'self] eq_triple_t fself fa fb fc
+class ['a, 'b, 'c, 'self] eq_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[eq] fa fb fc fself
 end
-class ['a, 'b, 'c, 'syn, 'self] foldl_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'syn, 'self] foldl_triple_t fself fa fb fc
+class ['a, 'b, 'c, 'syn, 'self] foldl_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'syn, 'self] @triple[foldl] fa fb fc fself
 end
-class ['a, 'b, 'c, 'syn, 'self] foldr_tuple3_t fself fa fb fc = object
-  inherit [ 'a, 'b, 'c, 'syn, 'self] foldr_triple_t fself fa fb fc
+class ['a, 'b, 'c, 'syn, 'self] foldr_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'syn, 'self] @triple[foldr] fa fb fc fself
 end
 
 (*******************************************************************************)
@@ -950,7 +940,7 @@ object
 end
 let gcata_tuple4 tr inh (a,b,c,d) = tr#c_tuple4 inh a b c d
 
-class ['a, 'b, 'c, 'd, 'self] fmt_tuple4_t _ fa fb fc fd =
+class ['a, 'b, 'c, 'd, 'self] fmt_tuple4_t fa fb fc fd _ =
   object
     inherit [ 'inh, 'a, unit
             , 'inh, 'b, unit
@@ -961,7 +951,7 @@ class ['a, 'b, 'c, 'd, 'self] fmt_tuple4_t _ fa fb fc fd =
     method c_tuple4 fmt a b c d =
       Format.fprintf fmt "(%a,%a,%a,%a)" fa a fb b fc c fd d
   end
-class ['a, 'b, 'c, 'd, 'self] html_tuple4_t _ fa fb fc fd =
+class ['a, 'b, 'c, 'd, 'self] html_tuple4_t fa fb fc fd _ =
   object
     inherit [ unit, 'a, 'syn
             , unit, 'b, 'syn
@@ -996,12 +986,13 @@ let tuple4 :
                   ('a, 'b, 'c, 'd) tuple4 -> HTML.er;
       >) t =
   {gcata   = gcata_tuple4;
-   plugins = object
-     method fmt     fa fb fc fd =
-       gcata_tuple4 (new @tuple4[fmt]     (fun _ -> assert false) fa fb fc fd)
-     method html    fa fb fc fd =
-       gcata_tuple4 (new @tuple4[html]    (fun _ -> assert false) fa fb fc fd) ()
-  end
+   plugins =
+     let tr  obj subj     = transform_gc  gcata_tuple4 obj subj in
+     let tr1 obj inh subj = transform1_gc gcata_tuple4 obj inh subj in
+     object
+       method html     fa fb fc fd = tr  (new @tuple4[html] fa fb fc fd)
+       method fmt      fa fb fc fd = tr1 (new @tuple4[fmt]  fa fb fc fd)
+     end
 }
 
 (****************************************************************************)
@@ -1013,7 +1004,7 @@ object
 end
 let gcata_ref tr inh r = tr#c_ref inh !r 
 
-class ['a, 'self] fmt_ref_t _ fa =
+class ['a, 'self] fmt_ref_t fa _ =
   object
     inherit [ 'inh, 'a, unit
             , 'inh, 'self, unit] ref_t
@@ -1021,7 +1012,7 @@ class ['a, 'self] fmt_ref_t _ fa =
     method c_ref fmt a =
       Format.fprintf fmt "!(%a)" fa a
   end
-class ['a, 'self] html_ref_t _ fa =
+class ['a, 'self] html_ref_t fa _ =
   object
     inherit [ 'inh, 'a, 'syn
             , 'inh, 'self, 'syn] ref_t
@@ -1040,13 +1031,12 @@ let ref:
       >) t =
   {gcata   = gcata_ref;
    plugins = object
-     method fmt     fa =
-       gcata_ref (new @ref[fmt]     (fun _ -> assert false) fa)
-     method html    fa =
-       gcata_ref (new @ref[html]    (fun _ -> assert false) fa) ()
+     method fmt     fa = transform1_gc gcata_ref (new @ref[fmt]  fa)
+     method html    fa = transform_gc  gcata_ref (new @ref[html] fa)
   end
 }
 (*** arrays *****************************************************************)
+(* TODO: array are not really implemented *)
 type 'a parray      = 'a array
 type 'a array       = 'a parray
 

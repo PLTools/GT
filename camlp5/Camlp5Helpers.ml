@@ -533,4 +533,4 @@ let typ_vars_of_typ t =
     | <:ctyp< [ = $list:lpv$ ] >>  -> failwith "polyvariant"
     | _ -> acc (* This could be wrong *)
   in
-  List.dedup ~compare:String.compare @@ helper [] t
+  List.dedup_and_sort ~compare:String.compare @@ helper [] t
