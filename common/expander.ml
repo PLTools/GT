@@ -206,15 +206,23 @@ let make_interface_class_sig ~loc tdecl =
               (* rows go to virtual methods. label goes to inherit fields *)
               let meths =
                 List.concat_map rows ~f:(function
-                | Rtag (lab,_,_,args)  ->
-                  let methname = sprintf "c_%s" lab.txt in
-                  [ Ctf.method_ ~loc ~virt:true methname @@
-                      (List.fold_right args ~init:(Typ.var ~loc "syn")
-                         ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-                        |> (Typ.arrow ~loc (Typ.use_tdecl tdecl))
-                        |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
-                      )
-                  ]
+                  | Rtag (lab,_,_,args)  ->
+                    let args = match args with
+                      | [] -> []
+                      | [{ptyp_desc=Ptyp_tuple ts; _}] -> ts
+                      | [t] -> [t]
+                      | _ -> failwith "conjective not supported"
+                    in
+                    let methname = Naming.meth_of_constr lab.txt in
+                    let ts =
+                      let open Typ in
+                      [ var ~loc "inh"
+                      ; use_tdecl tdecl ] @
+                      (List.map ~f:from_caml args) @
+                      [ var ~loc "syn" ]
+                      |> chain_arrow ~loc
+                    in
+                    [ Ctf.method_ ~loc ~virt:true methname ts ]
                 | Rinherit typ -> match typ.ptyp_desc with
                   | Ptyp_constr ({txt;loc}, params) ->
                      wrap txt params
@@ -346,10 +354,10 @@ let make_interface_class ~loc tdecl =
                             |> (arrow ~loc (var ~loc "inh"))
                           )
                       ]
-                    | Rtag (_,_,_,_args) ->
-                      failwith "Can't deal with conjunctive types"
+                | Rtag (_,_,_,_args) ->
+                  failwith "Can't deal with conjunctive types"
 
-                    | Rinherit typ -> match typ.ptyp_desc with
+                | Rinherit typ -> match typ.ptyp_desc with
                       | Ptyp_constr ({txt;loc}, params) ->
                         wrap ~is_poly:true txt params
                       | _ -> assert false
@@ -416,7 +424,7 @@ let make_gcata_typ ~loc tdecl =
             | Ptyp_variant (rows,_flg,_) ->
               let params = map_type_param_names tdecl.ptype_params
                   ~f:(fun s ->
-                    [Typ.any ~loc; Typ.var ~loc s;  Typ.var ~loc "syn" ]
+                    [Typ.any ~loc; Typ.var ~loc s; Typ.var ~loc @@ "s"^s ]
                   )
               in
               Typ.class_ ~loc
@@ -538,9 +546,44 @@ let collect_plugins_sig ~loc tdecl plugins =
       )
     ]
 
+
+let rename_params tdecl =
+  let loc = tdecl.ptype_loc in
+  visit_typedecl ~loc tdecl
+    ~onmanifest:(fun typ ->
+        let names = (map_type_param_names tdecl.ptype_params ~f:id) in
+        let (r_names,new_manifest) =
+          List.fold_left ~init:([],typ) names
+            ~f:(fun (ns,acc) name ->
+                if String.equal name Naming.self_typ_param_name
+                then
+                  let n_new = Naming.self_typ_param_name ^ "__new" in
+                  let t2 = map_core_type acc ~onvar:(fun s ->
+                      (* Caml.Printf.printf "cmp '%s' and '%s' = %b\n%!" s name (String.equal s name ); *)
+                      if String.equal s name then Some(ptyp_var ~loc n_new)
+                      else None)
+                  in
+                  (n_new::ns, t2)
+                else (name::ns,acc)
+              )
+        in
+        { tdecl with ptype_params = List.map2_exn tdecl.ptype_params
+                         (List.rev r_names)
+                         ~f:(fun (_,v) s -> (ptyp_var ~loc s, v))
+                     ; ptype_manifest = Some new_manifest
+        }
+      )
+    ~onvariant:(fun _ -> tdecl)
+    ~onabstract:(fun _ -> tdecl)
+    ~onrecord:(fun _ -> tdecl)
+    (* TODO: Implement general case about renaming of paramters *)
+
+
+
 (* for structures *)
 let do_typ ~loc sis plugins is_rec tdecl =
   let (_:bool) = is_rec in
+  let tdecl = rename_params tdecl in
   let intf_class = Str.of_class_declarations ~loc [make_interface_class ~loc tdecl] in
   let gcata = make_gcata_str ~loc tdecl in
 
@@ -555,7 +598,7 @@ module G = Graph.Persistent.Digraph.Concrete(String)
 module T = Graph.Topological.Make(G)
 module SM = Caml.Map.Make(String)
 
-let do_mutal_types ~loc sis plugins tdecls =
+let topsort_tdecls tdecls =
   (* TODO: we need topological sorting because in case
    *   type y = int x
    *   type 'a x = ....
@@ -572,7 +615,7 @@ let do_mutal_types ~loc sis plugins tdecls =
   let g = List.fold_left ~init:G.empty tdecls
       ~f:(fun acc tdecl ->
           let acc = G.add_vertex acc tdecl.ptype_name.txt in
-          let info = visit_typedecl ~loc tdecl
+          let info = visit_typedecl ~loc:tdecl.ptype_loc tdecl
             ~onrecord:(fun _ -> None)
             ~onvariant:(fun _ -> None)
             ~onabstract:(fun _ -> None)
@@ -597,6 +640,10 @@ let do_mutal_types ~loc sis plugins tdecls =
     |> List.rev
   in
   assert (List.length tdecls = List.length tdecls_new);
+  tdecls_new
+
+let do_mutal_types ~loc sis plugins tdecls =
+  let tdecls_new = topsort_tdecls tdecls in
   let classes, catas =
     let all =
       List.map tdecls_new ~f:(fun tdecl ->
@@ -618,6 +665,8 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
   let intf_class = make_interface_class_sig ~loc tdecl in
   let gcata = make_gcata_sig ~loc tdecl in
 
+  (* Pprintast.signature_item Format.std_formatter @@
+   *   psig_type ~loc:tdecl.ptype_loc Nonrecursive [tdecl]; *)
   List.concat
     [ sis
     ; [intf_class; gcata]
@@ -625,8 +674,12 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
     ; [ collect_plugins_sig ~loc tdecl plugins ]
     ]
 
-let do_mutal_types_sig ~loc plugins tdecls =
-  []
+let do_mutal_types_sig ~loc sis plugins tdecls =
+  (* TODO: it could be a bug with topological sorting here *)
+  sis @
+  List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls
+
+
 
 let wrap_plugin name = function
   | Skip -> id
@@ -667,10 +720,16 @@ let sig_type_decl_many_plugins ~loc si plugins_info declaration =
           wrap_plugin name args acc
         )
   in
+  let declaration =
+    (fst declaration,  List.map ~f:rename_params (snd declaration))
+  in
+
   match declaration with
   | Recursive, []      -> []
   | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
-  | Recursive, ts      -> do_mutal_types_sig ~loc plugins ts
+  | Recursive, ts      ->
+    (* Stdio.printf "Got %d declarations\n%!" (List.length ts); *)
+    do_mutal_types_sig ~loc si plugins ts
   | Nonrecursive, tdls ->
       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
 

@@ -151,6 +151,7 @@ and Cl :    (* class_expr *)
 and Sig :
   sig
     type t
+    val of_tdecls : loc:loc -> Ppxlib.type_declaration -> t
     val value : loc:loc -> name:string -> Typ.t -> t
     val class_: loc:loc -> name:string ->
       params: type_arg list ->

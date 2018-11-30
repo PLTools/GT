@@ -295,6 +295,7 @@ module Sig = struct
   include Sig
 
   type t = signature_item
+  let of_tdecls ~loc decl = Ast_helper.Sig.type_ ~loc Recursive [decl]
   let class_ ~loc  ~name ~params ?(virt=false)
       ?(wrap= (fun x -> x)) body =
     let virt = if virt then Virtual else Concrete in

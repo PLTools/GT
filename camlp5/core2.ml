@@ -162,18 +162,17 @@ let generate_sig tdecls loc =
   in
 
   let out =
-   List.flatten @@
-   List.map (fun (t,info) ->
-     let sis = <:sig_item< type $list:[t]$ >>  in
+     let ts = List.map fst tdecls in
+     let sis = <:sig_item< type $list:ts$ >>  in
      let caml_ast = Ast2pt.interf "asdf" [sis] in
      assert (List.length caml_ast  =  1);
      match (List.hd caml_ast).psig_desc with
-     | Psig_type (flg, [td]) ->
-       let copied = Migr.copy_type_declaration td in
+     | Psig_type (flg, tds) ->
+       let copied = List.map Migr.copy_type_declaration tds in
+       (* printf "copied length = %d\n%!" (List.length copied); *)
        (* let copied = td in *)
-       generator_f [sis] (Recursive, [copied])
+       generator_f [sis] (Recursive, copied)
      | _ -> assert false
-   ) tdecls
   in
 
   <:sig_item< declare $list:out$ end >>

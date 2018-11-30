@@ -78,9 +78,7 @@ let map_core_type ~onvar t =
     (* Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t; *)
     match t.ptyp_desc with
     | Ptyp_any -> t
-    | Ptyp_var name -> begin
-        Base.Option.value_map (onvar name) ~default:t ~f:id
-      end
+    | Ptyp_var name -> Base.Option.value (onvar name) ~default:t
     | Ptyp_constr (name, args) ->
       {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
     | Ptyp_tuple args ->
@@ -90,15 +88,18 @@ let map_core_type ~onvar t =
     | Ptyp_variant (rows,flg,opt) ->
       let rows = List.map rows ~f:(function
           | Rinherit t -> Rinherit (helper t)
-          | Rtag (name,attrs, flg, params) ->
-            let params = List.map params ~f:helper in
+          | Rtag (name,attrs, flg, ps) ->
+            (* Format.printf "got tag `%s`\n%!" name.txt; *)
+            let params = List.map ps ~f:helper in
             Rtag (name,attrs,flg, params)
         )
       in
       {t with ptyp_desc= Ptyp_variant (rows,flg,opt) }
     | _ -> failwith "not implemented"
   in
-  helper t
+  let ans = helper t in
+  (* Format.printf "helper returned `%a`\n%!" Pprintast.core_type ans; *)
+  ans
 
 let list_first_some ~f xs =
   List.fold_left xs ~init:None

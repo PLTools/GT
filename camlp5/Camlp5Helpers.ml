@@ -248,6 +248,7 @@ module Typ = struct
       | Ptyp_arrow (lab, l, r) -> arrow ~loc (helper l) (helper r)
       | Ptyp_constr ({txt;_}, ts) -> constr ~loc txt (List.map helper ts)
       | Ptyp_tuple ts -> <:ctyp< ( $list:(List.map helper ts)$ ) >>
+      | Ptyp_variant (_,_,_)
       | _ -> failwith "Not implemented: conversion from OCaml ast to Camlp5 Ast"
     in
     helper root_typ
@@ -323,7 +324,7 @@ module Str = struct
     in
     <:str_item< type $list:[t]$ >>
     (* TODO *)
-    (* assert false *)
+
   let single_value ~loc pat body =
     StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body ])
 
@@ -359,6 +360,42 @@ end
 
 module Sig = struct
   type t = MLast.sig_item
+  let of_tdecls ~loc td =
+    let open Ppxlib in
+    let tdPrm = HelpersBase.map_type_param_names td.ptype_params
+        ~f:(fun s -> named_type_arg ~loc s)
+    in
+    let tdDef =
+      match td.ptype_kind with
+      | Ptype_variant cds ->
+        let llslt = List.map (fun cd ->
+            let args =
+              match cd.pcd_args with
+              | Pcstr_record _ -> assert false
+              | Pcstr_tuple ts -> List.map Typ.from_caml ts
+            in
+            (loc, VaVal cd.pcd_name.txt, VaVal args, None)
+          ) cds
+        in
+        MLast.TySum (loc, Ploc.VaVal llslt)
+      | Ptype_abstract -> begin
+          match td.ptype_manifest with
+          | None -> assert false
+          | Some t -> Typ.from_caml t
+        end
+      | _ -> assert false
+
+    in
+    let t =
+      { tdNam = VaVal (loc, VaVal td.ptype_name.txt);
+        tdPrm = VaVal tdPrm;
+        tdPrv = VaVal false;
+        tdDef;
+        tdCon = VaVal []
+      }
+    in
+    <:sig_item< type $list:[t]$ >>
+
   let value ~loc ~name typ =
     SgVal (loc, Ploc.VaVal name, typ)
     (* let type_ ~loc recflg *)
