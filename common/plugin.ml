@@ -517,7 +517,7 @@ class virtual generator initial_args = object(self: 'self)
   method wrap_tr_function_str ~loc tdecl make_new_obj =
     Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
     Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")) )
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform0_gc")) )
       [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
       ; make_new_obj
       ; Exp.sprintf ~loc "subj"
@@ -1142,7 +1142,7 @@ class virtual with_inherit_arg = object(self: 'self)
     let body = make_gcata_of_class in
     Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
     Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform1_gc")))
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")))
       [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
       ; body
       ; Exp.sprintf ~loc "the_init"

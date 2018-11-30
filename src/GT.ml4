@@ -33,20 +33,18 @@ module Format = struct
 end
 
 type ('a, 'b) t = {gcata : 'a; plugins : 'b}
-let transform1_gc gcata make_obj inh subj =
+let transform_gc gcata make_obj inh subj =
   let rec obj = lazy (make_obj fself)
   and fself inh x = gcata (Lazy.force obj) inh x in
   fself inh subj
 
-let transform1 bundle = transform1_gc bundle.gcata
-
-let transform_gc gcata make_obj subj =
+let transform0_gc gcata make_obj subj =
   let rec obj = lazy (make_obj fself)
   and fself x = gcata (Lazy.force obj) () x in
   fself subj
 
-let transform  bundle = transform_gc bundle.gcata
-let transform0 bundle = transform_gc bundle.gcata
+let transform  bundle = transform_gc  bundle.gcata
+let transform0 bundle = transform0_gc bundle.gcata
 
 type comparison = LT | EQ | GT
 
@@ -223,27 +221,19 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
   {gcata   = gcata_list;
    plugins = object
                method show fa l =
-                 sprintf "[%s]" (transform_gc gcata_list (new @list[show] fa) l)
+                 sprintf "[%s]" (transform0_gc gcata_list (new @list[show] fa) l)
+               method html    fa   = transform0_gc gcata_list (new @list[html] fa)
+               method gmap    fa   = transform0_gc gcata_list (new @list[gmap] fa)
                method fmt fa inh l =
                  Format.fprintf inh "[@[%a@]]@,"
-                   (transform1_gc gcata_list (new @list[fmt] fa)) l
+                   (transform_gc gcata_list (new @list[fmt] fa)) l
 
-               method html    fa   =
-                 transform_gc gcata_list (new @list[html] fa)
-               method gmap    fa   =
-                 transform_gc gcata_list (new @list[gmap] fa)
-               method stateful fa   =
-                 transform1_gc gcata_list (new @list[stateful] fa)
-               method eval    fa   =
-                 transform1_gc gcata_list (new @list[eval] fa)
-               method eq      fa   =
-                 transform1_gc gcata_list (new @list[eq] fa)
-               method compare fa   =
-                 transform1_gc gcata_list (new @list[compare] fa)
-               method foldl   fa   =
-                 transform1_gc gcata_list (new @list[foldl] fa)
-               method foldr   fa  =
-                 transform1_gc gcata_list (new @list[foldr] fa)
+               method stateful fa  = transform_gc gcata_list (new @list[stateful] fa)
+               method eval     fa  = transform_gc gcata_list (new @list[eval] fa)
+               method eq       fa  = transform_gc gcata_list (new @list[eq] fa)
+               method compare  fa  = transform_gc gcata_list (new @list[compare] fa)
+               method foldl    fa  = transform_gc gcata_list (new @list[foldl] fa)
+               method foldr    fa  = transform_gc gcata_list (new @list[foldr] fa)
              end
   }
 
@@ -450,16 +440,17 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
               >) t =
   {gcata   = gcata_option;
    plugins = object
-               method show     fa = gcata_option (new @option[show] fself fa) ()
-               method fmt      fa = gcata_option (new @option[fmt] fself fa)
-               method html     fa = gcata_option (new @option[html] fself fa) ()
-               method gmap     fa = gcata_option (new @option[gmap] fself fa) ()
-               method stateful fa = gcata_option (new @option[stateful] fself fa)
-               method eval     fa = gcata_option (new @option[eval] fself fa)
-               method eq       fa = gcata_option (new @option[eq] fself fa)
-               method compare  fa = gcata_option (new @option[compare] fself fa)
-               method foldl    fa = gcata_option (new @option[foldl] fself fa)
-               method foldr    fa = gcata_option (new @option[foldr] fself fa)
+               method show     fa = transform0_gc gcata_option (new @option[show] fa)
+               method html     fa = transform0_gc gcata_option (new @option[html] fa)
+               method gmap     fa = transform0_gc gcata_option (new @option[gmap] fa)
+
+               method fmt      fa = transform_gc gcata_option (new @option[fmt] fa)
+               method stateful fa = transform_gc gcata_option (new @option[stateful] fa)
+               method eval     fa = transform_gc gcata_option (new @option[eval] fa)
+               method eq       fa = transform_gc gcata_option (new @option[eq] fa)
+               method compare  fa = transform_gc gcata_option (new @option[compare] fa)
+               method foldl    fa = transform_gc gcata_option (new @option[foldl] fa)
+               method foldr    fa = transform_gc gcata_option (new @option[foldr] fa)
              end
   }
 
@@ -549,16 +540,16 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               >) t =
   {gcata   = gcata_free;
    plugins = object
-       method show     fa = transform_gc gcata_free (new @free[show] fa)
-       method gmap     fa = transform_gc gcata_free (new @free[gmap] fa)
-       method html     fa = transform_gc  gcata_free (new @free[html] fa)
-       method fmt      fa = transform1_gc gcata_free (new @free[fmt] fa)
-       method eval     fa = transform1_gc gcata_free (new @free[eval]  fa)
-       method stateful fa = transform1_gc gcata_free (new @free[stateful] fa)
-       method eq       fa = transform1_gc gcata_free (new @free[eq] fa)
-       method compare  fa = transform1_gc gcata_free (new @free[compare] fa)
-       method foldl    fa = transform1_gc gcata_free (new @free[foldl] fa)
-       method foldr    fa = transform1_gc gcata_free (new @free[foldr] fa)
+       method show     fa = transform0_gc gcata_free (new @free[show] fa)
+       method gmap     fa = transform0_gc gcata_free (new @free[gmap] fa)
+       method html     fa = transform0_gc  gcata_free (new @free[html] fa)
+       method fmt      fa = transform_gc gcata_free (new @free[fmt] fa)
+       method eval     fa = transform_gc gcata_free (new @free[eval]  fa)
+       method stateful fa = transform_gc gcata_free (new @free[stateful] fa)
+       method eq       fa = transform_gc gcata_free (new @free[eq] fa)
+       method compare  fa = transform_gc gcata_free (new @free[compare] fa)
+       method foldl    fa = transform_gc gcata_free (new @free[foldl] fa)
+       method foldr    fa = transform_gc gcata_free (new @free[foldr] fa)
   end
   }
 
@@ -571,7 +562,6 @@ let gcata_pair tr inh = function (a, b) -> tr#c_Pair inh a b
 class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t =
   object
     method virtual c_Pair : 'inh -> 'a -> 'b -> 'syn
-    (* method t_pair fa fb = transform pair fa fb this *)
   end
 
 class ['a, 'b, 'self] show_pair_t fa fb _ =
@@ -667,8 +657,8 @@ let pair:
               >) t =
   {gcata   = gcata_pair;
    plugins =
-     let tr  obj subj     = transform_gc  gcata_pair obj subj in
-     let tr1 obj inh subj = transform1_gc gcata_pair obj inh subj in
+     let tr  obj subj     = transform0_gc gcata_pair obj subj in
+     let tr1 obj inh subj = transform_gc  gcata_pair obj inh subj in
      object
        method show     fa fb = tr  (new @pair[show] fa fb)
        method html     fa fb = tr  (new @pair[html] fa fb)
@@ -880,8 +870,8 @@ let triple :
       >) t =
   {gcata   = gcata_triple;
    plugins =
-     let tr  obj subj     = transform_gc  gcata_triple obj subj in
-     let tr1 obj inh subj = transform1_gc gcata_triple obj inh subj in
+     let tr  obj subj     = transform0_gc  gcata_triple obj subj in
+     let tr1 obj inh subj = transform_gc gcata_triple obj inh subj in
      object
        method show     fa fb fc = tr  (new @triple[show] fa fb fc)
        method html     fa fb fc = tr  (new @triple[html] fa fb fc)
@@ -985,8 +975,8 @@ let tuple4 :
       >) t =
   {gcata   = gcata_tuple4;
    plugins =
-     let tr  obj subj     = transform_gc  gcata_tuple4 obj subj in
-     let tr1 obj inh subj = transform1_gc gcata_tuple4 obj inh subj in
+     let tr  obj subj     = transform0_gc gcata_tuple4 obj subj in
+     let tr1 obj inh subj = transform_gc  gcata_tuple4 obj inh subj in
      object
        method html     fa fb fc fd = tr  (new @tuple4[html] fa fb fc fd)
        method fmt      fa fb fc fd = tr1 (new @tuple4[fmt]  fa fb fc fd)
@@ -1018,19 +1008,28 @@ class ['a, 'self] html_ref_t fa _ =
     constraint 'inh = unit
     method c_ref () a = fa a
   end
+class ['a, 'self] show_ref_t fa _ =
+  object
+    inherit [ 'inh, 'a, 'syn
+            , 'inh, 'self, 'syn] ref_t
+    constraint 'syn = string
+    constraint 'inh = unit
+    method c_ref () a = fa a
+  end
 
 let ref:
     ( ('ia, 'a, 'sa, 'inh, _, 'syn ) #ref_t ->
       'inh -> 'a ref -> 'syn
     , < fmt     : (Format.formatter -> 'a -> unit) ->
                   Format.formatter -> 'a ref -> unit;
-        html    : ('a -> HTML.er) ->
-                  'a ref -> HTML.er;
+        html    : ('a -> HTML.er) ->  'a ref -> HTML.er;
+        show    : ('a -> string) ->  'a ref -> string;
       >) t =
   {gcata   = gcata_ref;
    plugins = object
-     method fmt     fa = transform1_gc gcata_ref (new @ref[fmt]  fa)
-     method html    fa = transform_gc  gcata_ref (new @ref[html] fa)
+     method show    fa = transform0_gc gcata_ref (new @ref[show] fa)
+     method html    fa = transform0_gc gcata_ref (new @ref[html] fa)
+     method fmt     fa = transform_gc  gcata_ref (new @ref[fmt]  fa)
   end
 }
 (*** arrays *****************************************************************)
