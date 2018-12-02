@@ -2,6 +2,40 @@ open Base
 open Ppxlib
 open Ast_builder.Default
 
+let meint ~loc n =
+  pexp_apply ~loc
+    (Ast_builder.Default.pexp_ident ~loc
+       (Located.mk ~loc (Ldot (Lident "Exp", "int")) ) )
+
+    [ Labelled "loc", pexp_ident ~loc (Located.mk ~loc (Lident "loc"))
+    ; Nolabel, eint ~loc n]
+
+let meident ~loc longident =
+  pexp_apply ~loc
+    (Ast_builder.Default.pexp_ident ~loc
+       (Located.mk ~loc (Ldot (Lident "Exp", "ident")) ) )
+
+    [ Labelled "loc", pexp_ident ~loc (Located.mk ~loc (Lident "loc"))
+    ; Nolabel, pexp_ident ~loc (Located.mk ~loc longident) ]
+
+let meapply ~loc (e0) args : expression =
+  List.fold_left args ~init:e0
+    ~f:(fun (acc: expression) e ->
+        pexp_apply ~loc
+          (Ast_builder.Default.pexp_ident ~loc
+             (Located.mk ~loc (Ldot (Lident "Exp", "apply1")) ) )
+
+          [ Labelled "loc", pexp_ident ~loc (Located.mk ~loc (Lident "loc"))
+          ; Nolabel, (acc:expression)
+          ; e ]
+
+    )
+
+let mpint ~loc n =
+  pexp_apply ~loc
+    (Ast_builder.Default.pexp_ident ~loc (Located.mk ~loc (Lident "int")))
+    [ Nolabel, eint ~loc n]
+
 class expression_lifters loc = object
   inherit [expression] Ppxlib_traverse_builtins.lift
   method record flds =
@@ -15,7 +49,7 @@ class expression_lifters loc = object
        | [] -> None
        | l  -> Some (pexp_tuple ~loc l))
   method tuple     l = pexp_tuple ~loc l
-  method int       i = eint       ~loc i
+  method int       i = eint ~loc i
   method int32     i = eint32     ~loc i
   method int64     i = eint64     ~loc i
   method nativeint i = enativeint ~loc i

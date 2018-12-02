@@ -9,9 +9,12 @@ module Make(M : sig
     val cast : extension -> result
     val location : location -> result
     val attributes : (location -> result) option
+    val meint : loc:location -> Base.int -> result
+    val meident : loc: location -> Longident.t -> result
+    val meapply : loc:location -> result -> (arg_label * result) list -> result
     class std_lifters : location -> [result] Ppxlib_traverse_builtins.std_lifters
   end) = struct
-  let lift loc = object
+  let lift loc = object(self)
     inherit [M.result] Ast_traverse.lift as super
     inherit! M.std_lifters loc
 
@@ -26,8 +29,16 @@ module Make(M : sig
       | Some f -> assert_no_attributes x; f loc
 
     method! expression e =
+      let loc = e.pexp_loc in
       match e.pexp_desc with
       | Pexp_extension ({ txt = "e"; _}, _ as ext)-> M.cast ext
+      | Pexp_constant (Pconst_integer (s,_)) ->
+        M.meint ~loc (int_of_string s)
+      | Pexp_ident {txt; _} ->
+        M.meident ~loc txt
+      | Pexp_apply (e, args) ->
+        M.meapply ~loc (self#expression e)
+          (List.map (fun (l,e) -> (l, self#expression e)) args)
       | _ -> super#expression e
 
     method! pattern p =
@@ -71,6 +82,11 @@ module Expr = Make(struct
     let location loc = evar ~loc "loc"
     let attributes = None
     class std_lifters = Lifters.expression_lifters
+
+    let meint = Lifters.meint
+    let meident = Lifters.meident
+    let meapply = Lifters.meapply
+
     let cast ext =
       match snd ext with
       | PStr [{ pstr_desc = Pstr_eval (e, attrs); _}] ->
@@ -81,29 +97,23 @@ module Expr = Make(struct
           "expression expected"
   end)
 
-module Patt = Make(struct
-    type result = pattern
-    let location loc = ppat_any ~loc
-    let attributes = Some (fun loc -> ppat_any ~loc)
-    class std_lifters = Lifters.pattern_lifters
-    let cast ext =
-      match snd ext with
-      | PPat (p, None) -> p
-      | PPat (_, Some e) ->
-        Location.raise_errorf ~loc:e.pexp_loc
-          "guard not expected here"
-      | _ ->
-        Location.raise_errorf ~loc:(loc_of_attribute ext)
-          "pattern expected"
-  end)
-
-let notify fmt  =
-  Printf.ksprintf (fun s ->
-      let _cmd = Printf.sprintf "notify-send \"%s\"" s in
-      let _:int = Caml.Sys.command _cmd in
-      ()
-    ) fmt
-
+(* module Patt = Make(struct
+ *     type result = pattern
+ *     let location loc = ppat_any ~loc
+ *     let attributes = Some (fun loc -> ppat_any ~loc)
+ *     class std_lifters = Lifters.pattern_lifters
+ *
+ *     let meint ~loc _ = assert false
+ *     let cast ext =
+ *       match snd ext with
+ *       | PPat (p, None) -> p
+ *       | PPat (_, Some e) ->
+ *         Location.raise_errorf ~loc:e.pexp_loc
+ *           "guard not expected here"
+ *       | _ ->
+ *         Location.raise_errorf ~loc:(loc_of_attribute ext)
+ *           "pattern expected"
+ *   end) *)
 
 let () =
   let extensions ctx lifter =
@@ -124,10 +134,10 @@ let () =
     ]
   in
   let extensions =
-    extensions Expression Expr.lift @
-    extensions Pattern    Patt.lift
+    extensions Expression Expr.lift (* @
+     * extensions Pattern    Patt.lift *)
   in
-  notify "registering mymetaquot";
   Driver.register_transformation
     "mymetaquot"
     ~extensions
+

@@ -1,2 +1,1 @@
-let x = [%expr 1+2] 
-
+let x = [%expr 2]

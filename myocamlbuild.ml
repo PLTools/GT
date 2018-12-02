@@ -51,12 +51,9 @@ let () = dispatch (fun hook ->
          ; A"-ppx"; A"ppx/pp_gt.native --as-ppx"
          ]);
 
-    flag ["link";    "native"; "use_mymetaquot"]   (S [
-        A"-linkall"
-      (* ; A"mymetaquot/mymetaquot.cmxa" *)
-      ; A"-package"; A"ppxlib.runner"
-      (* ; A"metaquot_lifters/ppxlib_metaquot_lifters.cmxa"
-       * ; A"metaquot/ppxlib_metaquot.cmxa" *)
+    flag ["link";    "native"; "use_mymetaquot"]   (S [A"-linkall"
+      (* BEWARE of the following line. It can make your PPX non-loadable *)
+      (* ; A"-package"; A"ppxlib.runner" *)
       ]);
 
     m4_rules ();

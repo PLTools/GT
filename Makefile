@@ -45,6 +45,7 @@ add_camlp5: add_common
 camlp5: add_camlp5 compile
 
 add_ppx:
+	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 ppx: add_common add_ppx compile
 

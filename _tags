@@ -30,6 +30,7 @@ true: debug, bin_annot, short_paths
 <mymetaquot/my_metaquot.ml> or <mymetaquot/lifters.ml>: package(ppxlib.metaquot)
 <mymetaquot/mymetaquot.cm*a>: linkall
 <mymetaquot/pp_mymetaquot.*>: use_mymetaquot
+<mymetaquot/*.*>: linkall
 ###########################################
 # Regression tests
 
