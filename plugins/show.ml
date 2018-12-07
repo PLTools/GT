@@ -81,7 +81,7 @@ class g args = object(self)
                Exp.app ~loc acc
                  (self#app_transformation_expr ~loc
                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
-                    (Exp.assert_false ~loc)
+                    (Exp.unit ~loc)
                     (Exp.ident ~loc name)
                  )
              )

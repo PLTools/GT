@@ -63,22 +63,16 @@ class virtual generator initial_args = object(self: 'self)
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
   val reinterpreted_args =
     let check_name s =
-      try Caml.Scanf.sscanf s "_%d" (fun n -> Some n)
-      with Caml.Scanf.Scan_failure _ ->
-        (* Stdio.printf "can't parse it\n%!"; *)
-        None
+      try Caml.Scanf.sscanf s "_%d" Option.some
+      with Caml.Scanf.Scan_failure _ ->  None
     in
-    let ans =
-      List.fold_left initial_args ~init:[]
-        ~f:(fun acc (lident,expr) ->
-            match lident with
-            | Lident s -> Option.value_map (check_name s) ~default:acc
-                            ~f:(fun n -> (n,expr) :: acc)
-            | _ -> acc
-          )
-    in
-    (* printf "Total args found for plugin : %d\n%!"  (List.length ans); *)
-    ans
+    List.fold_left initial_args ~init:[]
+      ~f:(fun acc (lident,expr) ->
+          match lident with
+          | Lident s -> Option.value_map (check_name s) ~default:acc
+                          ~f:(fun n -> (n,expr) :: acc)
+          | _ -> acc
+        )
 
   method show_args =
     (* Stdio.printf "showing %d args\n%!" (List.length reinterpreted_args); *)
@@ -332,6 +326,8 @@ class virtual generator initial_args = object(self: 'self)
         let args,fixident =
           match cid.txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal
+
+
             ->
             (* Only Lident because we ignore types with same name but from another module *)
             let extra_args =
@@ -528,15 +524,8 @@ class virtual generator initial_args = object(self: 'self)
      * applies `fself` by default. Need to refactor and remove this function *)
     map_type_param_names tdecl.ptype_params ~f:(Exp.sprintf ~loc "f%s")
 
-  (* let <plugin-name> fa ... fz = <this body> *)
-  method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
-    self#wrap_tr_function_str ~loc tdecl
-      (  Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
-         (
-          List.map rec_typenames ~f:(Exp.sprintf ~loc "%s_%s" self#plugin_name)
-          @ (self#apply_fas_in_new_object ~loc tdecl)
-         )
-      )
+  method virtual make_trans_function_body: loc:loc -> ?rec_typenames: string list ->
+    string -> type_declaration -> Exp.t
 
   method make_trans_functions: loc:loc ->
     is_rec:bool -> string list -> type_declaration list -> Str.t
@@ -700,8 +689,10 @@ class virtual generator initial_args = object(self: 'self)
         Exp.fun_list ~loc
           (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
         Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
+
         Exp.app ~loc
-          (Exp.app_list ~loc
+          (self#app_extra_unit ~loc @@
+           Exp.app_list ~loc
              (Exp.field ~loc (Exp.sprintf ~loc "%s" @@ Naming.fix_result tdecl)
                 (lident @@ Naming.trf_field
                    ~plugin:self#plugin_name tdecl.ptype_name.txt)) @@
@@ -709,6 +700,8 @@ class virtual generator initial_args = object(self: 'self)
           )
           (Exp.sprintf ~loc "subj")
       )
+
+  method virtual app_extra_unit: loc:loc -> Exp.t -> Exp.t
 
   method make_trf_field_tdecl ~loc tdecl =
     let name = tdecl.ptype_name.txt in
@@ -841,7 +834,7 @@ class virtual generator initial_args = object(self: 'self)
     [ `Normal of string | `Poly of string ] ->
     (* pattern variable, label name, typ of label *)
     (string * string * core_type) list ->
-    label_declaration list -> 
+    label_declaration list ->
     Exp.t
 
   method virtual on_tuple_constr : loc:loc ->
@@ -970,10 +963,7 @@ class virtual generator initial_args = object(self: 'self)
                                 (Ldot (Lident "GT",
                                        Printf.sprintf "tuple%d" (List.length params))))
                           )
-                    (* [%expr let open GT in
-                     *   [%e  Exp.sprintf "tuple%d" (List.length params)
-                     *   ].GT.plugins ] *)
-                    self#plugin_name
+                          self#plugin_name
                        )
                  ~f:(fun left typ ->
                      self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
@@ -1001,8 +991,8 @@ class virtual generator initial_args = object(self: 'self)
                        self#plugin_name
                     )
               in
-              self#abstract_trf ~loc (fun einh esubj ->
-                  self#app_transformation_expr ~loc
+              self#fancy_abstract_trf ~loc (fun einh esubj ->
+                  self#fancy_app ~loc
                     (List.fold_left params
                        ~init
                        ~f:(fun left typ ->
@@ -1060,11 +1050,14 @@ class virtual generator initial_args = object(self: 'self)
          ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
 end
 
+(* ******************************************************************************* *)
+
+
 (** Base plugin class where transformation functions doesn't use inherited
     attribute.
     See {!Show} and {!Gmap} plugin for examples.
   *)
-class virtual no_inherit_arg = object(self: 'self)
+class virtual no_inherit_arg0 = object(self: 'self)
 
   method virtual plugin_name: string
   method virtual default_syn : loc:loc ->
@@ -1108,9 +1101,9 @@ class virtual no_inherit_arg = object(self: 'self)
     let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc subj_t syn_t
 
-  method abstract_trf ~loc k =
-    Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
-    k (Exp.assert_false ~loc) (Exp.ident ~loc "subj")
+  (* method abstract_trf ~loc k =
+   *   Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
+   *   k (Exp.unit ~loc) (Exp.ident ~loc "subj") *)
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
 
   method app_transformation_expr ~loc trf (inh: Exp.t) subj =
@@ -1126,7 +1119,7 @@ class virtual no_inherit_arg = object(self: 'self)
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
     (string * string * core_type) list ->
-    label_declaration list -> 
+    label_declaration list ->
     Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe _ _ _ ->
     failwithf "handling record constructors in plugin `%s`" self#plugin_name ()
 
@@ -1135,7 +1128,7 @@ end
 (** Base plugin class where transformation functions receive inherited attribute for
     type parameter *)
 class virtual with_inherit_arg = object(self: 'self)
-  inherit no_inherit_arg as super
+  inherit no_inherit_arg0 as super
 
   method wrap_tr_function_str ~loc (tdecl: type_declaration) make_gcata_of_class =
     (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
@@ -1171,17 +1164,74 @@ class virtual with_inherit_arg = object(self: 'self)
     Typ.arrow ~loc (self#default_inh ~loc tdecl)
       (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
 
-  method! abstract_trf ~loc k =
+  method abstract_trf ~loc k =
     Exp.fun_list ~loc [ Pat.sprintf ~loc "inh"; Pat.sprintf ~loc "subj" ]  @@
     k (Exp.ident ~loc "inh") (Exp.ident ~loc "subj")
     (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+
+  method fancy_abstract_trf ~loc k =
+    Exp.fun_list ~loc [ Pat.sprintf ~loc "inh"; Pat.sprintf ~loc "subj" ]  @@
+    k (Exp.ident ~loc "inh") (Exp.ident ~loc "subj")
 
   method! app_transformation_expr ~loc trf inh subj =
     (* we ignore inherited argument by default *)
     Exp.app_list ~loc trf [inh; subj]
 
+  method fancy_app ~loc trf (inh: Exp.t) subj =
+    Exp.app_list ~loc trf [inh; subj]
+
   method! app_gcata ~loc egcata = egcata
 
+  (* let <plugin-name> fa ... fz = <this body> *)
+  method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
+    self#wrap_tr_function_str ~loc tdecl
+      (  Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
+         (
+           List.map rec_typenames ~f:(fun name ->
+               Exp.sprintf ~loc "%s_%s" self#plugin_name name)
+          @ (self#apply_fas_in_new_object ~loc tdecl)
+         )
+      )
+
+  method app_extra_unit ~(loc: loc) (e: Exp.t) = e
+
+end
+
+
+(** Base plugin class where transformation functions doesn't use inherited
+    attribute.
+    See {!Show} and {!Gmap} plugin for examples.
+  *)
+class virtual no_inherit_arg = object(self: 'self)
+    inherit with_inherit_arg
+
+  (* let <plugin-name> fa ... fz = <this body> *)
+  method! make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
+    self#wrap_tr_function_str ~loc tdecl
+      (  Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
+         (
+           List.map rec_typenames ~f:(fun name ->
+               Exp.fun_ ~loc (Pat.unit ~loc) @@
+               Exp.sprintf ~loc "%s_%s" self#plugin_name name)
+          @ (self#apply_fas_in_new_object ~loc tdecl)
+         )
+      )
+
+    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
+
+  method! fancy_app ~loc trf (inh: Exp.t) subj = Exp.app ~loc trf subj
+
+  method fancy_abstract_trf ~loc k =
+    Exp.fun_list ~loc [ Pat.unit ~loc; Pat.sprintf ~loc "subj" ]  @@
+    k (Exp.unit ~loc) (Exp.ident ~loc "subj")
+
+
+  method compose_apply_transformations ~loc ~left right (typ:core_type) =
+    (* Exp.app ~loc left (Exp.fun_ ~loc (Pat.unit ~loc) right) *)
+    (* Exp.app ~loc  (Exp.app ~loc left @@ Exp.unit ~loc) right *)
+      Exp.app ~loc left  (Exp.app ~loc right @@ Exp.unit ~loc)
+
+  method! app_extra_unit ~loc e = Exp.app ~loc e (Exp.unit ~loc)
 end
 
 end
