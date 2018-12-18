@@ -716,21 +716,6 @@ class virtual generator initial_args = object(self: 'self)
          )
       ]
   method make_universal_types ~loc ~mut_names tdecls =
-    (* let obj_typs = List.fold_right tdecls
-     *     ~init:[]
-     *     ~f:(fun tdecl acc ->
-     *         let t =
-     *           Typ.arrow ~loc (Typ.ident ~loc "unit") @@
-     *           self#simple_trf_funcs ~loc tdecl @@
-     *           Typ.(constr ~loc
-     *                (lident @@ self#make_class_name ~is_mutal:true tdecl)
-     *                (self#plugin_class_params tdecl
-     *                 |> List.map ~f:(Typ.of_type_arg ~loc))
-     *               )
-     *         in
-     *         List.Assoc.add acc ~equal:String.equal tdecl.ptype_name.txt (tdecl, t)
-     *   )
-     * in *)
     let prereq_typ tl =
       Typ.arrow ~loc
         (Typ.ident ~loc @@
@@ -1225,6 +1210,11 @@ class virtual no_inherit_arg = object(self: 'self)
     Exp.fun_list ~loc [ Pat.unit ~loc; Pat.sprintf ~loc "subj" ]  @@
     k (Exp.unit ~loc) (Exp.ident ~loc "subj")
 
+  method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+    let subj_t = Option.value subj_t
+        ~default:(Typ.use_tdecl tdecl) in
+    let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
+    Typ.arrow ~loc subj_t syn_t
 
   method compose_apply_transformations ~loc ~left right (typ:core_type) =
     (* Exp.app ~loc left (Exp.fun_ ~loc (Pat.unit ~loc) right) *)
