@@ -54,7 +54,8 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
 
 (** Base class for all plugins. Implements {!Plugin_intf.typ_g} interface
 
-    Is subclassed by {!with_inherit_arg} and {!no_inherite_arg}. Use them for convenience.
+    Is subclassed by {!with_inherit_arg} and {!no_inherite_arg}. Use them for
+    convenience.
 *)
 class virtual generator initial_args = object(self: 'self)
   inherit Intf.g

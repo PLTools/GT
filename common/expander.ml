@@ -538,23 +538,42 @@ let make_gcata_str ~loc tdecl =
 let make_heading_gen ~loc wrap tdecl = []
 
 
-let collect_plugins_str ~loc tdecl plugins : Str.t =
+let collect_plugins_str ~loc tdecl plugins : Str.t list =
+  let wrap tdecl fname =
+    let fs = map_type_param_names tdecl.ptype_params ~f:id in
+    let ans =
+      List.fold_left fs ~init:(Exp.ident ~loc fname)
+        ~f:(fun acc name -> Exp.app ~loc acc (Exp.ident ~loc name))
+    in
+    let ans = Exp.app ~loc ans (Exp.unit ~loc) in
+    List.fold_right fs ~init:ans
+      ~f:(fun name acc -> Exp.fun_ ~loc (Pat.var ~loc name) acc)
+  in
   let plugin_fields =
     List.map plugins ~f:(fun p ->
+        let fname = p#make_trans_function_name tdecl in
         Cf.method_concrete ~loc p#trait_name @@
-        if p#need_inh_attr
-        then Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl
-        else
+        if p#need_inh_attr then Exp.ident ~loc fname
+        else wrap tdecl fname
       )
   in
 
   let tname = tdecl.ptype_name.txt in
-  Str.single_value ~loc (Pat.sprintf ~loc "%s" tname) @@
+
+  (Str.single_value ~loc (Pat.sprintf ~loc "%s" tname) @@
   Exp.record ~loc
     [ Ldot (lident "GT", "gcata"), Exp.sprintf ~loc "gcata_%s" tname
     ; Ldot (lident "GT", "plugins"), Exp.object_ ~loc @@ class_structure
         ~self:(Pat.any ~loc) ~fields:plugin_fields
-]
+    ])
+  :: (List.filter_map plugins ~f:(fun p ->
+      if p#need_inh_attr then None else
+        let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
+        Option.some @@
+        Str.single_value ~loc
+          (Pat.sprintf ~loc "%s" fname)
+          (wrap tdecl fname)
+    ))
 
 let collect_plugins_sig ~loc tdecl plugins =
   Sig.value ~loc ~name:tdecl.ptype_name.txt @@
@@ -610,7 +629,7 @@ let do_typ ~loc sis plugins is_rec tdecl =
     [ sis
     ; [intf_class; gcata]
     ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
-    ; [ collect_plugins_str ~loc tdecl plugins ]
+    ; collect_plugins_str ~loc tdecl plugins
     ]
 
 module G = Graph.Persistent.Digraph.Concrete(String)
@@ -676,7 +695,7 @@ let do_mutal_types ~loc sis plugins tdecls =
   (List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])) @
   catas @
   List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls_new) @
-  List.map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
+  List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
 
 
 (* for signatures *)

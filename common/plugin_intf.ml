@@ -96,6 +96,8 @@ class virtual ['loc, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = object
     loc:'loc ->
     is_rec:bool ->
     Ppxlib.type_declaration list -> 'str list
+
+  method virtual need_inh_attr : bool
 end
 
 (** Functor that takes AST construction functions for a specific backend and

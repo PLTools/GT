@@ -47,6 +47,7 @@ let transform  bundle = transform_gc  bundle.gcata
 let transform0 bundle = transform0_gc bundle.gcata
 
 let lift f _ = f
+let id x  = x
 
 type comparison = LT | EQ | GT
 
