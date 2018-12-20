@@ -479,6 +479,8 @@ class virtual generator initial_args = object(self: 'self)
 
   method wrap_tr_function_typ (typ: core_type) = typ
 
+  method virtual long_trans_function_typ: loc:loc -> type_declaration -> Typ.t
+
   method make_trans_function_typ ~loc tdecl =
     let type_ = self#make_RHS_typ_of_transformation ~loc tdecl in
     let names = map_type_param_names tdecl.ptype_params ~f:id in
@@ -509,15 +511,6 @@ class virtual generator initial_args = object(self: 'self)
       (Naming.trait_class_name_for_typ ~trait:self#plugin_name
          tdecl.ptype_name.txt)
       (if is_mutal then "_stub" else "")
-
-  method wrap_tr_function_str ~loc tdecl make_new_obj =
-    Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
-    Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform0_gc")) )
-      [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
-      ; make_new_obj
-      ; Exp.sprintf ~loc "subj"
-      ]
 
   method apply_fas_in_new_object ~loc tdecl =
     (* very similar to self#make_inherit_args_for_alias but the latter
@@ -709,7 +702,7 @@ class virtual generator initial_args = object(self: 'self)
       ~name:(Naming.typ1_for_class_arg ~plugin:self#plugin_name name)
       [lab_decl ~loc (Naming.trf_field name ~plugin:self#plugin_name)
          false
-         (let t = self#make_trans_function_typ ~loc tdecl in
+         (let t = self#long_trans_function_typ ~loc tdecl in
           match typ_vars_of_typ t with
           | [] -> t
           | xs -> Typ.poly ~loc xs t
@@ -738,22 +731,6 @@ class virtual generator initial_args = object(self: 'self)
                              |> List.map ~f:(Typ.of_type_arg ~loc))
                          )
                  in
-                 (* let part1 =
-                  *   Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) part1
-                  * in *)
-
-                 (* let t = List.fold_right obj_typs
-                  *     ~init:part1
-                  *     ~f:(fun (key,(other_tdecl, otyp)) acc ->
-                  *         (\* we need to try specialize [other_tdecl] using its
-                  *            occurances in [tdecl] *\)
-                  *         (\* TODO: rewrite this piece of code *\)
-                  *         Typ.arrow ~loc
-                  *           (Typ.sprintf ~loc "%s"  @@
-                  *            Naming.typ1_for_class_arg ~plugin:self#plugin_name key)
-                  *           acc
-                  *       )
-                  * in *)
                  let t = prereq_typ part1 in
                  match typ_vars_of_typ t with
                  | [] -> t
@@ -761,16 +738,7 @@ class virtual generator initial_args = object(self: 'self)
                end
             ]
         ]
-      ) (* @ [
-     *   Str.tdecl_record ~loc ~params:[]
-     *     ~name:(Naming.fix_result_record self#plugin_name tdecls) @@
-     *   List.map tdecls ~f:(fun tdecl ->
-     *       lab_decl ~loc (Naming.trf_function self#plugin_name tdecl)
-     *         false
-     *         Typ.(ident ~loc @@
-     *              Naming.typ1_for_class_arg ~plugin:self#plugin_name tdecl.ptype_name.txt)
-     *     )
-     * ] *)
+      )
 
   (* method specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
    *   let (_:type_declaration) = tdecl in
@@ -1026,9 +994,11 @@ class virtual generator initial_args = object(self: 'self)
   method compose_apply_transformations ~loc ~left right typ =
     Exp.app ~loc left right
 
+  method virtual fancy_abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
   method virtual app_gcata: loc:loc -> Exp.t -> Exp.t
   method virtual make_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
-  (* method virtual default_syn  : loc:loc -> Ppxlib.type_declaration -> Typ.t *)
+  method virtual long_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
+
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
 
   method virtual make_RHS_typ_of_transformation: loc:AstHelpers.loc ->
@@ -1051,18 +1021,13 @@ class virtual no_inherit_arg0 = object(self: 'self)
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
   method virtual syn_of_param: loc:loc -> string -> Typ.t
   method virtual inh_of_param: type_declaration -> string -> Typ.t
+  method virtual make_trans_function_typ: loc:loc -> type_declaration -> Typ.t
 
   method use_tdecl = Typ.use_tdecl
 
   (* almost the same as `make_typ_of_class_argument` *)
   method make_typ_of_self_trf ~loc tdecl =
-    let openize_poly typ =
-      let ans = Typ.from_caml typ in
-      (* let is_poly = is_polyvariant_tdecl tdecl in
-       * if is_poly then Typ.openize ~loc ans else *)
-        ans
-    in
-
+    let openize_poly typ = Typ.from_caml typ in
     let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
     let syn_t  = self#default_syn ~loc tdecl in
     Typ.(arrow ~loc subj_t @@ syn_t)
@@ -1108,6 +1073,20 @@ class virtual no_inherit_arg0 = object(self: 'self)
     Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe _ _ _ ->
     failwithf "handling record constructors in plugin `%s`" self#plugin_name ()
 
+  method wrap_tr_function_str ~loc (tdecl: type_declaration) make_gcata_of_class =
+    (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
+    let body = make_gcata_of_class in
+    Exp.fun_list ~loc [ Pat.sprintf ~loc "inh0"; Pat.sprintf ~loc "subj"] @@
+    Exp.app_list ~loc
+      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")))
+      [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
+      ; body
+      ; Exp.sprintf ~loc "inh0"
+      ; Exp.sprintf ~loc "subj"
+      ]
+
+  (* Is not very composable but this is olny difference between plugins now *)
+  method virtual need_inh_attr : bool
 end
 
 (** Base plugin class where transformation functions receive inherited attribute for
@@ -1115,20 +1094,13 @@ end
 class virtual with_inherit_arg = object(self: 'self)
   inherit no_inherit_arg0 as super
 
-  method wrap_tr_function_str ~loc (tdecl: type_declaration) make_gcata_of_class =
-    (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)
-    let body = make_gcata_of_class in
-    Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
-    Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")))
-      [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (* TODO: name *)
-      ; body
-      ; Exp.sprintf ~loc "the_init"
-      ; Exp.sprintf ~loc "subj"
-      ]
+  method need_inh_attr = true
+
 
   method! make_typ_of_self_trf ~loc tdecl =
     Typ.arrow ~loc (self#default_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl)
+
+  method long_typ_of_self_trf ~loc tdecl = self#make_typ_of_self_trf ~loc tdecl
 
   (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
    *   fot a type ('a,'b,....'z) being generated
@@ -1180,6 +1152,8 @@ class virtual with_inherit_arg = object(self: 'self)
 
   method app_extra_unit ~(loc: loc) (e: Exp.t) = e
 
+  method long_trans_function_typ ~(loc:loc) (tdecl: type_declaration) : Typ.t =
+    self#make_trans_function_typ ~loc tdecl
 end
 
 
@@ -1188,7 +1162,16 @@ end
     See {!Show} and {!Gmap} plugin for examples.
   *)
 class virtual no_inherit_arg = object(self: 'self)
-    inherit with_inherit_arg
+  inherit with_inherit_arg
+
+  method need_inh_attr = false
+
+  method! long_typ_of_self_trf ~loc tdecl =
+    (* almost copy-paste of inherit_arg0 class*)
+    let openize_poly typ = Typ.from_caml typ in
+    let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
+    let syn_t  = self#default_syn ~loc tdecl in
+    Typ.(arrow ~loc subj_t @@ syn_t)
 
   (* let <plugin-name> fa ... fz = <this body> *)
   method! make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
@@ -1201,8 +1184,6 @@ class virtual no_inherit_arg = object(self: 'self)
           @ (self#apply_fas_in_new_object ~loc tdecl)
          )
       )
-
-    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
 
   method! fancy_app ~loc trf (inh: Exp.t) subj = Exp.app ~loc trf subj
 
@@ -1222,6 +1203,28 @@ class virtual no_inherit_arg = object(self: 'self)
       Exp.app ~loc left  (Exp.app ~loc right @@ Exp.unit ~loc)
 
   method! app_extra_unit ~loc e = Exp.app ~loc e (Exp.unit ~loc)
+
+  method! long_trans_function_typ ~loc tdecl =
+    let type_ = self#make_RHS_typ_of_transformation ~loc tdecl in
+    let type_ = Typ.arrow ~loc (Typ.ident ~loc "unit") type_ in
+    let names = map_type_param_names tdecl.ptype_params ~f:id in
+
+    List.fold_right names ~init:type_
+      ~f:(fun name acc ->
+          Typ.(arrow ~loc (ident ~loc "unit") @@
+               arrow ~loc (var ~loc name) (self#syn_of_param ~loc name)
+              )
+        )
+
+  (* method wrap_tr_function_str ~loc tdecl make_new_obj =
+   *   Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
+   *   Exp.app_list ~loc
+   *     (Exp.of_longident ~loc (Ldot (Lident "GT", "transform0_gc")) )
+   *     [ Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt (\* TODO: name *\)
+   *     ; make_new_obj
+   *     ; Exp.sprintf ~loc "subj"
+   *     ] *)
+
 end
 
 end

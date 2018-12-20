@@ -46,6 +46,8 @@ let transform0_gc gcata make_obj subj =
 let transform  bundle = transform_gc  bundle.gcata
 let transform0 bundle = transform0_gc bundle.gcata
 
+let lift f _ = f
+
 type comparison = LT | EQ | GT
 
 let chain_compare x f =
@@ -990,7 +992,7 @@ class virtual ['ia,'a,'sa, 'inh, 'e, 'syn] ref_t =
 object
   method virtual c_ref : 'inh -> 'a -> 'syn
 end
-let gcata_ref tr inh r = tr#c_ref inh !r 
+let gcata_ref tr inh r = tr#c_ref inh !r
 
 class ['a, 'self] fmt_ref_t fa _ =
   object
@@ -1259,5 +1261,3 @@ let foldl   t = t.plugins#foldl
 let foldr   t = t.plugins#foldr
 let eq      t = t.plugins#eq
 let compare t = t.plugins#compare
-
-

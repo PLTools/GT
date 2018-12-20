@@ -541,8 +541,11 @@ let make_heading_gen ~loc wrap tdecl = []
 let collect_plugins_str ~loc tdecl plugins : Str.t =
   let plugin_fields =
     List.map plugins ~f:(fun p ->
-      Cf.method_concrete ~loc p#trait_name @@
-      Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl)
+        Cf.method_concrete ~loc p#trait_name @@
+        if p#need_inh_attr
+        then Exp.sprintf ~loc "%s" @@ p#make_trans_function_name tdecl
+        else
+      )
   in
 
   let tname = tdecl.ptype_name.txt in
@@ -788,7 +791,7 @@ let str_type_ext_many_plugins ~loc si plugins_info extension =
    *        (List.map ~f:fst extension.ptyext_params)
    *     ) :: meths
    * in
-   * 
+   *
    * let gcata =
    *   let cds = List.map extension.ptyext_constructors
    *       ~f:(fun ec ->
@@ -823,7 +826,7 @@ let str_type_ext_many_plugins ~loc si plugins_info extension =
    *                   ("c_" ^ cd.pcd_name.txt))
    *          ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)
    *             ))
-   * 
+   *
    * in
    * let plugins =
    *   List.fold_left plugins_info ~init:[]
@@ -832,7 +835,7 @@ let str_type_ext_many_plugins ~loc si plugins_info extension =
    *       )
    *   |> List.rev
    * in
-   * 
+   *
    * [ ifaceclass
    * ; gcata ]
    * @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension)) *)
