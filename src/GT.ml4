@@ -126,16 +126,16 @@ class ['a, 'self] html_list_t fa fself =
     method c_Cons _ x xs =
 
       HTML.ul @@ HTML.seq (
-        [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa x) (x::xs)
+        [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa () x) (x::xs)
         )
-(*      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself xs)) *)
+(*      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself () xs)) *)
   end
 
 class ['a, 'self] show_list_t fa fself =
   object
     inherit [unit, 'a, string, unit, 'self, string] @list
     method c_Nil  _      = ""
-    method c_Cons _ x xs = (fa x) ^ (match xs with [] -> "" | _ -> "; " ^ fself xs)
+    method c_Cons _ x xs = (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself () xs))
   end
 
 class ['a, 'self] fmt_list_t fa fself =
@@ -151,7 +151,7 @@ class ['a, 'sa, 'self] gmap_list_t fa fself =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa list] @list
     method c_Nil  _ = []
-    method c_Cons _ x xs = (fa x) :: (fself xs)
+    method c_Cons _ x xs = (fa () x) :: (fself () xs)
   end
 class ['a, 'sa, 'env, 'self] eval_list_t fa fself =
   object
@@ -209,11 +209,11 @@ class ['a, 'self] compare_list_t fa fself =
   end
 
 let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
-            < show    : ('a -> string)      -> 'a list -> string;
+            < show    : (unit -> 'a -> string)      -> 'a list -> string;
+              html    : (unit -> 'a -> HTML.viewer) -> 'a list -> HTML.viewer;
+              gmap    : (unit -> 'a -> 'b)          -> 'a list -> 'b list;
               fmt     : (Format.formatter -> 'a -> unit) ->
                         Format.formatter -> 'a list -> unit;
-              html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
-              gmap    : ('a -> 'b) -> 'a list -> 'b list;
               eval    : ('env -> 'a -> 'b) -> 'env -> 'a list -> 'b list;
               stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a list -> 'env * 'b list;
               foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
@@ -224,9 +224,9 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
   {gcata   = gcata_list;
    plugins = object
                method show fa l =
-                 sprintf "[%s]" (transform0_gc gcata_list (new @list[show] fa) l)
-               method html    fa   = transform0_gc gcata_list (new @list[html] fa)
-               method gmap    fa   = transform0_gc gcata_list (new @list[gmap] fa)
+                 sprintf "[%a]" (transform_gc gcata_list (new @list[show] fa)) l
+               method html    fa   = transform_gc gcata_list (new @list[html] fa) ()
+               method gmap    fa   = transform_gc gcata_list (new @list[gmap] fa) ()
                method fmt fa inh l =
                  Format.fprintf inh "[@[%a@]]@,"
                    (transform_gc gcata_list (new @list[fmt] fa)) l
@@ -257,19 +257,19 @@ module Lazy =
     class ['a, 'self ] show_t_t fa _fself =
       object
         inherit [unit, 'a, string, unit, 'self, string ] @t
-        method t_t inh subj = fa @@ Lazy.force subj
+        method t_t inh subj = fa () @@ Lazy.force subj
       end
 
     class ['a, 'self ] html_t_t fa _fself =
       object
         inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer ] @t
-        method t_t inh subj = fa @@ Lazy.force subj
+        method t_t inh subj = fa () @@ Lazy.force subj
       end
 
     class ['a, 'sa, 'self ] gmap_t_t fa _fself =
       object
         inherit [unit, 'a, 'sa, unit, 'self, 'sa t ] @t
-        method t_t inh subj = lazy (fa @@ Lazy.force subj)
+        method t_t inh subj = lazy (fa () @@ Lazy.force subj)
       end
 
     class ['a, 'sa, 'env, 'self ] eval_t_t fa _fself =
@@ -304,16 +304,16 @@ module Lazy =
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
-    class ['a, 'self ] compare_t_t fa fself =
+    class ['a, 'self ] compare_t_t fa _fself =
       object
         inherit ['a, 'a, comparison, 'a t, 'self, comparison ] @t
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
     let t : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #t_t -> 'inh -> 'a t -> 'syn,
-             < show    : ('a -> string)      -> 'a t -> string;
-               html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
-               gmap    : ('a -> 'b) -> 'a t -> 'b t;
+             < show    : (unit -> 'a -> string)      -> 'a t -> string;
+               html    : (unit -> 'a -> HTML.viewer) -> 'a t -> HTML.viewer;
+               gmap    : (unit -> 'a -> 'b)          -> 'a t -> 'b t;
                eval    : ('env -> 'a -> 'b) -> 'env -> 'a t -> 'b t;
                stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a t -> 'env * 'b t;
                foldl   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;
@@ -356,19 +356,19 @@ class ['a, 'self] show_option_t fa _fself =
   object
     inherit [ unit, 'a, string, unit, 'self, string] @option
     method c_None () _   = "None"
-    method c_Some () _ x = "Some (" ^ fa x ^ ")"
+    method c_Some () _ x = Printf.sprintf "Some (%a)" fa x
   end
 class ['a, 'self] html_option_t fa _fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @option
     method c_None () _   = HTML.string "None"
-    method c_Some () _ x = View.concat (HTML.string "Some") (HTML.ul (fa x))
+    method c_Some () _ x = View.concat (HTML.string "Some") (HTML.ul (fa () x))
   end
 class ['a, 'sa, 'self] gmap_option_t fa _fself =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'sa option] @option
     method c_None () _ = None
-    method c_Some () _ x = Some (fa x)
+    method c_Some () _ x = Some (fa () x)
   end
 
 class ['a, 'self] fmt_option_t fa _fself =
@@ -429,11 +429,11 @@ class ['a, 'self] compare_option_t fa _fself =
   end
 
 let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> 'syn,
-              < show    : ('a -> string)      -> 'a option -> string;
+              < show    : (unit -> 'a -> string)      -> 'a option -> string;
+                html    : (unit -> 'a -> HTML.viewer) -> 'a option -> HTML.viewer;
+                gmap    : (unit -> 'a -> 'b) -> 'a option -> 'b option;
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           Format.formatter -> 'a option -> unit;
-                html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
-                gmap    : ('a -> 'b) -> 'a option -> 'b option;
                 stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a option -> 'env * 'b option;
                 eval    : ('env -> 'a -> 'b) -> 'env -> 'a option -> 'b option;
                 foldl   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;
@@ -443,9 +443,9 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
               >) t =
   {gcata   = gcata_option;
    plugins = object
-               method show     fa = transform0_gc gcata_option (new @option[show] fa)
-               method html     fa = transform0_gc gcata_option (new @option[html] fa)
-               method gmap     fa = transform0_gc gcata_option (new @option[gmap] fa)
+               method show     fa = transform_gc gcata_option (new @option[show] fa) ()
+               method html     fa = transform_gc gcata_option (new @option[html] fa) ()
+               method gmap     fa = transform_gc gcata_option (new @option[gmap] fa) ()
 
                method fmt      fa = transform_gc gcata_option (new @option[fmt] fa)
                method stateful fa = transform_gc gcata_option (new @option[stateful] fa)
@@ -570,7 +570,7 @@ class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t =
 class ['a, 'b, 'self] show_pair_t fa fb _ =
   object
     inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] pair_t
-    method c_Pair () x y = "(" ^ fa x ^ ", " ^ fb y ^ ")"
+    method c_Pair () x y = Printf.sprintf "(%a, %a)" fa x fb y
   end
 class ['a, 'b, 'self] fmt_pair_t fa fb _ =
   object
@@ -585,15 +585,15 @@ class ['a, 'b, 'self] html_pair_t fa fb _ =
     constraint 'syn = HTML.viewer
     method c_Pair () x y =
       List.fold_left View.concat View.empty
-         [ HTML.ul (fa x)
-         ; HTML.ul (fb y)
+         [ HTML.ul (fa () x)
+         ; HTML.ul (fb () y)
          ]
   end
 
-class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t (fa: 'a -> 'sa) fb _ =
+class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t (fa: unit -> 'a -> 'sa) fb _ =
   object
     inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, ('sa, 'sb) pair] pair_t
-    method c_Pair () x y = (fa x, fb y)
+    method c_Pair () x y = (fa () x, fb () y)
   end
 
 class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_pair_t fa fb _ =
@@ -639,10 +639,12 @@ class ['a, 'b, 'self] compare_pair_t fa fb _ =
 
 let pair:
   ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, _, 'syn) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
-              < show    : ('a -> string) -> ('b -> string) -> ('a, 'b) pair -> string;
-                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) ->
+              < show    : (unit -> 'a -> string) -> (unit -> 'b -> string) ->
+                          ('a, 'b) pair -> string;
+                html    : (unit -> 'a -> HTML.viewer) -> (unit -> 'b -> HTML.viewer) ->
                           ('a, 'b) pair -> HTML.viewer;
-                gmap    : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) pair -> ('c, 'd) pair;
+                gmap    : (unit -> 'a -> 'c) -> (unit -> 'b -> 'd) ->
+                          ('a, 'b) pair -> ('c, 'd) pair;
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           (Format.formatter -> 'b -> unit) ->
                           Format.formatter -> ('a,'b) pair -> unit;
@@ -660,8 +662,8 @@ let pair:
               >) t =
   {gcata   = gcata_pair;
    plugins =
-     let tr  obj subj     = transform0_gc gcata_pair obj subj in
-     let tr1 obj inh subj = transform_gc  gcata_pair obj inh subj in
+     let tr  obj subj     = transform_gc gcata_pair obj ()  subj in
+     let tr1 obj inh subj = transform_gc gcata_pair obj inh subj in
      object
        method show     fa fb = tr  (new @pair[show] fa fb)
        method html     fa fb = tr  (new @pair[html] fa fb)
@@ -732,8 +734,8 @@ class ['a, 'b, 'c, 'self] show_triple_t fa fb fc _ =
             , unit, 'b, string
             , unit, 'c, string
             , unit, 'self, string] @triple
-    method c_Triple () x y z = Printf.sprintf "(%s, %s, %s)"
-      (fa x) (fb y) (fc z)
+    method c_Triple () x y z = Printf.sprintf "(%a, %a, %a)"
+      fa x fb y fc z
 end
 class ['a, 'b, 'c, 'self] fmt_triple_t fa fb fc _ =
   object
@@ -748,7 +750,7 @@ class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t fa fb fc _ =
             , unit, 'b, 'b2
             , unit, 'c, 'c2
             , unit, 'self, ('a2,'b2,'c2) triple ] @triple
-    method c_Triple () x y z = ( (fa x), (fb y), (fc z) )
+    method c_Triple () x y z = ( fa () x, fb () y, fc () z)
 end
 class ['a, 'b, 'c, 'self] html_triple_t fa fb fc _ =
   object
@@ -758,11 +760,11 @@ class ['a, 'b, 'c, 'self] html_triple_t fa fb fc _ =
     method c_Triple () x y z =
       List.fold_left View.concat View.empty
          [ HTML.string "("
-         ; HTML.ul (fa x)
+         ; HTML.ul (fa () x)
          ; HTML.string ", "
-         ; HTML.ul (fb y)
+         ; HTML.ul (fb () y)
          ; HTML.string ", "
-         ; HTML.ul (fc z)
+         ; HTML.ul (fc () z)
          ; HTML.string ")"]
   end
 
@@ -830,16 +832,20 @@ class ['a, 'b, 'c, 'syn, 'self] foldr_triple_t fa fb fc _ =
 let triple :
     ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'inh, _, 'syn ) #triple_t ->
       'inh -> ('a, 'b, 'c) triple -> 'syn
-    , < show    : ('a -> string) -> ('b -> string) ->  ('c -> string) ->
+    , < show    : (unit -> 'a -> string) ->
+                  (unit -> 'b -> string) ->
+                  (unit -> 'c -> string) ->
                   ('a, 'b, 'c) triple  -> string;
+        gmap    : (unit -> 'a -> 'd) -> (unit -> 'b -> 'e) -> (unit -> 'c -> 'f) ->
+                  ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
+        html    : (unit -> 'a -> HTML.er) ->
+                  (unit -> 'b -> HTML.er) ->
+                  (unit -> 'c -> HTML.er) ->
+                  ('a, 'b, 'c) triple -> HTML.er;
         fmt     : (Format.formatter -> 'a -> unit) ->
                   (Format.formatter -> 'b -> unit) ->
                   (Format.formatter -> 'c -> unit) ->
                   Format.formatter -> ('a, 'b, 'c) triple -> unit;
-        gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
-                  ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
-        html    : ('a -> HTML.er) -> ('b -> HTML.er) -> ('c -> HTML.er) ->
-                  ('a, 'b, 'c) triple -> HTML.er;
         eval    : ('env -> 'a -> 'd) -> ('env -> 'b -> 'e) -> ('env -> 'c -> 'f) ->
                   'env -> ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
         stateful: ('env -> 'a -> 'env * 'd) ->
@@ -873,7 +879,7 @@ let triple :
       >) t =
   {gcata   = gcata_triple;
    plugins =
-     let tr  obj subj     = transform0_gc  gcata_triple obj subj in
+     let tr  obj subj     = transform_gc gcata_triple obj  () subj in
      let tr1 obj inh subj = transform_gc gcata_triple obj inh subj in
      object
        method show     fa fb fc = tr  (new @triple[show] fa fb fc)
@@ -1257,8 +1263,12 @@ let bytes =
 let show    t = t.plugins#show
 let html    t = t.plugins#html
 let gmap    t = t.plugins#gmap
+
+let fmt     t = t.plugins#fmt
 let eval    t = t.plugins#eval
 let foldl   t = t.plugins#foldl
 let foldr   t = t.plugins#foldr
 let eq      t = t.plugins#eq
 let compare t = t.plugins#compare
+let stateful t = t.plugins#stateful
+let eval     t = t.plugins#eval

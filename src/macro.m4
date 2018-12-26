@@ -76,16 +76,16 @@ let $1 : (('inh, _, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
   {gcata = gcata_$1;
    plugins =
       object
-        method show    = gcata_$1 (new @$1[show]    (fun _ -> assert false)) ()
-        method fmt     = gcata_$1 (new @$1[fmt]     (fun _ -> assert false))
-        method html    = gcata_$1 (new @$1[html]    (fun _ -> assert false)) ()
-        method compare = gcata_$1 (new @$1[compare] (fun _ -> assert false))
-        method eq      = gcata_$1 (new @$1[eq]      (fun _ -> assert false))
-        method gmap    = gcata_$1 (new @$1[gmap]    (fun _ -> assert false)) ()
-        method eval    = gcata_$1 (new @$1[eval]    (fun _ -> assert false))
-        method stateful= gcata_$1 (new @$1[stateful](fun _ -> assert false))
-        method foldl   = gcata_$1 (new @$1[foldl]   (fun _ -> assert false))
-        method foldr   = gcata_$1 (new @$1[foldr]   (fun _ -> assert false))
+        method show    = transform_gc gcata_$1 (new @$1[show]    ) ()
+        method gmap    = transform_gc gcata_$1 (new @$1[gmap]    ) ()
+        method html    = transform_gc gcata_$1 (new @$1[html]    ) ()
+        method fmt     = transform_gc gcata_$1 (new @$1[fmt]     )
+        method compare = transform_gc gcata_$1 (new @$1[compare] )
+        method eq      = transform_gc gcata_$1 (new @$1[eq]      )
+        method eval    = transform_gc gcata_$1 (new @$1[eval]    )
+        method stateful= transform_gc gcata_$1 (new @$1[stateful])
+        method foldl   = transform_gc gcata_$1 (new @$1[foldl]   )
+        method foldr   = transform_gc gcata_$1 (new @$1[foldr]   )
       end
   }
 ]])

@@ -680,19 +680,12 @@ class virtual generator initial_args = object(self: 'self)
     ] @ List.map tdecls ~f:(fun tdecl ->
         Str.single_value ~loc
           (Pat.sprintf ~loc "%s" @@ Naming.trf_function self#plugin_name tdecl.ptype_name.txt) @@
-        Exp.fun_list ~loc
-          (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
-        Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@
-
+        Exp.fun_ ~loc (Pat.sprintf ~loc "eta_expand") @@
         Exp.app ~loc
-          (self#app_extra_unit ~loc @@
-           Exp.app_list ~loc
-             (Exp.field ~loc (Exp.sprintf ~loc "%s" @@ Naming.fix_result tdecl)
+          (Exp.field ~loc (Exp.sprintf ~loc "%s" @@ Naming.fix_result tdecl)
                 (lident @@ Naming.trf_field
                    ~plugin:self#plugin_name tdecl.ptype_name.txt)) @@
-             (map_type_param_names tdecl.ptype_params ~f:(Exp.sprintf ~loc "f%s"))
-          )
-          (Exp.sprintf ~loc "subj")
+          (Exp.sprintf ~loc "eta_expand")
       )
 
   method virtual app_extra_unit: loc:loc -> Exp.t -> Exp.t
@@ -829,6 +822,7 @@ class virtual generator initial_args = object(self: 'self)
               ls
       )
 
+  (* should be overriden in show_typed *)
   method generate_for_variable ~loc varname =
     Exp.sprintf ~loc "f%s" varname
 
@@ -894,31 +888,33 @@ class virtual generator initial_args = object(self: 'self)
    *   [ clas ] *)
 
 
+  (* TODO: maybe we can buble from the botton not whole expression  but mayse eitehr
+     full expression or not yet applied expression to attribute and subject. That will
+     allow to implement sprintf effectively *)
   (* TODO: decide expression of which type should be returned here *)
   (* do_type_gen will return an expression which after being applied
    * to inherited attribute and subject will return synthetized one
    *)
   method do_typ_gen ~loc ~mutal_decls ~is_self_rec t : Exp.t =
     let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
-    let access_plugins ~loc e =
-      Exp.acc ~loc e @@
-      (Ldot (Lident "GT", "plugins"))
-    in
+    (* let access_plugins ~loc e =
+     *   Exp.acc ~loc e @@
+     *   (Ldot (Lident "GT", "plugins"))
+     * in *)
     let rec helper ~loc t =
       match t.ptyp_desc with
       | Ptyp_var s -> self#generate_for_variable ~loc s
       | Ptyp_tuple params ->
         self#abstract_trf ~loc (fun einh esubj ->
-            self#app_transformation_expr ~loc
+            self#fancy_app ~loc
               (List.fold_left params
-                 ~init:(Exp.send ~loc
-                          (access_plugins ~loc
-                             (Exp.of_longident ~loc
-                                (Ldot (Lident "GT",
-                                       Printf.sprintf "tuple%d" (List.length params))))
-                          )
-                          self#plugin_name
+                 ~init:(
+                   Exp.(app ~loc
+                          (of_longident ~loc @@ Ldot (Lident "GT", self#plugin_name))
+                          (of_longident ~loc @@
+                           Ldot (Lident "GT", Printf.sprintf "tuple%d" (List.length params)))
                        )
+                 )
                  ~f:(fun left typ ->
                      self#compose_apply_transformations ~loc ~left (helper ~loc typ) typ
                    )
@@ -940,10 +936,10 @@ class virtual generator initial_args = object(self: 'self)
               (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls))
           | _ ->
               let init =
-                Exp.(send ~loc
-                       (access_plugins ~loc (of_longident ~loc txt))
-                       self#plugin_name
-                    )
+                   Exp.(app ~loc
+                          (of_longident ~loc @@ Ldot (Lident "GT", self#plugin_name))
+                          (of_longident ~loc txt)
+                       )
               in
               self#fancy_abstract_trf ~loc (fun einh esubj ->
                   self#fancy_app ~loc
@@ -992,9 +988,9 @@ class virtual generator initial_args = object(self: 'self)
   (* should be used only in concrete plugins  *)
   method treat_type_specially t = None
 
-  method compose_apply_transformations ~loc ~left right typ =
-    Exp.app ~loc left right
-
+  (* method compose_apply_transformations ~loc ~left right typ =
+   *   Exp.app ~loc left right *)
+  method virtual fancy_app: loc:loc -> Exp.t -> Exp.t -> Exp.t -> Exp.t
   method virtual fancy_abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
   method virtual app_gcata: loc:loc -> Exp.t -> Exp.t
   method virtual make_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
@@ -1003,7 +999,10 @@ class virtual generator initial_args = object(self: 'self)
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
 
   method virtual make_RHS_typ_of_transformation: loc:AstHelpers.loc ->
-         ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
+    ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
+
+  method compose_apply_transformations ~loc ~left right typ : Exp.t =
+    Exp.app ~loc left right
 end
 
 (* ******************************************************************************* *)
@@ -1212,9 +1211,12 @@ class virtual no_inherit_arg = object(self: 'self)
 
     List.fold_right names ~init:type_
       ~f:(fun name acc ->
-          Typ.(arrow ~loc (ident ~loc "unit") @@
-               arrow ~loc (var ~loc name) (self#syn_of_param ~loc name)
-              )
+          let for_arg =
+            Typ.(arrow ~loc (ident ~loc "unit") @@
+                 arrow ~loc (var ~loc name) (self#syn_of_param ~loc name)
+                )
+          in
+          Typ.arrow ~loc for_arg acc
         )
 
   (* method wrap_tr_function_str ~loc tdecl make_new_obj =

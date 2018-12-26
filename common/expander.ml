@@ -539,6 +539,7 @@ let make_heading_gen ~loc wrap tdecl = []
 
 
 let collect_plugins_str ~loc tdecl plugins : Str.t list =
+  (* TODO: fix eta expansion& application here *)
   let wrap tdecl fname =
     let fs = map_type_param_names tdecl.ptype_params ~f:id in
     let ans =
