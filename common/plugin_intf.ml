@@ -26,7 +26,7 @@ type plugin_args = (Ppxlib.longident * Ppxlib.expression) list
     OCaml AST and return pieces specific for backend.
 
 *)
-class virtual ['loc, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = object
+class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = object
 
   (** {1 Methods that are specific for a concrete plugin implementation } *)
 
@@ -98,6 +98,8 @@ class virtual ['loc, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = object
     Ppxlib.type_declaration list -> 'str list
 
   method virtual need_inh_attr : bool
+
+  method virtual eta_and_exp: center:'exp -> Ppxlib.type_declaration -> 'exp
 end
 
 (** Functor that takes AST construction functions for a specific backend and
@@ -106,7 +108,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
   open AstHelpers
 
   class virtual g = object
-    inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] typ_g
+    inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] typ_g
   end
 end
 
@@ -116,5 +118,5 @@ module type PluginRes =
   sig
     open AstHelpers
     val trait_name : string
-    val g : plugin_args -> (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
+    val g : plugin_args -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
   end

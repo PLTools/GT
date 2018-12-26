@@ -826,10 +826,17 @@ class virtual generator initial_args = object(self: 'self)
   method generate_for_variable ~loc varname =
     Exp.sprintf ~loc "f%s" varname
 
-  method virtual app_transformation_expr: loc:loc ->
-    Exp.t -> Exp.t -> Exp.t -> Exp.t
-
-  method virtual abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
+  (* required only for show_typed true *)
+  method eta_and_exp ~center tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    let fs = map_type_param_names tdecl.ptype_params ~f:id in
+    let ans =
+      List.fold_left fs ~init:center
+        ~f:(fun acc name -> Exp.app ~loc acc (Exp.ident ~loc name))
+    in
+    let ans = Exp.app ~loc ans (Exp.unit ~loc) in
+    List.fold_right fs ~init:ans
+      ~f:(fun name acc -> Exp.fun_ ~loc (Pat.var ~loc name) acc)
 
   (* method do_typext_str ~loc ({ptyext_path } as extension) =
    *   let clas =
@@ -988,8 +995,13 @@ class virtual generator initial_args = object(self: 'self)
   (* should be used only in concrete plugins  *)
   method treat_type_specially t = None
 
-  (* method compose_apply_transformations ~loc ~left right typ =
-   *   Exp.app ~loc left right *)
+  method virtual app_transformation_expr: loc:loc ->
+    Exp.t -> Exp.t -> Exp.t -> Exp.t
+
+  method virtual abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
+
+  (* [fancy_app ~loc e inh subj] will either apply twice or skip application
+   * of inherited attribute *)
   method virtual fancy_app: loc:loc -> Exp.t -> Exp.t -> Exp.t -> Exp.t
   method virtual fancy_abstract_trf: loc:loc -> (Exp.t -> Exp.t -> Exp.t) -> Exp.t
   method virtual app_gcata: loc:loc -> Exp.t -> Exp.t
@@ -1197,10 +1209,10 @@ class virtual no_inherit_arg = object(self: 'self)
     let syn_t  = Option.value syn_t ~default:(self#default_syn ~loc tdecl) in
     Typ.arrow ~loc subj_t syn_t
 
-  method compose_apply_transformations ~loc ~left right (typ:core_type) =
-    (* Exp.app ~loc left (Exp.fun_ ~loc (Pat.unit ~loc) right) *)
-    (* Exp.app ~loc  (Exp.app ~loc left @@ Exp.unit ~loc) right *)
-      Exp.app ~loc left  (Exp.app ~loc right @@ Exp.unit ~loc)
+  (* method compose_apply_transformations ~loc ~left right (typ:core_type) =
+   *   (\* Exp.app ~loc left (Exp.fun_ ~loc (Pat.unit ~loc) right) *\)
+   *   (\* Exp.app ~loc  (Exp.app ~loc left @@ Exp.unit ~loc) right *\)
+   *     Exp.app ~loc left  (Exp.app ~loc right @@ Exp.unit ~loc) *)
 
   method! app_extra_unit ~loc e = Exp.app ~loc e (Exp.unit ~loc)
 

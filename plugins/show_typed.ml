@@ -19,7 +19,7 @@ open AstHelpers
 module P = Plugin.Make(AstHelpers)
 
 class g args = object(self: 'self)
-  inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
+  inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit S.g args as super
   inherit P.no_inherit_arg
 
@@ -172,10 +172,30 @@ class g args = object(self: 'self)
    *     ]]
    *   ] *)
 
+  method! eta_and_exp ~center tdecl =
+    (* we should generate twice as many arguments there as before *)
+    let loc = loc_from_caml tdecl.ptype_loc in
+    let fs = map_type_param_names tdecl.ptype_params ~f:id in
+    let mangle = sprintf "typ_%s" in
+    let ans =
+      List.fold_left fs ~init:center
+        ~f:(fun acc name ->
+            Exp.app_list ~loc acc
+              [ Exp.ident ~loc @@ mangle name
+              ; Exp.ident ~loc name ] )
+    in
+    let ans = Exp.app ~loc ans (Exp.unit ~loc) in
+    List.fold_right fs ~init:ans
+      ~f:(fun name acc ->
+          Exp.fun_ ~loc (Pat.var ~loc @@ mangle name) @@
+          Exp.fun_ ~loc (Pat.var ~loc name) acc)
+
 end
 
-let g = (new g :> (Plugin_intf.plugin_args ->
-                   (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
+let g =
+  (new g :>
+     (Plugin_intf.plugin_args ->
+      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end
 

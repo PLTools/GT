@@ -39,7 +39,7 @@ let app_format_sprintf ~loc arg =
     arg
 
 class g args = object(self)
-  inherit [loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
+  inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit P.generator args
   inherit P.no_inherit_arg
 
@@ -135,8 +135,11 @@ class g args = object(self)
 
 end
 
-let g = (new g :> (Plugin_intf.plugin_args ->
-                   (loc, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g) )
+let g =
+  (new g :>
+     (Plugin_intf.plugin_args ->
+      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+
 end
 
 let register () =
