@@ -85,7 +85,7 @@ let tuple2 =
     end
   }
 
-let tuple2 =
+let tuple3 =
   { GT.gcata = GT.gcata_pair;
     GT.plugins = object
       method show    = GT.tuple2.GT.plugins#show
