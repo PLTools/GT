@@ -8,4 +8,4 @@ let _ =
                ) in
   let y = GT.gmap tree (GT.lift string_of_int)  x in
   Printf.printf "%s\n" @@ GT.show tree (GT.lift string_of_int) x;
-  Printf.printf "%s\n" @@ GT.show tree (GT.lift id)            y
+  Printf.printf "%s\n" @@ GT.show tree (GT.lift GT.id)         y

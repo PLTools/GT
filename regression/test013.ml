@@ -24,5 +24,5 @@ let show_b_new =
 
 let _ =
   let y = `D (`B (`C "5")) in
-  Printf.printf "%s\n" (GT.transform0(c) (new @c[show]) y);
-  Printf.printf "%s\n" (show_b_new y)
+  Printf.printf "%s\n" (GT.transform(c) (new @c[show]) () y);
+  Printf.printf "%s\n" (show_b_new () y)

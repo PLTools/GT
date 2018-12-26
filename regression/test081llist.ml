@@ -10,7 +10,7 @@ end
 
 let () =
   let open AL in
-  let sh xs = show_alist id id xs in
+  let sh xs = GT.show alist (GT.lift id) (GT.lift id) xs in
   (* let fo xs = foldl_alist (fun () -> id) (fun () -> id) "" xs in *)
   Printf.printf "%s\n%!" (sh @@ Cons ("aaa", "bbb"));
   (* Printf.printf "%s\n%!" (fo @@ Cons ("aaa", "bbb")); *)
@@ -24,7 +24,7 @@ end
 
 let () =
   let open L in
-  let sh x = show_list id x in
+  let sh x = show_list (GT.lift id) x in
   Printf.printf "%s\n%!" (sh @@ Cons ("aaa", Cons ("bbb", Nil)))
 
 module Lo : sig
@@ -35,7 +35,7 @@ end
 
 let () =
   let open Lo in
-  let sh x = show_logic id x in
+  let sh x = show_logic (GT.lift id) x in
   Printf.printf "%s\t%s\n%!" (sh @@ Var 5) (sh @@ Value "asdf")
 ;;
 
@@ -46,5 +46,5 @@ end = struct
 end
 
 let () =
-  let sh x = LList.show_llist id x in
+  let sh x = LList.show_llist (GT.lift id) x in
   Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) )

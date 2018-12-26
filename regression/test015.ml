@@ -5,10 +5,9 @@ let _ =
   let n  = GT.transform(tree) (new @tree[foldl] (+)) 0 x in
 
   let fa s x = if s = "" then string_of_int x else s ^ ", " ^ string_of_int x in
-  let sl = GT.transform(tree) (new @tree[foldl] fa) "" x in
-  let sr = GT.transform(tree) (new @tree[foldr] fa) "" x in
-  Printf.printf "%s\n" (GT.transform0(tree) (new @tree[show] string_of_int) x);
+  let sl = GT.transform(tree) (new @tree[foldl] @@ fa) "" x in
+  let sr = GT.transform(tree) (new @tree[foldr] @@ fa) "" x in
+  Printf.printf "%s\n" (GT.transform(tree) (new @tree[show] (GT.lift string_of_int)) () x);
   Printf.printf "%d\n" n;
   Printf.printf "%s\n" sl;
   Printf.printf "%s\n" sr
-

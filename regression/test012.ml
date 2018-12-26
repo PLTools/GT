@@ -5,12 +5,12 @@
 let _ =
   let x = `A 3 in
   let y = `D "2" in
-  Printf.printf "%s\n" @@ GT.transform0 (a) (new @a[show]) x;
-  Printf.printf "%s\n" @@ GT.transform0 (b) (new @b[show]) y;
-  Printf.printf "%s\n" @@ GT.transform0 (c) (new @c[show]) x;
-  Printf.printf "%s\n" @@ GT.transform0 (c) (new @c[show]) y;
-  Printf.printf "%b\n" @@ GT.transform(a) (new @a[eq]) x x;
-  Printf.printf "%b\n" @@ GT.transform(b) (new @b[eq]) y y;
-  Printf.printf "%b\n" @@ GT.transform(c) (new @c[eq]) x x;
-  Printf.printf "%b\n" @@ GT.transform(c) (new @c[eq]) y y;
-  Printf.printf "%b\n" @@ GT.transform(c) (new @c[eq]) x y;
+  Printf.printf "%s\n" @@ GT.show(a) x;
+  Printf.printf "%s\n" @@ GT.show(b)  y;
+  Printf.printf "%s\n" @@ GT.show(c)  x;
+  Printf.printf "%s\n" @@ GT.show(c)  y;
+  Printf.printf "%b\n" @@ GT.eq(a)  x x;
+  Printf.printf "%b\n" @@ GT.eq(b)  y y;
+  Printf.printf "%b\n" @@ GT.eq(c)  x x;
+  Printf.printf "%b\n" @@ GT.eq(c)  y y;
+  Printf.printf "%b\n" @@ GT.eq(c)  x y;

@@ -2,14 +2,11 @@
 and   b = B of c | D of GT.string with show
 and   c = E of a with show
 
-(* let (_:int) = new show_a_t_stub *)
-
 class show_a' prereq fself =
-
   object(this)
     inherit [_] @a[show] fself as super
     method c_C () x y = "new " ^ super#c_C () x y
-    method c_A () _ x = "new A " ^ (prereq.show_b.show_b_trf x)
+    method c_A () _ x = "new A " ^ (prereq.show_b.show_b_trf () x)
   end
 
 let show_a' =
@@ -19,7 +16,7 @@ let show_a' =
 
 let _ =
   let x = A (B (E (C [1; 2; 3; 4]))) in
-  let y = B (E (A (D "3"))) in  
-  Printf.printf "%s\n" (GT.transform0(a) (new @a[show]) x);
-  Printf.printf "%s\n" (GT.transform0(b) (new @b[show]) y);
-  Printf.printf "%s\n" (show_a' x);
+  let y = B (E (A (D "3"))) in
+  Printf.printf "%s\n" (GT.transform(a) (new @a[show]) () x);
+  Printf.printf "%s\n" (GT.transform(b) (new @b[show]) () y);
+  Printf.printf "%s\n" (show_a' () x);
