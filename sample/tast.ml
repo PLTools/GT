@@ -18,7 +18,13 @@ end
 
 (* There are issues here with 4.07 but 4.06 is fine. *)
 module Ident = struct
-  type t = [%import: Ident.t]  [@@deriving gt ~options:{ fmt; html; show }]
+  include Ident
+  let t = { GT.gcata = (fun _ _ -> assert false)
+          ; GT.plugins = object
+              method html    i = HTML.string @@ Ident.name i
+              method fmt fmt i = Format.fprintf fmt "%s" (Ident.name i)
+            end
+          }
 end
 
 module Path = struct
@@ -27,12 +33,12 @@ end
 
 module Types = struct
   type type_expr        = [%import: Types.type_expr]
-  and  row_desc         = [%import: Types.row_desc]
-  and  type_desc        = [%import: Types.type_desc]
-  and  row_field        = [%import: Types.row_field]
-  and  abbrev_memo      = [%import: Types.abbrev_memo]
-  and  field_kind       = [%import: Types.field_kind]
-  and  commutable       = [%import: Types.commutable]
+  and  row_desc         = [%import: Types.row_desc    [@with Stdlib.ref := GT.ref] ]
+  and  type_desc        = [%import: Types.type_desc   [@with Stdlib.ref := GT.ref] ]
+  and  row_field        = [%import: Types.row_field   [@with Stdlib.ref := GT.ref] ]
+  and  abbrev_memo      = [%import: Types.abbrev_memo [@with Stdlib.ref := GT.ref] ]
+  and  field_kind       = [%import: Types.field_kind  [@with Stdlib.ref := GT.ref] ]
+  and  commutable       = [%import: Types.commutable  [@with Stdlib.ref := GT.ref] ]
   [@@deriving gt ~options:{ fmt; html }]
 
   module Parsetree = Camlast
@@ -58,7 +64,7 @@ module Types = struct
   end
 
   type value_description  = [%import: Types.value_description]
-  and  value_kind         = [%import: Types.value_kind]
+  and  value_kind         = [%import: Types.value_kind    [@with Stdlib.ref := GT.ref] ]
   [@@deriving gt ~options:{ fmt; html }]
 
   module Variance = struct
@@ -142,7 +148,7 @@ type attributes = attribute GT.list   [@@deriving gt ~options:{ fmt; html }]
 
 type pattern = [%import: Typedtree.pattern]
 and pat_extra = [%import: Typedtree.pat_extra]
-and pattern_desc = [%import: Typedtree.pattern_desc]
+and pattern_desc = [%import: Typedtree.pattern_desc    [@with Stdlib.ref := GT.ref] ]
 and expression = [%import: Typedtree.expression]
 and exp_extra = [%import: Typedtree.exp_extra]
 and expression_desc = [%import: Typedtree.expression_desc]
@@ -204,12 +210,12 @@ and 'a class_infos = [%import: 'a Typedtree.class_infos]
 
 class ['self] pattern_desc_with_link mut_trfs_here fself = object
   inherit ['self] html_pattern_desc_t_stub mut_trfs_here fself
-  method! c_Tpat_var () _ { Ident.name } nameloc =
+  method! c_Tpat_var () _ ident nameloc =
     let loc_str = Location.show_location nameloc.Asttypes.loc in
     HTML.ul @@
     HTML.seq
       [ HTML.anchor loc_str @@
-        HTML.string @@ Printf.sprintf "%S  from %s" name loc_str
+        HTML.string @@ Printf.sprintf "%S  from %s" (Ident.name ident) loc_str
       ]
 end
 

@@ -37,16 +37,8 @@ let transform_gc gcata make_obj inh subj =
   let rec obj = lazy (make_obj fself)
   and fself inh x = gcata (Lazy.force obj) inh x in
   fself inh subj
-(*
-let transform0_gc gcata make_obj subj =
-  let rec obj = lazy (make_obj fself)
-  and fself x = gcata (Lazy.force obj) () x in
-  fself subj
-*)
+
 let transform  bundle = transform_gc  bundle.gcata
-(*
-let transform0 bundle = transform0_gc bundle.gcata
-*)
 
 let lift f _ = f
 let id x  = x
