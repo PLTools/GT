@@ -115,7 +115,7 @@ class g args = object(self)
                 Exp.app ~loc acc
                   (self#app_transformation_expr ~loc
                      (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
-                     (Exp.assert_false ~loc)
+                     (Exp.unit ~loc)
                      (Exp.ident ~loc pld_name.txt)
                   )
               )
@@ -127,7 +127,8 @@ class g args = object(self)
   method treat_type_specially t =
     Option.map ~f:(fun _ ->
       let loc = loc_from_caml t.ptyp_loc in
-      Exp.fun_ ~loc (Pat.any ~loc) @@
+      Exp.fun_ ~loc (Pat.unit ~loc) @@
+      Exp.fun_ ~loc (Pat.any  ~loc) @@
       Exp.string_const ~loc "\"<opaque>\""
       ) @@
     List.find t.ptyp_attributes ~f:(fun ({txt},_) -> String.equal txt "opaque")

@@ -468,26 +468,25 @@ let gcata_free tr inh subj = tr#c_Free inh subj subj
 class ['a, 'self] show_free_t fa _ =
   object
     inherit [unit, 'a, string, unit, 'self, string] free_t
-    method c_Free () _ x = "(" ^ fa x ^ ")"
+    method c_Free () _ x = Printf.sprintf "(%a)" fa x
   end
+class ['a, 'self] html_free_t fa _ =
+  object
+    inherit [unit, 'a, 'syn, unit, 'self, 'syn] free_t
+    constraint 'syn = HTML.viewer
+    method c_Free () _ x = fa () x
+  end
+class ['a, 'sa, 'self] gmap_free_t fa _ =
+  object
+    inherit [unit, 'a, 'sa, unit, 'self, 'sa free] free_t
+    method c_Free () _ x = fa () x
+  end
+
 class ['a, 'self] fmt_free_t fa _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] free_t
     constraint 'inh = Format.formatter
     method c_Free fmt _ x = Format.fprintf fmt "(%a)" fa x
-  end
-
-class ['a, 'self] html_free_t fa _ =
-  object
-    inherit [unit, 'a, 'syn, unit, 'self, 'syn] free_t
-    constraint 'syn = HTML.viewer
-    method c_Free () _ x = fa x
-  end
-
-class ['a, 'sa, 'self] gmap_free_t fa _ =
-  object
-    inherit [unit, 'a, 'sa, unit, 'self, 'sa free] free_t
-    method c_Free () _ x = fa x
   end
 class ['a, 'sa, 'env, 'self] eval_free_t fa _ =
   object
@@ -527,11 +526,11 @@ class ['a, 'self] compare_free_t fa _ =
   end
 
 let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
-              < show    : ('a -> string) -> 'a free -> string;
+              < show    : (unit -> 'a -> string)      -> 'a free -> string;
+                html    : (unit -> 'a -> HTML.viewer) -> 'a free -> HTML.viewer;
+                gmap    : (unit -> 'a -> 'c)          -> 'a free -> 'c free;
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           Format.formatter -> 'a free -> unit;
-                html    : ('a -> HTML.viewer) -> 'a free -> HTML.viewer;
-                gmap    : ('a -> 'c) -> 'a free -> 'c free;
                 eval    : ('env -> 'a -> 'c) -> 'env -> 'a free -> 'c free;
                 stateful: ('env -> 'a -> 'env * 'c) -> 'env -> 'a free -> 'env * 'c free;
                 foldl   : ('c -> 'a -> 'c) -> 'c -> 'a free -> 'c;
@@ -543,9 +542,9 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               >) t =
   {gcata   = gcata_free;
    plugins = object
-       method show     fa = transform0_gc gcata_free (new @free[show] fa)
-       method gmap     fa = transform0_gc gcata_free (new @free[gmap] fa)
-       method html     fa = transform0_gc  gcata_free (new @free[html] fa)
+       method show     fa = transform_gc gcata_free (new @free[show] fa) ()
+       method gmap     fa = transform_gc gcata_free (new @free[gmap] fa) ()
+       method html     fa = transform_gc gcata_free (new @free[html] fa) ()
        method fmt      fa = transform_gc gcata_free (new @free[fmt] fa)
        method eval     fa = transform_gc gcata_free (new @free[eval]  fa)
        method stateful fa = transform_gc gcata_free (new @free[stateful] fa)
@@ -959,13 +958,13 @@ class ['a, 'b, 'c, 'd, 'self] html_tuple4_t fa fb fc fd _ =
     method c_tuple4 () x y z d =
       List.fold_left View.concat View.empty
          [ HTML.string "("
-         ; HTML.ul (fa x)
+         ; HTML.ul (fa () x)
          ; HTML.string ", "
-         ; HTML.ul (fb y)
+         ; HTML.ul (fb () y)
          ; HTML.string ", "
-         ; HTML.ul (fc z)
+         ; HTML.ul (fc () z)
          ; HTML.string ")"
-         ; HTML.ul (fd d)
+         ; HTML.ul (fd () d)
          ; HTML.string ")"
          ]
   end
@@ -978,14 +977,16 @@ let tuple4 :
                   (Format.formatter -> 'c -> unit) ->
                   (Format.formatter -> 'd -> unit) ->
                   Format.formatter -> ('a, 'b, 'c, 'd) tuple4 -> unit;
-        html    : ('a -> HTML.er) -> ('b -> HTML.er) -> ('c -> HTML.er) ->
-                  ('d -> HTML.er) ->
+        html    : (unit -> 'a -> HTML.er) ->
+                  (unit -> 'b -> HTML.er) ->
+                  (unit -> 'c -> HTML.er) ->
+                  (unit -> 'd -> HTML.er) ->
                   ('a, 'b, 'c, 'd) tuple4 -> HTML.er;
       >) t =
   {gcata   = gcata_tuple4;
    plugins =
-     let tr  obj subj     = transform0_gc gcata_tuple4 obj subj in
-     let tr1 obj inh subj = transform_gc  gcata_tuple4 obj inh subj in
+     let tr  obj subj     = transform_gc gcata_tuple4 obj  () subj in
+     let tr1 obj inh subj = transform_gc gcata_tuple4 obj inh subj in
      object
        method html     fa fb fc fd = tr  (new @tuple4[html] fa fb fc fd)
        method fmt      fa fb fc fd = tr1 (new @tuple4[fmt]  fa fb fc fd)

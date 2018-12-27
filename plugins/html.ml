@@ -115,7 +115,7 @@ class g args = object(self)
               H.li ~loc
                 [ self#app_transformation_expr ~loc
                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
-                    (Exp.assert_false ~loc)
+                    (Exp.unit ~loc)
                     (Exp.ident ~loc name)
                 ]
               ))
@@ -139,7 +139,7 @@ class g args = object(self)
               [ H.pcdata ~loc pld_name.txt
               ; self#app_transformation_expr ~loc
                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
-                  (Exp.assert_false ~loc)
+                  (Exp.unit ~loc)
                   (Exp.ident ~loc pld_name.txt)
               ]
             )
@@ -170,7 +170,7 @@ class g args = object(self)
               [ H.pcdata ~loc lname
               ; self#app_transformation_expr ~loc
                   (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
-                  (Exp.assert_false ~loc)
+                  (Exp.unit ~loc)
                   (Exp.ident ~loc pname)
               ]
         )

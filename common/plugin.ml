@@ -960,15 +960,19 @@ class virtual generator initial_args = object(self: 'self)
                 )
         end
         | Ptyp_variant (rows, _, maybe_labels) -> begin
-          let oninherit einh esubj typs cident varname =
-            self#app_transformation_expr
-              (Exp.app_list ~loc
-                Exp.(of_longident ~loc @@
-                     map_longident cident
-                       ~f:(Printf.sprintf "%s_%s" self#plugin_name))
-                (List.map typs ~f:(helper ~loc))
-              )
-              einh esubj
+            let oninherit ~loc einh esubj typs cident varname =
+              self#fancy_app ~loc
+                (Exp.app_list ~loc
+                   Exp.(app ~loc
+                          (of_longident ~loc @@ Ldot (Lident "GT", self#plugin_name))
+                          (of_longident ~loc cident)
+                       )
+                     (* of_longident ~loc @@
+                      *    map_longident cident
+                      *      ~f:(Printf.sprintf "%s_%s" self#plugin_name)) *)
+                   (List.map typs ~f:(helper ~loc))
+                )
+                einh esubj
             in
             let onrow lab bindings =
               Exp.app_list ~loc
@@ -995,6 +999,7 @@ class virtual generator initial_args = object(self: 'self)
   (* should be used only in concrete plugins  *)
   method treat_type_specially t = None
 
+  (* may be the same as fancy_app *)
   method virtual app_transformation_expr: loc:loc ->
     Exp.t -> Exp.t -> Exp.t -> Exp.t
 
