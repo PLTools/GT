@@ -6,12 +6,6 @@ module Location = Camlast.Location
 module Longident = Camlast.Longident
 module Asttypes = Camlast.Asttypes
 
-module Ident = struct
-  type t = [%import: Ident.t]  [@@deriving gt ~options:{ fmt; html; show }]
-end
-module Path = struct
-  type t = [%import: Path.t]  [@@deriving gt ~options:{ fmt; html }]
-end
 
 module Primitive = struct
   type boxed_integer = [%import: Primitive.boxed_integer]
@@ -20,6 +14,15 @@ module Primitive = struct
   [@@deriving gt ~options:{ fmt; html }]
   type description   = [%import: Primitive.description]
   [@@deriving gt ~options:{ fmt; html }]
+end
+
+(* There are issues here with 4.07 but 4.06 is fine. *)
+module Ident = struct
+  type t = [%import: Ident.t]  [@@deriving gt ~options:{ fmt; html; show }]
+end
+
+module Path = struct
+  type t = [%import: Path.t]  [@@deriving gt ~options:{ fmt; html }]
 end
 
 module Types = struct
@@ -34,7 +37,7 @@ module Types = struct
 
   module Parsetree = Camlast
   module Meths = struct
-    type 'a t = [%import: 'a Types.Meths.t] 
+    type 'a t = [%import: 'a Types.Meths.t]
     let t =
       { GT.gcata = (fun _ _ -> failwith "meths not implemented")
       ; GT.plugins = object
@@ -44,7 +47,7 @@ module Types = struct
       }
   end
   module Vars = struct
-    type 'a t = [%import: 'a Types.Vars.t] 
+    type 'a t = [%import: 'a Types.Vars.t]
     let t =
       { GT.gcata = (fun _ _ -> failwith "vars not implemented")
       ; GT.plugins = object
@@ -82,7 +85,7 @@ module Types = struct
   [@@deriving gt ~options:{ fmt; html }]
 
   module Concr = struct
-    type t = [%import: Types.Concr.t] 
+    type t = [%import: Types.Concr.t]
     let t =
       { GT.gcata = (fun _ _ -> failwith "concr not implemented")
       ; GT.plugins = object
@@ -201,7 +204,7 @@ and 'a class_infos = [%import: 'a Typedtree.class_infos]
 
 class ['self] pattern_desc_with_link mut_trfs_here fself = object
   inherit ['self] html_pattern_desc_t_stub mut_trfs_here fself
-  method! c_Tpat_var () { Ident.name } nameloc =
+  method! c_Tpat_var () _ { Ident.name } nameloc =
     let loc_str = Location.show_location nameloc.Asttypes.loc in
     HTML.ul @@
     HTML.seq

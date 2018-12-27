@@ -16,12 +16,12 @@ module Simple =
   struct
 
     (* Decoration *)
-    let decorate : (unit -> 'a) -> expr -> 'a decorated = fun fd e ->
+    let decorate : (unit -> unit -> 'a) -> expr -> 'a decorated = fun fd e ->
       fix (fun s e -> let d = fd () in GT.gmap(a_expr) s e, d) e
 
     (* Stripping *)
     let strip : 'a decorated -> expr = fun e ->
-      fix (fun s e -> GT.gmap(a_expr) s (fst e)) e
+      fix (fun fself e -> GT.gmap(a_expr) fself (fst e)) e
 
     (* Testing *)
     let _ =

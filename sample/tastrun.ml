@@ -63,7 +63,7 @@ let implementation ppf sourcefile outputprefix =
       Format.fprintf fmt "</pre><hr>\n";
 
       Format.fprintf fmt "%s" @@ HTML.toHTML @@
-      HTML.body @@ Tast.html_structure typedtree;
+      HTML.body @@ GT.html Tast.structure typedtree;
       Format.fprintf fmt "%s" {|</html>|};
 
       Format.pp_print_flush fmt ();

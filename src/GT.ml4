@@ -37,14 +37,16 @@ let transform_gc gcata make_obj inh subj =
   let rec obj = lazy (make_obj fself)
   and fself inh x = gcata (Lazy.force obj) inh x in
   fself inh subj
-
+(*
 let transform0_gc gcata make_obj subj =
   let rec obj = lazy (make_obj fself)
   and fself x = gcata (Lazy.force obj) () x in
   fself subj
-
+*)
 let transform  bundle = transform_gc  bundle.gcata
+(*
 let transform0 bundle = transform0_gc bundle.gcata
+*)
 
 let lift f _ = f
 let id x  = x
@@ -1016,7 +1018,7 @@ class ['a, 'self] html_ref_t fa _ =
             , 'inh, 'self, 'syn] ref_t
     constraint 'syn = HTML.viewer
     constraint 'inh = unit
-    method c_ref () a = fa a
+    method c_ref () a = fa () a
   end
 class ['a, 'self] show_ref_t fa _ =
   object
@@ -1024,7 +1026,7 @@ class ['a, 'self] show_ref_t fa _ =
             , 'inh, 'self, 'syn] ref_t
     constraint 'syn = string
     constraint 'inh = unit
-    method c_ref () a = fa a
+    method c_ref () a = fa () a
   end
 
 let ref:
@@ -1032,14 +1034,14 @@ let ref:
       'inh -> 'a ref -> 'syn
     , < fmt     : (Format.formatter -> 'a -> unit) ->
                   Format.formatter -> 'a ref -> unit;
-        html    : ('a -> HTML.er) ->  'a ref -> HTML.er;
-        show    : ('a -> string) ->  'a ref -> string;
+        html    : (unit -> 'a -> HTML.er) ->  'a ref -> HTML.er;
+        show    : (unit -> 'a -> string) ->  'a ref -> string;
       >) t =
   {gcata   = gcata_ref;
    plugins = object
-     method show    fa = transform0_gc gcata_ref (new @ref[show] fa)
-     method html    fa = transform0_gc gcata_ref (new @ref[html] fa)
-     method fmt     fa = transform_gc  gcata_ref (new @ref[fmt]  fa)
+     method show    fa = transform_gc gcata_ref (new @ref[show] fa) ()
+     method html    fa = transform_gc gcata_ref (new @ref[html] fa) ()
+     method fmt     fa = transform_gc gcata_ref (new @ref[fmt]  fa)
   end
 }
 (*** arrays *****************************************************************)
@@ -1053,21 +1055,26 @@ end
 
 let gcata_array tr inh subj = tr#do_array inh subj
 
+class ['a, 'self] show_array_t fa fself = object
+  inherit [unit, 'a, string, unit, 'self, string] @array
+  method do_array () arr =
+    "[|" ^ (Array.fold_right
+              (fun x s -> Printf.sprintf "%a; %s" fa x s) arr " |]")
+end
+
+class ['a, 'sa, 'self] gmap_array_t fa fself =
+  object
+    inherit [unit, 'a, 'sa, unit, 'self, 'sa array] @array
+    method do_array () arr = Array.map (fa ()) arr
+  end
 class ['a, 'self] html_array_t fa fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @array
     method do_array () arr =
       HTML.ul @@ HTML.seq (
-        [ HTML.string "array" ] @ List.map (fun x -> HTML.li @@ fa x) @@ Array.to_list arr
+        [ HTML.string "array" ] @ List.map (fun x -> HTML.li @@ fa () x) @@ Array.to_list arr
         )
   end
-
-class ['a, 'self] show_array_t fa fself = object
-  inherit [unit, 'a, string, unit, 'self, string] @array
-  method do_array () arr =
-    "[|" ^ (Array.fold_right
-              (fun x s -> Printf.sprintf "%a; %s" (fun () -> fa) x s) arr " |]")
-end
 
 class ['a, 'self] fmt_array_t fa fself = object
   inherit [Format.formatter, 'a, unit, Format.formatter, 'self, unit] @array
@@ -1078,17 +1085,12 @@ class ['a, 'self] fmt_array_t fa fself = object
     Format.fprintf fmt " |]"
 end
 
-class ['a, 'sa, 'self] gmap_array_t fself fa =
-  object
-    inherit [unit, 'a, 'sa, unit, 'self, 'sa array] @array
-    method do_array () arr = Array.map fa arr
-  end
-class ['a, 'sa, 'env, 'self] eval_array_t fself fa =
+class ['a, 'sa, 'env, 'self] eval_array_t fa fself =
   object
     inherit ['env, 'a, 'sa, 'env, 'self, 'sa array] @array
     method do_array env arr = Array.map (fa env) arr
   end
-class ['a, 'sa, 'env, 'self] stateful_array_t fself fa =
+class ['a, 'sa, 'env, 'self] stateful_array_t fa fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa array] @array
     method do_array env0 arr =
@@ -1106,19 +1108,19 @@ class ['a, 'sa, 'env, 'self] stateful_array_t fself fa =
         (!env, ans)
   end
 
-class ['a, 'syn, 'self] foldl_array_t fself fa =
+class ['a, 'syn, 'self] foldl_array_t fa fself =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @array
     method do_array env arr = Array.fold_left fa env arr
   end
 
-class ['a, 'syn, 'self] foldr_array_t fself fa =
+class ['a, 'syn, 'self] foldr_array_t fa fself =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @array
     method do_array env arr = Array.fold_right (fun x acc -> fa acc x) arr env
   end
 
-class ['a, 'self] eq_array_t fself fa =
+class ['a, 'self] eq_array_t fa fself =
   object
     inherit ['a, 'a, bool, 'a array, 'self, bool] @array
     method do_array env arr =
@@ -1132,7 +1134,7 @@ class ['a, 'self] eq_array_t fself fa =
       )
   end
 
-class ['a, 'self] compare_array_t fself fa =
+class ['a, 'self] compare_array_t fa fself =
   object
     inherit ['a, 'a, comparison, 'a array, 'self, comparison] @array
     method do_array env arr =
@@ -1149,21 +1151,21 @@ class ['a, 'self] compare_array_t fself fa =
 let array =
   { gcata = gcata_array
   ; plugins =
-      let tr  obj   fa s = gcata_array (obj (fun _ -> assert false) fa) () s in
-      let tr1 obj i fa s = gcata_array (obj (fun _ -> assert false) fa) i  s in
+      let tr  obj fa   s = transform_gc gcata_array (obj fa) () s in
+      let tr1 obj fa i s = transform_gc gcata_array (obj fa)  i s in
       object
-        method show   = tr (new @array[show])
-        method gmap   = tr (new @array[gmap])
-        method html   = tr (new @array[html])
+        method show fa  = tr (new @array[show]) fa
+        method gmap fa  = tr (new @array[gmap]) fa
+        method html fa  = tr (new @array[html]) fa
 
-        method fmt    = tr1 (new @array[fmt])
+        method fmt fa   = tr1 (new @array[fmt]) fa
 
-        method eval   = tr1 (new @array[eval])
-        method stateful = tr1 (new @array[stateful])
-        method compare  = tr1 (new @array[compare])
-        method eq       = tr1 (new @array[eq])
-        method foldl    = tr1 (new @array[foldl])
-        method foldr    = tr1 (new @array[foldr])
+        method eval     fa = tr1 (new @array[eval]) fa
+        method stateful fa = tr1 (new @array[stateful]) fa
+        method compare  fa = tr1 (new @array[compare]) fa
+        method eq       fa = tr1 (new @array[eq]) fa
+        method foldl    fa = tr1 (new @array[foldl]) fa
+        method foldr    fa = tr1 (new @array[foldr]) fa
     end
   }
 
