@@ -12,7 +12,6 @@ module Location = struct
         (l.pos_cnum - l.pos_bol)
 
   type      t = [%import:    Location.t]
-  (* [@@deriving gt ~options:{show; html}] *)
 
   let fmt_location f loc =
     let open Format in
@@ -29,34 +28,21 @@ module Location = struct
     inherit  [unit,'self,View.viewer] t_t
     method do_t () _ = HTML.string "<noloc>"
   end
-  let html_t subj =
-    GT.fix0 (fun self -> gcata_t ((new html_t_t) self) ()) subj
+  let html_t () subj = GT.transform_gc gcata_t (new html_t_t) () subj
 
   class ['self] fmt_t_t fself = object
     inherit  [Format.formatter, 'self, unit] t_t
     method do_t = fmt_location
   end
-  let fmt_t fmt subj =
-    GT.fix0 (fun self -> gcata_t ((new fmt_t_t) self) ) fmt subj
+  let fmt_t fmt subj = GT.transform_gc gcata_t (new fmt_t_t) fmt subj
   let t =
     {
       GT.gcata = gcata_t;
-      GT.plugins = (object method html = html_t method fmt = fmt_t end)
+      GT.plugins = (object method html = html_t () method fmt = fmt_t end)
     }
 
   type 'a loc = [%import: 'a Location.loc]
   [@@deriving gt ~options:{ fmt; html }]
-
-  (* class virtual ['ia,'a,'sa,'inh,'self,'syn] loc_t =
-   *   object method virtual  do_loc : 'inh -> 'a loc -> 'syn end
-   * class ['a,'self] show_loc_t fself  fa =  object
-   *   inherit  [unit,'a,string,unit,'self,string] loc_t
-   *   method do_loc () { txt; loc } =
-   *     Format.sprintf "{  txt=%s; loc=%s; }" (fa txt)
-   *       ((fun subj -> (t.GT.plugins)#show subj) loc)
-   * end
-   * let rec show_loc fa subj =
-   *   GT.fix0 (fun self -> gcata_loc ((new show_loc_t) self fa) ()) subj *)
 
 end
 
@@ -143,7 +129,6 @@ type constant = [%import: Parsetree.constant] [@@deriving gt ~options:{ fmt; htm
  * and extension_constructor_kind = [%import: Parsetree.extension_constructor_kind]
  * and case = [%import: Parsetree.case]
  * [@@deriving gt ~options:{ fmt; html }] *)
-
 
 type attribute = (string Asttypes.loc * payload)
 and extension = (string Asttypes.loc * payload)
@@ -274,13 +259,16 @@ and class_type_field =
   pctf_attributes: attributes }
 and class_type_field_desc =
   | Pctf_inherit of class_type
-  | Pctf_val of (Asttypes.label Asttypes.loc * Asttypes.mutable_flag *
-  Asttypes.virtual_flag * core_type)
-  | Pctf_method of (Asttypes.label Asttypes.loc * Asttypes.private_flag *
-  Asttypes.virtual_flag * core_type)
-  | Pctf_constraint of (core_type * core_type)
-  | Pctf_attribute of attribute
-  | Pctf_extension of extension
+  | Pctf_val of (Asttypes.label Asttypes.loc *
+                 Asttypes.mutable_flag *
+                 Asttypes.virtual_flag *
+                 core_type
+                )
+  (* | Pctf_method of (Asttypes.label Asttypes.loc * Asttypes.private_flag *
+   * Asttypes.virtual_flag * core_type)
+   * | Pctf_constraint of (core_type * core_type)
+   * | Pctf_attribute of attribute
+   * | Pctf_extension of extension *)
 and include_declaration = module_expr include_infos
 and 'a include_infos =
   {

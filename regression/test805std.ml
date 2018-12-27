@@ -1,7 +1,5 @@
-module GT = struct
-  include GT
-  include Show_typed_api
-end
+(* The same as test 086 but in PPX syntax *)
+module GT = Show_typed_api
 
 module T : sig
   type t2 = GT.int * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
@@ -41,5 +39,3 @@ module T : sig
   type ('a,'b) arr1 = ('a * 'b) array [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 
 end
-
-

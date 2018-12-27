@@ -1,10 +1,10 @@
 @type a = A of b | C of GT.int GT.list with show
 and   b = B of a | D of GT.string      with show
 
+let x = A (B (C [1; 2; 3; 4]))
+let y = B (A (D "3"))
 
-
-
-
+let () = Printf.printf "%s\n" @@ GT.show(a) x
 
 class show_a2stub prereq fself =
   object
@@ -21,8 +21,5 @@ let a = { a with plugins = object
                    method show = show_a_new
                  end}
 let _ =
-  let x = A (B (C [1; 2; 3; 4])) in
-  let y = B (A (D "3")) in
-  Printf.printf "%s\n" (GT.show(a) x);
   Printf.printf "%s\n" (GT.show(b) y);
   Printf.printf "%s\n" (GT.show(a) x);
