@@ -11,26 +11,34 @@ let fix = GT.fix0;;
 
 let show_decorated e = GT.show(decorated) e
 
+let fix f inh t =
+  let knot = ref (fun _ -> assert false) in
+  let recurse inh t = f !knot inh t in
+  knot := recurse;
+  recurse inh t
+
 (* Simple --- one-level --- decoration *)
 module Simple =
   struct
-
-    (* Decoration *)
-    let decorate : (unit -> unit -> 'a) -> expr -> 'a decorated = fun fd e ->
-      fix (fun s e -> let d = fd () in GT.gmap(a_expr) s e, d) e
+    (* let (_:int) = GT.transform_gc gcata_a_expr (new gmap_a_expr_t (GT.lift fst)) () *)
 
     (* Stripping *)
-    let strip : 'a decorated -> expr = fun e ->
-      fix (fun fself e -> GT.gmap(a_expr) fself (fst e)) e
+    let strip :  'a decorated -> expr = fun e ->
+      fix (fun fself () e -> GT.gmap(a_expr) fself (fst e)) () e
+
+    (* Decoration *)
+    let decorate : (unit -> 'a) -> expr -> 'a decorated = fun fd e ->
+      fix (fun fself () e -> let d = fd () in GT.gmap(a_expr) fself e, d) () e
+
 
     (* Testing *)
     let _ =
       Printf.printf "\n";
       let e = Add (Add (Const 1, Const 2), Const 3) in
-      Printf.printf "%s\n" (show_expr e);
+      Printf.printf "%s\n" (GT.show expr e);
       let e = decorate (let i = ref 0 in fun () -> let n = !i in incr i; n) e in
-      Printf.printf "%s\n" (show_decorated string_of_int e);
-      Printf.printf "%s\n" (show_expr @@ strip e)
+      Printf.printf "%s\n" (show_decorated (GT.lift string_of_int) e);
+      Printf.printf "%s\n" (GT.show expr @@ strip e)
 
   end
 
@@ -43,7 +51,7 @@ module Advanced =
 
     (* Redecorate *)
     let redecorate : ('a -> 'b) -> 'a decorated -> 'b decorated = fun ab e ->
-      fix (fun s (e, a) -> GT.gmap(a_expr) s e, ab a) e
+      fix (fun s () (e, a) -> GT.gmap(a_expr) s e, ab a) () e
 
     (* Testing *)
     let _ =
@@ -51,43 +59,45 @@ module Advanced =
       let e = Add (Add (Const 1, Const 2), Const 3) in
       Printf.printf "%s\n" (show_expr e);
       let e = lift e in
-      Printf.printf "%s\n" (show_decorated (fun _ -> "()") e);
+      Printf.printf "%s\n" (show_decorated (fun () _ -> "()") e);
       let e = redecorate (let i = ref 0 in fun () -> let n = !i in incr i; n) e in
-      Printf.printf "%s\n" (show_decorated (GT.show GT.int) e);
+      Printf.printf "%s\n" (show_decorated (GT.lift @@ GT.show GT.int) e);
       let e = redecorate (let i = ref 0 in fun a -> let n = !i in incr i; (a, n)) e in
       Printf.printf "%s\n" @@
-      show_decorated (GT.show(GT.pair) (GT.show GT.int) (GT.show GT.int)) e;
+      show_decorated GT.(lift @@ show(pair) (lift @@ show int) (lift @@ show int)) e;
       let e = redecorate snd e in
-      Printf.printf "%s\n" (show_decorated (GT.show GT.int) e)
+      Printf.printf "%s\n" (show_decorated GT.(lift @@ show int) e)
 
   end
 
 (* Custom --- no use of gmap *)
-module Custom =
-  struct
-    let redecorate : 'inh -> ('a -> 'inh -> 'c * 'inh) -> 'a decorated -> 'c decorated =
-      fun init f expr ->
-      let tr = object(self_p)
+module Custom = struct
+  let redecorate : 'inh -> ('a -> 'inh -> 'c * 'inh) -> 'a decorated -> 'c decorated =
+    fun init f expr ->
+      (* TODO: we have issues here because we can't create proper*)
+      let tr fself = object
         inherit [ 'inh, 'a decorated a_expr, 'c decorated a_expr * 'inh
                 , 'inh, 'a, 'c
                 , 'inh, 'c decorated * 'inh, _
                 ] GT.pair_t
 
-        method c_Pair c0 l r =
-          let (l, c1) = GT.transform a_expr (object
-              method c_Const c0 n : ('c decorated a_expr * 'inh) = (Const n, c0)
-              method c_Add   c0 l r =
-                let (l, c1) = GT.transform (decorated) self_p c0 l in
-                let (r, c2) = GT.transform (decorated) self_p c1 r in
-                (Add (l,r), c2)
-            end)
+        method c_Pair c0 _ l r =
+          let (l, c1) =
+            GT.transform a_expr
+              (fun _ -> object
+                method c_Const c0 _ n : ('c decorated a_expr * 'inh) = (Const n, c0)
+                method c_Add   c0 _ l r =
+                  let (l, c1) = fself c0 l in
+                  let (r, c2) = fself c1 r in
+                  (Add (l,r), c2)
+              end)
               c0
               l
           in
           let (new_decor,new_inh) = f r c1 in
           ( (l, new_decor), new_inh)
       end in
-      GT.transform (decorated) tr init expr |> fst
+      GT.transform(decorated) tr init expr |> fst
 
     let () =
       Printf.printf "\n";
