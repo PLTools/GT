@@ -75,10 +75,10 @@ module Custom = struct
   let redecorate : 'inh -> ('a -> 'inh -> 'c * 'inh) -> 'a decorated -> 'c decorated =
     fun init f expr ->
       (* TODO: we have issues here because we can't create proper*)
-      let tr fself = object
+      let tr = object(self)
         inherit [ 'inh, 'a decorated a_expr, 'c decorated a_expr * 'inh
-                , 'inh, 'a, 'c
-                , 'inh, 'c decorated * 'inh, _
+                , 'inh,                  'a,                         'c
+                , 'inh, 'c decorated * 'inh, 'c decorated * 'inh
                 ] GT.pair_t
 
         method c_Pair c0 _ l r =
@@ -87,9 +87,9 @@ module Custom = struct
               (fun _ -> object
                 method c_Const c0 _ n : ('c decorated a_expr * 'inh) = (Const n, c0)
                 method c_Add   c0 _ l r =
-                  let (l, c1) = fself c0 l in
-                  let (r, c2) = fself c1 r in
-                  (Add (l,r), c2)
+                  let (l2, c1) = decorated.GT.gcata self c0 l in
+                  let (r2, c2) = decorated.GT.gcata self c1 r in
+                  (Add (l2,r2), c2)
               end)
               c0
               l
@@ -97,17 +97,17 @@ module Custom = struct
           let (new_decor,new_inh) = f r c1 in
           ( (l, new_decor), new_inh)
       end in
-      GT.transform(decorated) tr init expr |> fst
+      decorated.GT.gcata tr init expr |> fst
 
     let () =
       Printf.printf "\n";
       let e = Add (Add (Const 1, Const 2), Const 3) in
       Printf.printf "%s\n" (show_expr e);
       let e2 = Simple.decorate (fun () -> ()) e in
-      Printf.printf "%s\n" (show_decorated (fun _ -> "<unit>") e2);
+      Printf.printf "%s\n" (show_decorated (fun () _ -> "<unit>") e2);
 
       let e3 = redecorate 10 (fun () n -> n,n+1) e2 in
-      Printf.printf "%s\n" (show_decorated (GT.show GT.int) e3);
+      Printf.printf "%s\n" (show_decorated GT.(lift @@ show int) e3);
       ()
 
   end
