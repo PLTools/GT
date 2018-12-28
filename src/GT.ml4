@@ -1,4 +1,4 @@
- (**************************************************************************
+(**************************************************************************
  *  Copyright (C) 2012-2015
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
  *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA
@@ -553,30 +553,32 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
 (* Pairs and other stuff without explicit structure *)
 type ('a, 'b) pair = 'a * 'b
 
-let gcata_pair tr inh = function (a, b) -> tr#c_Pair inh a b
+let gcata_pair tr inh p =
+  match p with
+  | (a, b) -> tr#c_Pair inh p a b
 
 class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t =
   object
-    method virtual c_Pair : 'inh -> 'a -> 'b -> 'syn
+    method virtual c_Pair : 'inh -> 'a*'b -> 'a -> 'b -> 'syn
   end
 
 class ['a, 'b, 'self] show_pair_t fa fb _ =
   object
     inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] pair_t
-    method c_Pair () x y = Printf.sprintf "(%a, %a)" fa x fb y
+    method c_Pair () _ x y = Printf.sprintf "(%a, %a)" fa x fb y
   end
 class ['a, 'b, 'self] fmt_pair_t fa fb _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] pair_t
     constraint 'inh = Format.formatter
-    method c_Pair fmt x y = Format.fprintf fmt "(%a,%a)" fa x fb y
+    method c_Pair fmt _ x y = Format.fprintf fmt "(%a,%a)" fa x fb y
   end
 
 class ['a, 'b, 'self] html_pair_t fa fb _ =
   object
     inherit [unit, 'a, 'syn, unit, 'b, 'syn, unit, 'self, 'syn] pair_t
     constraint 'syn = HTML.viewer
-    method c_Pair () x y =
+    method c_Pair () _ x y =
       List.fold_left View.concat View.empty
          [ HTML.ul (fa () x)
          ; HTML.ul (fb () y)
@@ -586,18 +588,18 @@ class ['a, 'b, 'self] html_pair_t fa fb _ =
 class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t (fa: unit -> 'a -> 'sa) fb _ =
   object
     inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, ('sa, 'sb) pair] pair_t
-    method c_Pair () x y = (fa () x, fb () y)
+    method c_Pair () _ x y = (fa () x, fb () y)
   end
 
 class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_pair_t fa fb _ =
   object
     inherit ['env, 'a, 'sa, 'env, 'b, 'sb, 'env, 'self, ('sa, 'sb) pair] pair_t
-    method c_Pair env x y = (fa env x, fb env y)
+    method c_Pair env _ x y = (fa env x, fb env y)
   end
 class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t fa fb _ =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * ('sa, 'sb) pair] pair_t
-    method c_Pair env x y =
+    method c_Pair env _ x y =
       let env1,l = fa env x in
       let env2,r = fb env y in
       env, (l,r)
@@ -606,19 +608,19 @@ class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t fa fb _ =
 class ['a, 'b, 'syn, 'self] foldl_pair_t fa fb _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] pair_t
-    method c_Pair s x y = fb (fa s x) y
+    method c_Pair s _ x y = fb (fa s x) y
   end
 
 class ['a, 'b, 'syn, 'self] foldr_pair_t fa fb _ =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] pair_t
-    method c_Pair s x y = fa (fb s y) x
+    method c_Pair s _ x y = fa (fb s y) x
   end
 
 class ['a, 'b, 'self] eq_pair_t fa fb _ =
   object
     inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, 'self, bool] pair_t
-    method c_Pair inh x y =
+    method c_Pair inh _ x y =
       match inh with
       (z, t) -> fa z x && fb t y
   end
@@ -627,7 +629,7 @@ class ['a, 'b, 'self] compare_pair_t fa fb _ =
   object
     inherit ['a, 'a, 'syn, 'b, 'b, 'syn, ('a, 'b) pair, 'self, 'syn] pair_t
     constraint 'syn = comparison
-    method c_Pair (z,t) x y = (match fa z x with EQ -> fb t y | c -> c)
+    method c_Pair (z,t) _ x y = (match fa z x with EQ -> fb t y | c -> c)
   end
 
 let pair:
