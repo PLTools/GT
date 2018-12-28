@@ -4,7 +4,7 @@ with show, gmap, eq, compare, foldl,foldr
 class ['a, 'b] print (fa: unit -> 'a -> unit) fb _fself =
   object
     inherit [unit, 'a, unit, unit, 'b, unit, unit, _, unit] @t
-    method c_Pair () x (y, (a, b)) =
+    method c_Pair () _ x (y, (a, b)) =
       Printf.printf "%d\n" x;
       Printf.printf "%s\n" y;
       fa () a;

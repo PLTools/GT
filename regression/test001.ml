@@ -22,9 +22,9 @@ class toString fa _fself =
     method c_B  () _ _ x = "B " ^ x
     method c_E  () _     = "E"
     method c_C  () _ x   = "C "  ^ (string_of_int x)
-    method c_J  () _ x   = "J "  ^ (fa x)
-    method c_JT () _ x   = "JT " ^ (fa x)
-    method c_JF () _ x   = "JF " ^ (fa x)
+    method c_J  () _ x   = "J "  ^ (fa () x)
+    method c_JT () _ x   = "JT " ^ (fa () x)
+    method c_JF () _ x   = "JF " ^ (fa () x)
   end
 
 class resolve fa _ =
@@ -37,17 +37,17 @@ class resolve fa _ =
     method c_B  _ _ f x = B (f, x)
     method c_E  _ _     = E
     method c_C  _ _ x   = C x
-    method c_J  _ _ x   = J  (fa x)
-    method c_JT _ _ x   = JT (fa x)
-    method c_JF _ _ x   = JF (fa x)
+    method c_J  _ _ x   = J  (fa () x)
+    method c_JT _ _ x   = JT (fa () x)
+    method c_JF _ _ x   = JF (fa () x)
   end
 
 let resolve p =
   let symbols = Pervasives.ref [] in
   let p = Array.mapi (fun i (s, c) -> if s != "" then symbols := (s, i) :: !symbols; c) p in
-  Array.map (fun i -> transform0(t) (new resolve (fun i -> List.assoc i !symbols)) i) p
+  Array.map (fun i -> transform(t) (new resolve (fun () i -> List.assoc i !symbols)) () i) p
 
-let toString i  = transform0(t) (new toString string_of_int) i
+let toString i  = transform(t) (new toString (lift string_of_int)) () i
 
 type env  = int list * (string -> int) * int list * int list * int
 

@@ -6,7 +6,7 @@ open GT
 class ['a, 'b] tree_gmap_t f fself =
   object
     inherit ['a, 'b, _] @tree
-    method c_Node x _ n l = Node (f n, List.map fself l)
+    method c_Node x _ n l = Node (f () n, List.map (fself ()) l)
   end
 
 class ['a, 'b] tree_fold_t f fself =
@@ -19,7 +19,7 @@ let num_of_nodes t =
   GT.transform(tree) (new tree_fold_t (fun n _ -> n+1)) 0 t
 
 let increment t =
-  GT.transform0(tree) (new tree_gmap_t (fun n -> n+1)) t
+  GT.transform(tree) (new tree_gmap_t (fun () n -> n+1)) () t
 
 let toString t =
   Buffer.contents @@
@@ -37,4 +37,3 @@ let _ =
   Printf.printf "Tree: %s\n" (toString t);
   Printf.printf "Number of nodes: %d\n" (num_of_nodes t);
   Printf.printf "Incremented: %s\n" (toString (increment t))
-
