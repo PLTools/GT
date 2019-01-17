@@ -88,7 +88,7 @@ module Exp = struct
   type t = MLast.expr
 
   let ident ~loc s =
-    if Base.Char.is_uppercase s.[0]
+    if Base.Char.is_uppercase s.[0] || Base.String.equal s "[]"
     then <:expr< $uid:s$ >>
     else <:expr< $lid:s$ >>
   let lid = ident
@@ -110,7 +110,6 @@ module Exp = struct
       | Ldot (l, r) ->
         let u = helper l in
         <:expr< $u$ . $ident ~loc r$ >>
-        (* acc ~loc u (ident ~loc r) *)
       | _ -> assert false
     in
     helper l
