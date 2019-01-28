@@ -6,6 +6,6 @@
 
 let _ =
   let x = X (A 1, [Y (A "2", []); X (A 2, []); Y (A "3", [])]) in
-  let y = GT.gmap t (GT.lift string_of_int) (GT.lift int_of_string) x in
-  Printf.printf "%s\n" @@ GT.show t (GT.lift string_of_int) GT.(lift id) x;
-  Printf.printf "%s\n" @@ GT.show t GT.(lift id) (GT.lift string_of_int) y
+  let y = GT.gmap t string_of_int int_of_string  x in
+  Printf.printf "%s\n" @@ GT.show t string_of_int id x;
+  Printf.printf "%s\n" @@ GT.show t id string_of_int y

@@ -6,6 +6,6 @@ let _ =
                    ; Node (4, [Node (5, []); Leaf])
                    ]
                ) in
-  let y = GT.gmap tree (GT.lift string_of_int)  x in
-  Printf.printf "%s\n" @@ GT.show tree (GT.lift string_of_int) x;
-  Printf.printf "%s\n" @@ GT.show tree (GT.lift GT.id)         y
+  let y = GT.gmap tree string_of_int  x in
+  Printf.printf "%s\n" @@ GT.show tree string_of_int x;
+  Printf.printf "%s\n" @@ GT.show tree GT.id         y
