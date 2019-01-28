@@ -583,7 +583,7 @@ let collect_plugins_sig ~loc tdecl plugins =
   Typ.constr ~loc (Ldot (lident "GT", "t"))
     [ make_gcata_typ ~loc tdecl
     ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
-        (p#trait_name, p#make_trans_function_typ ~loc tdecl)
+        (p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
       )
     ]
 

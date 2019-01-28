@@ -548,9 +548,10 @@ class virtual generator initial_args = object(self: 'self)
 
   method do_single_sig ~loc ~is_rec tdecl =
     List.concat
-    [ self#make_class_sig ~loc ~is_rec tdecl []
-    ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
-    ]
+      [ self#make_class_sig ~loc ~is_rec tdecl []
+      (* Need to fix drawing a signature by specializing for show|gmap case *)
+      (* ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl] *)
+      ]
 
   method do_single ~loc ~is_rec tdecl =
     [ self#make_class ~loc ~is_rec [] tdecl
@@ -829,11 +830,17 @@ class virtual generator initial_args = object(self: 'self)
   (* required only for show_typed true *)
   method eta_and_exp ~center tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    let fs = map_type_param_names tdecl.ptype_params ~f:id in
+    let fs = map_type_param_names tdecl.ptype_params ~f:(sprintf "f%s") in
     let ans =
       List.fold_left fs ~init:center
-        ~f:(fun acc name -> Exp.app ~loc acc (Exp.ident ~loc name))
+        ~f:(fun acc name ->
+            Exp.app ~loc
+              acc
+              (Exp.app ~loc
+                 (Exp.of_longident ~loc (Ldot (Lident "GT", "lift")))
+                 (Exp.ident ~loc name)))
     in
+    (* extra unit instead of inherited attribute *)
     let ans = Exp.app ~loc ans (Exp.unit ~loc) in
     List.fold_right fs ~init:ans
       ~f:(fun name acc -> Exp.fun_ ~loc (Pat.var ~loc name) acc)
@@ -1052,8 +1059,6 @@ class virtual no_inherit_arg0 = object(self: 'self)
   (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
    *   fot a type ('a,'b,....'z) being generated
    **)
-  (* method virtual make_typ_of_class_argument: *)
-
   method make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
@@ -1171,6 +1176,10 @@ class virtual with_inherit_arg = object(self: 'self)
 
   method long_trans_function_typ ~(loc:loc) (tdecl: type_declaration) : Typ.t =
     self#make_trans_function_typ ~loc tdecl
+
+  method make_final_trans_function_typ ~loc tdecl =
+    self#make_trans_function_typ ~loc tdecl
+
 end
 
 
@@ -1235,6 +1244,33 @@ class virtual no_inherit_arg = object(self: 'self)
           in
           Typ.arrow ~loc for_arg acc
         )
+
+  (* (\* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
+   *  *   fot a type ('a,'b,....'z) being generated
+   *  **\)
+   * method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+   *   (Typ.t -> 'a -> 'a) ->
+   *   string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+   *   fun ~loc tdecl chain name k ->
+   *     let subj_t = Typ.var ~loc name in
+   *     let syn_t = self#syn_of_param ~loc name in
+   *     k @@ (fun arg -> chain (Typ.arrow ~loc subj_t syn_t) arg) *)
+
+  method! make_final_trans_function_typ ~loc tdecl =
+    let make_arg ~loc td chain name k =
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      k @@ (fun arg -> chain (Typ.arrow ~loc subj_t syn_t) arg)
+    in
+    let type_ = self#make_RHS_typ_of_transformation ~loc tdecl in
+    let names = map_type_param_names tdecl.ptype_params ~f:id in
+    List.fold_left names
+      ~init:id
+      ~f:(fun acc name ->
+          make_arg ~loc tdecl (Typ.arrow ~loc) name
+            (fun f arg -> acc @@ f arg)
+        )
+      type_
 
   (* method wrap_tr_function_str ~loc tdecl make_new_obj =
    *   Exp.fun_ ~loc (Pat.sprintf ~loc "subj") @@

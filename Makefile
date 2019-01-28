@@ -72,10 +72,10 @@ clean: clean_tests
 REGRES_CASES :=
 # now we add camlp5 tests
 REGRES_CASES += 000 001 002 003 006 007 008 009 010 012 013 014 015 016 017 018 019 020 022 023 029 030 031 032 037  #001 004 005
-REGRES_CASES += 024 025 # 021 040 #036 #040
+REGRES_CASES += 024 025 036 # 021 040 #036 #040
 REGRES_CASES += 081 082 083 086 087 089 090
 # PPX based tests
-REGRES_CASES += 801 803 804 805 806 810 811 812 820 821 809 # 808
+REGRES_CASES += 801 803 804 805 806 810 811 812 820 821 822 809 # 808
 
 TEST_DIR := regression
 define TESTRULES
@@ -88,7 +88,7 @@ NATIVE_TEST_EXECUTABLES += $$(NATIVE_$(1))
 
 TEST$(1)_NAME := $$(ML_FILE_$(1):regression/test$(1)%.ml=%)
 #$$(info $$(ML_FILE_$(1)) $$(NATIVE_$(1)) $$(TEST$(1)_NAME) )
-#$$(info $$(NATIVE_TEST_EXECUTABLES)) 
+#$$(info $$(NATIVE_TEST_EXECUTABLES))
 .PHONY: test_$(1) test$(1).native compile_tests_native compile_tests_byte
 
 test$(1).native: $$(ML_FILE_$(1)) all $$(NATIVE_$(1))
@@ -192,4 +192,3 @@ uninstall:
 
 rebuild: clean
 	$(MAKE) all tests
-

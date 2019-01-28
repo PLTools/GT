@@ -32,7 +32,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
 
   (* They are very likely will need to be implemented when new plugin is added. *)
 
-  (** Name of a trait (and a plugintoo). It is used for constructing new classes and 
+  (** Name of a trait (and a plugintoo). It is used for constructing new classes and
     * functions related to plugin.
     *)
   method virtual trait_name : string
@@ -100,6 +100,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
   method virtual need_inh_attr : bool
 
   method virtual eta_and_exp: center:'exp -> Ppxlib.type_declaration -> 'exp
+  method virtual make_final_trans_function_typ : loc:'loc -> Ppxlib.type_declaration -> 'typ
 end
 
 (** Functor that takes AST construction functions for a specific backend and
