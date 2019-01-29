@@ -79,7 +79,7 @@ let tuple2 =
       method eval     = GT.tuple2.GT.plugins#eval
       method show_typed (_typa: string) fa (_typb:string) fb x =
         GT.transform(GT.pair)
-          (new show_typed_tuple2_t _typa fa _typb fb)
+          (new show_typed_tuple2_t _typa (GT.lift fa) _typb (GT.lift fb))
           ()
           x
     end
@@ -99,7 +99,7 @@ let tuple3 =
       method eval     = GT.tuple2.GT.plugins#eval
       method show_typed (_typa: string) fa (_typb:string) fb _typc fc x =
         GT.transform(GT.triple)
-          (new show_typed_tuple3_t _typa fa _typb fb _typc fc)
+          (new show_typed_tuple3_t _typa (GT.lift fa) _typb (GT.lift fb) _typc (GT.lift fc))
           ()
           x
     end

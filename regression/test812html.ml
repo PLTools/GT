@@ -21,11 +21,11 @@ let () =
 
   let x2 = A 5655 in
   Format.fprintf fmt "%s\n\n%!" @@ HTML.toHTML @@
-  GT.html t2 (GT.lift @@ GT.html GT.float) x2;
+  GT.html t2 (GT.html GT.float) x2;
 
   let x3 = C (3.1415, 888) in
   Format.fprintf fmt "%s\n\n%!" @@ HTML.toHTML @@
-  GT.html t2 (GT.lift @@ GT.html GT.float) x3;
+  GT.html t2 (GT.html GT.float) x3;
 
   let x4 = D x1 in
   Format.fprintf fmt "%s\n\n%!" @@ HTML.toHTML @@

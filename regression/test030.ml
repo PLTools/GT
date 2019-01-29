@@ -19,8 +19,8 @@ let _ =
   Printf.printf "compare (x, y) = %s\n" (cs (GT.compare(t) c c x y));
   Printf.printf "compare (y, x) = %s\n" (cs (GT.compare(t) c c y x));
   Printf.printf "%s\n"
-    (GT.show(t) (GT.lift id)            (GT.lift string_of_int) @@
-     GT.gmap(t) (GT.lift string_of_int) (GT.lift int_of_string) @@
+    (GT.show(t) id            string_of_int @@
+     GT.gmap(t) string_of_int int_of_string @@
      A (1, "2")
     );
   transform(t) (new print (GT.lift string_of_int) (GT.lift id)) () (A (1, "2"))

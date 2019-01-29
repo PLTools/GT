@@ -24,7 +24,7 @@ module Location = struct
     object method virtual  do_t : 'inh -> t -> 'syn end
   let gcata_t tr inh subj = tr#do_t inh subj
 
-  class ['self] html_t_t fself = object
+  class ['self] html_t_t _fself = object
     inherit  [unit,'self,View.viewer] t_t
     method do_t () _ = HTML.string "<noloc>"
   end
@@ -488,4 +488,4 @@ and case =
   pc_lhs: pattern ;
   pc_guard: expression option ;
   pc_rhs: expression }
-[@@deriving gt ~options:{ fmt; html }]
+[@@deriving gt ~options:{ fmt;  }]
