@@ -21,7 +21,7 @@ module P = Plugin.Make(AstHelpers)
 class g args = object(self: 'self)
   inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit S.g args as super
-  inherit P.no_inherit_arg
+  inherit P.no_inherit_arg args
 
   method trait_name = trait_name
 
@@ -54,13 +54,6 @@ class g args = object(self: 'self)
      *   using_type ~typename: tdecl.ptype_name.txt tdecl
      * in *)
     super#wrap_tr_function_str ~loc tdecl gcata_on_new_expr
-
-
-  (* method! generate_for_variable ~loc name =
-   *   [%expr snd [%e super#generate_for_variable ~loc name ]] *)
-
-  (* method! extract_transformation ~loc etrf =
-   *   [%expr snd [%e super#extract_transformation ~loc etrf ]] *)
 
 
   method! prepare_fa_args ~loc tdecl =
@@ -173,6 +166,7 @@ class g args = object(self: 'self)
    *   ] *)
 
   method! eta_and_exp ~center tdecl =
+    (* TODO: big copy-paste. Fix this somehow *)
     (* we should generate twice as many arguments there as before *)
     let loc = loc_from_caml tdecl.ptype_loc in
     let fs = map_type_param_names tdecl.ptype_params ~f:id in
@@ -182,13 +176,33 @@ class g args = object(self: 'self)
         ~f:(fun acc name ->
             Exp.app_list ~loc acc
               [ Exp.ident ~loc @@ mangle name
-              ; Exp.ident ~loc name ] )
+              ; Exp.app ~loc
+                 (Exp.of_longident ~loc (Ldot (Lident "GT", "lift")))
+                 (Exp.ident ~loc name) ] )
     in
     let ans = Exp.app ~loc ans (Exp.unit ~loc) in
     List.fold_right fs ~init:ans
       ~f:(fun name acc ->
           Exp.fun_ ~loc (Pat.var ~loc @@ mangle name) @@
           Exp.fun_ ~loc (Pat.var ~loc name) acc)
+
+
+  method make_final_trans_function_typ ~loc tdecl =
+    let make_arg ~loc td chain name k =
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      k @@ (fun arg -> chain (Typ.ident ~loc "string") @@
+             chain (Typ.arrow ~loc subj_t syn_t) arg)
+    in
+    let type_ = self#make_RHS_typ_of_transformation ~loc tdecl in
+    let names = map_type_param_names tdecl.ptype_params ~f:id in
+    List.fold_left names
+      ~init:id
+      ~f:(fun acc name ->
+          make_arg ~loc tdecl (Typ.arrow ~loc) name
+            (fun f arg -> acc @@ f arg)
+        )
+      type_
 
 end
 

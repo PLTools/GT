@@ -198,6 +198,7 @@ module Typ = struct
 
   let var ~loc s = ptyp_var ~loc s
   let any ~loc = ptyp_any ~loc
+  let unit ~loc  = [%type: unit]
   (* let ground  ~loc s = constr ~loc (Located.mk ~loc s) [] *)
   let class_  ~loc = ptyp_class ~loc
   let object_ ~loc flg xs =

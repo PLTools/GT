@@ -203,9 +203,10 @@ class ['a, 'self] compare_list_t fa fself =
   end
 
 let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
-            < show    : (unit -> 'a -> string)      -> 'a list -> string;
-              html    : (unit -> 'a -> HTML.viewer) -> 'a list -> HTML.viewer;
-              gmap    : (unit -> 'a -> 'b)          -> 'a list -> 'b list;
+            < show    : ('a -> string)      -> 'a list -> string;
+              html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
+              gmap    : ('a -> 'b)          -> 'a list -> 'b list;
+
               fmt     : (Format.formatter -> 'a -> unit) ->
                         Format.formatter -> 'a list -> unit;
               eval    : ('env -> 'a -> 'b) -> 'env -> 'a list -> 'b list;
@@ -218,9 +219,10 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
   {gcata   = gcata_list;
    plugins = object
                method show fa l =
-                 sprintf "[%a]" (transform_gc gcata_list (new @list[show] fa)) l
-               method html    fa   = transform_gc gcata_list (new @list[html] fa) ()
-               method gmap    fa   = transform_gc gcata_list (new @list[gmap] fa) ()
+                 sprintf "[%a]" (transform_gc gcata_list (new @list[show] (lift fa))) l
+               method html    fa   = transform_gc gcata_list (new @list[html] (lift fa)) ()
+               method gmap    fa   = transform_gc gcata_list (new @list[gmap] (lift fa)) ()
+
                method fmt fa inh l =
                  Format.fprintf inh "[@[%a@]]@,"
                    (transform_gc gcata_list (new @list[fmt] fa)) l
@@ -305,9 +307,10 @@ module Lazy =
       end
 
     let t : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #t_t -> 'inh -> 'a t -> 'syn,
-             < show    : (unit -> 'a -> string)      -> 'a t -> string;
-               html    : (unit -> 'a -> HTML.viewer) -> 'a t -> HTML.viewer;
-               gmap    : (unit -> 'a -> 'b)          -> 'a t -> 'b t;
+             < show    : ('a -> string)      -> 'a t -> string;
+               html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
+               gmap    : ('a -> 'b)          -> 'a t -> 'b t;
+
                eval    : ('env -> 'a -> 'b) -> 'env -> 'a t -> 'b t;
                stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a t -> 'env * 'b t;
                foldl   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;
@@ -315,12 +318,13 @@ module Lazy =
                eq      : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool;
                compare : ('a -> 'a -> comparison) -> 'a t -> 'a t -> comparison;
              >) t' =
-      let fself _ = assert false in
+      let fself _ _ = assert false in
       {gcata   = gcata_lazy;
        plugins = object
-                   method show     fa  = gcata_lazy (new @t[show] fself fa) ()
-                   method html     fa  = gcata_lazy (new @t[html] fself fa) ()
-                   method gmap     fa  = gcata_lazy (new @t[gmap] fself fa) ()
+                   method show     fa  = gcata_lazy (new @t[show] fself (lift fa)) ()
+                   method html     fa  = gcata_lazy (new @t[html] fself (lift fa)) ()
+                   method gmap     fa  = gcata_lazy (new @t[gmap] fself (lift fa)) ()
+
                    method eval     fa  = gcata_lazy (new @t[eval] fself fa)
                    method stateful fa  = gcata_lazy (new @t[stateful] fself fa)
                    method eq      fa   = gcata_lazy (new @t[eq] fself fa)
@@ -423,9 +427,10 @@ class ['a, 'self] compare_option_t fa _fself =
   end
 
 let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> 'syn,
-              < show    : (unit -> 'a -> string)      -> 'a option -> string;
-                html    : (unit -> 'a -> HTML.viewer) -> 'a option -> HTML.viewer;
-                gmap    : (unit -> 'a -> 'b) -> 'a option -> 'b option;
+              < show    : ('a -> string)      -> 'a option -> string;
+                html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
+                gmap    : ('a -> 'b)          -> 'a option -> 'b option;
+
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           Format.formatter -> 'a option -> unit;
                 stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a option -> 'env * 'b option;
@@ -437,9 +442,9 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
               >) t =
   {gcata   = gcata_option;
    plugins = object
-               method show     fa = transform_gc gcata_option (new @option[show] fa) ()
-               method html     fa = transform_gc gcata_option (new @option[html] fa) ()
-               method gmap     fa = transform_gc gcata_option (new @option[gmap] fa) ()
+               method show     fa = transform_gc gcata_option (new @option[show] (lift fa)) ()
+               method html     fa = transform_gc gcata_option (new @option[html] (lift fa)) ()
+               method gmap     fa = transform_gc gcata_option (new @option[gmap] (lift fa)) ()
 
                method fmt      fa = transform_gc gcata_option (new @option[fmt] fa)
                method stateful fa = transform_gc gcata_option (new @option[stateful] fa)
@@ -520,9 +525,10 @@ class ['a, 'self] compare_free_t fa _ =
   end
 
 let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
-              < show    : (unit -> 'a -> string)      -> 'a free -> string;
-                html    : (unit -> 'a -> HTML.viewer) -> 'a free -> HTML.viewer;
-                gmap    : (unit -> 'a -> 'c)          -> 'a free -> 'c free;
+              < show    : ('a -> string)      -> 'a free -> string;
+                html    : ('a -> HTML.viewer) -> 'a free -> HTML.viewer;
+                gmap    : ('a -> 'c)          -> 'a free -> 'c free;
+
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           Format.formatter -> 'a free -> unit;
                 eval    : ('env -> 'a -> 'c) -> 'env -> 'a free -> 'c free;
@@ -536,9 +542,10 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               >) t =
   {gcata   = gcata_free;
    plugins = object
-       method show     fa = transform_gc gcata_free (new @free[show] fa) ()
-       method gmap     fa = transform_gc gcata_free (new @free[gmap] fa) ()
-       method html     fa = transform_gc gcata_free (new @free[html] fa) ()
+       method show     fa = transform_gc gcata_free (new @free[show] (lift fa)) ()
+       method gmap     fa = transform_gc gcata_free (new @free[gmap] (lift fa)) ()
+       method html     fa = transform_gc gcata_free (new @free[html] (lift fa)) ()
+
        method fmt      fa = transform_gc gcata_free (new @free[fmt] fa)
        method eval     fa = transform_gc gcata_free (new @free[eval]  fa)
        method stateful fa = transform_gc gcata_free (new @free[stateful] fa)
@@ -634,12 +641,13 @@ class ['a, 'b, 'self] compare_pair_t fa fb _ =
 
 let pair:
   ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, _, 'syn) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
-              < show    : (unit -> 'a -> string) -> (unit -> 'b -> string) ->
+              < show    : ('a -> string) -> ('b -> string) ->
                           ('a, 'b) pair -> string;
-                html    : (unit -> 'a -> HTML.viewer) -> (unit -> 'b -> HTML.viewer) ->
+                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) ->
                           ('a, 'b) pair -> HTML.viewer;
-                gmap    : (unit -> 'a -> 'c) -> (unit -> 'b -> 'd) ->
+                gmap    : ('a -> 'c) -> ('b -> 'd) ->
                           ('a, 'b) pair -> ('c, 'd) pair;
+
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           (Format.formatter -> 'b -> unit) ->
                           Format.formatter -> ('a,'b) pair -> unit;
@@ -660,9 +668,10 @@ let pair:
      let tr  obj subj     = transform_gc gcata_pair obj ()  subj in
      let tr1 obj inh subj = transform_gc gcata_pair obj inh subj in
      object
-       method show     fa fb = tr  (new @pair[show] fa fb)
-       method html     fa fb = tr  (new @pair[html] fa fb)
-       method gmap     fa fb = tr  (new @pair[gmap] fa fb)
+       method show     fa fb = tr  (new @pair[show] (lift fa) (lift fb))
+       method html     fa fb = tr  (new @pair[html] (lift fa) (lift fb))
+       method gmap     fa fb = tr  (new @pair[gmap] (lift fa) (lift fb))
+
        method fmt      fa fb = tr1 (new @pair[fmt]  fa fb)
        method eval     fa fb = tr1 (new @pair[eval] fa fb)
        method stateful fa fb = tr1 (new @pair[stateful] fa fb)
@@ -827,16 +836,17 @@ class ['a, 'b, 'c, 'syn, 'self] foldr_triple_t fa fb fc _ =
 let triple :
     ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'inh, _, 'syn ) #triple_t ->
       'inh -> ('a, 'b, 'c) triple -> 'syn
-    , < show    : (unit -> 'a -> string) ->
-                  (unit -> 'b -> string) ->
-                  (unit -> 'c -> string) ->
+    , < show    : ('a -> string) ->
+                  ('b -> string) ->
+                  ('c -> string) ->
                   ('a, 'b, 'c) triple  -> string;
-        gmap    : (unit -> 'a -> 'd) -> (unit -> 'b -> 'e) -> (unit -> 'c -> 'f) ->
+        gmap    : ('a -> 'd) -> ('b -> 'e) -> ('c -> 'f) ->
                   ('a, 'b, 'c) triple -> ('d, 'e, 'f) triple;
-        html    : (unit -> 'a -> HTML.er) ->
-                  (unit -> 'b -> HTML.er) ->
-                  (unit -> 'c -> HTML.er) ->
+        html    : ('a -> HTML.er) ->
+                  ('b -> HTML.er) ->
+                  ('c -> HTML.er) ->
                   ('a, 'b, 'c) triple -> HTML.er;
+
         fmt     : (Format.formatter -> 'a -> unit) ->
                   (Format.formatter -> 'b -> unit) ->
                   (Format.formatter -> 'c -> unit) ->
@@ -877,9 +887,10 @@ let triple :
      let tr  obj subj     = transform_gc gcata_triple obj  () subj in
      let tr1 obj inh subj = transform_gc gcata_triple obj inh subj in
      object
-       method show     fa fb fc = tr  (new @triple[show] fa fb fc)
-       method html     fa fb fc = tr  (new @triple[html] fa fb fc)
-       method gmap     fa fb fc = tr  (new @triple[gmap] fa fb fc)
+       method show     fa fb fc = tr  (new @triple[show] (lift fa) (lift fb) (lift fc))
+       method html     fa fb fc = tr  (new @triple[html] (lift fa) (lift fb) (lift fc))
+       method gmap     fa fb fc = tr  (new @triple[gmap] (lift fa) (lift fb) (lift fc))
+
        method fmt      fa fb fc = tr1 (new @triple[fmt]  fa fb fc)
        method eval     fa fb fc = tr1 (new @triple[eval] fa fb fc)
        method stateful fa fb fc = tr1 (new @triple[stateful] fa fb fc)
@@ -973,10 +984,10 @@ let tuple4 :
                   (Format.formatter -> 'c -> unit) ->
                   (Format.formatter -> 'd -> unit) ->
                   Format.formatter -> ('a, 'b, 'c, 'd) tuple4 -> unit;
-        html    : (unit -> 'a -> HTML.er) ->
-                  (unit -> 'b -> HTML.er) ->
-                  (unit -> 'c -> HTML.er) ->
-                  (unit -> 'd -> HTML.er) ->
+        html    : ('a -> HTML.er) ->
+                  ('b -> HTML.er) ->
+                  ('c -> HTML.er) ->
+                  ('d -> HTML.er) ->
                   ('a, 'b, 'c, 'd) tuple4 -> HTML.er;
       >) t =
   {gcata   = gcata_tuple4;
@@ -984,7 +995,7 @@ let tuple4 :
      let tr  obj subj     = transform_gc gcata_tuple4 obj  () subj in
      let tr1 obj inh subj = transform_gc gcata_tuple4 obj inh subj in
      object
-       method html     fa fb fc fd = tr  (new @tuple4[html] fa fb fc fd)
+       method html     fa fb fc fd = tr  (new @tuple4[html] (lift fa) (lift fb) (lift fc) (lift fd))
        method fmt      fa fb fc fd = tr1 (new @tuple4[fmt]  fa fb fc fd)
      end
 }
@@ -1026,15 +1037,17 @@ class ['a, 'self] show_ref_t fa _ =
 let ref:
     ( ('ia, 'a, 'sa, 'inh, _, 'syn ) #ref_t ->
       'inh -> 'a ref -> 'syn
-    , < fmt     : (Format.formatter -> 'a -> unit) ->
+    , < html    : ('a -> HTML.er) ->  'a ref -> HTML.er;
+        show    : ('a -> string)  ->  'a ref -> string;
+
+        fmt     : (Format.formatter -> 'a -> unit) ->
                   Format.formatter -> 'a ref -> unit;
-        html    : (unit -> 'a -> HTML.er) ->  'a ref -> HTML.er;
-        show    : (unit -> 'a -> string) ->  'a ref -> string;
       >) t =
   {gcata   = gcata_ref;
    plugins = object
-     method show    fa = transform_gc gcata_ref (new @ref[show] fa) ()
-     method html    fa = transform_gc gcata_ref (new @ref[html] fa) ()
+     method show    fa = transform_gc gcata_ref (new @ref[show] (lift fa)) ()
+     method html    fa = transform_gc gcata_ref (new @ref[html] (lift fa)) ()
+
      method fmt     fa = transform_gc gcata_ref (new @ref[fmt]  fa)
   end
 }
@@ -1148,12 +1161,11 @@ let array =
       let tr  obj fa   s = transform_gc gcata_array (obj fa) () s in
       let tr1 obj fa i s = transform_gc gcata_array (obj fa)  i s in
       object
-        method show fa  = tr (new @array[show]) fa
-        method gmap fa  = tr (new @array[gmap]) fa
-        method html fa  = tr (new @array[html]) fa
+        method show fa  = tr (new @array[show]) (lift fa)
+        method gmap fa  = tr (new @array[gmap]) (lift fa)
+        method html fa  = tr (new @array[html]) (lift fa)
 
-        method fmt fa   = tr1 (new @array[fmt]) fa
-
+        method fmt      fa = tr1 (new @array[fmt]) fa
         method eval     fa = tr1 (new @array[eval]) fa
         method stateful fa = tr1 (new @array[stateful]) fa
         method compare  fa = tr1 (new @array[compare]) fa
@@ -1183,6 +1195,10 @@ class ['self] show_bytes_t fself = object
   inherit [ unit, 'self, string] @bytes
   method do_bytes () = Bytes.to_string
 end
+class ['self] gmap_bytes_t fself = object
+  inherit [unit, 'self, bytes] @bytes
+  method do_bytes () arr = arr
+end
 
 class ['self] fmt_bytes_t fself = object
   inherit [Format.formatter, 'self, unit] @bytes
@@ -1190,12 +1206,6 @@ class ['self] fmt_bytes_t fself = object
   method do_bytes fmt arr =
     Format.fprintf fmt "%S" (Bytes.to_string arr)
 end
-
-class ['self] gmap_bytes_t fself =
-  object
-    inherit [unit, 'self, bytes] @bytes
-    method do_bytes () arr = arr
-  end
 class ['env, 'self] eval_bytes_t fself =
   object
     inherit [ 'env, 'self, bytes] @bytes
@@ -1238,8 +1248,8 @@ class ['self] compare_bytes_t fself =
 let bytes =
   { gcata = gcata_bytes
   ; plugins =
-      let tr  obj    s = gcata_bytes (obj (fun _ -> assert false) ) () s in
-      let tr1 obj i  s = gcata_bytes (obj (fun _ -> assert false) ) i  s in
+      let tr  obj    s = gcata_bytes (obj (fun _ _ -> assert false) ) () s in
+      let tr1 obj i  s = gcata_bytes (obj (fun _ _ -> assert false) ) i  s in
       object
         method show   = tr (new @bytes[show])
         method gmap   = tr (new @bytes[gmap])

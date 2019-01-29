@@ -203,9 +203,10 @@ module Typ = struct
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:ctyp< $lid:s$ >>) fmt
   let ident ~loc s = <:ctyp< $lid:s$ >>
-  let var ~loc s = <:ctyp< '$s$ >>
-  let app ~loc l r = <:ctyp< $l$ $r$ >>
-  let any ~loc  = <:ctyp< _ >>
+  let var  ~loc s = <:ctyp< '$s$ >>
+  let app  ~loc l r = <:ctyp< $l$ $r$ >>
+  let any  ~loc = <:ctyp< _ >>
+  let unit ~loc = <:ctyp< unit >>
   let alias ~loc t s =
     let p = var ~loc s in
     <:ctyp< $t$ as $p$ >>

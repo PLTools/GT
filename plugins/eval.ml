@@ -15,7 +15,7 @@ open AstHelpers
 
 class g initial_args = object(self: 'self)
   inherit G.g initial_args as super
-  inherit P.with_inherit_arg as super2
+  inherit P.with_inherit_arg initial_args as super2
 
   method trait_name = trait_name
 

@@ -41,7 +41,7 @@ let app_format_sprintf ~loc arg =
 class g args = object(self)
   inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit P.generator args
-  inherit P.no_inherit_arg
+  inherit P.no_inherit_arg args
 
   method trait_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"

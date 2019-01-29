@@ -14,11 +14,10 @@ let make_dest_param_names  ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
 class g initial_args = object(self: 'self)
-  inherit P.generator initial_args as super
-  inherit P.with_inherit_arg  as super2
+  inherit P.with_inherit_arg initial_args as super
 
   method trait_name = trait_name
-  
+
   method syn_of_param ~loc s = Typ.var ~loc "syn"
   method default_inh  ~loc tdecl = self#default_syn ~loc tdecl
   method default_syn  ~loc  ?extra_path  tdecl = self#syn_of_param ~loc "dummy"

@@ -49,8 +49,7 @@ let hack_params ?(loc=noloc) ps =
   (param_names, rez_names, assoc, blownup_params)
 
 class g args = object(self: 'self)
-  inherit P.generator args
-  inherit P.no_inherit_arg
+  inherit P.no_inherit_arg args
 
   method trait_name = trait_name
 

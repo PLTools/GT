@@ -39,7 +39,7 @@ let app_format_fprintf ~loc efmtr efmts =
 class g args = object(self)
   inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
   inherit P.generator args
-  inherit P.with_inherit_arg
+  inherit P.with_inherit_arg args
 
   method trait_name = trait_name
   method default_inh ~loc _tdecl =
@@ -141,7 +141,7 @@ class g args = object(self)
       ~init:(app_format_fprintf ~loc inhe @@
         Exp.string_const ~loc @@ sprintf "%s {@[<hov>%s@]@ }@," cname fmt
       )
-  
+
 
 end
 

@@ -35,8 +35,7 @@ let trait_name = trait_name
 let access_GT s = Ldot (Lident "GT", s)
 
 class g initial_args = object(self: 'self)
-  inherit P.generator initial_args
-  inherit P.with_inherit_arg
+  inherit P.with_inherit_arg initial_args
 
   method trait_name = trait_name
 
