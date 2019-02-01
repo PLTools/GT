@@ -139,7 +139,7 @@ class virtual generator initial_args = object(self: 'self)
              *     Naming.mut_arg_name ~plugin:self#plugin_name td.ptype_name.txt
              *   ) *)
             @ (self#prepare_fa_args ~loc tdecl)
-            @ [Pat.var ~loc Naming.self_arg_name]
+            @ [Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt]
           in
           Cl.fun_list ~loc names body
       )
@@ -357,7 +357,7 @@ class virtual generator initial_args = object(self: 'self)
 
     let class_args =
       (self#make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams)
-      @ [fix_self_app @@ Exp.ident ~loc Naming.self_arg_name]
+      @ [fix_self_app @@ Exp.ident ~loc (self#self_arg_name tdecl.ptype_name.txt)]
     in
     k @@ ans class_args
 
@@ -762,7 +762,7 @@ class virtual generator initial_args = object(self: 'self)
       let params = self#plugin_class_params tdecl in
       Str.class_single ~loc ~name:class_name
         ~wrap:(fun cl ->
-            Cl.fun_ ~loc (Pat.sprintf ~loc "%s" Naming.self_arg_name) @@
+            Cl.fun_ ~loc (Pat.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt) @@
             Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl
           )
         ~params
@@ -770,7 +770,7 @@ class virtual generator initial_args = object(self: 'self)
             (Cl.constr ~loc (Lident stub_name) @@
              List.map ~f:(Typ.of_type_arg ~loc) params)
             (mut_funcs @
-             [Exp.sprintf ~loc "%s" Naming.self_arg_name] @
+             [Exp.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt] @
              (self#apply_fas_in_new_object ~loc tdecl))
         ]
     )
@@ -901,6 +901,8 @@ class virtual generator initial_args = object(self: 'self)
    *   in
    *   [ clas ] *)
 
+  method self_arg_name cname  =
+    sprintf "%s_%s" Naming.self_arg_name cname
 
   (* TODO: maybe we can buble from the botton not whole expression  but mayse eitehr
      full expression or not yet applied expression to attribute and subject. That will
@@ -938,8 +940,12 @@ class virtual generator initial_args = object(self: 'self)
               )
               einh esubj
           )
-      | Ptyp_constr (_,_) when is_self_rec t ->
-        Exp.ident ~loc Naming.self_arg_name
+      | Ptyp_constr ({txt},_) when is_self_rec t ->
+        let cname =
+          let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
+          helper txt
+        in
+        Exp.ident ~loc (self#self_arg_name cname)
       | Ptyp_constr ({txt},params) -> begin
           match txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal ->

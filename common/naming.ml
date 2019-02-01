@@ -25,7 +25,7 @@ let mut_ofield ~plugin = sprintf "%s_o%s_func" plugin
 let typ3_for_class_arg ~plugin_name = sprintf "%s_t_%s_3" plugin_name
 let mut_oclass_field ~plugin = sprintf "%s_%s_func" plugin
 
-let extra_param_name = "self"
+let extra_param_name = "extra"
 let self_arg_name = "fself"
 let all_trfs_together = "all_trfs_together"
 let make_extra_param = sprintf "%s_%s" extra_param_name
