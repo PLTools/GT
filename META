@@ -20,8 +20,12 @@ package "ppx" (
   archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx htmlTy.cmx show_typed.cmx"
   plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
   plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
-
   exists_if = "ppx_deriving_gt.cma"
+
+  # This line makes things transparent for people mixing preprocessors
+  # and normal dependencies
+  requires(-ppx_driver) = ""
+  ppx(-ppx_driver,-custom_ppx) = "./pp_gt.native --as-ppx"
 )
 
 package "expander" (

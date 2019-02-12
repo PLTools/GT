@@ -162,7 +162,7 @@ INSTALL_TARGETS=META \
 	$(wildcard _build/ppx/ppx_gt_expander.cmxa) \
 	$(wildcard _build/ppx/ppx_gt_expander.cmi) \
 	$(wildcard _build/ppx/ppx_gt_expander.a) \
-	$(wildcard _build/rewriter/pp_gt.native) \
+	$(wildcard _build/ppx/pp_gt.native) \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .cmo,$(PLUGINS))) ) \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .cmx,$(PLUGINS))) ) \
 	$(wildcard $(addprefix _build/plugins/,$(addsuffix .o,$(PLUGINS))) ) \
