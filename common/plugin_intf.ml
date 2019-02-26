@@ -92,7 +92,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
   method virtual make_trans_function_typ : loc:'loc -> Ppxlib.type_declaration -> 'typ
 
   (** Generate structure items for mutally recursive type declarations. *)
-  method virtual do_mutals :
+  method virtual do_mutuals :
     loc:'loc ->
     is_rec:bool ->
     Ppxlib.type_declaration list -> 'str list

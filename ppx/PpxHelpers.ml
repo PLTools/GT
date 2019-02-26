@@ -295,6 +295,13 @@ module Str = struct
   let values ~loc vbs =
     pstr_value ~loc Recursive vbs
 
+  let functor1 ~loc name ~param sigs strs =
+    pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name)
+      ~expr:(pmod_functor ~loc (Located.mk ~loc param)
+               (Option.some @@
+                pmty_signature ~loc sigs) @@
+             pmod_structure ~loc strs
+            )
 end
 
 module Sig = struct

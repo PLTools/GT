@@ -562,29 +562,36 @@ class virtual generator initial_args = object(self: 'self)
     self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
-  method do_mutals ~loc ~is_rec tdecls : Str.t list =
+  method do_mutuals ~loc ~is_rec tdecls : Str.t list =
     (* for mutal recursion we need to generate two classes, one transformation
        function many structures, fixpoint, etc.
     *)
     let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
-    List.map tdecls ~f:(self#make_trf_field_tdecl ~loc) @
-    [ let name = Naming.prereq_name self#plugin_name
-          (List.hd_exn tdecls).ptype_name.txt
-      in
-      Str.tdecl_record ~loc ~name ~params:[] @@
-      List.map tdecls ~f:(fun tdecl ->
-          let lab_name = Naming.typ1_for_class_arg ~plugin:self#plugin_name
-              tdecl.ptype_name.txt  in
-          lab_decl ~loc (Naming.trf_function self#plugin_name tdecl.ptype_name.txt)
-            false
-            (Typ.ident ~loc lab_name)
-        )
-    ] @
-    List.map tdecls ~f:(self#make_class ~loc ~is_rec:true tdecls) @
-    (self#make_universal_types  ~loc ~mut_names tdecls) @
-    [self#make_mutal_fix ~loc tdecls] @
-    (self#apply_mutal_fix ~loc tdecls) @
-    (self#make_shortend_class ~loc tdecls)
+    (* List.map tdecls ~f:(self#make_trf_field_tdecl ~loc) @
+     * [ let name = Naming.prereq_name self#plugin_name
+     *       (List.hd_exn tdecls).ptype_name.txt
+     *   in
+     *   Str.tdecl_record ~loc ~name ~params:[] @@
+     *   List.map tdecls ~f:(fun tdecl ->
+     *       let lab_name = Naming.typ1_for_class_arg ~plugin:self#plugin_name
+     *           tdecl.ptype_name.txt  in
+     *       lab_decl ~loc (Naming.trf_function self#plugin_name tdecl.ptype_name.txt)
+     *         false
+     *         (Typ.ident ~loc lab_name)
+     *     )
+     * ] @ *)
+    (* List.map tdecls ~f:(self#make_class ~loc ~is_rec:true tdecls) @
+     * (self#make_universal_types  ~loc ~mut_names tdecls) @
+     * [self#make_mutal_fix ~loc tdecls] @
+     * (self#apply_mutal_fix ~loc tdecls) @ *)
+    (* (self#make_shortend_class ~loc tdecls) @ *)
+    (self#make_indexes ~loc tdecls) @
+    []
+
+  method make_indexes ~loc tdecls =
+    let (_:type_declaration list) = tdecls in
+    [ Str.functor1 ~loc "Index" ~param:"S" []  []
+    ]
 
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
     let names = map_type_param_names tdecl.ptype_params ~f:id in
@@ -704,6 +711,7 @@ class virtual generator initial_args = object(self: 'self)
          )
       ]
   method make_universal_types ~loc ~mut_names tdecls =
+    let (_:string list) = mut_names in
     let prereq_typ tl =
       Typ.arrow ~loc
         (Typ.ident ~loc @@

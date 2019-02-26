@@ -683,7 +683,7 @@ let topsort_tdecls tdecls =
   assert (List.length tdecls = List.length tdecls_new);
   tdecls_new
 
-let do_mutal_types ~loc sis plugins tdecls =
+let do_mutual_types ~loc sis plugins tdecls =
   let tdecls_new = topsort_tdecls tdecls in
   let classes, catas =
     let all =
@@ -697,7 +697,7 @@ let do_mutal_types ~loc sis plugins tdecls =
   sis @
   (List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])) @
   catas @
-  List.concat_map plugins ~f:(fun g -> g#do_mutals ~loc ~is_rec:true tdecls_new) @
+  List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new) @
   List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
 
 
@@ -784,7 +784,7 @@ let str_type_decl_many_plugins ~loc si plugins_info declaration =
   match declaration with
   | Recursive, []      -> []
   | Recursive, [tdecl] -> do_typ         ~loc si plugins true tdecl
-  | Recursive, ts      -> do_mutal_types ~loc si plugins ts
+  | Recursive, ts      -> do_mutual_types ~loc si plugins ts
   | Nonrecursive, decls ->
       List.concat_map ~f:(do_typ ~loc si plugins false) decls
 

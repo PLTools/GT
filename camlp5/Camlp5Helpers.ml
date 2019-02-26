@@ -365,6 +365,7 @@ module Str = struct
     let t = <:ctyp< { $list:llsbt$ } >> in
     tdecl ~loc ~name ~params t
 
+  let functor1 ~loc name ~param sigs strs = failwith "not_implemented"
 end
 
 module Sig = struct
