@@ -104,16 +104,28 @@ class virtual generator initial_args = object(self: 'self)
     in
 
     let is_self_rec t =
-      is_rec &&
+      if not is_rec then `Nonrecursive else
       match t.ptyp_desc with
-      | Ptyp_var _ -> false
       | Ptyp_constr ({txt=Lident s}, params)
         when String.equal s cur_name &&
-             List.length params = List.length tdecl.ptype_params &&
-             List.for_all2_exn params tdecl.ptype_params
-               ~f:(fun a (b,_) -> 0=compare_core_type a b)
-        -> is_rec
-      | _ -> false
+             List.length params = List.length tdecl.ptype_params ->
+        let wrap old next = match old,next with
+          | `Nonregular,_ -> `Nonregular
+          | _,`Nonregular -> `Nonregular
+          | `Regular,`Regular -> `Regular
+        in
+        ((List.fold2_exn params tdecl.ptype_params
+          ~init:`Regular
+          ~f:(fun acc inst_par (formal_par,_) ->
+              match inst_par.ptyp_desc, formal_par.ptyp_desc with
+              | (Ptyp_var s1, Ptyp_var s2) when String.equal s1 s2 -> wrap acc `Regular
+              | (_, Ptyp_var _) -> `Nonregular
+              | (_, Ptyp_any) -> `Nonregular (* TODO: think again about this *)
+              | _ when 0=compare_core_type inst_par formal_par -> wrap acc `Regular
+              | _ -> `Nonregular
+            ))
+          :> [ `Regular | `Nonregular | `Nonrecursive])
+      | _ -> `Nonrecursive
     in
     self#got_typedecl ~loc tdecl ~is_self_rec ~mutal_decls k
 
@@ -131,13 +143,18 @@ class virtual generator initial_args = object(self: 'self)
       ~wrap:(fun body ->
           (* constructor arguments are *)
           let names =
-            (match mutal_decls with
-            | [] -> []
-            | _ -> [Pat.sprintf ~loc "%s" @@ Naming.mut_arg_composite])
+            (* (match mutal_decls with
+             * | [] -> []
+             * | _ -> (\* [Pat.sprintf ~loc "%s" @@ Naming.mut_arg_composite] *\)
+             *   [Pat.record ~loc [(Lident Naming.mut_arg_composite
+             *                     ,Pat.var ~loc Naming.mut_arg_composite)] ]
+             * ) *)
             (* List.map mutal_decls ~f:(fun td ->
              *     Pat.sprintf ~loc "%s" @@
              *     Naming.mut_arg_name ~plugin:self#plugin_name td.ptype_name.txt
              *   ) *)
+            [Pat.record ~loc [(Lident Naming.mut_arg_composite
+                                ,Pat.var ~loc Naming.mut_arg_composite)] ]
             @ (self#prepare_fa_args ~loc tdecl)
             @ [Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt]
           in
@@ -326,22 +343,19 @@ class virtual generator initial_args = object(self: 'self)
         in
         let args,fixident =
           match cid.txt with
-          | Lident s when List.mem mutal_names s ~equal:String.equal
-
-
-            ->
+          | Lident s when List.mem mutal_names s ~equal:String.equal ->
             (* Only Lident because we ignore types with same name but from another module *)
             let extra_args =
               match mutal_names with
               | [] -> []
-              | _ -> [Exp.ident ~loc @@ Naming.mut_arg_composite]
+              | _ -> [Exp.record1 ~loc (Lident Naming.mut_arg_composite) @@
+                        Exp.ident ~loc Naming.mut_arg_composite
+                     ]
               (* List.map mutal_names
                *   ~f:(fun name -> Exp.ident ~loc @@
                *        Naming.mut_arg_name ~plugin:self#plugin_name name) *)
             in
-            (extra_args @ args,
-             (fun s -> s ^ "_stub")
-            )
+            (extra_args @ args, id)
           | _ -> (args, id)
         in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
@@ -452,7 +466,7 @@ class virtual generator initial_args = object(self: 'self)
     ~onopen:(fun () -> [])
 
   method virtual on_record_declaration: loc:loc ->
-    is_self_rec:(core_type -> bool) ->
+    is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:(type_declaration list) ->
     type_declaration ->
     label_declaration list ->
@@ -511,7 +525,8 @@ class virtual generator initial_args = object(self: 'self)
     sprintf "%s%s"
       (Naming.trait_class_name_for_typ ~trait:self#plugin_name
          tdecl.ptype_name.txt)
-      (if is_mutal then "_stub" else "")
+      (* (if is_mutal then "_stub" else "") *)
+      ""
 
   method apply_fas_in_new_object ~loc tdecl =
     (* very similar to self#make_inherit_args_for_alias but the latter
@@ -522,28 +537,86 @@ class virtual generator initial_args = object(self: 'self)
     string -> type_declaration -> Exp.t
 
   method make_trans_functions: loc:loc ->
-    is_rec:bool -> string list -> type_declaration list -> Str.t
+    is_rec:bool -> string list -> type_declaration list -> Str.t list
     = fun ~loc ~is_rec mutal_names tdecls ->
-      (* we will generate mutally recursive showers here *)
+      (* we will generate mutally recursive showers here
+
+         (* n functions like *)
+         let show0_typ1 = ...
+
+         let knot = ... using fix
+
+         (* n function like *)
+         let show_typ1 = knot.call TYP1
+      *)
       let on_tdecl tdecl =
         let cur_name = tdecl.ptype_name.txt in
         let others =
           List.filter mutal_names ~f:(String.(<>) cur_name)
         in
         value_binding ~loc
-          ~pat:(Pat.sprintf ~loc "%s" @@ self#make_trans_function_name tdecl)
+          ~pat:(Pat.sprintf ~loc "%s_0" @@ self#make_trans_function_name tdecl)
           ~expr:(
             let class_name = self#make_class_name
                 ~is_mutal:(not (List.is_empty mutal_names))
                 tdecl
             in
             Exp.fun_list ~loc
-              (self#prepare_fa_args ~loc tdecl)
+              ((Pat.var ~loc "call")::(self#prepare_fa_args ~loc tdecl))
               (self#make_trans_function_body ~loc ~rec_typenames:others
                  class_name tdecl)
           )
       in
-      Str.values ~loc @@ List.map tdecls ~f:on_tdecl
+      let make_knot () = value_binding ~loc
+          ~pat:(Pat.sprintf ~loc "%s" self#plugin_name)
+          ~expr:Exp.(app ~loc
+                       (sprintf ~loc "fixv")
+                       (fun_ ~loc (Pat.sprintf ~loc "f") @@
+                        record1 ~loc (Lident "call") @@
+                        new_type "a" ~loc @@
+                        fun_ ~loc (Pat.constraint_ ~loc (Pat.var ~loc "sym")
+                                     (Typ.constr ~loc (Ldot (Lident "I","i"))
+                                        [Typ.ident ~loc "a"])
+                                  ) @@
+                        constraint_ ~loc
+                          (match_ ~loc (ident ~loc "sym") @@
+                           List.map tdecls ~f:(fun tdecl ->
+                               case ~lhs:(Pat.of_longident ~loc
+                                            (Ldot (Lident "I",
+                                                   Naming.cname_index tdecl.ptype_name.txt)) )
+                                 ~rhs:Exp.(app ~loc
+                                             (sprintf ~loc "%s_0" @@
+                                              self#make_trans_function_name tdecl)
+                                             (ident ~loc "f")
+                                          )
+                             )
+                          )
+                          (Typ.ident ~loc "a")
+                       )
+                    )
+      in
+      let use_knot tdecl = value_binding ~loc
+          ~pat:(Pat.sprintf ~loc "%s" @@
+                Naming.trf_function self#plugin_name tdecl.ptype_name.txt)
+          ~expr:(
+            Exp.fun_ ~loc
+              (Pat.sprintf ~loc "eta")
+              (Exp.app_list ~loc
+                 (Exp.field ~loc (Exp.sprintf ~loc "%s" self#plugin_name)
+                    (Lident "call")
+                 )
+                 [ Exp.construct ~loc
+                     (Ldot (Lident "I", Naming.cname_index tdecl.ptype_name.txt)) []
+                 ; Exp.sprintf ~loc "eta"
+                 ]
+              )
+          )
+      in
+
+      List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive)
+        ((List.map tdecls ~f:on_tdecl) @
+         [ make_knot () ] @
+         (List.map tdecls ~f:use_knot))
 
 
   method do_single_sig ~loc ~is_rec tdecl =
@@ -554,9 +627,11 @@ class virtual generator initial_args = object(self: 'self)
       ]
 
   method do_single ~loc ~is_rec tdecl =
-    [ self#make_class ~loc ~is_rec [] tdecl
-    ; self#make_trans_functions ~loc ~is_rec [] [tdecl]
-    ]
+    List.concat
+      [ self#make_indexes ~loc [tdecl]
+      ; [ self#make_class ~loc ~is_rec [] tdecl ]
+      ; self#make_trans_functions ~loc ~is_rec [] [tdecl]
+      ]
 
   method final_typ_params_for_alias ~loc tdecl rhs =
     self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
@@ -566,7 +641,7 @@ class virtual generator initial_args = object(self: 'self)
     (* for mutal recursion we need to generate two classes, one transformation
        function many structures, fixpoint, etc.
     *)
-    let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in
+    (* let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in *)
     (* List.map tdecls ~f:(self#make_trf_field_tdecl ~loc) @
      * [ let name = Naming.prereq_name self#plugin_name
      *       (List.hd_exn tdecls).ptype_name.txt
@@ -585,12 +660,39 @@ class virtual generator initial_args = object(self: 'self)
      * [self#make_mutal_fix ~loc tdecls] @
      * (self#apply_mutal_fix ~loc tdecls) @ *)
     (* (self#make_shortend_class ~loc tdecls) @ *)
-    (self#make_indexes ~loc tdecls) @
-    []
+    List.concat
+      [ self#make_indexes ~loc tdecls
+      ; List.map tdecls ~f:(self#make_class ~loc ~is_rec:true tdecls)
+      ; self#make_trans_functions ~loc ~is_rec [] tdecls
+      ]
 
+
+  (* This function should depend on the plugin *)
   method make_indexes ~loc tdecls =
     let (_:type_declaration list) = tdecls in
-    [ Str.functor1 ~loc "Index" ~param:"S" []  []
+    [ Str.functor1 ~loc "Index" ~param:"S" [Sig.tdecl_abstr ~loc "result" [Some "a"]]
+        [ Str.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+          List.map tdecls ~f:(fun tdecl ->
+              (Naming.cname_index tdecl.ptype_name.txt ,
+               Typ.constr ~loc (lident "i") [
+                 let make_result = Typ.constr ~loc (Ldot (Lident "S", "result")) in
+                 List.fold_right
+                   (map_type_param_names tdecl.ptype_params ~f:id)
+                   ~init:(make_result [Typ.use_tdecl tdecl])
+                   ~f:(fun name acc ->
+                       Typ.arrow ~loc (make_result [Typ.var ~loc name]) acc
+                     )
+               ])
+            )
+        ]
+    ; Str.module_ ~loc "I" @@ Me.apply ~loc (Me.ident ~loc (Lident "Index"))
+        (Me.structure ~loc
+           [ Str.tdecl ~loc ~name:"result" ~params:["a"]
+               Typ.(arrow ~loc (unit ~loc) @@
+                    arrow ~loc (var ~loc "a") (constr ~loc (Lident "string") []))
+           ])
+    ; Str.include_ ~loc @@ Me.(apply ~loc (ident ~loc (Lident "FixV"))
+                                 (ident ~loc (Lident "I")))
     ]
 
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
@@ -784,7 +886,7 @@ class virtual generator initial_args = object(self: 'self)
     )
 
   method virtual on_record_constr: loc:loc ->
-    is_self_rec:(core_type -> bool) ->
+    is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
@@ -794,7 +896,7 @@ class virtual generator initial_args = object(self: 'self)
     Exp.t
 
   method virtual on_tuple_constr : loc:loc ->
-    is_self_rec:(core_type -> bool) ->
+    is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
@@ -948,48 +1050,65 @@ class virtual generator initial_args = object(self: 'self)
               )
               einh esubj
           )
-      | Ptyp_constr ({txt},_) when is_self_rec t ->
-        let cname =
-          let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
-          helper txt
-        in
-        Exp.ident ~loc (self#self_arg_name cname)
       | Ptyp_constr ({txt},params) -> begin
-          match txt with
-          | Lident s when List.mem mutal_names s ~equal:String.equal ->
-            (* we should use local trf object *)
-            let open Exp in
-            app_list ~loc
-              (field ~loc
-                 (field ~loc (ident ~loc Naming.mut_arg_composite)
-                    (lident @@ Naming.trf_function self#plugin_name s))
-                 (lident @@ Naming.trf_field ~plugin:self#plugin_name s))
-              (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls))
-          | _ ->
-              let init =
-                   Exp.(app ~loc
-                          (of_longident ~loc @@ Ldot (Lident "GT", self#plugin_name))
-                          (of_longident ~loc txt)
-                       )
-              in
-              self#abstract_trf ~loc (fun einh esubj ->
-                  self#fancy_app ~loc
-                    (List.fold_left params
-                       ~init
-                       ~f:(fun left typ ->
-                           (* TODO: copy-paste with constructors  *)
-                           let arg = helper ~loc typ in
-                           let arg =
-                             if self#need_inh_attr
-                             then arg
-                             else Exp.app ~loc arg (Exp.unit ~loc) in
-                           self#compose_apply_transformations ~loc ~left arg typ
-                         )
-                    )
-                    einh esubj
+          match is_self_rec t with
+          | `Regular ->
+            let cname =
+              let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
+              helper txt
+            in
+            Exp.ident ~loc (self#self_arg_name cname)
+          | `Nonregular ->
+            let args = List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls) in
+            let cname =
+              let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
+              helper txt
+            in
+            Exp.(app_list ~loc (ident ~loc Naming.mut_arg_composite) @@
+                 [construct ~loc (Ldot (Lident "I", Naming.cname_index cname)) []] @
+                 args
                 )
+            (* assert false *)
+          | `Nonrecursive -> begin
+              (* it is not a recursion but it can be a mutual recursion *)
+              match txt with
+              | Lident s when List.mem mutal_names s ~equal:String.equal ->
+                (* we should use local trf object *)
+                let open Exp in
+                app_list ~loc
+                  (field ~loc
+                     (field ~loc (ident ~loc Naming.mut_arg_composite)
+                        (lident @@ Naming.trf_function self#plugin_name s))
+                     (lident @@ Naming.trf_field ~plugin:self#plugin_name s))
+                  (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls))
+              | _ ->
+                let init =
+                  Exp.(app ~loc
+                         (of_longident ~loc @@ Ldot (Lident "GT", self#plugin_name))
+                         (of_longident ~loc txt)
+                      )
+                in
+                self#abstract_trf ~loc (fun einh esubj ->
+                    self#fancy_app ~loc
+                      (List.fold_left params
+                         ~init
+                         ~f:(fun left typ ->
+                             (* TODO: copy-paste with constructors  *)
+                             let arg = helper ~loc typ in
+                             let arg =
+                               if self#need_inh_attr
+                               then arg
+                               else Exp.app ~loc arg (Exp.unit ~loc) in
+                             self#compose_apply_transformations ~loc ~left arg typ
+                           )
+                      )
+                      einh esubj
+                  )
+
+            end
         end
-        | Ptyp_variant (rows, _, maybe_labels) -> begin
+
+      | Ptyp_variant (rows, _, maybe_labels) -> begin
             let oninherit ~loc einh esubj typs cident varname =
               self#fancy_app ~loc
                 (Exp.app_list ~loc
@@ -1122,7 +1241,7 @@ class virtual no_inherit_arg0 args = object(self: 'self)
     Exp.app ~loc egcata (Exp.unit ~loc)
 
   method on_record_constr: loc:loc ->
-    is_self_rec:(core_type -> bool) ->
+    is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->
@@ -1198,10 +1317,8 @@ class virtual with_inherit_arg args = object(self: 'self)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
     self#wrap_tr_function_str ~loc tdecl
       (  Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
-         (
-           List.map rec_typenames ~f:(fun name ->
-               Exp.sprintf ~loc "%s_%s" self#plugin_name name)
-          @ (self#apply_fas_in_new_object ~loc tdecl)
+         ( (Exp.sprintf ~loc "%s" "call")
+          :: (self#apply_fas_in_new_object ~loc tdecl)
          )
       )
 
@@ -1236,7 +1353,7 @@ class virtual no_inherit_arg args = object(self: 'self)
   method make_trans_function_body ~loc ?(rec_typenames=[]) class_name tdecl =
     self#wrap_tr_function_str ~loc tdecl
       (  Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name) @@
-         (
+         ( ((Exp.sprintf ~loc "%s" "call")) ::
            List.map rec_typenames ~f:(fun name ->
                Exp.fun_ ~loc (Pat.unit ~loc) @@
                Exp.sprintf ~loc "%s_%s" self#plugin_name name)

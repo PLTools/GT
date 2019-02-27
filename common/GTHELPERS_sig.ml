@@ -32,6 +32,7 @@ module rec Pat :
     val variant: loc:loc -> string -> t list -> t
     val tuple:   loc:loc -> t list -> t
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
+    val record1: loc:loc -> string -> t
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
 and Exp :
@@ -79,6 +80,8 @@ and Exp :
     val true_ : loc:loc -> t
     val false_: loc:loc -> t
     val list  : loc:loc -> t list -> t
+    val new_type: loc:loc -> string -> t -> t
+    val constraint_: loc:loc -> t -> Typ.t -> t
   end
 and Typ :
   sig
@@ -93,7 +96,9 @@ and Typ :
     val var : loc:loc -> string -> t
     val any : loc:loc -> t
     val unit : loc:loc -> t
+    val string : loc:loc -> t
     val constr : loc:loc -> Ppxlib.longident -> t list -> t
+
     val tuple : loc:loc -> t list -> t
     val class_ : loc:loc -> Ppxlib.longident -> t list -> t
     val object_ : loc:loc -> Ppxlib.closed_flag -> (string * t) list -> t
@@ -132,7 +137,8 @@ and Str :
     type t
     val of_tdecls : loc:loc -> Ppxlib.type_declaration -> t
     val single_value : loc:loc -> Pat.t -> Exp.t -> t
-    val values: loc:loc -> Vb.t list -> t
+    val values: loc:loc -> ?rec_flag:Ppxlib.rec_flag -> Vb.t list -> t
+    val of_vb: loc:loc  -> ?rec_flag:Ppxlib.rec_flag -> Vb.t -> t
     val class_single :
       loc:loc ->
       name:string ->
@@ -144,7 +150,17 @@ and Str :
       lab_decl list -> t
     val of_class_declarations: loc:loc -> class_declaration list -> t
     val functor1 : loc:loc -> string -> param:string -> Sig.t list -> t list -> t
+    val simple_gadt : loc:loc -> name:string -> params_count:int ->
+      (string * Typ.t) list -> t
+    val module_  : loc:loc -> string -> Me.t -> t
+    val include_ : loc:loc -> Me.t -> t
   end
+and Me : sig
+  type t
+  val structure: loc:loc -> Str.t list -> t
+  val ident: loc:loc -> Longident.t -> t
+  val apply: loc:loc -> t -> t -> t
+end
 and Cl :    (* class_expr *)
   sig
     type t
@@ -164,6 +180,7 @@ and Sig :
       ?wrap:(Cty.t -> Cty.t) ->
       Ctf.t list ->
       t
+    val tdecl_abstr: loc:loc -> string -> string option list -> t
   end
 and Vb :
   sig

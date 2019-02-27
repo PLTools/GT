@@ -52,10 +52,12 @@ let make_fix_name ~plugin tdecls =
 let name_fix_generated_object ~plugin tdecl =
   sprintf "%s_o_%s" plugin tdecl.ptype_name.txt
 let prereq_name ~plugin tail = sprintf "%s_%s_prereq" plugin tail
-let mut_arg_composite = "mut_trfs_here"
+let mut_arg_composite = (* "mut_trfs_here" *) "call"
 (* let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin *)
 (* let mut_class_stubname ~plugin tdecl =
  *   sprintf "%s_%s_stub" plugin_name tdecl.ptype_name.txt *)
 
 let fix_result tdecl =
   sprintf "fix_result_%s" tdecl.ptype_name.txt
+
+let cname_index typname = String.capitalize typname

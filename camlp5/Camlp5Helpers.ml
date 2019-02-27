@@ -59,7 +59,7 @@ module Pat = struct
 
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
-  let record1 ~loc lident expr = record ~loc [lident, expr]
+  let record1 ~loc name = record ~loc [ Lident name, <:patt< $lid:name$>> ]
 
   let tuple ~loc ps = <:patt< ($list:ps$) >>
   let variant ~loc name args =
@@ -177,6 +177,9 @@ module Exp = struct
       | x::xs -> helper (app_list ~loc <:expr< $uid:"::"$ >> [x; acc]) xs
     in
     helper <:expr< $uid:"[]"$ >> (List.rev xs)
+
+  let new_type ~loc = failwith "Not implemented"
+  let constraint_ ~loc e t = <:expr< ($e$:$t$) >>
 end
 
 type lab_decl = (loc * string * bool * ctyp)
@@ -203,10 +206,12 @@ module Typ = struct
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:ctyp< $lid:s$ >>) fmt
   let ident ~loc s = <:ctyp< $lid:s$ >>
+  let string ~loc = <:ctyp< string >>
+  let unit ~loc = <:ctyp< unit >>
+
   let var  ~loc s = <:ctyp< '$s$ >>
   let app  ~loc l r = <:ctyp< $l$ $r$ >>
   let any  ~loc = <:ctyp< _ >>
-  let unit ~loc = <:ctyp< unit >>
   let alias ~loc t s =
     let p = var ~loc s in
     <:ctyp< $t$ as $p$ >>
@@ -337,8 +342,13 @@ module Str = struct
   let single_value ~loc pat body =
     StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body ])
 
-  let values ~loc vbs =
-    <:str_item< value rec $list:vbs$ >>
+  let values ~loc ?(rec_flag=Ppxlib.Recursive) vbs =
+    match rec_flag with
+    | Recursive -> <:str_item< value rec $list:vbs$ >>
+    | Nonrecursive -> <:str_item< value $list:vbs$ >>
+
+  let of_vb ~loc ?(rec_flag=Ppxlib.Recursive) vb = values ~loc ~rec_flag [vb]
+
   let class_single ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fields =
     let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
               ciPrm = (loc, Ploc.VaVal params);
@@ -366,6 +376,19 @@ module Str = struct
     tdecl ~loc ~name ~params t
 
   let functor1 ~loc name ~param sigs strs = failwith "not_implemented"
+  let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
+    fun ~loc -> assert false
+
+  let module_ ~loc = assert false
+
+  let include_ ~loc = assert false
+end
+
+module Me = struct
+  type t
+  let structure ~loc = assert false
+  let ident ~loc = assert false
+  let apply ~loc = assert false
 end
 
 module Sig = struct
@@ -419,6 +442,8 @@ module Sig = struct
             }
     in
     <:sig_item< class $list:[c]$ >>
+
+  let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc -> assert false
 end
 
 module Vb = struct

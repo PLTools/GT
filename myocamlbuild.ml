@@ -19,9 +19,10 @@ open Command;;
 let make_plugins_args ~is_byte =
   (* N.B. Order matters *)
   let names =
-    [ "show"; "gmap"; "eval";  "compare"; "eq";  "stateful"; "foldl"; "foldr"
+    [ "show"; "gmap"
+(*    ; "eval";  "compare"; "eq";  "stateful"; "foldl"; "foldr"
     ; "show_typed"; "fmt"
-    ; "html"
+    ; "html" *)
 (*    ; "htmlTy" *)
     ]
   in

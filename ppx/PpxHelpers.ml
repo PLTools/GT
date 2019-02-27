@@ -35,6 +35,7 @@ module Pat = struct
   let of_longident ~loc lident =
     let rec helper = function
       | Lident s -> ppat_var ~loc (Located.mk ~loc s)
+      | Ldot (Lident l, r) as p -> ppat_construct ~loc (Located.mk ~loc p) None
       | _ -> assert false
     in
     helper lident
@@ -60,6 +61,7 @@ module Pat = struct
   let type_ ~loc lident = ppat_type ~loc (Located.mk ~loc lident)
   let record ~loc ps =
     ppat_record ~loc (List.map ~f:(fun (l,t) -> (Located.mk ~loc l, t)) ps) Closed
+  let record1 ~loc name = record ~loc [(Lident name, var ~loc name)]
   let constr_record      ~loc lident ps =
     constr ~loc lident [record ~loc (List.map ~f:(fun (l,x) -> (Lident l, x)) ps)]
 
@@ -155,6 +157,10 @@ module Exp = struct
       ~f:(fun e acc -> construct ~loc (lident "::") [e; acc])
       ~init:(construct ~loc (lident "[]") [])
 
+  let new_type ~loc s e =
+    pexp_newtype ~loc (Located.mk ~loc s) e
+
+  let constraint_ ~loc e t = pexp_constraint ~loc e t
 end
 
 module Cl = struct
@@ -195,6 +201,8 @@ module Typ = struct
   let ident  ~loc s = ptyp_constr ~loc (Located.lident ~loc s) []
   let sprintf ~loc fmt = Printf.ksprintf (ident ~loc) fmt
   let of_longident ~loc lident = ptyp_constr ~loc (Located.mk ~loc lident) []
+  let string ~loc = ptyp_constr ~loc (Located.mk ~loc @@ Lident "string") []
+  let unit ~loc = ptyp_constr ~loc (Located.mk ~loc @@ Lident "unit") []
 
   let var ~loc s = ptyp_var ~loc s
   let any ~loc = ptyp_any ~loc
@@ -262,7 +270,7 @@ module Str = struct
     let params = List.map ~f:(fun s -> Typ.var ~loc s, Invariant) params in
     pstr_type ~loc Recursive @@
     [ type_declaration ~loc ~name:(Located.mk ~loc name) ~params
-        ~manifest:None
+        ~manifest:(Some typ)
         ~kind:Ptype_abstract
         ~cstrs:[] ~private_:Public
     ]
@@ -292,8 +300,9 @@ module Str = struct
   let single_value ~loc pat expr =
     let flag = Nonrecursive in
     pstr_value ~loc flag [value_binding ~loc ~pat ~expr]
-  let values ~loc vbs =
-    pstr_value ~loc Recursive vbs
+  let values ~loc ?(rec_flag=Recursive) vbs =
+    pstr_value ~loc rec_flag vbs
+  let of_vb ~loc ?(rec_flag=Recursive) vb = pstr_value ~loc rec_flag [vb]
 
   let functor1 ~loc name ~param sigs strs =
     pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name)
@@ -302,6 +311,33 @@ module Str = struct
                 pmty_signature ~loc sigs) @@
              pmod_structure ~loc strs
             )
+
+  let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
+    fun ~loc ~name ~params_count xs ->
+    pstr_type ~loc Recursive
+      [ type_declaration ~loc ~name:(Located.mk ~loc name)
+          ~params:(List.init params_count ~f:(fun _ -> (ptyp_any ~loc, Invariant)))
+          ~cstrs:[]
+          ~private_:Public
+          ~manifest:None
+          ~kind:(Ptype_variant (List.map xs ~f:(fun (name,typ) ->
+              constructor_declaration ~loc ~name:(Located.mk ~loc name) ~args:(Pcstr_tuple [])
+                ~res:(Some typ)
+            )))
+      ]
+
+  let module_ ~loc name me =
+    pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name) ~expr:me
+
+  let include_ ~loc me =
+    pstr_include ~loc @@ include_infos ~loc me
+end
+
+module Me = struct
+  type t = module_expr
+  let structure ~loc sis = pmod_structure ~loc sis
+  let ident ~loc lident = pmod_ident ~loc (Located.mk ~loc lident)
+  let apply ~loc = pmod_apply ~loc
 end
 
 module Sig = struct
@@ -323,6 +359,17 @@ module Sig = struct
     let prim = [] in
     value_description ~loc ~name:(Located.mk ~loc name) ~type_ ~prim
 
+  let tdecl_abstr ~loc name params =
+    psig_type ~loc Recursive @@
+    [ type_declaration ~loc ~name:(Located.mk ~loc name)
+        ~params:(List.map params ~f:(function
+            | None -> (ptyp_any ~loc, Invariant)
+            | Some s -> (ptyp_var ~loc s, Invariant) ))
+        ~cstrs:[]
+        ~kind:Ptype_abstract
+        ~private_:Public
+        ~manifest:None
+    ]
 end
 module Cf = struct
   type t = class_field
