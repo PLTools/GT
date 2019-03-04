@@ -40,6 +40,22 @@ let transform_gc gcata make_obj inh subj =
 
 let transform  bundle = transform_gc  bundle.gcata
 
+module type FixVR = sig
+  type 'a s
+  type fn = { call : 'a. 'a s -> 'a }
+  val fixv : (fn -> fn) -> fn
+end
+module FixV(Sym: sig type 'a i end) =
+(struct
+  type 'a s = 'a Sym.i
+  type fn = { call: 'a. 'a Sym.i -> 'a }
+  (* ∀t.((∀α.α t → α) → (∀α.α t → α)) → (∀α.α t → α) *)
+  let fixv f =
+    let rec g = { call = fun x -> (f g).call x } in
+    g
+end: FixVR with type 'a s = 'a Sym.i)
+
+
 let lift f _ = f
 let id x  = x
 

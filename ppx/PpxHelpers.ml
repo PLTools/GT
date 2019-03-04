@@ -39,6 +39,7 @@ module Pat = struct
       | _ -> assert false
     in
     helper lident
+
   let constraint_ ~loc = ppat_constraint ~loc
 
   let constr      ~loc lident ps =
@@ -61,7 +62,13 @@ module Pat = struct
   let type_ ~loc lident = ppat_type ~loc (Located.mk ~loc lident)
   let record ~loc ps =
     ppat_record ~loc (List.map ~f:(fun (l,t) -> (Located.mk ~loc l, t)) ps) Closed
-  let record1 ~loc name = record ~loc [(Lident name, var ~loc name)]
+  let record1 ~loc name =
+    match name with
+    | Lident name ->
+      record ~loc [(Lident name, var ~loc name)]
+    | Ldot (Lident p, name) as i ->
+      record ~loc [(i, var ~loc name)]
+    | _ -> failwith "not implemented"
   let constr_record      ~loc lident ps =
     constr ~loc lident [record ~loc (List.map ~f:(fun (l,x) -> (Lident l, x)) ps)]
 
@@ -78,6 +85,12 @@ module Exp = struct
   let unit ~loc = [%expr ()]
   let uid  ~loc = assert false
   let lid = ident
+  let access ~loc mname iname =
+    assert (Char.is_uppercase mname.[0]);
+    let lident = Ldot (Lident mname, iname) in
+    if Char.is_uppercase iname.[0]
+    then pexp_construct ~loc (Located.mk ~loc lident) None
+    else of_longident ~loc lident
 
   let constant ~loc = pexp_constant ~loc
   let int_const ~loc n = constant ~loc (Pconst_integer (Int.to_string n, None))
@@ -198,9 +211,14 @@ module Typ = struct
     ptyp_constr ~loc (Located.lident ~loc tdecl.ptype_name.txt) @@
     (List.map ~f:fst tdecl.ptype_params)
 
+  let of_longident ~loc lident = ptyp_constr ~loc (Located.mk ~loc lident) []
+  let access2 ~loc mname tname =
+    assert (Char.is_uppercase mname.[0]);
+    let lident = Ldot (Lident mname, tname) in
+    of_longident ~loc lident
+
   let ident  ~loc s = ptyp_constr ~loc (Located.lident ~loc s) []
   let sprintf ~loc fmt = Printf.ksprintf (ident ~loc) fmt
-  let of_longident ~loc lident = ptyp_constr ~loc (Located.mk ~loc lident) []
   let string ~loc = ptyp_constr ~loc (Located.mk ~loc @@ Lident "string") []
   let unit ~loc = ptyp_constr ~loc (Located.mk ~loc @@ Lident "unit") []
 
@@ -341,17 +359,18 @@ module Me = struct
 end
 
 module Sig = struct
-  open Ast_helper
-  include Sig
+  (* open Ast_helper *)
+  (* include Sig *)
 
   type t = signature_item
   let of_tdecls ~loc decl = Ast_helper.Sig.type_ ~loc Recursive [decl]
   let class_ ~loc  ~name ~params ?(virt=false)
-      ?(wrap= (fun x -> x)) body =
+      ?(wrap= (fun x -> x)) fields =
     let virt = if virt then Virtual else Concrete in
     let params = invariantize params in
-    psig_class ~loc [Ci.mk ~loc (Located.mk ~loc name) ~virt ~params @@
-                     wrap (Cty.signature (Csig.mk [%type: _] body))
+    psig_class ~loc [class_infos ~loc ~name:(Located.mk ~loc name) ~virt ~params
+                       ~expr:(wrap (pcty_signature ~loc @@
+                                    class_signature ~self:[%type: _] ~fields))
                     ]
 
   let value ~loc ~name type_ =
@@ -370,7 +389,65 @@ module Sig = struct
         ~private_:Public
         ~manifest:None
     ]
+
+  let functor1 ~loc name ~param sigs strs =
+    psig_module ~loc @@ module_declaration ~loc ~name:(Located.mk ~loc name)
+      ~type_:(pmty_functor ~loc (Located.mk ~loc param)
+               (Option.some @@
+                pmty_signature ~loc sigs) @@
+              pmty_signature ~loc strs
+            )
+
+  let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
+    fun ~loc ~name ~params_count xs ->
+    psig_type ~loc Recursive
+      [ type_declaration ~loc ~name:(Located.mk ~loc name)
+          ~params:(List.init params_count ~f:(fun _ -> (ptyp_any ~loc, Invariant)))
+          ~cstrs:[]
+          ~private_:Public
+          ~manifest:None
+          ~kind:(Ptype_variant (List.map xs ~f:(fun (name,typ) ->
+              constructor_declaration ~loc ~name:(Located.mk ~loc name) ~args:(Pcstr_tuple [])
+                ~res:(Some typ)
+            )))
+      ]
+
+  let module_ ~loc md = psig_module ~loc md
+  let modtype ~loc = psig_modtype ~loc
 end
+
+
+module Mt = struct
+  type t = module_type
+  let ident ~loc lident = pmty_ident ~loc (Located.mk ~loc lident)
+  let signature ~loc = pmty_signature ~loc
+  let functor_ ~loc argname argt t = pmty_functor ~loc (Located.mk ~loc argname) argt t
+  let with_ ~loc = pmty_with ~loc
+end
+
+type nonrec module_declaration = module_declaration
+type nonrec module_type_declaration = module_type_declaration
+
+let module_declaration ~loc ~name type_ =
+  module_declaration ~loc ~name:(Located.mk ~loc name) ~type_
+
+let module_type_declaration ~loc ~name type_ =
+  module_type_declaration ~loc ~name:(Located.mk ~loc name) ~type_
+
+module WC = struct
+  type t = Ppxlib.with_constraint
+
+  (* There is no helper functions in Ast_builder *)
+  let typ ~loc ~params name typ =
+    Pwith_type (Located.mk ~loc (Lident name),
+                type_declaration ~loc ~name:(Located.mk ~loc name)
+                  ~params:(List.map params ~f:(fun s -> (Typ.var ~loc s, Invariant)))
+                  ~private_:Public ~cstrs:[]
+                  ~kind:Ptype_abstract
+                  ~manifest:(Some typ)
+               )
+end
+
 module Cf = struct
   type t = class_field
   let constraint_ ~loc t1 t2 =
@@ -418,6 +495,22 @@ let case  ~lhs ~rhs = case ~lhs ~rhs ~guard:None
 
 type class_structure = Ppxlib.class_structure
 let class_structure = Ast_builder.Default.class_structure
+
+type nonrec type_kind =
+  | Ptype_abstract
+  | Ptype_record of lab_decl list
+
+type nonrec type_declaration = type_declaration
+let type_declaration ~loc ~name ~params ~manifest ~kind =
+  type_declaration ~loc ~name:(Located.mk ~loc name)
+    ~params:(List.map params ~f:(fun p -> (p,Invariant)))
+    ~cstrs:[]
+    ~private_:Public
+    ~manifest
+    ~kind:(match kind with
+        | Ptype_abstract -> Parsetree.Ptype_abstract
+        | Ptype_record ls -> Parsetree.Ptype_record ls
+      )
 
 open Parsetree
 

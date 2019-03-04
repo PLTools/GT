@@ -65,6 +65,13 @@ class g args = object(self)
      *   Naming.make_extra_param tdecl.ptype_name.txt
      * ] *)
 
+  method trf_scheme ~loc =
+    Typ.(arrow ~loc (of_longident ~loc (Ldot (Lident "Format", "formatter"))) @@
+         arrow ~loc (var ~loc "a") (unit ~loc) )
+  method trf_scheme_params = ["a"]
+  method index_module_name = "Index"
+  method index_modtyp_name = "IndexResult"
+
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     let constr_name = match constr_info with

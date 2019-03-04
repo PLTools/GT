@@ -7,10 +7,22 @@ type class_structure
 type case
 type class_declaration
 type lab_decl
+type module_declaration
+type module_type_declaration
+(* type type_declaration *)
+type type_arg
+
+(* type nonrec type_kind =
+ *   | Ptype_abstract
+ *   | Ptype_record of lab_decl list
+ *
+ * val type_declaration: loc:loc ->
+ *   name:string ->
+ *   params:type_arg list ->
+ *   manifest:type_arg option -> kind:type_kind -> type_declaration *)
 
 val loc_from_caml: Ppxlib.location -> loc
 val noloc: loc
-type type_arg
 val named_type_arg : loc:loc -> string -> type_arg
 val typ_arg_of_core_type : Ppxlib.core_type -> type_arg
 
@@ -32,7 +44,7 @@ module rec Pat :
     val variant: loc:loc -> string -> t list -> t
     val tuple:   loc:loc -> t list -> t
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
-    val record1: loc:loc -> string -> t
+    val record1: loc:loc -> Ppxlib.longident -> t
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
 and Exp :
@@ -42,6 +54,7 @@ and Exp :
     val ident : loc:loc -> string -> t
     val of_longident: loc:loc -> Ppxlib.longident -> t
     val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
+    val access  : loc:loc -> string -> string -> t
 
     val unit : loc:loc -> t
     (* val uid  : loc:loc -> string -> t *)
@@ -54,8 +67,9 @@ and Exp :
     val app : loc:loc -> t -> t -> t
     val app_lab  : loc:loc -> t -> string -> t -> t
     val app_list : loc:loc -> t -> t list -> t
+
+    (* TODO: rename this to `field` or something *)
     val acc      : loc:loc -> t -> Ppxlib.longident -> t
-    (* val acc_list : loc:loc -> t -> t list -> t *)
 
     val field : loc:loc -> t -> Ppxlib.longident -> t
     (* val function_: loc:loc -> (Pat.t * t) list -> t *)
@@ -90,6 +104,7 @@ and Typ :
     val use_tdecl: Ppxlib.type_declaration -> t
     val of_type_arg: loc:loc -> type_arg -> t
     val of_longident : loc:loc -> Ppxlib.longident -> t
+    val access2 : loc:loc -> string -> string -> t
     val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
     val ident : loc:loc -> string -> t
 
@@ -161,6 +176,17 @@ and Me : sig
   val ident: loc:loc -> Longident.t -> t
   val apply: loc:loc -> t -> t -> t
 end
+and Mt : sig
+  type t
+  val ident: loc:loc -> Longident.t -> t
+  val signature: loc:loc -> Sig.t list -> t
+  val functor_:  loc:loc -> string -> t option -> t -> t
+  val with_: loc:loc -> t -> WC.t list -> t
+end
+and WC : sig
+  type t
+  val typ : loc:loc -> params:string list -> string -> Typ.t -> t
+end
 and Cl :    (* class_expr *)
   sig
     type t
@@ -180,7 +206,12 @@ and Sig :
       ?wrap:(Cty.t -> Cty.t) ->
       Ctf.t list ->
       t
+    val functor1: loc:loc -> string -> param:string -> t list -> t list -> t
+    val simple_gadt : loc:loc -> name:string -> params_count:int ->
+      (string * Typ.t) list -> t
     val tdecl_abstr: loc:loc -> string -> string option list -> t
+    val module_: loc:loc -> module_declaration -> t
+    val modtype: loc:loc -> module_type_declaration -> t
   end
 and Vb :
   sig
@@ -197,6 +228,8 @@ val value_binding: loc:loc -> pat:Pat.t -> expr:Exp.t -> Vb.t
 val case: lhs:Pat.t -> rhs:Exp.t -> case
 val class_structure : self:Pat.t -> fields:Cf.t list -> class_structure
 val lab_decl: loc:loc -> string -> bool -> Typ.t -> lab_decl
+val module_declaration: loc:loc -> name:string -> Mt.t -> module_declaration
+val module_type_declaration: loc:loc -> name:string -> Mt.t option -> module_type_declaration
 
 (* if argument is polymorphic variant type then make it open *)
 val openize_poly: Typ.t -> Typ.t

@@ -543,11 +543,12 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
   let wrap p tdecl fname plugin_name =
     p#eta_and_exp
       ~center:(Exp.app ~loc
-                 (Exp.field ~loc (Exp.sprintf ~loc "%s" plugin_name)
+                 (Exp.field ~loc
+                    (Exp.sprintf ~loc "%s" @@ Naming.make_fix_func_name plugin_name)
                     (Lident "call")
                  )
-                 (Exp.construct ~loc
-                    (Ldot (Lident "I", Naming.cname_index tdecl.ptype_name.txt)) []
+                 (Exp.access ~loc (sprintf "I%s" p#trait_name)
+                    (Naming.cname_index tdecl.ptype_name.txt)
                  )
               )
       tdecl
@@ -620,22 +621,6 @@ let rename_params tdecl =
     ~onrecord:(fun _ -> tdecl)
     (* TODO: Implement general case about renaming of paramters *)
 
-
-
-(* for structures *)
-let do_typ ~loc sis plugins is_rec tdecl =
-  let (_:bool) = is_rec in
-  let tdecl = rename_params tdecl in
-  let intf_class = Str.of_class_declarations ~loc [make_interface_class ~loc tdecl] in
-  let gcata = make_gcata_str ~loc tdecl in
-
-  List.concat
-    [ sis
-    ; [intf_class; gcata]
-    ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
-    ; collect_plugins_str ~loc tdecl plugins
-    ]
-
 module G = Graph.Persistent.Digraph.Concrete(String)
 module T = Graph.Topological.Make(G)
 module SM = Caml.Map.Make(String)
@@ -684,6 +669,104 @@ let topsort_tdecls tdecls =
   assert (List.length tdecls = List.length tdecls_new);
   tdecls_new
 
+let indexes_str ~loc _ tdecls =
+  [ Str.functor1 ~loc "Index" ~param:"S"
+        [ Sig.tdecl_abstr ~loc "result" [Some "a"] ]
+        [ Str.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+          List.map tdecls ~f:(fun tdecl ->
+              (Naming.cname_index tdecl.ptype_name.txt,
+               Typ.constr ~loc (lident "i") [
+                 let make_result = Typ.constr ~loc (Ldot (Lident "S", "result")) in
+                 List.fold_right
+                   (map_type_param_names tdecl.ptype_params ~f:id)
+                   ~init:(make_result [Typ.use_tdecl tdecl])
+                   ~f:(fun name acc ->
+                       Typ.arrow ~loc (make_result [Typ.var ~loc name]) acc
+                     )
+               ])
+            )
+        ]
+    ; Str.functor1 ~loc "Index2" ~param:"S"
+        [ Sig.tdecl_abstr ~loc "result" [Some "a"; Some "b"] ]
+        [ Str.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+          List.map tdecls ~f:(fun tdecl ->
+              (Naming.cname_index tdecl.ptype_name.txt,
+               Typ.constr ~loc (lident "i") [
+                 let make_result x = Typ.constr ~loc (Ldot (Lident "S", "result")) [x;x] in
+                 List.fold_right
+                   (map_type_param_names tdecl.ptype_params ~f:id)
+                   ~init:(make_result (Typ.use_tdecl tdecl))
+                   ~f:(fun name acc ->
+                       Typ.arrow ~loc (make_result (Typ.var ~loc name)) acc
+                     )
+               ])
+            )
+        ]
+    ]
+
+let indexes_sig ~loc plugins tdecls =
+  let wrap mtname funame params ~start =
+    [ Sig.modtype ~loc @@ module_type_declaration ~loc ~name:mtname @@ Option.some @@
+      Mt.signature ~loc
+        [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)
+        ; Sig.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+          List.map tdecls ~f:(fun tdecl ->
+              (Naming.cname_index tdecl.ptype_name.txt,
+               Typ.constr ~loc (lident "i") [
+                 let make_result = Typ.constr ~loc (Lident "result") in
+                 List.fold_right
+                   (map_type_param_names tdecl.ptype_params ~f:id)
+                   ~init:(make_result @@ start tdecl)
+                   ~f:(fun name acc ->
+                       Typ.arrow ~loc (make_result [Typ.var ~loc name]) acc
+                     )
+               ])
+            )
+        ]
+    ; Sig.module_ ~loc @@ module_declaration ~loc ~name:funame @@
+      Mt.functor_ ~loc "S"
+        (Option.some @@
+         Mt.signature ~loc [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
+        (Mt.with_ ~loc
+           (Mt.ident ~loc (Lident mtname))
+           [ WC.typ ~loc ~params "result" @@
+             Typ.constr ~loc (Ldot (Lident "S", "result")) @@
+             List.map params ~f:(Typ.var ~loc)
+           ]
+        )
+    ]
+  in
+  List.concat
+    [ wrap "IndexResult"  "Index"  ["a"] ~start:(fun td -> [Typ.use_tdecl td])
+    ; wrap "IndexResult2" "Index2" ["a"; "b"]
+        ~start:(fun td ->
+            let ns = List.mapi td.ptype_params
+                ~f:(fun n _ -> (Char.to_int 'a' + n) |> Char.of_int_exn |> Char.to_string )
+            in
+            [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+              List.map ns ~f:(Typ.var ~loc)
+            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+              List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s_2" s)
+            ]
+          )
+    ]
+
+(* for structures *)
+let do_typ ~loc sis plugins is_rec tdecl =
+  let (_:bool) = is_rec in
+  let tdecl = rename_params tdecl in
+  let intf_class = Str.of_class_declarations ~loc [make_interface_class ~loc tdecl] in
+  let gcata = make_gcata_str ~loc tdecl in
+
+  List.concat
+    [ sis
+    ; [intf_class; gcata]
+    ; indexes_str ~loc plugins [tdecl]
+    ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
+    ; collect_plugins_str ~loc tdecl plugins
+    ]
+
+
 let do_mutual_types ~loc sis plugins tdecls =
   let tdecls_new = topsort_tdecls tdecls in
   let classes, catas =
@@ -695,12 +778,14 @@ let do_mutual_types ~loc sis plugins tdecls =
     (List.map ~f:fst all, List.map ~f:snd all)
   in
 
-  sis @
-  (List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])) @
-  catas @
-  List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new) @
-  List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
-
+  List.concat
+    [ sis
+    ; List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])
+    ; catas
+    ; indexes_str ~loc plugins tdecls
+    ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new)
+    ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
+    ]
 
 (* for signatures *)
 let do_typ_sig ~loc sis plugins is_rec tdecl =
@@ -712,6 +797,7 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; [intf_class; gcata]
+    ; indexes_sig ~loc plugins [tdecl]
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; [ collect_plugins_sig ~loc tdecl plugins ]
     ]

@@ -49,7 +49,7 @@ add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 ppx: add_common add_ppx compile
 
-PLUGINS=show gmap #compare eq foldl foldr gmap eval stateful fmt show show_typed html #htmlTy
+PLUGINS=show gmap compare eq foldl foldr eval stateful fmt html #show_typed #htmlTy
 add_plugins:
 	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \

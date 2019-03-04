@@ -98,6 +98,13 @@ class g args = object(self: 'self)
     in
     List.map ~f:Typ.from_caml ps
 
+  method trf_scheme ~loc =
+    Typ.(arrow ~loc (unit ~loc) @@
+         arrow ~loc (var ~loc "a") (var ~loc "b"))
+  method trf_scheme_params = ["a"; "b"]
+  method index_module_name = "Index"
+  method index_modtyp_name = "IndexResult"
+
   (* method! use_tdecl td =
    *   Typ.var ~loc:(loc_from_caml td.ptype_loc) @@
    *   Naming.make_extra_param td.ptype_name.txt *)

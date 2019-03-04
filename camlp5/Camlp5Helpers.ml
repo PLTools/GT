@@ -20,6 +20,12 @@ let noloc = Ploc.dummy
 type type_arg = MLast.type_var
 let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), None)
 
+type module_declaration
+let module_declaration ~loc = assert false
+
+type module_type_declaration
+let module_type_declaration ~loc = assert false
+
 module Pat = struct
   type t = MLast.patt
   let any ~loc = <:patt< _ >>
@@ -59,7 +65,8 @@ module Pat = struct
 
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
-  let record1 ~loc name = record ~loc [ Lident name, <:patt< $lid:name$>> ]
+  let record1 ~loc ident =
+    record ~loc [ ident, of_longident ~loc ident ]
 
   let tuple ~loc ps = <:patt< ($list:ps$) >>
   let variant ~loc name args =
@@ -115,8 +122,11 @@ module Exp = struct
     helper l
 
   let acc ~loc e l = <:expr< $e$ . $of_longident ~loc l$ >>
-  (* let acc_list ~loc l rs = List.fold_left (acc ~loc) l rs *)
 
+  let access ~loc mname iname =
+    let u = <:expr< $uid:mname$ >> in
+    let l = <:expr< $lid:mname$ >> in
+    <:expr< $u$ . $l$ >>
 
   let app ~loc l r = <:expr< $l$ $r$ >>
   let app_lab ~loc l lab r =
@@ -208,6 +218,10 @@ module Typ = struct
   let ident ~loc s = <:ctyp< $lid:s$ >>
   let string ~loc = <:ctyp< string >>
   let unit ~loc = <:ctyp< unit >>
+
+  let access2 ~loc mname tname =
+    assert (Base.Char.is_uppercase mname.[0]);
+    of_longident ~loc (Ldot (Lident mname, tname))
 
   let var  ~loc s = <:ctyp< '$s$ >>
   let app  ~loc l r = <:ctyp< $l$ $r$ >>
@@ -391,6 +405,16 @@ module Me = struct
   let apply ~loc = assert false
 end
 
+module Mt = struct
+  type t
+  let ident ~loc = assert false
+  let signature ~loc = assert false
+  let apply ~loc = assert false
+  let functor_ ~loc = assert false
+  let with_ ~loc = assert false
+
+end
+
 module Sig = struct
   type t = MLast.sig_item
   let of_tdecls ~loc td =
@@ -443,7 +467,19 @@ module Sig = struct
     in
     <:sig_item< class $list:[c]$ >>
 
+  let functor1 ~loc name ~param sigs strs = failwith "not_implemented"
+
+  let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
+    fun ~loc -> assert false
+
   let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc -> assert false
+  let module_ ~loc = assert false
+  let modtype ~loc = assert false
+end
+
+module WC = struct
+  type t
+  let typ ~loc = assert false
 end
 
 module Vb = struct

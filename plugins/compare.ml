@@ -62,6 +62,13 @@ class g initial_args = object(self: 'self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml
 
+  method trf_scheme ~loc =
+    Typ.(arrow ~loc (var ~loc "a") @@
+         arrow ~loc (var ~loc "a") (constr ~loc (Lident "bool") []))
+  method trf_scheme_params = ["a"]
+  method index_module_name = "Index"
+  method index_modtyp_name = "IndexResult"
+
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =

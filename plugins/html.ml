@@ -7,12 +7,12 @@
     For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
     function with type
 
-    [(Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ... ->
-     Format.formatter -> ('a,'b,...) typ -> unit ]
+    [('a -> HTML.er) -> ('b -> HTML.er) -> ... ->
+     ('a,'b,...) typ -> HTML.er ]
 
-    Inherited attributes' type (both default and for type parameters) is
-    [Format.formatter].
-    Synthesized attributes' type (both default and for type parameters) is [unit].
+    Inherited attributes' type (both default and for type parameters) are absent.
+
+    Synthesized attributes' type (both default and for type parameters) is [HTML.er].
 *)
 
 (*
@@ -22,7 +22,6 @@
  * St.Petersburg State University, JetBrains Research
  *)
 
-(* NOT IMPELEMENTED YET *)
 open Base
 open Ppxlib
 open HelpersBase
@@ -97,6 +96,13 @@ class g args = object(self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml
 
+  method trf_scheme ~loc =
+    Typ.(arrow ~loc (unit ~loc) @@
+         arrow ~loc (var ~loc "a") (constr ~loc (Ldot (Lident "HTML","er")) []))
+  method trf_scheme_params = ["a"]
+  method index_module_name = "Index"
+  method index_modtyp_name = "IndexResult"
+
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     let constr_name = match constr_info with
       | `Poly s -> sprintf "`%s" s
@@ -148,7 +154,7 @@ class g args = object(self)
     ]
 
   method! on_record_constr: loc:loc ->
-    is_self_rec:(core_type -> bool) ->
+    is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
     [ `Normal of string | `Poly of string ] ->

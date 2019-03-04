@@ -43,6 +43,8 @@ let trf_function trait s = Printf.sprintf "%s_%s" trait s
 let stub_class_name ~plugin tdecl =
   sprintf "%s_%s_t_stub" plugin tdecl.ptype_name.txt
 
+let init_trf_function trait s = trf_function trait s ^ "_0"
+
 let make_fix_name ~plugin tdecls =
   (* Let's use only first type for fix function definition *)
   assert (List.length tdecls > 0);
@@ -61,3 +63,6 @@ let fix_result tdecl =
   sprintf "fix_result_%s" tdecl.ptype_name.txt
 
 let cname_index typname = String.capitalize typname
+let mutuals_pack = "_mutuals_pack"
+let make_fix_func_name plugin (* tdecls *) =
+  sprintf "%s_fix" plugin

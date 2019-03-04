@@ -38,6 +38,13 @@ class g initial_args = object(self: 'self)
     [ self#default_syn ~loc tdecl
     ]
 
+  method trf_scheme ~loc =
+    Typ.(arrow ~loc (var ~loc "b") @@
+         arrow ~loc (var ~loc "a") (var ~loc "b"))
+  method trf_scheme_params = ["a";"b"]
+  method index_module_name = "Index2"
+  method index_modtyp_name = "IndexResult2"
+
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->

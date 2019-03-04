@@ -63,6 +63,13 @@ class g args = object(self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml
 
+  method trf_scheme ~loc =
+    Typ.(arrow ~loc (unit ~loc) @@
+         arrow ~loc (var ~loc "a") (constr ~loc (Lident "string") []))
+  method trf_scheme_params = ["a"]
+  method index_module_name = "Index"
+  method index_modtyp_name = "IndexResult"
+
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
     let constr_name = match constr_info with

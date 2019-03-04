@@ -4,7 +4,11 @@
 
 set  +x
 camlp5o `ocamlfind query ocamlgraph`/graph.cma \
-    camlp5/pp5gt.cma plugins/gmap.cmo plugins/show.cmo \
+    camlp5/pp5gt.cma \
+    	plugins/gmap.cmo plugins/show.cmo \
+	plugins/compare.cmo plugins/eq.cmo \
+	plugins/foldl.cmo plugins/foldr.cmo \
+	plugins/stateful.cmo \
     $@
 exit $?
 
