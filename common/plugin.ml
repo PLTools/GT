@@ -616,7 +616,9 @@ class virtual generator initial_args = object(self: 'self)
       List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive)
         ((List.map tdecls ~f:on_tdecl) @
          [ make_knot () ] @
-         (List.map tdecls ~f:use_knot))
+         (* (List.map tdecls ~f:use_knot) @ *)
+         []
+        )
 
 
   method do_single_sig ~loc ~is_rec tdecl =
@@ -951,7 +953,8 @@ class virtual generator initial_args = object(self: 'self)
                  (Exp.ident ~loc name)))
     in
     (* extra unit instead of inherited attribute *)
-    let ans = Exp.app ~loc ans (Exp.unit ~loc) in
+    let ans = Exp.app_list ~loc ans [Exp.unit ~loc; Exp.ident loc "subj"] in
+    let ans = Exp.fun_ ~loc (Pat.var ~loc "subj") ans in
     List.fold_right fs ~init:ans
       ~f:(fun name acc -> Exp.fun_ ~loc (Pat.var ~loc name) acc)
 

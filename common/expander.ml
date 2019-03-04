@@ -540,24 +540,24 @@ let make_heading_gen ~loc wrap tdecl = []
 
 let collect_plugins_str ~loc tdecl plugins : Str.t list =
   (* TODO: fix eta expansion& application here *)
-  let wrap p tdecl fname =
-    p#eta_and_exp ~center:(Exp.ident ~loc fname)
+  let wrap p tdecl fname plugin_name =
+    p#eta_and_exp
+      ~center:(Exp.app ~loc
+                 (Exp.field ~loc (Exp.sprintf ~loc "%s" plugin_name)
+                    (Lident "call")
+                 )
+                 (Exp.construct ~loc
+                    (Ldot (Lident "I", Naming.cname_index tdecl.ptype_name.txt)) []
+                 )
+              )
       tdecl
-    (* let fs = map_type_param_names tdecl.ptype_params ~f:id in
-     * let ans =
-     *   List.fold_left fs ~init:(Exp.ident ~loc fname)
-     *     ~f:(fun acc name -> Exp.app ~loc acc (Exp.ident ~loc name))
-     * in
-     * let ans = Exp.app ~loc ans (Exp.unit ~loc) in
-     * List.fold_right fs ~init:ans
-     *   ~f:(fun name acc -> Exp.fun_ ~loc (Pat.var ~loc name) acc) *)
   in
   let plugin_fields =
     List.map plugins ~f:(fun p ->
         let fname = p#make_trans_function_name tdecl in
         Cf.method_concrete ~loc p#trait_name @@
         if p#need_inh_attr then Exp.ident ~loc fname
-        else wrap p tdecl fname
+        else wrap p tdecl fname p#trait_name
       )
   in
 
@@ -570,12 +570,13 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
         ~self:(Pat.any ~loc) ~fields:plugin_fields
     ])
   :: (List.filter_map plugins ~f:(fun p ->
-      if p#need_inh_attr then None else
-        let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
-        Option.some @@
-        Str.single_value ~loc
-          (Pat.sprintf ~loc "%s" fname)
-          (wrap p tdecl fname)
+      None
+      (* if p#need_inh_attr then None else
+       *   let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
+       *   Option.some @@
+       *   Str.single_value ~loc
+       *     (Pat.sprintf ~loc "%s" fname)
+       *     (wrap p tdecl fname p#trait_name) *)
     ))
 
 let collect_plugins_sig ~loc tdecl plugins =

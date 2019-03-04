@@ -53,16 +53,11 @@ module Y = struct
             | I.U -> show_u_0  f
             | I.T -> show_t_0  f
       })
-  let show_s eta = show.call I.S eta
-  let show_u eta = show.call I.U eta
-  let show_t eta = show.call I.T eta
 
-  let show_s fa = show_s (GT.lift fa) ()
-  let show_u = show_u ()
-  let show_t = show_t ()
+  let show_s fa = show.call I.S (GT.lift fa) ()
 
   let () =
     printf "After overriding a method\n%!";
-    let () = printf "%s\n%!" @@ show_s (sprintf "%S") (SS "ZZZZZZZ") in
+    let () = printf "%s\n%!" @@ show_s (sprintf "%s") (SS "ZZZZZZZ") in
     ()
 end
