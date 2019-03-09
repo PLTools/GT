@@ -322,6 +322,18 @@ module Str = struct
     pstr_value ~loc rec_flag vbs
   let of_vb ~loc ?(rec_flag=Recursive) vb = pstr_value ~loc rec_flag [vb]
 
+  let tdecl_abstr ~loc name params =
+    pstr_type ~loc Recursive @@
+    [ type_declaration ~loc ~name:(Located.mk ~loc name)
+        ~params:(List.map params ~f:(function
+            | None -> (ptyp_any ~loc, Invariant)
+            | Some s -> (ptyp_var ~loc s, Invariant) ))
+        ~cstrs:[]
+        ~kind:Ptype_abstract
+        ~private_:Public
+        ~manifest:None
+    ]
+
   let functor1 ~loc name ~param sigs strs =
     pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name)
       ~expr:(pmod_functor ~loc (Located.mk ~loc param)
@@ -346,6 +358,7 @@ module Str = struct
 
   let module_ ~loc name me =
     pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name) ~expr:me
+  let modtype ~loc = pstr_modtype ~loc
 
   let include_ ~loc me =
     pstr_include ~loc @@ include_infos ~loc me
@@ -356,6 +369,7 @@ module Me = struct
   let structure ~loc sis = pmod_structure ~loc sis
   let ident ~loc lident = pmod_ident ~loc (Located.mk ~loc lident)
   let apply ~loc = pmod_apply ~loc
+  let functor_ ~loc name = pmod_functor ~loc (Located.mk ~loc name)
 end
 
 module Sig = struct

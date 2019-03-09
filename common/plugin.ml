@@ -664,7 +664,7 @@ class virtual generator initial_args = object(self: 'self)
       Mt.with_ ~loc
         (Mt.ident ~loc (Ldot (Lident "GT", "FixVR")))
         [ WC.typ ~loc ~params:self#trf_scheme_params "s" @@
-          Typ.constr ~loc (Ldot (Lident "Sym", "i")) @@
+          Typ.constr ~loc (Ldot (Lident "I", "i")) @@
           List.map self#trf_scheme_params ~f:(Typ.var ~loc)
         ]
     ]

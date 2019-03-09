@@ -161,6 +161,7 @@ and Str :
       ?wrap:(Cl.t -> Cl.t) ->
       params:type_arg list -> Cf.t list -> t
     val tdecl : loc:loc -> name:string -> params:string list -> Typ.t -> t
+    val tdecl_abstr: loc:loc -> string -> string option list -> t
     val tdecl_record: loc:loc -> name:string -> params:string list ->
       lab_decl list -> t
     val of_class_declarations: loc:loc -> class_declaration list -> t
@@ -168,13 +169,33 @@ and Str :
     val simple_gadt : loc:loc -> name:string -> params_count:int ->
       (string * Typ.t) list -> t
     val module_  : loc:loc -> string -> Me.t -> t
+    val modtype  : loc:loc -> module_type_declaration -> t
     val include_ : loc:loc -> Me.t -> t
+  end
+and Sig :
+  sig
+    type t
+    val of_tdecls : loc:loc -> Ppxlib.type_declaration -> t
+    val value : loc:loc -> name:string -> Typ.t -> t
+    val class_: loc:loc -> name:string ->
+      params: type_arg list ->
+      ?virt:bool ->
+      ?wrap:(Cty.t -> Cty.t) ->
+      Ctf.t list ->
+      t
+    val functor1: loc:loc -> string -> param:string -> t list -> t list -> t
+    val simple_gadt : loc:loc -> name:string -> params_count:int ->
+      (string * Typ.t) list -> t
+    val tdecl_abstr: loc:loc -> string -> string option list -> t
+    val module_: loc:loc -> module_declaration -> t
+    val modtype: loc:loc -> module_type_declaration -> t
   end
 and Me : sig
   type t
   val structure: loc:loc -> Str.t list -> t
   val ident: loc:loc -> Longident.t -> t
   val apply: loc:loc -> t -> t -> t
+  val functor_ : loc:loc -> string -> Mt.t option -> t -> t
 end
 and Mt : sig
   type t
@@ -195,24 +216,7 @@ and Cl :    (* class_expr *)
     val constr :  loc:loc -> Longident.t -> Typ.t list -> t
     val apply  :  loc:loc -> t -> Exp.t list -> t
   end
-and Sig :
-  sig
-    type t
-    val of_tdecls : loc:loc -> Ppxlib.type_declaration -> t
-    val value : loc:loc -> name:string -> Typ.t -> t
-    val class_: loc:loc -> name:string ->
-      params: type_arg list ->
-      ?virt:bool ->
-      ?wrap:(Cty.t -> Cty.t) ->
-      Ctf.t list ->
-      t
-    val functor1: loc:loc -> string -> param:string -> t list -> t list -> t
-    val simple_gadt : loc:loc -> name:string -> params_count:int ->
-      (string * Typ.t) list -> t
-    val tdecl_abstr: loc:loc -> string -> string option list -> t
-    val module_: loc:loc -> module_declaration -> t
-    val modtype: loc:loc -> module_type_declaration -> t
-  end
+
 and Vb :
   sig
     type t

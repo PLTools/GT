@@ -394,7 +394,8 @@ module Str = struct
     fun ~loc -> assert false
 
   let module_ ~loc = assert false
-
+  let modtype ~loc = assert false
+  let tdecl_abstr ~loc = assert false
   let include_ ~loc = assert false
 end
 
@@ -403,6 +404,7 @@ module Me = struct
   let structure ~loc = assert false
   let ident ~loc = assert false
   let apply ~loc = assert false
+  let functor_ ~loc = assert false
 end
 
 module Mt = struct

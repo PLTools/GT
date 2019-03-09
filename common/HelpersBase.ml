@@ -262,3 +262,6 @@ let notify fmt  =
       let _:int = Caml.Sys.command _cmd in
       ()
     ) fmt
+
+let string_after_a n =
+  Base.Char.(to_int 'a' |> ((+)n) |> of_int_exn |> to_string)
