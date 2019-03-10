@@ -45,7 +45,7 @@ class g args = object(self)
 
   method trait_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method default_syn ~loc  ?extra_path  _tdecl = Typ.ident ~loc "string"
+  method default_syn ~loc ?in_class _tdecl = Typ.ident ~loc "string"
 
   method syn_of_param ~loc _     = Typ.ident ~loc "string"
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
@@ -71,7 +71,7 @@ class g args = object(self)
   method index_modtyp_name = "IndexResult"
 
   (* Adapted to generate only single method per constructor definition *)
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
@@ -87,7 +87,7 @@ class g args = object(self)
            ~f:(fun acc (name, typ) ->
                Exp.app ~loc acc
                  (self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
                     (Exp.unit ~loc)
                     (Exp.ident ~loc name)
                  )
@@ -121,7 +121,7 @@ class g args = object(self)
             ~f:(fun acc {pld_name; pld_type} ->
                 Exp.app ~loc acc
                   (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type)
                      (Exp.unit ~loc)
                      (Exp.ident ~loc pld_name.txt)
                   )

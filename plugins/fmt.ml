@@ -44,7 +44,7 @@ class g args = object(self)
   method trait_name = trait_name
   method default_inh ~loc _tdecl =
     Typ.of_longident ~loc (Ldot (Lident"Format", "formatter"))
-  method default_syn ~loc  ?extra_path  _tdecl = Typ.ident ~loc "unit"
+  method default_syn ~loc ?in_class _tdecl = Typ.ident ~loc "unit"
 
   method syn_of_param ~loc _     = Typ.ident ~loc "unit"
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
@@ -73,7 +73,7 @@ class g args = object(self)
   method index_modtyp_name = "IndexResult"
 
   (* Adapted to generate only single method per constructor definition *)
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
@@ -90,7 +90,7 @@ class g args = object(self)
          List.fold_left ts
            ~f:(fun acc (name, typ) ->
                 Exp.app_list ~loc acc
-                  [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ
+                  [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ
                   ; Exp.ident ~loc name
                   ]
              )
@@ -118,7 +118,7 @@ class g args = object(self)
       List.fold_left labs
             ~f:(fun acc {pld_name; pld_type} ->
                 Exp.app_list ~loc acc
-                  [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type
+                  [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type
                   ; Exp.ident ~loc pld_name.txt
                   ]
               )
@@ -127,7 +127,7 @@ class g args = object(self)
                   )
     ]
 
-  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe info bindings labs =
+  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs =
     let cname = match info with
       | `Normal s -> s
       | `Poly s -> s
@@ -141,7 +141,7 @@ class g args = object(self)
     List.fold_left bindings
       ~f:(fun acc (name, _, typ) ->
         Exp.app_list ~loc acc
-          [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ
+          [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ
           ; Exp.ident ~loc name
           ]
       )

@@ -25,7 +25,7 @@ class g initial_args = object(self: 'self)
     Typ.tuple ~loc [Typ.var ~loc "env"; Typ.var ~loc @@ Gmap.param_name_mangler s]
   method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
-  method! default_syn ~loc  ?extra_path  tdecl =
+  method! default_syn ~loc ?in_class tdecl =
     Typ.tuple ~loc [self#default_inh ~loc tdecl; super#default_syn ~loc tdecl]
 
   (* the same as in eval *)
@@ -64,7 +64,7 @@ class g initial_args = object(self: 'self)
     (List.map ~f:Typ.from_caml ps) @
     [ Typ.var ~loc "env" ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
       Exp.fun_list ~loc
         (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
         (let c = match constr_info with
@@ -88,7 +88,7 @@ class g initial_args = object(self: 'self)
                    (Pat.tuple ~loc [ Pat.sprintf ~loc "env%d" (i+1)
                                    ; Pat.sprintf ~loc "%s" @@ res_var_name name])
                    (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
                      (if i=0 then inhe else Exp.sprintf ~loc "env%d" i)
                      (Exp.ident ~loc name)
                    )

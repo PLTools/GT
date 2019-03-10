@@ -694,9 +694,24 @@ let indexes_str ~loc _ tdecls =
         (Option.some @@
          Mt.signature ~loc [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
         (Me.structure ~loc
-           [
+           [ Str.tdecl ~loc ~name:"result" ~params @@
+             Typ.constr ~loc (Ldot (Lident "S", "result")) @@
+             List.map params ~f:(Typ.var ~loc)
+           ; Str.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+             List.map tdecls ~f:(fun tdecl ->
+                 (Naming.cname_index tdecl.ptype_name.txt,
+                  Typ.constr ~loc (lident "i") [
+                    let make_result = Typ.constr ~loc (Lident "result") in
+
+                    (map_type_param_names tdecl.ptype_params ~f:id)
+                    |> List.mapi ~f:arg
+                    |> List.fold_right
+                      ~init:(make_result @@ start tdecl)
+                      ~f:(Typ.arrow ~loc)
+                  ]
+                 ))
            ])
-          (* TODO: generate actual definition here *)
+        (* TODO: generate actual definition here *)
         (* (Me.with_ ~loc
          *    (Mt.ident ~loc (Lident mtname))
          *    [ WC.typ ~loc ~params "result" @@

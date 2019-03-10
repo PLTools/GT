@@ -47,7 +47,7 @@ class g initial_args = object(self: 'self)
     else ans
 
   method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))
-  method default_syn  ~loc ?extra_path tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method inh_of_param tdecl name =
     let loc = loc_from_caml tdecl.ptype_loc in
@@ -100,7 +100,7 @@ class g initial_args = object(self: 'self)
         *)
       ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info args =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info args =
     let is_poly,cname =
       match constr_info with
       | `Normal s -> false,  s
@@ -127,7 +127,7 @@ class g initial_args = object(self: 'self)
                 self#chain_exprs ~loc
                   acc
                   (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
                      (Exp.ident ~loc pname)
                      (Exp.ident ~loc name)
                   )
@@ -170,7 +170,7 @@ class g initial_args = object(self: 'self)
         [ Pat.sprintf ~loc "inh"; pat] @@
         let wrap lab =
           self#app_transformation_expr ~loc
-            (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls lab.pld_type)
+            (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl lab.pld_type)
             (Exp.field ~loc (Exp.ident ~loc "inh") (Lident lab.pld_name.txt))
             (Exp.ident ~loc lab.pld_name.txt )
         in

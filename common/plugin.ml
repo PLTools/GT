@@ -166,7 +166,7 @@ class virtual generator initial_args = object(self: 'self)
       @@
       [ let parent_name = Naming.class_name_for_typ cur_name in
         Cf.inherit_ ~loc (Cl.constr ~loc (Lident parent_name) inh_params)
-      ] @ fields
+      ] @ (self#extra_class_str_members tdecl) @ fields
 
 
   method virtual make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
@@ -231,6 +231,25 @@ class virtual generator initial_args = object(self: 'self)
               [ self#default_syn ~loc tdecl ]
             ]
         )
+      ~onvariant:(fun cds ->
+          k @@ List.map cds ~f:(fun cd ->
+              let typs = match cd.pcd_args with
+                | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+                | Pcstr_tuple ts -> ts
+              in
+              let new_ts =
+                let open Typ in
+                [ self#default_inh ~loc tdecl
+                ; use_tdecl tdecl ] @
+                (List.map typs ~f:Typ.from_caml) @
+                [ self#default_syn ~loc ~in_class:true tdecl ]
+                (* There changing default_syn to 'extra can introduce problems *)
+              in
+
+              Ctf.method_ ~loc ~virt:false (Naming.meth_of_constr cd.pcd_name.txt) @@
+              Typ.chain_arrow ~loc new_ts
+            )
+        )
       ~onmanifest:(fun typ ->
         let rec helper typ =
           match typ.ptyp_desc with
@@ -270,10 +289,9 @@ class virtual generator initial_args = object(self: 'self)
                     ~ok:(fun cid params ->
                         Ctf.inherit_ ~loc @@
                         Cty.constr ~loc
-                          (map_longident  cid.txt
+                          (map_longident cid.txt
                              ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
-                          (self# final_typ_params_for_alias ~loc
-                             tdecl params)
+                          (self# final_typ_params_for_alias ~loc tdecl params)
                      )
                      ~fail:(fun () -> assert false)
               | Rtag (lab,_,_, typs) -> begin
@@ -282,21 +300,21 @@ class virtual generator initial_args = object(self: 'self)
                   | [] -> Typ.(chain_arrow ~loc
                                 [ self#default_inh ~loc tdecl
                                 ; use_tdecl tdecl
-                                ; self#default_syn ~loc tdecl]
+                                ; self#default_syn ~loc ~in_class:true tdecl]
                               )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
                              [ self#default_inh ~loc tdecl
                              ; use_tdecl tdecl ] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
-                             [self#default_syn ~loc tdecl]
+                             [self#default_syn ~loc ~in_class:true tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
                              [ self#default_inh ~loc tdecl
                              ; use_tdecl tdecl ] @
                              (List.map ~f:Typ.from_caml typs) @
-                             [self#default_syn ~loc tdecl]
+                             [self#default_syn ~loc ~in_class:true tdecl]
                           )
                 end
               )
@@ -305,24 +323,6 @@ class virtual generator initial_args = object(self: 'self)
         | _ -> assert false
         in
         helper typ
-    )
-    ~onvariant:(fun cds ->
-        k @@ List.map cds ~f:(fun cd ->
-              let typs = match cd.pcd_args with
-                | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
-                | Pcstr_tuple ts -> ts
-              in
-              let new_ts =
-                let open Typ in
-                [ self#default_inh ~loc tdecl
-                ; use_tdecl tdecl ] @
-                (List.map typs ~f:Typ.from_caml) @
-                [ self#default_syn ~loc tdecl ]
-              in
-
-              Ctf.method_ ~loc ~virt:false (Naming.meth_of_constr cd.pcd_name.txt) @@
-              Typ.chain_arrow ~loc new_ts
-          )
     )
 
   method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
@@ -347,17 +347,18 @@ class virtual generator initial_args = object(self: 'self)
     let ans args : Cf.t list =
       [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams
         in
-        let args,fixident =
-          match cid.txt with
-          | Lident s when List.mem mutal_names s ~equal:String.equal ->
-            (* Only Lident because we ignore types with same name but from another module *)
-            ( (Exp.ident ~loc Naming.mutuals_pack) :: args, id)
-          | _ -> (args, id)
+        let args =
+          (* match cid.txt with
+           * | Lident s when List.mem mutal_names s ~equal:String.equal ->
+           *   (\* Only Lident because we ignore types with same name but from another module *\) *)
+           (Exp.of_longident ~loc @@
+             map_longident ~f:(fun _ -> Naming.make_fix_func_name self#plugin_name) cid.txt) :: args
+          (* | _ -> args *)
         in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
           (Cl.constr ~loc
              (map_longident cid.txt
-                ~f:(fun s -> fixident @@
+                ~f:(fun s ->
                     Naming.trait_class_name_for_typ ~trait:self#plugin_name s
                   ))
              typ_params)
@@ -403,7 +404,7 @@ class virtual generator initial_args = object(self: 'self)
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
         Exp.fun_ ~loc (Pat.any ~loc) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe:(Exp.ident ~loc inhname)
-          (`Poly constr_name.txt) []
+          tdecl (`Poly constr_name.txt) []
       ]
     | Rtag (constr_name,_,_, [arg]) ->
       k [
@@ -413,7 +414,7 @@ class virtual generator initial_args = object(self: 'self)
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
         Exp.fun_ ~loc (Pat.any ~loc) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe:(Exp.ident ~loc inhname)
-          (`Poly constr_name.txt) bindings
+          tdecl (`Poly constr_name.txt) bindings
       ]
     | Rtag (constr_name,_,_,args) ->
       (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
@@ -444,14 +445,14 @@ class virtual generator initial_args = object(self: 'self)
               ) |> helper
           | Ptyp_constr (cid, params) ->
               self#got_constr ~loc ~is_self_rec tdecl mutal_decls
-                (self#do_typ_gen ~mutal_decls ~is_self_rec)
+                (self#do_typ_gen ~mutal_decls ~is_self_rec tdecl)
                 cid params (fun x -> x)
 
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc:typ.ptyp_loc ts
           | Ptyp_variant (rows,_,_) ->
-            self#got_polyvar ~loc tdecl (self#do_typ_gen ~mutal_decls ~is_self_rec)
+            self#got_polyvar ~loc tdecl (self#do_typ_gen ~mutal_decls ~is_self_rec tdecl)
               ~is_self_rec ~mutal_decls rows (fun x -> x)
         | _ -> assert false
         in
@@ -654,7 +655,7 @@ class virtual generator initial_args = object(self: 'self)
 
 
   method make_indexes_sig ~loc tdecls : Sig.t list =
-    [ Sig.module_ ~loc @@ module_declaration ~loc ~name:(sprintf "I") @@
+    [ Sig.module_ ~loc @@ module_declaration ~loc ~name:(sprintf "I%s" self#trait_name) @@
       Mt.with_ ~loc
         (Mt.ident ~loc (Lident self#index_modtyp_name))
         [ WC.typ ~loc ~params:self#trf_scheme_params "result" @@
@@ -663,9 +664,9 @@ class virtual generator initial_args = object(self: 'self)
     ; Sig.module_ ~loc @@ module_declaration ~loc ~name:(sprintf "Fix_%s" self#trait_name) @@
       Mt.with_ ~loc
         (Mt.ident ~loc (Ldot (Lident "GT", "FixVR")))
-        [ WC.typ ~loc ~params:self#trf_scheme_params "s" @@
-          Typ.constr ~loc (Ldot (Lident "I", "i")) @@
-          List.map self#trf_scheme_params ~f:(Typ.var ~loc)
+        [ WC.typ ~loc ~params:["w"] "s" @@
+          Typ.constr ~loc (Ldot (Lident (sprintf "I%s" self#trait_name), "i")) @@
+          List.map ["w"] ~f:(Typ.var ~loc)
         ]
     ]
 
@@ -884,6 +885,7 @@ class virtual generator initial_args = object(self: 'self)
     is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
+    type_declaration ->
     [ `Normal of string | `Poly of string ] ->
     (* pattern variable, label name, typ of label *)
     (string * string * core_type) list ->
@@ -894,6 +896,7 @@ class virtual generator initial_args = object(self: 'self)
     is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
+    type_declaration ->
     [ `Normal of string | `Poly of string ] ->
     (string * core_type) list ->
     Exp.t
@@ -911,7 +914,7 @@ class virtual generator initial_args = object(self: 'self)
           Exp.fun_ ~loc (Pat.any ~loc) @@
           self#on_tuple_constr ~loc ~mutal_decls ~is_self_rec
             ~inhe:(Exp.ident ~loc inhname)
-            (`Normal cd.pcd_name.txt) bindings
+            tdecl (`Normal cd.pcd_name.txt) bindings
         | Pcstr_record ls ->
             let inhname = gen_symbol ~prefix:"inh_" () in
             let loc = loc_from_caml cd.pcd_loc in
@@ -923,6 +926,7 @@ class virtual generator initial_args = object(self: 'self)
             Exp.fun_ ~loc (Pat.any ~loc) @@
             self#on_record_constr ~loc ~mutal_decls ~is_self_rec
               ~inhe:(Exp.ident ~loc inhname)
+              tdecl
               (`Normal cd.pcd_name.txt)
               bindings
               ls
@@ -1017,7 +1021,7 @@ class virtual generator initial_args = object(self: 'self)
   (* do_type_gen will return an expression which after being applied
    * to inherited attribute and subject will return synthetized one
    *)
-  method do_typ_gen ~loc ~mutal_decls ~is_self_rec t : Exp.t =
+  method do_typ_gen ~loc ~mutal_decls ~is_self_rec tdecl t : Exp.t =
     let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
     let rec helper ~loc t =
       match t.ptyp_desc with
@@ -1055,7 +1059,9 @@ class virtual generator initial_args = object(self: 'self)
             in
             Exp.ident ~loc (self#self_arg_name cname)
           | `Nonregular ->
-            let args = List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls) in
+            let args = List.map params
+                ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+            in
             let cname =
               let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
               helper txt
@@ -1064,7 +1070,7 @@ class virtual generator initial_args = object(self: 'self)
                  [construct ~loc (Ldot (Lident "I", Naming.cname_index cname)) []] @
                  args
                 )
-            (* assert false *)
+
           | `Nonrecursive -> begin
               (* it is not a recursion but it can be a mutual recursion *)
               match txt with
@@ -1076,11 +1082,11 @@ class virtual generator initial_args = object(self: 'self)
                      (field ~loc (ident ~loc Naming.mut_arg_composite)
                         (lident @@ Naming.trf_function self#plugin_name s))
                      (lident @@ Naming.trf_field ~plugin:self#plugin_name s))
-                  (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls))
+                  (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl))
               | _ ->
                 let init =
                   Exp.(app ~loc
-                         (of_longident ~loc @@ Ldot (Lident "GT", self#plugin_name))
+                         (access ~loc "GT" self#plugin_name)
                          (of_longident ~loc txt)
                       )
                 in
@@ -1128,6 +1134,7 @@ class virtual generator initial_args = object(self: 'self)
               Exp.app_list ~loc
                 (self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls
                    ~inhe:(Exp.sprintf ~loc "inh")
+                   tdecl
                    (`Poly lab.txt)
                    bindings)
               @@
@@ -1186,7 +1193,7 @@ class virtual no_inherit_arg0 args = object(self: 'self)
 
   method virtual plugin_name: string
   method virtual default_syn : loc:loc ->
-      ?extra_path:(Ppxlib__.Import.string -> longident) ->
+      ?in_class:bool ->
       Ppxlib.type_declaration -> Typ.t
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
   method virtual syn_of_param: loc:loc -> string -> Typ.t
@@ -1240,6 +1247,7 @@ class virtual no_inherit_arg0 args = object(self: 'self)
     is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
+    type_declaration ->
     [ `Normal of string | `Poly of string ] ->
     (string * string * core_type) list ->
     label_declaration list ->

@@ -76,7 +76,7 @@ class g args = object(self)
 
   method trait_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method default_syn ~loc ?extra_path _tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn ~loc ?in_class _tdecl = self#syn_of_param ~loc "dummy"
 
   method syn_of_param ~loc _     =
     Typ.constr ~loc (Ldot (Lident "HTML", "er")) []
@@ -103,7 +103,7 @@ class g args = object(self)
   method index_module_name = "Index"
   method index_modtyp_name = "IndexResult"
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
@@ -120,7 +120,7 @@ class g args = object(self)
            (List.map ts ~f:(fun (name, typ) ->
               H.li ~loc
                 [ self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
                     (Exp.unit ~loc)
                     (Exp.ident ~loc name)
                 ]
@@ -144,7 +144,7 @@ class g args = object(self)
             H.li ~loc
               [ H.pcdata ~loc pld_name.txt
               ; self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type)
                   (Exp.unit ~loc)
                   (Exp.ident ~loc pld_name.txt)
               ]
@@ -157,10 +157,11 @@ class g args = object(self)
     is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
     mutal_decls:type_declaration list ->
     inhe:Exp.t ->
+    _ ->
     [ `Normal of string | `Poly of string ] ->
     (string * _ * core_type) list ->
     label_declaration list ->
-    Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe info bindings labs ->
+    Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs ->
     let constr_name = match info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
@@ -175,7 +176,7 @@ class g args = object(self)
           H.li ~loc
               [ H.pcdata ~loc lname
               ; self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
                   (Exp.unit ~loc)
                   (Exp.ident ~loc pname)
               ]

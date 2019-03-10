@@ -20,7 +20,7 @@ class g initial_args = object(self: 'self)
 
   method syn_of_param ~loc s = Typ.var ~loc "syn"
   method default_inh  ~loc tdecl = self#default_syn ~loc tdecl
-  method default_syn  ~loc  ?extra_path  tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method inh_of_param tdecl _ =
     self#syn_of_param ~loc:(loc_from_caml tdecl.ptype_loc) "dummy"
@@ -84,10 +84,10 @@ class g initial_args = object(self: 'self)
         ~init
         xs
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info args =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info args =
     let names = List.map args ~f:fst in
     Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
-    self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls)
+    self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
         ~init:inhe
         args
 

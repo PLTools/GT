@@ -41,7 +41,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
   method virtual default_inh : loc:'loc -> Ppxlib.type_declaration -> 'typ
 
   (** Synthesized attribute for whole type declaration. Is is defined by plugin kind. *)
-  method virtual default_syn  : loc:'loc -> ?extra_path:(string -> Ppxlib.longident) ->
+  method virtual default_syn  : loc:'loc -> ?in_class:bool ->
     Ppxlib.type_declaration -> 'typ
 
   (** [syn_of_param ~loc name ] constructs synthethized attribute for type paramter [name]. *)

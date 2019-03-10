@@ -22,7 +22,7 @@ class g initial_args = object(self: 'self)
 
   (* method default_inh = core_type_of_type_declaration *)
   method syn_of_param ~loc s = Typ.sprintf ~loc "bool"
-  method default_syn ~loc  ?extra_path  tdecl = self#syn_of_param ~loc "dummy"
+  method default_syn ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   (* method inh_of_param tdecl name =
    *   let loc = tdecl.ptype_loc in

@@ -58,25 +58,24 @@ class g args = object(self: 'self)
   method inh_of_param tdecl _name =
     self#default_inh ~loc:(loc_from_caml tdecl.ptype_loc) tdecl
 
-  method default_syn ~loc ?extra_path  tdecl =
+  method default_syn ~loc ?(in_class=false) tdecl =
+    if in_class then
+      Typ.var ~loc @@ sprintf "extra_%s" tdecl.ptype_name.txt
+    else
     let param_names,rez_names,find_param,blownup_params =
       hack_params tdecl.ptype_params
     in
     let ans =
-      let ident = match extra_path with
-        | Some f -> f (self#cur_name tdecl)
-        | None   -> Lident (self#cur_name tdecl)
-      in
-
+      let ident = Lident (self#cur_name tdecl)
+      (* let ident = match extra_path with
+       *   | Some f -> f (self#cur_name tdecl)
+       *   | None   -> Lident (self#cur_name tdecl)
+       * in *)
+    in
       Typ.constr ~loc ident @@
       List.map ~f:(Typ.var ~loc) rez_names
     in
-    if is_polyvariant_tdecl tdecl
-    then Typ.alias ~loc (Typ.variant_of_t ~loc ans) @@
-      (* Typ.var ~loc @@ *)
-      Naming.make_extra_param tdecl.ptype_name.txt
-    else ans
-
+    ans
 
   method plugin_class_params tdecl =
     let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
@@ -102,8 +101,20 @@ class g args = object(self: 'self)
     Typ.(arrow ~loc (unit ~loc) @@
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a"; "b"]
-  method index_module_name = "Index"
-  method index_modtyp_name = "IndexResult"
+  method index_module_name = "Index2"
+  method index_modtyp_name = "IndexResult2"
+
+
+  method! extra_class_sig_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    [ Ctf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+           map_type_param_names tdecl.ptype_params
+             ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
+        )
+    ]
+  method! extra_class_str_members _ = []
 
   (* method! use_tdecl td =
    *   Typ.var ~loc:(loc_from_caml td.ptype_loc) @@
@@ -177,22 +188,31 @@ class g args = object(self: 'self)
    *     [Cf.constraint_ ~loc (Typ.var ~loc Plugin.extra_param_name) right ]
    *   else [] *)
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     Exp.fun_list ~loc
       (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
       (let ctuple =
          List.map ts
            ~f:(fun (name, typ) ->
                self#app_transformation_expr ~loc
-                 (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls typ)
+                 (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
                  inhe
                  (Exp.ident ~loc name)
              )
        in
-       (match constr_info with `Normal s -> Exp.construct ~loc (lident s)
-                             | `Poly s   -> Exp.variant ~loc s
+       (match constr_info with
+        | `Normal s -> Exp.construct ~loc (lident s) ctuple
+        | `Poly s   ->
+          let ans =  Exp.variant ~loc s ctuple in
+          Exp.match_ ~loc ans
+            [case
+               ~lhs:(Pat.constraint_ ~loc
+                       (Pat.var ~loc "wtf")
+                       (Typ.class_ ~loc (Lident tdecl.ptype_name.txt) []))
+               ~rhs:(Exp.ident ~loc "wtf")
+            ]
        )
-         ctuple
+
       )
 
 
@@ -210,7 +230,7 @@ class g args = object(self: 'self)
         ~f:(fun {pld_name; pld_type} ->
             lident pld_name.txt,
             self#app_transformation_expr ~loc
-              (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls pld_type)
+              (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type)
               (Exp.unit ~loc)
               (Exp.ident ~loc pld_name.txt)
           )
