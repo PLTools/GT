@@ -93,7 +93,7 @@ class virtual generator initial_args = object(self: 'self)
         prepare_param_triples ~loc
           ~inh:(fun ~loc -> self#inh_of_param tdecl)
           ~syn:self#syn_of_param
-          ~default_syn:(self#default_syn ~loc tdecl)
+          ~default_syn:(self#default_syn ~loc ~in_class:true tdecl)
           ~default_inh:(self#default_inh ~loc tdecl)
           ~extra:(Typ.var ~loc @@
                   sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
@@ -194,7 +194,7 @@ class virtual generator initial_args = object(self: 'self)
           ~name:(self#make_class_name ~is_mutal:false tdecl)
           ~virt:false
           ~wrap:(fun sign ->
-              let for_self = self#make_typ_of_self_trf ~loc tdecl in
+              let for_self = self#make_typ_of_self_trf ~loc ~in_class:true tdecl in
               let funcs_for_args =
                 let names = map_type_param_names tdecl.ptype_params ~f:id in
                 List.fold_left names
@@ -1166,7 +1166,8 @@ class virtual generator initial_args = object(self: 'self)
    * of inherited attribute *)
   method virtual fancy_app: loc:loc -> Exp.t -> Exp.t -> Exp.t -> Exp.t
   method virtual app_gcata: loc:loc -> Exp.t -> Exp.t
-  method virtual make_typ_of_self_trf: loc:loc -> type_declaration -> Typ.t
+  method virtual make_typ_of_self_trf:
+    loc:loc -> ?in_class:bool -> type_declaration -> Typ.t
 
   method virtual default_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
 
@@ -1204,10 +1205,10 @@ class virtual no_inherit_arg0 args = object(self: 'self)
   method need_inh_attr = false
 
   (* almost the same as `make_typ_of_class_argument` *)
-  method make_typ_of_self_trf ~loc tdecl =
+  method make_typ_of_self_trf ~loc ?(in_class=false) tdecl =
     let openize_poly typ = Typ.from_caml typ in
     let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
-    let syn_t  = self#default_syn ~loc tdecl in
+    let syn_t  = self#default_syn ~loc ~in_class tdecl in
 
     let ans = Typ.(arrow ~loc subj_t @@ syn_t) in
     if self#need_inh_attr

@@ -114,7 +114,16 @@ class g args = object(self: 'self)
              ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
         )
     ]
-  method! extra_class_str_members _ = []
+  method! extra_class_str_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    [ Cf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+           map_type_param_names tdecl.ptype_params
+             ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
+        )
+    ]
+
 
   (* method! use_tdecl td =
    *   Typ.var ~loc:(loc_from_caml td.ptype_loc) @@
@@ -204,13 +213,13 @@ class g args = object(self: 'self)
         | `Normal s -> Exp.construct ~loc (lident s) ctuple
         | `Poly s   ->
           let ans =  Exp.variant ~loc s ctuple in
-          Exp.match_ ~loc ans
-            [case
-               ~lhs:(Pat.constraint_ ~loc
-                       (Pat.var ~loc "wtf")
-                       (Typ.class_ ~loc (Lident tdecl.ptype_name.txt) []))
-               ~rhs:(Exp.ident ~loc "wtf")
-            ]
+          ans
+          (* Exp.match_ ~loc ans
+           *   [case
+           *      ~lhs:Pat.(alias ~loc (type_ ~loc (Lident tdecl.ptype_name.txt))
+           *                   "wtf")
+           *      ~rhs:(Exp.ident ~loc "wtf")
+           *   ] *)
        )
 
       )
