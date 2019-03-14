@@ -688,11 +688,11 @@ let indexes_str ~loc _ tdecls =
                ]
             ))
         ]
-    ; (* Str.module_ ~loc @@ module_declaration ~loc ~name:funame @@ *)
-      Str.module_ ~loc funame @@
+    ; Str.module_ ~loc funame @@
       Me.functor_ ~loc "S"
         (Option.some @@
-         Mt.signature ~loc [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
+         Mt.signature ~loc
+           [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
         (Me.structure ~loc
            [ Str.tdecl ~loc ~name:"result" ~params @@
              Typ.constr ~loc (Ldot (Lident "S", "result")) @@
@@ -711,14 +711,7 @@ let indexes_str ~loc _ tdecls =
                   ]
                  ))
            ])
-        (* TODO: generate actual definition here *)
-        (* (Me.with_ ~loc
-         *    (Mt.ident ~loc (Lident mtname))
-         *    [ WC.typ ~loc ~params "result" @@
-         *      Typ.constr ~loc (Ldot (Lident "S", "result")) @@
-         *      List.map params ~f:(Typ.var ~loc)
-         *    ]
-         * ) *)
+
     ]
   in
   List.concat

@@ -165,7 +165,7 @@ and Str :
     val tdecl_record: loc:loc -> name:string -> params:string list ->
       lab_decl list -> t
     val of_class_declarations: loc:loc -> class_declaration list -> t
-    val functor1 : loc:loc -> string -> param:string -> Sig.t list -> t list -> t
+    (* val functor1 : loc:loc -> string -> param:string -> Sig.t list -> t list -> t *)
     val simple_gadt : loc:loc -> name:string -> params_count:int ->
       (string * Typ.t) list -> t
     val module_  : loc:loc -> string -> Me.t -> t

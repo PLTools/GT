@@ -1,5 +1,11 @@
 #load "q_MLast.cmo";;
 
+(* Camlp5 AST
+   https://github.com/camlp5/camlp5/blob/master/main/mLast.mli
+   Camlp5 doc
+   https://camlp5.github.io/doc/htmlc/ast_strict.html
+*)
+
 open Ploc
 open MLast
 
@@ -19,12 +25,6 @@ let noloc = Ploc.dummy
 
 type type_arg = MLast.type_var
 let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), None)
-
-type module_declaration
-let module_declaration ~loc = assert false
-
-type module_type_declaration
-let module_type_declaration ~loc = assert false
 
 module Pat = struct
   type t = MLast.patt
@@ -391,31 +391,72 @@ module Str = struct
 
   let functor1 ~loc name ~param sigs strs = failwith "not_implemented"
   let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
-    fun ~loc -> assert false
+    fun ~loc ~name ~params_count ts ->
+    let ltv = List.init params_count (fun _ -> (VaVal None,None) ) in
+    let ls = (loc, VaVal name) in
+    let ltt = [] in
+    let t =
+      let llslt = List.map (fun (name,typ) ->
+          (* TODO: error about gadts may be here *)
+          (loc,VaVal name, VaVal [], None (* Some typ *))
+        ) ts in
+      <:ctyp< [ $list:llslt$ ] >>
+    in
+    let ltd = <:type_decl< $tp:ls$ $list:ltv$ = private $t$ $list:ltt$ >>
+    in
+    <:str_item< type $list:[ltd]$ >>
 
-  let module_ ~loc = assert false
-  let modtype ~loc = assert false
+  let module_ ~loc name me =
+    let lsme = [ (VaVal name, me)] in
+    <:str_item< module $list:lsme$ >>
+  let modtype ~loc (_,name,topt) =
+    match topt with
+    | Some mt -> <:str_item< module type $name$ = $mt$ >>
+    | None   -> failwith "Should not happen?"
   let tdecl_abstr ~loc = assert false
-  let include_ ~loc = assert false
+  let include_ ~loc me = <:str_item< include $me$ >>
 end
 
 module Me = struct
-  type t
-  let structure ~loc = assert false
-  let ident ~loc = assert false
-  let apply ~loc = assert false
-  let functor_ ~loc = assert false
+  type t = MLast.module_expr
+  let structure ~loc lsi =
+    <:module_expr< struct $list:lsi$ end >>
+  let ident ~loc lident =
+    match lident with
+    | Ppxlib.Lident s -> <:module_expr< $uid:s$ >>
+    | _ -> failwith "not_impelemnted"
+  let apply ~loc me1 me2 =
+    <:module_expr< $me1$ $me2$ >>
+  let functor_ ~loc name typ_opt me =
+    match typ_opt with
+    | Some mt -> <:module_expr< functor ($name$ : $mt$) -> $me$ >>
+    | None -> assert false
 end
 
 module Mt = struct
-  type t
-  let ident ~loc = assert false
-  let signature ~loc = assert false
-  let apply ~loc = assert false
-  let functor_ ~loc = assert false
-  let with_ ~loc = assert false
+  type t = MLast.module_type
+  let ident ~loc = function
+    | Ppxlib.Lident s -> <:module_type< $uid:s$ >>
+    | _ -> failwith "not implemented"
+
+  let signature ~loc lsi =
+    <:module_type< sig $list:lsi$ end >>
+
+  let functor_ ~loc name typ_opt me =
+    match typ_opt with
+    | Some mtl -> <:module_type< functor ($name$ : $mtl$) -> $me$ >>
+    | None -> assert false
+  let with_ ~loc mt lwc =
+    <:module_type< $mt$ with $list:lwc$ >>
 
 end
+
+type module_declaration = loc * string * Mt.t
+let module_declaration ~loc ~name t : module_declaration  = (loc,name,t)
+
+type module_type_declaration = loc * string * Mt.t option
+let module_type_declaration ~loc ~name topt : module_type_declaration =
+  (loc,name,topt)
 
 module Sig = struct
   type t = MLast.sig_item
@@ -469,19 +510,66 @@ module Sig = struct
     in
     <:sig_item< class $list:[c]$ >>
 
-  let functor1 ~loc name ~param sigs strs = failwith "not_implemented"
+  let functor1 ~loc name ~param sigs_arg sigs_r =
+    let mt1 = <:module_type< sig $list:sigs_arg$ end >> in
+    let mt2 = <:module_type< sig $list:sigs_r$ end >> in
+    let mt  = <:module_type< functor ($param$ : $mt1$) -> $mt2$ >> in
+    <:sig_item< module $list:[(VaVal name,mt)]$ >>
 
-  let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
-    fun ~loc -> assert false
 
-  let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc -> assert false
-  let module_ ~loc = assert false
-  let modtype ~loc = assert false
+  let simple_gadt (* : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t *) =
+    fun ~loc ~name ~params_count constructors ->
+
+    let tdDef =
+      (* TODO: error about gadts may be here *)
+      let cs =
+        List.map (fun (name,t) -> (loc, VaVal name, VaVal [], Some t) )
+          constructors in
+      (TySum (loc, VaVal cs))
+    in
+    let td =
+      { tdNam = VaVal (loc, VaVal name);
+        tdPrm = VaVal (List.init params_count (fun n ->
+            (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) );
+        tdPrv = VaVal false;
+        tdDef;
+        tdCon = VaVal []
+      }
+    in
+    <:sig_item< type $list:[td]$ >>
+
+
+
+  let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc name params ->
+
+    let td =
+      { tdNam = VaVal (loc, VaVal name);
+        tdPrm = VaVal (List.map (fun s -> (VaVal s,None)) params);
+        tdPrv = VaVal false;
+        tdDef = <:ctyp< 'abstract >>;
+        tdCon = VaVal []
+      }
+    in
+    <:sig_item< type $list:[td]$ >>
+
+  let module_ ~loc (_,name,mtyp) =
+    <:sig_item< module $list:[(VaVal name,mtyp)]$ >>
+
+  let modtype ~loc (_loc,s,mt_opt) =
+    let mt =
+      match mt_opt with
+      | Some mt -> mt
+      | None -> <:module_type< 'abstract >>
+    in
+    <:sig_item< module type $s$ = $mt$ >>
 end
 
 module WC = struct
-  type t
-  let typ ~loc = assert false
+  type t = MLast.with_constr
+  let typ ~loc ~params name t =
+    let ls = [name] in
+    let ltv = List.map (fun s -> named_type_arg ~loc s) params in
+    <:with_constr< type $list:ls$ $list:ltv$ = $t$ >>
 end
 
 module Vb = struct
