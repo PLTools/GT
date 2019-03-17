@@ -10,11 +10,11 @@ open AstHelpers
 module P = Plugin.Make(AstHelpers)
 
 let trait_name =  trait_name
-let make_dest_param_names  ps =
+let make_dest_param_names ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
-class g initial_args = object(self: 'self)
-  inherit P.with_inherit_arg initial_args as super
+class g initial_args tdecls = object(self: 'self)
+  inherit P.with_inherit_arg initial_args tdecls as super
 
   method trait_name = trait_name
 
@@ -42,8 +42,7 @@ class g initial_args = object(self: 'self)
     Typ.(arrow ~loc (var ~loc "b") @@
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a";"b"]
-  method index_module_name = "Index2"
-  method index_modtyp_name = "IndexResult2"
+  inherit P.index_result2
 
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
@@ -109,7 +108,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end

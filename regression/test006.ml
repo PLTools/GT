@@ -1,4 +1,6 @@
-@type 'a tree = Leaf | Node of 'a * 'a tree GT.list with show, gmap
+open GT;;
+
+@type 'a tree = Leaf | Node of 'a * 'a tree list with show, gmap
 
 let _ =
   let x = Node (1, [ Node (2, [Leaf])

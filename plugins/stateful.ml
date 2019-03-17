@@ -13,10 +13,10 @@ module P = Plugin.Make(AstHelpers)
 let trait_name = trait_name
 open AstHelpers
 
-class g initial_args = object(self: 'self)
+class g initial_args tdecls = object(self: 'self)
   (* TODO: maybe do not inherit from gmap a.k.a. functor *)
-  inherit G.g initial_args as super
-  inherit P.with_inherit_arg initial_args as super2
+  inherit G.g initial_args tdecls as super
+  inherit P.with_inherit_arg initial_args tdecls as super2
 
   method trait_name = trait_name
 
@@ -103,7 +103,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end

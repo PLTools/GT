@@ -38,10 +38,10 @@ let app_format_sprintf ~loc arg =
     (Exp.of_longident ~loc (Ldot(Lident "Format", "sprintf")))
     arg
 
-class g args = object(self)
+class g args tdecls = object(self)
   inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
-  inherit P.generator args
-  inherit P.no_inherit_arg args
+  inherit P.generator args tdecls
+  inherit P.no_inherit_arg args tdecls
 
   method trait_name = trait_name
   method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
@@ -67,8 +67,8 @@ class g args = object(self)
     Typ.(arrow ~loc (unit ~loc) @@
          arrow ~loc (var ~loc "a") (constr ~loc (Lident "string") []))
   method trf_scheme_params = ["a"]
-  method index_module_name = "Index"
-  method index_modtyp_name = "IndexResult"
+
+  inherit P.index_result
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
@@ -145,7 +145,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end

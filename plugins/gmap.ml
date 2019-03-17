@@ -48,8 +48,8 @@ let hack_params ?(loc=noloc) ps =
   in
   (param_names, rez_names, assoc, blownup_params)
 
-class g args = object(self: 'self)
-  inherit P.no_inherit_arg args
+class g args tdecls = object(self: 'self)
+  inherit P.no_inherit_arg args tdecls
 
   method trait_name = trait_name
 
@@ -59,7 +59,7 @@ class g args = object(self: 'self)
     self#default_inh ~loc:(loc_from_caml tdecl.ptype_loc) tdecl
 
   method default_syn ~loc ?(in_class=false) tdecl =
-    if in_class then
+    if in_class && is_polyvariant_tdecl tdecl then
       Typ.var ~loc @@ sprintf "extra_%s" tdecl.ptype_name.txt
     else
     let param_names,rez_names,find_param,blownup_params =
@@ -101,28 +101,30 @@ class g args = object(self: 'self)
     Typ.(arrow ~loc (unit ~loc) @@
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a"; "b"]
-  method index_module_name = "Index2"
-  method index_modtyp_name = "IndexResult2"
 
+  inherit P.index_result2
 
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    [ Ctf.constraint_ ~loc
-        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-        (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+    if not (is_polyvariant_tdecl tdecl) then [] else
+      [ Ctf.constraint_ ~loc
+          (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+          (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
            map_type_param_names tdecl.ptype_params
              ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
-        )
-    ]
+          )
+      ]
+
   method! extra_class_str_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    [ Cf.constraint_ ~loc
-        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-        (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+    if not (is_polyvariant_tdecl tdecl) then [] else
+      [ Cf.constraint_ ~loc
+          (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+          (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
            map_type_param_names tdecl.ptype_params
              ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
-        )
-    ]
+          )
+      ]
 
 
   (* method! use_tdecl td =
@@ -249,7 +251,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end

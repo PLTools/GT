@@ -36,10 +36,10 @@ let app_format_fprintf ~loc efmtr efmts =
     Exp.(of_longident ~loc (Ldot(Lident "Format", "fprintf")) )
     [ efmtr; efmts ]
 
-class g args = object(self)
+class g args tdecls = object(self)
   inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] Plugin_intf.typ_g
-  inherit P.generator args
-  inherit P.with_inherit_arg args
+  inherit P.generator args tdecls
+  inherit P.with_inherit_arg args tdecls
 
   method trait_name = trait_name
   method default_inh ~loc _tdecl =
@@ -69,8 +69,7 @@ class g args = object(self)
     Typ.(arrow ~loc (of_longident ~loc (Ldot (Lident "Format", "formatter"))) @@
          arrow ~loc (var ~loc "a") (unit ~loc) )
   method trf_scheme_params = ["a"]
-  method index_module_name = "Index"
-  method index_modtyp_name = "IndexResult"
+  inherit P.index_result
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
@@ -154,7 +153,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end

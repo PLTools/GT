@@ -40,6 +40,7 @@ module Pat = struct
     in
     helper lident
 
+  let access2 ~loc m n = of_longident ~loc (Ldot (Lident m, n))
   let constraint_ ~loc = ppat_constraint ~loc
 
   let constr      ~loc lident ps =
@@ -73,6 +74,9 @@ module Pat = struct
     constr ~loc lident [record ~loc (List.map ~f:(fun (l,x) -> (Lident l, x)) ps)]
 
 end
+
+let use_new_type ~loc name e =
+  pexp_newtype ~loc (Located.mk ~loc name) e
 
 module Exp = struct
   type t = expression
@@ -169,9 +173,6 @@ module Exp = struct
     List.fold_right xs
       ~f:(fun e acc -> construct ~loc (lident "::") [e; acc])
       ~init:(construct ~loc (lident "[]") [])
-
-  let new_type ~loc s e =
-    pexp_newtype ~loc (Located.mk ~loc s) e
 
   let constraint_ ~loc e t = pexp_constraint ~loc e t
 end

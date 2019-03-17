@@ -101,6 +101,8 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
 
   method virtual eta_and_exp: center:'exp -> Ppxlib.type_declaration -> 'exp
   method virtual make_final_trans_function_typ : loc:'loc -> Ppxlib.type_declaration -> 'typ
+
+  method virtual index_module_name: string
 end
 
 (** Functor that takes AST construction functions for a specific backend and
@@ -119,5 +121,6 @@ module type PluginRes =
   sig
     open AstHelpers
     val trait_name : string
-    val g : plugin_args -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
+    val g : plugin_args -> Ppxlib.type_declaration list ->
+      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
   end

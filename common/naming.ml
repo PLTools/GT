@@ -66,3 +66,7 @@ let cname_index typname = String.capitalize typname
 let mutuals_pack = "_mutuals_pack"
 let make_fix_func_name plugin (* tdecls *) =
   sprintf "%s_fix" plugin
+
+let hack_index_name tdecls s =
+  assert (List.length tdecls > 0);
+  sprintf "%s_%s" s (List.hd_exn tdecls).ptype_name.txt

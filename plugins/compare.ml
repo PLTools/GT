@@ -34,8 +34,8 @@ let trait_name = trait_name
 
 let access_GT s = Ldot (Lident "GT", s)
 
-class g initial_args = object(self: 'self)
-  inherit P.with_inherit_arg initial_args
+class g initial_args tdecls = object(self: 'self)
+  inherit P.with_inherit_arg initial_args tdecls
 
   method trait_name = trait_name
 
@@ -64,10 +64,9 @@ class g initial_args = object(self: 'self)
 
   method trf_scheme ~loc =
     Typ.(arrow ~loc (var ~loc "a") @@
-         arrow ~loc (var ~loc "a") (constr ~loc (Lident "bool") []))
+         arrow ~loc (var ~loc "a") (constr ~loc (Ldot (Lident "GT", "comparison")) []))
   method trf_scheme_params = ["a"]
-  method index_module_name = "Index"
-  method index_modtyp_name = "IndexResult"
+  inherit P.index_result
 
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
@@ -183,7 +182,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 
 end

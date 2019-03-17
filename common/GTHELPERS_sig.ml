@@ -33,6 +33,7 @@ module rec Pat :
     val any : loc:loc -> t
     val unit: loc:loc -> t
     val var : loc:loc -> string -> t
+    val access2: loc:loc -> string -> string -> t
     val alias:  loc:loc -> t -> string -> t
     val sprintf : loc:loc -> ('a, unit, string, t) format4 -> 'a
     val of_longident : loc:loc -> Ppxlib.longident -> t
@@ -94,7 +95,7 @@ and Exp :
     val true_ : loc:loc -> t
     val false_: loc:loc -> t
     val list  : loc:loc -> t list -> t
-    val new_type: loc:loc -> string -> t -> t
+    (* val new_type: loc:loc -> string -> t -> t *)
     val constraint_: loc:loc -> t -> Typ.t -> t
   end
 and Typ :
@@ -234,6 +235,7 @@ val class_structure : self:Pat.t -> fields:Cf.t list -> class_structure
 val lab_decl: loc:loc -> string -> bool -> Typ.t -> lab_decl
 val module_declaration: loc:loc -> name:string -> Mt.t -> module_declaration
 val module_type_declaration: loc:loc -> name:string -> Mt.t option -> module_type_declaration
+val use_new_type: loc:loc -> string -> Exp.t -> Exp.t
 
 (* if argument is polymorphic variant type then make it open *)
 val openize_poly: Typ.t -> Typ.t

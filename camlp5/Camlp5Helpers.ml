@@ -47,6 +47,7 @@ module Pat = struct
     in
     helper lid
 
+  let access2 ~loc m n = of_longident ~loc (Ldot (Lident m, n))
   let constraint_ ~loc p t = <:patt< ($p$ : $t$) >>
 
   let constr_record ~loc uid ps =
@@ -66,7 +67,7 @@ module Pat = struct
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
   let record1 ~loc ident =
-    record ~loc [ ident, of_longident ~loc ident ]
+    record ~loc [ ident, of_longident ~loc @@ HelpersBase.lident_tail ident ]
 
   let tuple ~loc ps = <:patt< ($list:ps$) >>
   let variant ~loc name args =
@@ -90,6 +91,9 @@ end
 type case = patt * expr option * expr
 let case ~lhs ~rhs : case = (lhs, None, rhs)
 
+let use_new_type ~loc name e =
+  let p = <:patt< (type $lid:name$) >> in
+  <:expr< fun [ $list:[ (p,Ploc.VaVal None,e) ]$ ] >>
 
 module Exp = struct
   type t = MLast.expr
@@ -106,9 +110,7 @@ module Exp = struct
 
   let string_const ~loc s = <:expr< $str:s$ >>
   let int_const ~loc n = <:expr< $int:string_of_int n$ >>
-  let assert_false ~loc =
-    let r = ident ~loc "false" in
-    <:expr< assert $r$ >>
+  let assert_false ~loc = <:expr< assert False >>
 
   let of_longident ~loc l =
     let rec helper = function
@@ -125,8 +127,7 @@ module Exp = struct
 
   let access ~loc mname iname =
     let u = <:expr< $uid:mname$ >> in
-    let l = <:expr< $lid:mname$ >> in
-    <:expr< $u$ . $l$ >>
+    <:expr< $u$ . $ident ~loc iname$ >>
 
   let app ~loc l r = <:expr< $l$ $r$ >>
   let app_lab ~loc l lab r =
@@ -174,7 +175,7 @@ module Exp = struct
     else <:expr< let $list:lpe$ in $ewhere$ >>
   let let_one ~loc ?(rec_=false) pat e1 ewhere = let_ ~loc ~rec_ [pat, e1] ewhere
 
-  let from_caml e = failwith "not implemented"
+  let from_caml e = failwith "from_caml not implemented"
   let assert_false ~loc = <:expr< assert False >>
   let failwith_ ~loc s  = <:expr< failwith $str:s$ >>
   let objmagic_unit ~loc = <:expr< Obj.magic () >>
@@ -188,7 +189,7 @@ module Exp = struct
     in
     helper <:expr< $uid:"[]"$ >> (List.rev xs)
 
-  let new_type ~loc = failwith "Not implemented"
+  (* let new_type ~loc = failwith "Not implemented" *)
   let constraint_ ~loc e t = <:expr< ($e$:$t$) >>
 end
 
@@ -389,20 +390,22 @@ module Str = struct
     let t = <:ctyp< { $list:llsbt$ } >> in
     tdecl ~loc ~name ~params t
 
-  let functor1 ~loc name ~param sigs strs = failwith "not_implemented"
+  (* let functor1 ~loc name ~param sigs strs = failwith "not_implemented" *)
   let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
     fun ~loc ~name ~params_count ts ->
-    let ltv = List.init params_count (fun _ -> (VaVal None,None) ) in
+    let ltv =
+      List.init params_count (fun n ->
+          (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) in
     let ls = (loc, VaVal name) in
     let ltt = [] in
     let t =
       let llslt = List.map (fun (name,typ) ->
           (* TODO: error about gadts may be here *)
-          (loc,VaVal name, VaVal [], None (* Some typ *))
+          (loc,VaVal name, VaVal [], Some typ)
         ) ts in
       <:ctyp< [ $list:llslt$ ] >>
     in
-    let ltd = <:type_decl< $tp:ls$ $list:ltv$ = private $t$ $list:ltt$ >>
+    let ltd = <:type_decl< $tp:ls$ $list:ltv$ = $t$ $list:ltt$ >>
     in
     <:str_item< type $list:[ltd]$ >>
 
@@ -422,9 +425,12 @@ module Me = struct
   let structure ~loc lsi =
     <:module_expr< struct $list:lsi$ end >>
   let ident ~loc lident =
-    match lident with
-    | Ppxlib.Lident s -> <:module_expr< $uid:s$ >>
-    | _ -> failwith "not_impelemnted"
+    let rec helper = function
+      | Ppxlib.Lident s -> <:module_expr< $uid:s$ >>
+      | Ppxlib.Ldot (p, s) -> <:module_expr< $helper p$ . $uid:s$ >>
+      | _ -> failwith "Me.ident not_implemented"
+    in
+    helper lident
   let apply ~loc me1 me2 =
     <:module_expr< $me1$ $me2$ >>
   let functor_ ~loc name typ_opt me =
@@ -435,9 +441,13 @@ end
 
 module Mt = struct
   type t = MLast.module_type
-  let ident ~loc = function
-    | Ppxlib.Lident s -> <:module_type< $uid:s$ >>
-    | _ -> failwith "not implemented"
+  let ident ~loc lident =
+    let rec helper = function
+      | Ppxlib.Lident s -> <:module_type< $uid:s$ >>
+      | Ppxlib.Ldot (p, s) -> <:module_type< $helper p$ . $uid:s$ >>
+      | _ -> failwith "Mt.ident not implemented"
+    in
+    helper lident
 
   let signature ~loc lsi =
     <:module_type< sig $list:lsi$ end >>

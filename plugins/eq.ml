@@ -15,14 +15,18 @@ module C = Compare.Make(AstHelpers)
 
 open AstHelpers
 
-class g initial_args = object(self: 'self)
-  inherit C.g initial_args as super
+class g initial_args tdecls = object(self: 'self)
+  inherit C.g initial_args tdecls as super
 
   method! trait_name = trait_name
 
   (* method default_inh = core_type_of_type_declaration *)
   method syn_of_param ~loc s = Typ.sprintf ~loc "bool"
   method default_syn ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+
+  method! trf_scheme ~loc =
+    Typ.(arrow ~loc (var ~loc "a") @@
+         arrow ~loc (var ~loc "a") (constr ~loc (Lident "bool") []))
 
   (* method inh_of_param tdecl name =
    *   let loc = tdecl.ptype_loc in
@@ -165,7 +169,7 @@ end
 
 let g =
   (new g :>
-     (Plugin_intf.plugin_args ->
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
 end
 
