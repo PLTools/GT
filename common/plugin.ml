@@ -336,7 +336,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
            * | Lident s when List.mem mutal_names s ~equal:String.equal ->
            *   (\* Only Lident because we ignore types with same name but from another module *\) *)
            (Exp.of_longident ~loc @@
-             map_longident ~f:(fun _ -> Naming.make_fix_func_name self#plugin_name) cid.txt) :: args
+            map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt)
+           :: args
           (* | _ -> args *)
         in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
@@ -499,7 +500,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
     is_rec:bool -> string list -> type_declaration list -> Sig.t list
     = fun ~loc ~is_rec mutal_names tdecls ->
 
-      [ Sig.value ~loc ~name:(Naming.make_fix_func_name self#plugin_name) @@
+      [ Sig.value ~loc ~name:(self#fix_func_name ()) @@
           Typ.access2 ~loc self#fix_module_name "fn"
       ]
 
@@ -550,7 +551,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       let accI s = Ldot (Lident (Naming.hack_index_name tdecls @@
                                  sprintf "I%s" self#trait_name), s) in
       let make_knot () = value_binding ~loc
-          ~pat:(Pat.sprintf ~loc "%s" @@ Naming.make_fix_func_name self#plugin_name)
+          ~pat:(Pat.sprintf ~loc "%s" @@ self#fix_func_name ())
           ~expr:Exp.(app ~loc
                        (access ~loc self#fix_module_name "fixv")
                        (fun_ ~loc (Pat.sprintf ~loc "f") @@
@@ -584,6 +585,10 @@ class virtual generator initial_args tdecls = object(self: 'self)
          [ make_knot () ]
         )
 
+  method fix_func_name ?for_ () =
+    match for_ with
+    | None -> Naming.fix_func_name_tdecls self#plugin_name self#tdecls
+    | Some for_ -> Naming.fix_func_name ~for_ self#plugin_name
 
   method do_single_sig ~loc ~is_rec tdecl =
     List.concat
