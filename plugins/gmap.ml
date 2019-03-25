@@ -66,12 +66,7 @@ class g args tdecls = object(self: 'self)
       hack_params tdecl.ptype_params
     in
     let ans =
-      let ident = Lident (self#cur_name tdecl)
-      (* let ident = match extra_path with
-       *   | Some f -> f (self#cur_name tdecl)
-       *   | None   -> Lident (self#cur_name tdecl)
-       * in *)
-    in
+      let ident = Lident (self#cur_name tdecl) in
       Typ.constr ~loc ident @@
       List.map ~f:(Typ.var ~loc) rez_names
     in

@@ -332,13 +332,15 @@ class virtual generator initial_args tdecls = object(self: 'self)
       [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams
         in
         let args =
-          (* match cid.txt with
-           * | Lident s when List.mem mutal_names s ~equal:String.equal ->
-           *   (\* Only Lident because we ignore types with same name but from another module *\) *)
-           (Exp.of_longident ~loc @@
-            map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt)
-           :: args
-          (* | _ -> args *)
+          (match cid.txt with
+          | Lident s when List.mem mutal_names s ~equal:String.equal ->
+            (* Only Lident because we ignore types with same name but from another module *)
+
+            [Exp.sprintf ~loc "%s" Naming.mutuals_pack]
+          | _ ->
+            [Exp.of_longident ~loc @@
+             map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt]
+          ) @ args
         in
         Cf.inherit_ ~loc @@ Cl.apply ~loc
           (Cl.constr ~loc

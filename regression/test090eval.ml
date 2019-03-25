@@ -115,6 +115,7 @@ end
 
 class ['extra] de_bruijn fself = object
   inherit [string, int, string, unit, 'env, 'extra] eval_t_t
+      eval_t_fix
       ith (fun _ _ -> ()) fself
 
   inherit [named, nameless, 'extra]    Abs.de_bruijn fself
@@ -128,6 +129,7 @@ let convert term = GT.transform(t) (new de_bruijn) [] term
 class ['extra] import fself =
 object
   inherit [string, int, string, int, enumerator, 'extra] @t[stateful]
+            stateful_t_fix
             lookup lookup fself
   inherit [named, nominal, 'extra]    Abs.import fself
   inherit [named, nominal, 'extra]    Let.import fself

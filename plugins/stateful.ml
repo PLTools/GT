@@ -26,7 +26,11 @@ class g initial_args tdecls = object(self: 'self)
   method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
   method! default_syn ~loc ?in_class tdecl =
-    Typ.tuple ~loc [self#default_inh ~loc tdecl; super#default_syn ~loc tdecl]
+    let in_class = match in_class with
+      | None -> false
+      | Some b -> b
+    in
+    Typ.tuple ~loc [self#default_inh ~loc tdecl; super#default_syn ~loc ~in_class tdecl]
 
   (* the same as in eval *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
