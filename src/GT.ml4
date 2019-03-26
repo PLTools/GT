@@ -176,6 +176,7 @@ module Index_stateful_list(S:sig type ('env, 'a, 'b) result end) =
     type 'xxx i =
       | List: (('env, 'a, 'a2) result -> ('env, 'a list, 'a2 list) result) i
   end
+
 module Ieq_list = (Index_list)(struct type 'a result = 'a -> 'a -> bool end)
 module Fix_eq_list = (FixV)(Ieq_list)
 class ['a,'extra_list] eq_list_t _ fa  fself_list =
@@ -199,6 +200,7 @@ let eq_list_fix =
            fun (sym : a Ieq_list.i) ->
              (match sym with | Ieq_list.List -> eq_list_0 f : a)
        })
+
 module Icompare_list =
   (Index_list)(struct type 'a result = 'a -> 'a -> comparison end)
 module Fix_compare_list = (FixV)(Icompare_list)
@@ -226,6 +228,7 @@ let compare_list_fix =
              (match sym with | Icompare_list.List -> compare_list_0 f :
              a)
        })
+
 module Ifoldr_list =
   (Index_fold_list)(struct type ('a, 'b) result = 'b -> 'a -> 'b end)
 module Fix_foldr_list = (FixV)(Ifoldr_list)
@@ -246,6 +249,7 @@ let foldr_list_fix =
            fun (sym : a Ifoldr_list.i) ->
              (match sym with | Ifoldr_list.List -> foldr_list_0 f : a)
        })
+
 module Ifoldl_list =
   (Index_fold_list)(struct type ('a, 'b) result = 'b -> 'a -> 'b end)
 module Fix_foldl_list = (FixV)(Ifoldl_list)
@@ -335,6 +339,7 @@ let gmap_list_fix =
            fun (sym : a Igmap_list.i) ->
              (match sym with | Igmap_list.List -> gmap_list_0 f : a)
        })
+
 module Ifmt_list =
   (Index_list)(struct type 'a result = Format.formatter -> 'a -> unit end)
 module Fix_fmt_list = (FixV)(Ifmt_list)
@@ -342,10 +347,10 @@ class ['a,'extra_list] fmt_list_t _   fa  fself_list =
   object
     inherit  [Format.formatter,'a,unit,Format.formatter,'extra_list,unit]
       list_t
-    method c_Nil inh___035_ _ = Format.fprintf inh___035_ "[]"
-    method c_Cons inh___036_ _ _x__037_ _x__038_ =
-      Format.fprintf inh___036_ "::@ @[(@,%a,@,@ %a@,)@]" fa _x__037_
-        fself_list _x__038_
+    method c_Nil inh___035_ _ = ()
+    method c_Cons fmt _ x xs =
+      fa fmt x;
+      (match xs with [] -> () | _ -> Format.fprintf fmt ";@,@ %a" fself_list xs)
   end
 let fmt_list_0 call fa inh0 subj =
   transform_gc gcata_list ((new fmt_list_t) call fa) inh0 subj
@@ -357,6 +362,7 @@ let fmt_list_fix =
            fun (sym : a Ifmt_list.i) ->
              (match sym with | Ifmt_list.List -> fmt_list_0 f : a)
        })
+
 module Ihtml_list =
   (Index_list)(struct type 'a result = unit -> 'a -> HTML.er end)
 module Fix_html_list = (FixV)(Ihtml_list)
@@ -364,16 +370,11 @@ class ['a,'extra_list] html_list_t { Fix_html_list.call = call }
    fa  fself_list =
   object
     inherit  [unit,'a,HTML.er,unit,'extra_list,HTML.er] list_t
-    method c_Nil inh___039_ _ =
-      HTML.ul (HTML.seq (List.cons (HTML.string "[]") []))
-    method c_Cons inh___040_ _ _x__041_ _x__042_ =
-      HTML.ul
-        (HTML.seq
-           (List.cons (HTML.li (HTML.seq (List.cons (HTML.string "::") [])))
-              (List.cons (HTML.li (HTML.seq (List.cons (fa () _x__041_) [])))
-                 (List.cons
-                    (HTML.li
-                       (HTML.seq (List.cons (fself_list () _x__042_) []))) []))))
+    method c_Nil inh___039_ _ = HTML.ul (HTML.string "[]")
+    method c_Cons inh___040_ _ x xs =
+      HTML.ul @@ HTML.seq (
+        [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa () x) (x::xs)
+      )
   end
 let html_list_0 call fa inh0 subj =
   transform_gc gcata_list ((new html_list_t) call fa) inh0 subj
@@ -385,15 +386,16 @@ let html_list_fix =
            fun (sym : a Ihtml_list.i) ->
              (match sym with | Ihtml_list.List -> html_list_0 f : a)
        })
+
 module Ishow_list =
   (Index_list)(struct type 'a result = unit -> 'a -> string end)
 module Fix_show_list = (FixV)(Ishow_list)
 class ['a,'extra_list] show_list_t _ fa  fself_list =
   object
     inherit  [unit,'a,string,unit,'extra_list,string] list_t
-    method c_Nil inh___043_ _ = "[]"
-    method c_Cons inh___044_ _ _x__045_ _x__046_ =
-      Printf.sprintf ":: (%s, %s)" (fa () _x__045_) (fself_list () _x__046_)
+    method c_Nil inh___043_ _ = ""
+    method c_Cons inh___044_ _ x xs =
+      (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself_list () xs))
   end
 let show_list_0 call fa inh0 subj =
   transform_gc gcata_list ((new show_list_t) call fa) inh0 subj
@@ -431,18 +433,19 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
          method eval = eval_list_0 eval_list_fix
          method gmap fa subj =
            gmap_list_fix.call Igmap_list.List (lift fa) () subj
-         method fmt = fmt_list_0 fmt_list_fix
+         method fmt fa fmt s  =
+           Format.fprintf fmt "[ @[%a@] ]@," (fmt_list_0 fmt_list_fix fa) s
          method html fa subj =
            html_list_fix.call Ihtml_list.List (lift fa) () subj
          method show fa subj =
-           show_list_fix.call Ishow_list.List (lift fa) () subj
+           Printf.sprintf "[%a]" (show_list_fix.call Ishow_list.List (lift fa)) subj
        end)
   }
 
 
 module Lazy =
   struct
-    type ('a,'b) t' = ('a,'b) t (* becase Lazu hides type t *)
+    type ('a,'b) t' = ('a,'b) t (* becase Lazy hides type t *)
 
     include Lazy
 
@@ -1854,7 +1857,7 @@ class ['a, 'b, 'extra_pair] fmt_pair_t _  fa fb fself_pair =
       pair_t
 
     method c_Pair inh___028_ _ _x__029_ _x__030_ =
-      Format.fprintf inh___028_ "@ @[(@,%a,@,@ %a@,)@]" fa _x__029_ fb
+      Format.fprintf inh___028_ "@[(@,%a,@,@ %a@,)@]" fa _x__029_ fb
         _x__030_
   end
 
@@ -1911,7 +1914,7 @@ class ['a, 'b, 'extra_pair] show_pair_t _  fa fb fself_pair =
       [unit, 'a, string, unit, 'b, string, unit, 'extra_pair, string] pair_t
 
     method c_Pair inh___034_ _ _x__035_ _x__036_ =
-      Printf.sprintf " (%s, %s)" (fa () _x__035_) (fb () _x__036_)
+      Printf.sprintf "(%s, %s)" (fa () _x__035_) (fb () _x__036_)
   end
 
 let show_pair_0 call fa fb inh0 subj =

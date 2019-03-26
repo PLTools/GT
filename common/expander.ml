@@ -812,7 +812,10 @@ let indexes_sig ~loc _plugins tdecls =
   in
   List.concat
     [ wrap (fix_name "IndexResult")  (fix_name "Index") ["a"]
-        ~start:(fun td -> [Typ.use_tdecl td])
+        ~start:(fun td -> [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+                            List.init (List.length td.ptype_params)
+                              (fun n -> Typ.var ~loc @@ string_after_a n)
+                          ])
         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result") [Typ.var ~loc @@ string_after_a n])
     ; wrap (fix_name "IndexResult2")  (fix_name "Index2") ["a"; "b"]
         ~start:(fun td ->

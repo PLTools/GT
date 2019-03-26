@@ -581,10 +581,15 @@ class virtual generator initial_args tdecls = object(self: 'self)
                        )
                     )
       in
-
+      let knots = List.map tdecls ~f:(fun {ptype_name=n} ->
+          value_binding ~loc ~pat:(Pat.sprintf ~loc "%s" @@ self#fix_func_name ~for_:n.txt ())
+            ~expr:(Exp.ident ~loc @@ self#fix_func_name ())
+        )
+      in
       List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive)
         ((List.map tdecls ~f:on_tdecl) @
-         [ make_knot () ]
+         [ make_knot () ] @
+         knots
         )
 
   method fix_func_name ?for_ () =
@@ -1059,7 +1064,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
               helper txt
             in
             Exp.(app_list ~loc (ident ~loc Naming.mut_arg_composite) @@
-                 [construct ~loc (Ldot (Lident "I", Naming.cname_index cname)) []] @
+                 [construct ~loc (Ldot (Lident self#index_module_name,
+                                        Naming.cname_index cname)) []] @
                  args
                 )
 
@@ -1068,13 +1074,13 @@ class virtual generator initial_args tdecls = object(self: 'self)
               match txt with
               | Lident s when List.mem mutal_names s ~equal:String.equal ->
                 (* we should use local trf object *)
+                let args = List.map params
+                    ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+                in
                 let open Exp in
-                app_list ~loc
-                  (field ~loc
-                     (field ~loc (ident ~loc Naming.mut_arg_composite)
-                        (lident @@ Naming.trf_function self#plugin_name s))
-                     (lident @@ Naming.trf_field ~plugin:self#plugin_name s))
-                  (List.map params ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl))
+                app_list ~loc (ident ~loc Naming.mut_arg_composite) @@
+                 [construct ~loc (Ldot (Lident self#index_module_name, Naming.cname_index s)) []] @
+                 args
               | _ ->
                 let init =
                   Exp.(app ~loc
