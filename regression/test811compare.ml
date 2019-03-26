@@ -33,8 +33,8 @@ module T3 = struct
   [@@deriving gt ~options:{ compare; eq}]
 
   let ()  =
-    let cmp1 x y = compare_t (GT.compare GT.string) x y in
-    let eq1  x y = eq_t      (GT.eq GT.string) x y in
+    let cmp1 x y = GT.compare t (GT.compare GT.string) x y in
+    let eq1  x y = GT.eq t      (GT.eq GT.string) x y in
     let a = { q=5; w="asd"; e= [""] } in
     let b = { q=6; w="asd"; e= [""] } in
     assert (GT.EQ  = cmp1 a a);

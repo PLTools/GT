@@ -17,7 +17,7 @@ let () =
 
   let x1 = {a=5; b="beeeee"} in
   Format.fprintf fmt "%s\n\n%!" @@ HTML.toHTML @@
-  html_t x1;
+  GT.html t x1;
 
   let x2 = A 5655 in
   Format.fprintf fmt "%s\n\n%!" @@ HTML.toHTML @@

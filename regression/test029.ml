@@ -27,12 +27,12 @@ let _ =
   Printf.printf "compare (x, y) = %s\n" (cs @@ cmp1 x y);
   Printf.printf "compare (y, x) = %s\n" (cs @@ cmp1 y x);
   Printf.printf "%s\n" @@
-  GT.show(t) (string_of_int) (function `B -> "`B") @@
-  GT.gmap(t) (int_of_string) GT.id y
+  GT.show(t) GT.(show int) (function `B -> "`B") @@
+  GT.gmap(t) int_of_string GT.id y
   ;
   GT.transform(t)
     (new print
-      (fun () -> Printf.printf "%s\n")
+      GT.(lift @@ Printf.printf "%s\n")
       (fun () -> function `B -> Printf.printf "`B\n"))
     ()
     x

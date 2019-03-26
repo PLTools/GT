@@ -14,5 +14,5 @@ let () =
   fprintf std_formatter "%a\n" t2.GT.plugins#fmt (LLL [1;2;3]);
   fprintf std_formatter "%a\n"
     (GT.list.GT.plugins#fmt GT.float.GT.plugins#fmt)
-    [1.; 2.; 3.];
+    [1.; 2.; 3.; 4.];
   ()
