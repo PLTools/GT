@@ -6,7 +6,9 @@ camlp5o `ocamlfind query ocamlgraph`/graph.cma \
     	plugins/gmap.cmo plugins/show.cmo \
 	plugins/compare.cmo plugins/eq.cmo \
 	plugins/foldl.cmo plugins/foldr.cmo \
-	plugins/stateful.cmo \
+	plugins/stateful.cmo plugins/eval.cmo \
+	plugins/html.cmo \
+	plugins/fmt.cmo \
     $@
 exit $?
 

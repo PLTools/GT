@@ -3,11 +3,11 @@
 let _ =
   let x   = A 1 in
   let y   = B "2" in
-  let z   = C [4] in  
+  let z   = C [4] in
   let z'  = C [4] in
   let z'' = C [] in
-  let compare x y = 
-    match GT.transform(t) (new @t[compare] (fun y -> GT.transform(GT.int) new @GT.int[compare] y)) x y with
+  let compare x y =
+    match GT.transform(t) (new @t[compare] compare_t_fix (fun y -> GT.transform(GT.int) new @GT.int[compare] y)) x y with
     | GT.GT -> "GT"
     | GT.LT -> "LT"
     | GT.EQ -> "EQ"
@@ -18,5 +18,3 @@ let _ =
   Printf.printf "x   == z: %s\n" (compare x   z);
   Printf.printf "z'  == z: %s\n" (compare z'  z);
   Printf.printf "z'' == z: %s\n" (compare z'' z)
-
-

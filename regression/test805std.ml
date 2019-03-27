@@ -1,5 +1,5 @@
 (* The same as test 086 but in PPX syntax *)
-module GT = Show_typed_api
+(* module GT = Show_typed_api *)
 
 module T : sig
   type t2 = GT.int * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
