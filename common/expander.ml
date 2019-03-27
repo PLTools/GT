@@ -102,8 +102,6 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   in
   k @@ rs@ls
 
-(* let inh_syn_ts ~loc = [ Typ.var ~loc "inh"; Typ.var ~loc "syn" ] *)
-
 let params_of_interface_class ~loc params =
   (* actual params depend on sort of type.
      2 + 3*params_count + 1 (for polyvar subtyping)
@@ -725,8 +723,12 @@ let indexes_str ~loc _ tdecls =
   List.concat
     [ wrap (hack_index_name tdecls "IndexResult") (hack_index_name tdecls "Index")
         ["a"]
-        ~start:(fun td -> [Typ.use_tdecl td])
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result") [Typ.var ~loc @@ string_after_a n])
+        ~start:(fun td -> [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+                            List.init (List.length td.ptype_params)
+                              (fun n -> Typ.var ~loc @@ string_after_a n)
+                          ])
+        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+                            [Typ.var ~loc @@ string_after_a n])
     ; wrap (hack_index_name tdecls "IndexResult2") (hack_index_name tdecls "Index2")
         ["a";"b"]
         ~start:(fun td ->
@@ -741,19 +743,19 @@ let indexes_str ~loc _ tdecls =
                  [ Typ.var ~loc @@ (string_after_a n)
                  ; Typ.var ~loc @@ (string_after_a n ^ "2")
                  ])
-    ; wrap (hack_index_name tdecls "IndexResult_fold") (hack_index_name tdecls "Index_fold")
-        ["a";"b"]
+    ; wrap (hack_index_name tdecls "IndexResult_fold")
+        (hack_index_name tdecls "Index_fold")
+        ["a";"syn"]
         ~start:(fun td ->
             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
             [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
               List.map ns ~f:(Typ.var ~loc)
-            ; Typ.var ~loc @@ Printf.sprintf "%s2" "a" (* TODO: 'syn should be here *)
-                (* TODO: not sure about 2nd argument *)
+            ; Typ.var ~loc "syn"
             ]
           )
         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
                  [ Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc @@ (string_after_a n ^ "2")
+                 ; Typ.var ~loc "syn"
                  ])
      ; wrap (hack_index_name tdecls "IndexResult_stateful")
            (hack_index_name tdecls "Index_stateful")
@@ -831,15 +833,15 @@ let indexes_sig ~loc _plugins tdecls =
             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
             [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
               List.map ns ~f:(Typ.var ~loc)
-            ; Typ.var ~loc @@ Printf.sprintf "%s2" "a"
-                (* TODO: not sure about 2nd argument *)
+            ; Typ.var ~loc "syn"
             ]
           )
         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
                  [ Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc @@ (string_after_a n ^ "2")
+                 ; Typ.var ~loc "syn"
                  ])
-    ; wrap (fix_name "IndexResult_stateful")  (fix_name "Index_stateful") ["env"; "a"; "b"]
+    ; wrap (fix_name "IndexResult_stateful")  (fix_name "Index_stateful")
+        ["env"; "a"; "b"]
         ~start:(fun td ->
             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
             [ Typ.var ~loc "env"
