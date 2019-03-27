@@ -42,7 +42,17 @@ class g initial_args tdecls = object(self: 'self)
     Typ.(arrow ~loc (var ~loc "b") @@
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a";"b"]
-  inherit P.index_result2
+
+  (* For foldl/r we specify this two methods manually *)
+  method index_functor tdecls =
+    assert (List.length tdecls > 0);
+    let name = (List.hd_exn tdecls).ptype_name.txt in
+    sprintf "Index_fold_%s" name
+  method index_modtyp_name tdecls =
+    assert (List.length tdecls > 0);
+    let name = (List.hd_exn tdecls).ptype_name.txt in
+    sprintf "IndexResult_fold_%s" name
+
 
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->

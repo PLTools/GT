@@ -38,8 +38,24 @@ class g initial_args tdecls = object(self: 'self)
       let inh_t = self#default_inh ~loc tdecl in
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
-  (* method! app_transformation_expr ~loc trf inh subj =
-   *   Exp.app_list ~loc trf [ inh; subj ] *)
+  method trf_scheme_params = ["env"; "a"; "b"]
+  method! trf_scheme ~loc =
+    let v s =
+      assert (List.mem ~equal:String.equal self#trf_scheme_params s);
+      Typ.var ~loc s
+    in
+    Typ.(arrow ~loc (v "env") @@
+         arrow ~loc (v "a") @@
+         pair ~loc (v "env") (v "b") )
+
+  method! index_functor tdecls =
+    assert (List.length tdecls > 0);
+    let name = (List.hd_exn tdecls).ptype_name.txt in
+    sprintf "Index_stateful_%s" name
+  method! index_modtyp_name tdecls =
+    assert (List.length tdecls > 0);
+    let name = (List.hd_exn tdecls).ptype_name.txt in
+    sprintf "IndexResult_stateful_%s" name
 
   method! plugin_class_params tdecl =
     let param_names,_,find_param,blownup_params = G.hack_params tdecl.ptype_params in

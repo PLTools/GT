@@ -114,6 +114,7 @@ and Typ :
     val unit : loc:loc -> t
     val string : loc:loc -> t
     val constr : loc:loc -> Ppxlib.longident -> t list -> t
+    val pair   : loc:loc -> t -> t -> t
 
     val tuple : loc:loc -> t list -> t
     val class_ : loc:loc -> Ppxlib.longident -> t list -> t

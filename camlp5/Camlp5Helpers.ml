@@ -219,6 +219,7 @@ module Typ = struct
   let ident ~loc s = <:ctyp< $lid:s$ >>
   let string ~loc = <:ctyp< string >>
   let unit ~loc = <:ctyp< unit >>
+  let pair ~loc l r = <:ctyp< ( $list:[l;r]$ ) >>
 
   let access2 ~loc mname tname =
     assert (Base.Char.is_uppercase mname.[0]);

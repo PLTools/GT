@@ -222,6 +222,7 @@ module Typ = struct
   let sprintf ~loc fmt = Printf.ksprintf (ident ~loc) fmt
   let string ~loc = ptyp_constr ~loc (Located.mk ~loc @@ Lident "string") []
   let unit ~loc = ptyp_constr ~loc (Located.mk ~loc @@ Lident "unit") []
+  let pair ~loc l r = ptyp_tuple ~loc [l;r]
 
   let var ~loc s = ptyp_var ~loc s
   let any ~loc = ptyp_any ~loc
