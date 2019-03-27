@@ -1,4 +1,3 @@
 @type ('self) t =
-   (* | App of 'self * 'self *)
    | Abs of 'self
- with show
+  with show,html,gmap,fmt,eval,stateful,foldl,foldr,compare,eq

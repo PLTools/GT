@@ -27,7 +27,7 @@ let _ =
       GT.show pv id id (`A "1");
   Printf.printf "Mapped pv and showed as a pv_ext: %s\n" @@
   GT.show pv_ext (GT.show GT.int) id @@
-  GT.gmap pv      int_of_string   id (`A "1");
+  ((GT.gmap pv      int_of_string   id (`A "1")) :> (_,_) pv_ext);
   Printf.printf "Original pv_ext: %s\n" @@
     GT.show pv_ext id id (`C "1");
   Printf.printf "Mapped PV_ext and showed as a pv_ext: %s\n" @@
@@ -49,7 +49,7 @@ let () =
       GT.show pv_ext2 id id (`C "1");
   Printf.printf "Mapped pv_ext and showed as a pv_ext2: %s\n" @@
   GT.show pv_ext2 (GT.show GT.int) id @@
-  GT.gmap pv_ext  int_of_string    id (`C "1");
+  ((GT.gmap pv_ext  int_of_string    id (`C "1")) :> (_,_) pv_ext2);
   Printf.printf "Original pv_ext2: %s\n" @@
     GT.show pv_ext2 id (GT.show GT.int)  (`D "1");
   Printf.printf "Mapped PV_ext2 and showed as a pv_ext2: %s\n" @@
@@ -72,7 +72,7 @@ let () =
   GT.show pv_ext2 id id  (`D "1");
   Printf.printf "Mapped pv_ext2 and showed as a pv_ext3: %s\n" @@
   GT.show pv_ext3 (GT.show GT.int) id id @@
-  GT.gmap pv_ext2 (int_of_string) id (`D "1");
+  ((GT.gmap pv_ext2 (int_of_string) id (`D "1")) :> (_,_,_) pv_ext3);
   Printf.printf "Original pv_ext3: %s\n" @@
   GT.show pv_ext3 id id id  (`E "1");
   Printf.printf "Mapped PV_ext3 and showed as a pv_ext3: %s\n" @@

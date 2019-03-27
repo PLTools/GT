@@ -24,6 +24,7 @@ module Abs = struct
   class ['term, 'term2, 'extra] de_bruijn ft =
     object
       inherit [string, unit, 'term, 'term2, 'env, 'extra] @t[eval]
+          eval_t_fix
           (fun _ _ -> ())
           ft
           unused
@@ -35,7 +36,7 @@ module Abs = struct
   class ['me, 'me', 'extra] import ft =
     object
       inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful]
-                lookup ft unused
+                stateful_t_fix lookup ft unused
       method c_Abs env _ name term =
         let env', i = env#add name in
         let env2, t = ft env' term in
@@ -51,6 +52,7 @@ module Let = struct
   @type ('name, 'term) t = [`Let of 'name * 'term * 'term] with show,eval,stateful
   class ['me, 'term2, 'extra] de_bruijn ft = object
     inherit [string, unit, 'me, 'term2, 'env, 'extra] @t[eval]
+              eval_t_fix
         (fun _ _ -> ())
         ft
         unused
@@ -61,6 +63,7 @@ module Let = struct
   class ['me, 'me', 'extra] import ft =
     object
       inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful]
+                stateful_t_fix
                 lookup ft unused
       method c_Let env0 _ name bnd term =
         let env1, i = env0#add name in
@@ -75,6 +78,7 @@ module LetRec = struct
 
   class ['me, 'me2, 'extra] de_bruijn ft = object
     inherit [string, unit, 'me, 'me2, string list, 'extra] @t[eval]
+              eval_t_fix
         (fun _ _ -> ())
         ft
         unused
@@ -87,6 +91,7 @@ module LetRec = struct
   class ['me, 'me', 'extra] import ft =
     object
       inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful]
+                stateful_t_fix
                 lookup ft unused
       method c_LetRec env _ name bnd term =
         let (env0, i) = env#add name in

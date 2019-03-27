@@ -7,7 +7,7 @@ let etoHTML e =
   HTML.toHTML (
     HTML.html (
       HTML.ul (
-        HTML.li (transform(expr) (new @expr[html]) () e)
+        HTML.li (transform(expr) (new @expr[html] html_expr_fix) () e)
       )
     )
   );;
@@ -18,7 +18,7 @@ let stoHTML e =
   HTML.toHTML (
     HTML.html (
       HTML.ul (
-        HTML.li (transform(str) (new @str[html]) () e)
+        HTML.li (transform(str) (new @str[html] html_str_fix ) () e)
       )
     )
   )
