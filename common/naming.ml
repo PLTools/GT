@@ -45,17 +45,17 @@ let stub_class_name ~plugin tdecl =
 
 let init_trf_function trait s = trf_function trait s ^ "_0"
 
-let make_fix_name ~plugin tdecls =
+let make_fix_name tdecls =
   (* Let's use only first type for fix function definition *)
   assert (List.length tdecls > 0);
   let name = (List.hd_exn tdecls).ptype_name.txt in
-  String.concat ~sep:"_" [plugin; "fix"; name]
+  String.concat ~sep:"_" ["fix"; name]
 
 let name_fix_generated_object ~plugin tdecl =
   sprintf "%s_o_%s" plugin tdecl.ptype_name.txt
 let prereq_name ~plugin tail = sprintf "%s_%s_prereq" plugin tail
 let mut_arg_composite = (* "mut_trfs_here" *) "call"
-(* let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin *)
+let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin
 (* let mut_class_stubname ~plugin tdecl =
  *   sprintf "%s_%s_stub" plugin_name tdecl.ptype_name.txt *)
 
@@ -76,3 +76,6 @@ let fix_func_name ?for_ trait =
 let fix_func_name_tdecls trait tdecls =
   assert (List.length tdecls > 0);
   fix_func_name ~for_:(List.hd_exn tdecls).ptype_name.txt trait
+
+
+let for_ s = sprintf "for_%s" s

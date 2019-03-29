@@ -538,17 +538,17 @@ let make_heading_gen ~loc wrap tdecl = []
 let collect_plugins_str ~loc tdecl plugins : Str.t list =
   (* TODO: fix eta expansion& application here *)
   let wrap p tdecl fname plugin_name =
-    p#eta_and_exp
-      ~center:(Exp.app ~loc
-                 (Exp.field ~loc
-                    (Exp.sprintf ~loc "%s" @@
-                     Naming.fix_func_name ~for_:tdecl.ptype_name.txt plugin_name)
-                    (Lident "call")
-                 )
-                 (Exp.access ~loc p#index_module_name
-                    (Naming.cname_index tdecl.ptype_name.txt)
-                 )
-              )
+    p#eta_and_exp ~center:(Exp.sprintf ~loc "%s_%s" plugin_name tdecl.ptype_name.txt)
+      (* ~center:(Exp.app ~loc
+       *            (Exp.field ~loc
+       *               (Exp.sprintf ~loc "%s" @@
+       *                Naming.fix_func_name ~for_:tdecl.ptype_name.txt plugin_name)
+       *               (Lident "call")
+       *            )
+       *            (Exp.access ~loc p#index_module_name
+       *               (Naming.cname_index tdecl.ptype_name.txt)
+       *            )
+       *         ) *)
       tdecl
   in
   let plugin_fields =
@@ -676,190 +676,190 @@ let topsort_tdecls tdecls =
   assert (List.length tdecls = List.length tdecls_new);
   tdecls_new
 
-let indexes_str ~loc _ tdecls =
-  let wrap mtname funame params ~start ~arg =
-    [ Str.modtype ~loc @@ module_type_declaration ~loc ~name:mtname @@ Option.some @@
-      Mt.signature ~loc
-        [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)
-        ; Sig.simple_gadt ~loc ~name:"i" ~params_count:1 @@
-          List.map tdecls ~f:(fun tdecl ->
-              (Naming.cname_index tdecl.ptype_name.txt,
-               Typ.constr ~loc (lident "i") [
-                 let make_result = Typ.constr ~loc (Lident "result") in
-
-                 (map_type_param_names tdecl.ptype_params ~f:id)
-                 |> List.mapi ~f:arg
-                 |> List.fold_right
-                   ~init:(make_result @@ start tdecl)
-                   ~f:(Typ.arrow ~loc)
-               ]
-            ))
-        ]
-    ; Str.module_ ~loc funame @@
-      Me.functor_ ~loc "S"
-        (Option.some @@
-         Mt.signature ~loc
-           [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
-        (Me.structure ~loc
-           [ Str.tdecl ~loc ~name:"result" ~params @@
-             Typ.constr ~loc (Ldot (Lident "S", "result")) @@
-             List.map params ~f:(Typ.var ~loc)
-           ; Str.simple_gadt ~loc ~name:"i" ~params_count:1 @@
-             List.map tdecls ~f:(fun tdecl ->
-                 (Naming.cname_index tdecl.ptype_name.txt,
-                  Typ.constr ~loc (lident "i") [
-                    let make_result = Typ.constr ~loc (Lident "result") in
-
-                    (map_type_param_names tdecl.ptype_params ~f:id)
-                    |> List.mapi ~f:arg
-                    |> List.fold_right
-                      ~init:(make_result @@ start tdecl)
-                      ~f:(Typ.arrow ~loc)
-                  ]
-                 ))
-           ])
-    ]
-  in
-  List.concat
-    [ wrap (hack_index_name tdecls "IndexResult") (hack_index_name tdecls "Index")
-        ["a"]
-        ~start:(fun td -> [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
-                            List.init (List.length td.ptype_params)
-                              (fun n -> Typ.var ~loc @@ string_after_a n)
-                          ])
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                            [Typ.var ~loc @@ string_after_a n])
-    ; wrap (hack_index_name tdecls "IndexResult2") (hack_index_name tdecls "Index2")
-        ["a";"b"]
-        ~start:(fun td ->
-            let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
-            [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(Typ.var ~loc)
-            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
-            ]
-          )
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                 [ Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc @@ (string_after_a n ^ "2")
-                 ])
-    ; wrap (hack_index_name tdecls "IndexResult_fold")
-        (hack_index_name tdecls "Index_fold")
-        ["a";"syn"]
-        ~start:(fun td ->
-            let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
-            [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(Typ.var ~loc)
-            ; Typ.var ~loc "syn"
-            ]
-          )
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                 [ Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc "syn"
-                 ])
-     ; wrap (hack_index_name tdecls "IndexResult_stateful")
-           (hack_index_name tdecls "Index_stateful")
-        ["env"; "a"; "b"]
-        ~start:(fun td ->
-            let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
-            [ Typ.var ~loc "env"
-            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(Typ.var ~loc)
-            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
-            ]
-          )
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                 [ Typ.var ~loc "env"
-                 ; Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc @@ (string_after_a n ^ "2")
-                 ])
-    ]
-
-let indexes_sig ~loc _plugins tdecls =
-  let fix_name s = hack_index_name tdecls s in
-
-  let wrap mtname funame params ~start ~arg =
-    [ Sig.modtype ~loc @@ module_type_declaration ~loc ~name:mtname @@ Option.some @@
-      Mt.signature ~loc
-        [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)
-        ; Sig.simple_gadt ~loc ~name:"i" ~params_count:1 @@
-          List.map tdecls ~f:(fun tdecl ->
-              (Naming.cname_index tdecl.ptype_name.txt,
-               Typ.constr ~loc (lident "i") [
-                 let make_result = Typ.constr ~loc (Lident "result") in
-
-                 (map_type_param_names tdecl.ptype_params ~f:id)
-                 |> List.mapi ~f:arg
-                 |> List.fold_right
-                   ~init:(make_result @@ start tdecl)
-                   ~f:(Typ.arrow ~loc)
-               ]
-            ))
-        ]
-    ; Sig.module_ ~loc @@ module_declaration ~loc ~name:funame @@
-      Mt.functor_ ~loc "S"
-        (Option.some @@
-         Mt.signature ~loc [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
-        (Mt.with_ ~loc
-           (Mt.ident ~loc (Lident mtname))
-           [ WC.typ ~loc ~params "result" @@
-             Typ.constr ~loc (Ldot (Lident "S", "result")) @@
-             List.map params ~f:(Typ.var ~loc)
-           ]
-        )
-    ]
-  in
-  List.concat
-    [ wrap (fix_name "IndexResult")  (fix_name "Index") ["a"]
-        ~start:(fun td -> [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
-                            List.init (List.length td.ptype_params)
-                              (fun n -> Typ.var ~loc @@ string_after_a n)
-                          ])
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result") [Typ.var ~loc @@ string_after_a n])
-    ; wrap (fix_name "IndexResult2")  (fix_name "Index2") ["a"; "b"]
-        ~start:(fun td ->
-            let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
-            [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(Typ.var ~loc)
-            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
-            ]
-          )
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                 [ Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc @@ (string_after_a n ^ "2")
-                 ])
-    ; wrap (fix_name "IndexResult_fold")  (fix_name "Index_fold")
-        ["a"; "b"]
-        ~start:(fun td ->
-            let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
-            [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(Typ.var ~loc)
-            ; Typ.var ~loc "syn"
-            ]
-          )
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                 [ Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc "syn"
-                 ])
-    ; wrap (fix_name "IndexResult_stateful")  (fix_name "Index_stateful")
-        ["env"; "a"; "b"]
-        ~start:(fun td ->
-            let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
-            [ Typ.var ~loc "env"
-            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(Typ.var ~loc)
-            ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
-              List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
-            ]
-          )
-        ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
-                 [ Typ.var ~loc "env"
-                 ; Typ.var ~loc @@ (string_after_a n)
-                 ; Typ.var ~loc @@ (string_after_a n ^ "2")
-                 ])
-    ]
+(* let indexes_str ~loc _ tdecls =
+ *   let wrap mtname funame params ~start ~arg =
+ *     [ Str.modtype ~loc @@ module_type_declaration ~loc ~name:mtname @@ Option.some @@
+ *       Mt.signature ~loc
+ *         [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)
+ *         ; Sig.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+ *           List.map tdecls ~f:(fun tdecl ->
+ *               (Naming.cname_index tdecl.ptype_name.txt,
+ *                Typ.constr ~loc (lident "i") [
+ *                  let make_result = Typ.constr ~loc (Lident "result") in
+ *
+ *                  (map_type_param_names tdecl.ptype_params ~f:id)
+ *                  |> List.mapi ~f:arg
+ *                  |> List.fold_right
+ *                    ~init:(make_result @@ start tdecl)
+ *                    ~f:(Typ.arrow ~loc)
+ *                ]
+ *             ))
+ *         ]
+ *     ; Str.module_ ~loc funame @@
+ *       Me.functor_ ~loc "S"
+ *         (Option.some @@
+ *          Mt.signature ~loc
+ *            [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
+ *         (Me.structure ~loc
+ *            [ Str.tdecl ~loc ~name:"result" ~params @@
+ *              Typ.constr ~loc (Ldot (Lident "S", "result")) @@
+ *              List.map params ~f:(Typ.var ~loc)
+ *            ; Str.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+ *              List.map tdecls ~f:(fun tdecl ->
+ *                  (Naming.cname_index tdecl.ptype_name.txt,
+ *                   Typ.constr ~loc (lident "i") [
+ *                     let make_result = Typ.constr ~loc (Lident "result") in
+ *
+ *                     (map_type_param_names tdecl.ptype_params ~f:id)
+ *                     |> List.mapi ~f:arg
+ *                     |> List.fold_right
+ *                       ~init:(make_result @@ start tdecl)
+ *                       ~f:(Typ.arrow ~loc)
+ *                   ]
+ *                  ))
+ *            ])
+ *     ]
+ *   in
+ *   List.concat
+ *     [ wrap (hack_index_name tdecls "IndexResult") (hack_index_name tdecls "Index")
+ *         ["a"]
+ *         ~start:(fun td -> [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *                             List.init (List.length td.ptype_params)
+ *                               (fun n -> Typ.var ~loc @@ string_after_a n)
+ *                           ])
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                             [Typ.var ~loc @@ string_after_a n])
+ *     ; wrap (hack_index_name tdecls "IndexResult2") (hack_index_name tdecls "Index2")
+ *         ["a";"b"]
+ *         ~start:(fun td ->
+ *             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
+ *             [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(Typ.var ~loc)
+ *             ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
+ *             ]
+ *           )
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                  [ Typ.var ~loc @@ (string_after_a n)
+ *                  ; Typ.var ~loc @@ (string_after_a n ^ "2")
+ *                  ])
+ *     ; wrap (hack_index_name tdecls "IndexResult_fold")
+ *         (hack_index_name tdecls "Index_fold")
+ *         ["a";"syn"]
+ *         ~start:(fun td ->
+ *             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
+ *             [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(Typ.var ~loc)
+ *             ; Typ.var ~loc "syn"
+ *             ]
+ *           )
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                  [ Typ.var ~loc @@ (string_after_a n)
+ *                  ; Typ.var ~loc "syn"
+ *                  ])
+ *      ; wrap (hack_index_name tdecls "IndexResult_stateful")
+ *            (hack_index_name tdecls "Index_stateful")
+ *         ["env"; "a"; "b"]
+ *         ~start:(fun td ->
+ *             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
+ *             [ Typ.var ~loc "env"
+ *             ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(Typ.var ~loc)
+ *             ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
+ *             ]
+ *           )
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                  [ Typ.var ~loc "env"
+ *                  ; Typ.var ~loc @@ (string_after_a n)
+ *                  ; Typ.var ~loc @@ (string_after_a n ^ "2")
+ *                  ])
+ *     ]
+ *
+ * let indexes_sig ~loc _plugins tdecls =
+ *   let fix_name s = hack_index_name tdecls s in
+ *
+ *   let wrap mtname funame params ~start ~arg =
+ *     [ Sig.modtype ~loc @@ module_type_declaration ~loc ~name:mtname @@ Option.some @@
+ *       Mt.signature ~loc
+ *         [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)
+ *         ; Sig.simple_gadt ~loc ~name:"i" ~params_count:1 @@
+ *           List.map tdecls ~f:(fun tdecl ->
+ *               (Naming.cname_index tdecl.ptype_name.txt,
+ *                Typ.constr ~loc (lident "i") [
+ *                  let make_result = Typ.constr ~loc (Lident "result") in
+ *
+ *                  (map_type_param_names tdecl.ptype_params ~f:id)
+ *                  |> List.mapi ~f:arg
+ *                  |> List.fold_right
+ *                    ~init:(make_result @@ start tdecl)
+ *                    ~f:(Typ.arrow ~loc)
+ *                ]
+ *             ))
+ *         ]
+ *     ; Sig.module_ ~loc @@ module_declaration ~loc ~name:funame @@
+ *       Mt.functor_ ~loc "S"
+ *         (Option.some @@
+ *          Mt.signature ~loc [ Sig.tdecl_abstr ~loc "result" (List.map params ~f:Option.some)])
+ *         (Mt.with_ ~loc
+ *            (Mt.ident ~loc (Lident mtname))
+ *            [ WC.typ ~loc ~params "result" @@
+ *              Typ.constr ~loc (Ldot (Lident "S", "result")) @@
+ *              List.map params ~f:(Typ.var ~loc)
+ *            ]
+ *         )
+ *     ]
+ *   in
+ *   List.concat
+ *     [ wrap (fix_name "IndexResult")  (fix_name "Index") ["a"]
+ *         ~start:(fun td -> [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *                             List.init (List.length td.ptype_params)
+ *                               (fun n -> Typ.var ~loc @@ string_after_a n)
+ *                           ])
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result") [Typ.var ~loc @@ string_after_a n])
+ *     ; wrap (fix_name "IndexResult2")  (fix_name "Index2") ["a"; "b"]
+ *         ~start:(fun td ->
+ *             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
+ *             [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(Typ.var ~loc)
+ *             ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
+ *             ]
+ *           )
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                  [ Typ.var ~loc @@ (string_after_a n)
+ *                  ; Typ.var ~loc @@ (string_after_a n ^ "2")
+ *                  ])
+ *     ; wrap (fix_name "IndexResult_fold")  (fix_name "Index_fold")
+ *         ["a"; "b"]
+ *         ~start:(fun td ->
+ *             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
+ *             [ Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(Typ.var ~loc)
+ *             ; Typ.var ~loc "syn"
+ *             ]
+ *           )
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                  [ Typ.var ~loc @@ (string_after_a n)
+ *                  ; Typ.var ~loc "syn"
+ *                  ])
+ *     ; wrap (fix_name "IndexResult_stateful")  (fix_name "Index_stateful")
+ *         ["env"; "a"; "b"]
+ *         ~start:(fun td ->
+ *             let ns = List.mapi td.ptype_params ~f:(fun n _ -> string_after_a n) in
+ *             [ Typ.var ~loc "env"
+ *             ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(Typ.var ~loc)
+ *             ; Typ.constr ~loc (Lident td.ptype_name.txt) @@
+ *               List.map ns ~f:(fun s -> Typ.var ~loc @@ Printf.sprintf "%s2" s)
+ *             ]
+ *           )
+ *         ~arg:(fun n _ -> Typ.constr ~loc (Lident "result")
+ *                  [ Typ.var ~loc "env"
+ *                  ; Typ.var ~loc @@ (string_after_a n)
+ *                  ; Typ.var ~loc @@ (string_after_a n ^ "2")
+ *                  ])
+ *     ] *)
 
 (* for structures *)
 let do_typ ~loc sis plugins is_rec tdecl =
@@ -872,11 +872,64 @@ let do_typ ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; [intf_class; gcata]
-    ; indexes_str ~loc plugins [tdecl]
+    (* ; indexes_str ~loc plugins [tdecl] *)
     ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
     ; collect_plugins_str ~loc tdecl plugins
     ]
 
+let fix_str ~loc tdecls =
+  value_binding ~loc
+    ~pat:(Pat.sprintf ~loc "%s" @@ Naming.make_fix_name tdecls)
+    ~expr:Exp.(
+        fun_list ~loc (List.map tdecls ~f:(fun {ptype_name} ->
+            Pat.sprintf ~loc "%s0" ptype_name.txt
+          )) @@
+
+        Exp.let_ ~loc ~rec_:true
+          (List.map tdecls ~f:(fun tdecl ->
+               let e k = Exp.fun_list ~loc
+                   (map_type_param_names tdecl.ptype_params
+                      ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
+                   k
+               in
+               let inhsubj k =
+                 Exp.fun_list ~loc
+                   [ Pat.var ~loc "inh";  Pat.var ~loc "subj"]
+                   k
+               in
+               let gc  =
+                 Exp.app_list ~loc
+                   (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt)
+                   [ Exp.app_list ~loc
+                       (Exp.sprintf ~loc "%s0" tdecl.ptype_name.txt)
+                       ((Exp.tuple ~loc @@
+                         List.map tdecls ~f:(fun {ptype_name={txt}} ->
+                             Exp.sprintf ~loc "trait%s" txt
+                           ))
+                        ::
+                        (map_type_param_names tdecl.ptype_params
+                           ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
+                        @
+                        [Exp.app_list ~loc
+                           (Exp.sprintf ~loc "trait%s" tdecl.ptype_name.txt)
+                           (map_type_param_names tdecl.ptype_params
+                              ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
+                        ]
+                       )
+                   ; Exp.ident ~loc "inh"
+                   ; Exp.ident ~loc "subj"
+                   ]
+
+               in
+               (Pat.sprintf ~loc "trait%s" tdecl.ptype_name.txt,
+                e @@ inhsubj @@ gc)
+             )) @@
+        Exp.tuple ~loc
+          (List.map tdecls ~f:(fun {ptype_name} ->
+               Exp.sprintf ~loc "trait%s" ptype_name.txt
+             ))
+      )
+  |> Str.of_vb ~loc ~rec_flag:Nonrecursive |> List.return
 
 let do_mutual_types ~loc sis plugins tdecls =
   let tdecls_new = topsort_tdecls tdecls in
@@ -894,9 +947,10 @@ let do_mutual_types ~loc sis plugins tdecls =
     [ sis
     ; List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])
     ; catas
-    ; indexes_str ~loc plugins tdecls
+    ; fix_str ~loc tdecls
+    (* ; indexes_str ~loc plugins tdecls *)
     ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new)
-    ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
+    (* ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins) *)
     ]
 
 (* for signatures *)
@@ -910,7 +964,7 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; [intf_class; gcata]
-    ; indexes_sig ~loc plugins [tdecl]
+    (* ; indexes_sig ~loc plugins [tdecl] *)
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; [ collect_plugins_sig ~loc tdecl plugins ]
     ]

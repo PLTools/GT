@@ -31,15 +31,16 @@ let show_c_fix2 =
               GT.transform_gc gcata_c (new show_c' f show_b_fix) : a) })
 
 
-let show_a_fix2 =
+let show_a0' f () s = GT.transform_gc gcata_a (new show_a_t f) () s
+
+let show_ab_fix2 =
   Fix_show_a.fixv (fun f ->
       { call =
-         (fun (type a) (sym : a Ishow_a.i) ->
+         (fun (type w) -> fun (sym : w Ishow_a.i) ->
            (match sym with
-            | Ishow_a.A ->
-              GT.transform_gc gcata_c (new show_c' show_c_fix2 f)
+            | Ishow_a.A -> show_a0' f
             | Ishow_a.B ->
-              GT.transform_gc gcata_c (new show_c' show_c_fix2 f)) : a)
+              GT.transform_gc gcata_c (new show_c' show_c_fix2 f)) : w)
       })
 
 let () =
