@@ -1,3 +1,5 @@
+open Printf
+
 type a = [`A of b | `C of GT.int   ]
 and  b = [`B of a | `D of GT.string]
 [@@deriving gt ~options:{show;gmap}]
@@ -23,3 +25,30 @@ end
 
 type c = [ b | `E of GT.int ]
 [@@deriving gt ~options:{show}]
+
+module ShowC = struct
+  class ['self] show_c_stub2 make_clas (fself: _ -> _ -> _) =
+    let show_a2,show_b2 =
+      Show2.(fix_a
+               showa0
+               (fun _ self -> ((make_clas self ()) :> 'self show_b_t_stub) ))
+    in
+    object
+      inherit [unit, _, string] c_t
+      inherit [ 'self] show_b_t_stub (show_a2,show_b2) fself
+      method! c_B () _ a  = sprintf "new `B (%s)" (show_a2 () a)
+      method! c_D () _ s  = sprintf "new `D %s" s
+      method  c_E () _ s  = sprintf "new `E %d" s
+    end
+
+  let rec showc0 fself () = Printf.printf "new c0!\n"; new show_c_stub2 showc0 fself
+
+  let (_: (unit -> b -> string) -> c -> string) = fun self -> gcata_c (showc0 self ()) ()
+  let show_c () s =
+    let rec trait () s = gcata_c (showc0 trait ()) () (s :> c)
+    in
+    trait () s
+
+
+  let _ = Printf.printf "%s\n" (show_c () (`C (`A (`D "4"))))
+end
