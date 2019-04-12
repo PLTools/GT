@@ -950,7 +950,7 @@ let do_mutual_types ~loc sis plugins tdecls =
     ; fix_str ~loc tdecls
     (* ; indexes_str ~loc plugins tdecls *)
     ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new)
-    (* ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins) *)
+    ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
     ]
 
 (* for signatures *)
