@@ -165,10 +165,30 @@ end
 (* Conversion functions *)  
 let convert term =
   fix0 (fun f -> transform(t) (new de_bruijn f)) [] term 
-       
-let import term =
-  fix0 (fun f -> transform(t) (new import f)) (new enumerator) term 
 
+(*       
+let import term =
+  let rec import' =
+    let mem = lazy (transform(t) (Printf.printf "New...\n"; new import import')) in
+    fun enum term -> (Lazy.force mem) enum term
+  in
+  import' (new enumerator) term
+ *)     
+
+
+let rec fix1 f x y =
+  let f' = f (fix1 f) in
+  f' x y
+
+(*let import term =
+  fix1 (fun f -> (*lazy*) (transform(t) (new import f) (new enumerator))) term
+ *)     
+
+
+let import term =
+  fix1 (fun f -> transform(t) (Printf.printf "New...\n"; new import f)) (new enumerator) term 
+ 
+          
 (* Testing *)
 let _ =
   let l = `App (`Abs ("x", `Var "x"), `Abs ("y", `Var "y")) in

@@ -28,7 +28,7 @@ let _ =
   Printf.printf "Original: %s\n" (show(expr) e);
   Printf.printf "Value   : %d\n" (snd @@ eval (function "x" -> 3 | "a" -> 8) f)
   
- (*
+ 
 class simplifier f =
   object inherit [_] @expr[gmap] f
     method c_Div _ x y =
@@ -67,7 +67,7 @@ class ns_simplifier f =
                     | y       -> Mul (x, y)
                    )
   end
-    
+ (*   
 let fix f =
   let knot    = ref (fun _ -> assert false) in
   let recurse = ref (f !knot) in
@@ -95,6 +95,8 @@ let rec simplify e =
   fun e ->
     (Lazy.force sobj) () e 
                           *)
+                          *)
+    
 let ns_simplify e = fix0 (fun f -> transform(expr) (new ns_simplifier f) ()) e
 
 let substitute st e =
@@ -109,14 +111,11 @@ let substitute st e =
  let eval st e = let Const n = simplify @@ substitute st e in n
                                                                 
  let _ =
-   let e = Mul (Add (Var "a", Const 3), Add (Const 5, Var "b")) in
+   let e = Mul (`Add (`Var "a", `Const 3), `Add (`Const 5, `Var "b")) in
    Printf.printf "Original           : %s\n" (show(expr) e);
-   Printf.printf "Simplified         : %s\n" (show(expr) @@ simplify e)
-     (*
+   Printf.printf "Simplified         : %s\n" (show(expr) @@ simplify e);
    Printf.printf "Substitute         : %s\n" (show(expr) @@ substitute (function "a" -> 0 | "b" -> 1) e);
    Printf.printf "Substitute+simplify: %s\n" (show(expr) @@ simplify @@ substitute (function "a" -> 0 | "b" -> 1) e);
    Printf.printf "Eval               : %d\n" (eval  (function "a" -> 0 | "b" -> 1) e);
-   let e = Mul (Mul (Var "a", Const 0), Div (Const 1, Const 0)) in
+   let e = `Mul (`Mul (`Var "a", `Const 0), `Div (`Const 1, `Const 0)) in
    Printf.printf "Simplified         : %s\n" (show(expr) @@ ns_simplify e)
-      *)
-      *)
