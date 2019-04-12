@@ -31,7 +31,7 @@ module ShowC = struct
     let show_a2,show_b2 =
       Show2.(fix_a
                showa0
-               (fun _ self -> ((make_clas self ()) :> 'self show_b_t_stub) ))
+               (fun _ _ -> ((make_clas fself ()) :> 'self show_b_t_stub) ))
     in
     object
       inherit [unit, _, string] c_t
@@ -43,12 +43,15 @@ module ShowC = struct
 
   let rec showc0 fself () = Printf.printf "new c0!\n"; new show_c_stub2 showc0 fself
 
-  let (_: (unit -> b -> string) -> c -> string) = fun self -> gcata_c (showc0 self ()) ()
+  (* let (_: (unit -> b -> string) -> c -> string) = fun self -> gcata_c (showc0 self ()) () *)
   let show_c () s =
     let rec trait () s = gcata_c (showc0 trait ()) () (s :> c)
     in
     trait () s
 
 
-  let _ = Printf.printf "%s\n" (show_c () (`C (`A (`D "4"))))
+  let _ =
+    Printf.printf "%s\n" (show_c () (`B (`A (`D "4"))));
+    Printf.printf "%s\n" (show_c () (`E 18) )
+
 end

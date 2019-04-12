@@ -32,29 +32,13 @@ module Format = struct
   let pp_print_string fmt s = fprintf fmt "\"%s\"" s
 end
 
-type ('a, 'b) t = { gcata : 'a; plugins : 'b }
+type ('a, 'b) t = {gcata : 'a; plugins : 'b}
 let transform_gc gcata make_obj inh subj =
   let rec obj = lazy (make_obj fself)
   and fself inh x = gcata (Lazy.force obj) inh x in
   fself inh subj
 
 let transform  bundle = transform_gc  bundle.gcata
-
-module type FixVR = sig
-  type 'a s
-  type fn = { call : 'a. 'a s -> 'a }
-  val fixv : (fn -> fn) -> fn
-end
-module FixV(Sym: sig type 'a i end) =
-(struct
-  type 'a s = 'a Sym.i
-  type fn = { call: 'a. 'a Sym.i -> 'a }
-  (* ∀t.((∀α.α t → α) → (∀α.α t → α)) → (∀α.α t → α) *)
-  let fixv f =
-    let rec g = { call = fun x -> (f g).call x } in
-    g
-end: FixVR with type 'a s = 'a Sym.i)
-
 
 let lift f _ = f
 let id x  = x
@@ -119,293 +103,104 @@ let fix0 f t =
 type 'a plist      = 'a list
 type 'a list       = 'a plist
 
-(* TODO: add switch to customize methods' names generated from constructors *)
-class virtual ['ia,'a,'sa,'inh,'extra,'syn] list_t =
+class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] list_t =
   object
-    method virtual  c_Nil : 'inh -> 'a list -> 'syn
-    method virtual  c_Cons : 'inh -> 'a list -> 'a -> 'a list -> 'syn
-  end
-let gcata_list tr inh subj =
-  match subj with
-  | [] -> tr#c_Nil inh subj
-  | _x__001_::_x__002_ -> tr#c_Cons inh subj _x__001_ _x__002_
-
-module type IndexResult_list  = sig
-  type 'a result
-  type 'd i = List: ('a result -> 'a list result) i
-end
-module Index_list(S:sig type 'a result end) =
-  struct
-    type 'a result = 'a S.result
-    type 'xxx i =
-      | List: ('a result -> 'a list result) i
-  end
-module type IndexResult2_list  =
-  sig
-    type ('a, 'b) result
-    type 'xxx i =
-      | List: (('a, 'a2) result -> ('a list, 'a2 list) result) i
-  end
-module Index2_list(S:sig type ('a, 'b) result end) =
-  struct
-    type ('a, 'b) result = ('a, 'b) S.result
-    type 'd i =
-      | List: (('a, 'a2) result -> ('a list, 'a2 list) result) i
-  end
-module type IndexResult_fold_list  =
-  sig
-    type ('a, 'b) result
-    type 'xxx i =
-      | List: (('a, 'a2) result -> ('a list, 'a2) result) i
-  end
-module Index_fold_list(S:sig type ('a, 'b) result end) =
-  struct
-    type ('a, 'b) result = ('a, 'b) S.result
-    type 'xxx i =
-      | List: (('a, 'a2) result -> ('a list, 'a2) result) i
-  end
-module type IndexResult_stateful_list  =
-  sig
-    type ('env, 'a, 'b) result
-    type 'xxx i =
-      | List: (('env, 'a, 'a2) result -> ('env, 'a list, 'a2 list) result) i
-  end
-module Index_stateful_list(S:sig type ('env, 'a, 'b) result end) =
-  struct
-    type ('env, 'a, 'b) result = ('env, 'a, 'b) S.result
-    type 'xxx i =
-      | List: (('env, 'a, 'a2) result -> ('env, 'a list, 'a2 list) result) i
+    method virtual c_Nil  : 'inh -> 'syn
+    method virtual c_Cons : 'inh -> 'a -> 'a list -> 'syn
   end
 
-module Ieq_list = (Index_list)(struct type 'a result = 'a -> 'a -> bool end)
-module Fix_eq_list = (FixV)(Ieq_list)
-class ['a,'extra_list] eq_list_t _ fa  fself_list =
-  object
-    inherit  ['a,'a,bool,'a list,'extra_list,bool] list_t
-    method c_Nil inh___003_ _ =
-      match inh___003_ with | [] -> true | other -> false
-    method c_Cons inh___004_ _ _x__005_ _x__006_ =
-      match inh___004_ with
-      | _x__007_::_x__008_ ->
-          (true && (fa _x__007_ _x__005_)) && (fself_list _x__008_ _x__006_)
-      | other -> false
-  end
-let eq_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new eq_list_t) call fa) inh0 subj
-let eq_list_fix =
-  Fix_eq_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Ieq_list.i) ->
-             (match sym with | Ieq_list.List -> eq_list_0 f : a)
-       })
+let gcata_list tr inh = function
+| []    -> tr#c_Nil inh
+| x::xs -> tr#c_Cons inh x xs
 
-module Icompare_list =
-  (Index_list)(struct type 'a result = 'a -> 'a -> comparison end)
-module Fix_compare_list = (FixV)(Icompare_list)
-class ['a,'extra_list] compare_list_t _ fa  fself_list =
+class ['a, 'self] html_list_t fa fself =
   object
-    inherit  ['a,'a,comparison,'a list,'extra_list,comparison] list_t
-    method c_Nil inh___009_ _ =
-      match inh___009_ with | [] -> EQ | other -> compare_vari other []
-    method c_Cons inh___010_ _ _x__011_ _x__012_ =
-      match inh___010_ with
-      | _x__013_::_x__014_ ->
-          chain_compare
-            (chain_compare EQ (fun () -> fa _x__013_ _x__011_))
-            (fun () -> fself_list _x__014_ _x__012_)
-      | other -> compare_vari other ((Obj.magic ()) :: (Obj.magic ()))
-  end
-let compare_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new compare_list_t) call fa) inh0 subj
-let compare_list_fix =
-  Fix_compare_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Icompare_list.i) ->
-             (match sym with | Icompare_list.List -> compare_list_0 f :
-             a)
-       })
+    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @list
+    method c_Nil  _      = View.empty
+    method c_Cons _ x xs =
 
-module Ifoldr_list =
-  (Index_fold_list)(struct type ('a, 'b) result = 'b -> 'a -> 'b end)
-module Fix_foldr_list = (FixV)(Ifoldr_list)
-class ['a,'syn,'extra_list] foldr_list_t _ fa  fself_list =
-  object
-    inherit  ['syn,'a,'syn,'syn,'extra_list,'syn] list_t
-    method c_Nil inh___015_ _ = inh___015_
-    method c_Cons inh___016_ _ _x__017_ _x__018_ =
-      fa (fself_list inh___016_ _x__018_) _x__017_
-  end
-let foldr_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new foldr_list_t) call fa) inh0 subj
-let foldr_list_fix =
-  Fix_foldr_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Ifoldr_list.i) ->
-             (match sym with | Ifoldr_list.List -> foldr_list_0 f : a)
-       })
-
-module Ifoldl_list =
-  (Index_fold_list)(struct type ('a, 'b) result = 'b -> 'a -> 'b end)
-module Fix_foldl_list = (FixV)(Ifoldl_list)
-class ['a,'syn,'extra_list] foldl_list_t _ fa  fself_list =
-  object
-    inherit  ['syn,'a,'syn,'syn,'extra_list,'syn] list_t
-    method c_Nil inh___019_ _ = inh___019_
-    method c_Cons inh___020_ _ _x__021_ _x__022_ =
-      fself_list (fa inh___020_ _x__021_) _x__022_
-  end
-let foldl_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new foldl_list_t) call fa) inh0 subj
-let foldl_list_fix =
-  Fix_foldl_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Ifoldl_list.i) ->
-             (match sym with | Ifoldl_list.List -> foldl_list_0 f : a)
-       })
-module Istateful_list =
-  (Index_stateful_list)(struct
-                          type ('env, 'a, 'b) result =
-                            'env -> 'a -> ('env * 'b)
-                        end)
-module Fix_stateful_list = FixV(Istateful_list)
-class ['a,'a_2,'env,'extra_list] stateful_list_t _ fa  fself_list =
-  object
-    inherit  ['env,'a,('env * 'a_2),'env,'extra_list,('env * 'a_2 list)]
-      list_t
-    method c_Nil inh___023_ _ = (inh___023_, [])
-    method c_Cons inh___024_ _ _x__025_ _x__026_ =
-      let (env1, _x__025__rez) = fa inh___024_ _x__025_ in
-      let (env2, _x__026__rez) = fself_list env1 _x__026_ in
-      (env2, (_x__025__rez :: _x__026__rez))
-  end
-let stateful_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new stateful_list_t) call fa) inh0 subj
-let stateful_list_fix =
-  Fix_stateful_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Istateful_list.i) ->
-             (match sym with | Istateful_list.List -> stateful_list_0 f :
-             a)
-       })
-
-module Ieval_list =
-  (Index2_list)(struct type ('a, 'b) result = unit -> 'a -> 'b end)
-module Fix_eval_list = (FixV)(Ieval_list)
-class ['a,'a_2,'env,'extra_list] eval_list_t _ fa  fself_list =
-  object
-    inherit  ['env,'a,'a_2,'env,'extra_list,'a_2 list] list_t
-    method c_Nil inh___027_ _ = []
-    method c_Cons inh___028_ _ _x__029_ _x__030_ = (fa inh___028_ _x__029_) ::
-      (fself_list inh___028_ _x__030_)
-  end
-let eval_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new eval_list_t) call fa) inh0 subj
-let eval_list_fix =
-  Fix_eval_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Ieval_list.i) ->
-             (match sym with | Ieval_list.List -> eval_list_0 f : a)
-       })
-
-module Igmap_list =
-  (Index2_list)(struct type ('a, 'b) result = unit -> 'a -> 'b end)
-module Fix_gmap_list = (FixV)(Igmap_list)
-class ['a,'a_2,'extra_list] gmap_list_t _ fa  fself_list =
-  object
-    inherit  [unit,'a,'a_2,unit,'extra_list,'a_2 list] list_t
-    method c_Nil inh___031_ _ = []
-    method c_Cons inh___032_ _ _x__033_ _x__034_ = (fa inh___032_ _x__033_) ::
-      (fself_list inh___032_ _x__034_)
-  end
-let gmap_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new gmap_list_t) call fa) inh0 subj
-let gmap_list_fix =
-  Fix_gmap_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Igmap_list.i) ->
-             (match sym with | Igmap_list.List -> gmap_list_0 f : a)
-       })
-
-module Ifmt_list =
-  (Index_list)(struct type 'a result = Format.formatter -> 'a -> unit end)
-module Fix_fmt_list = (FixV)(Ifmt_list)
-class ['a,'extra_list] fmt_list_t _   fa  fself_list =
-  object
-    inherit  [Format.formatter,'a,unit,Format.formatter,'extra_list,unit]
-      list_t
-    method c_Nil inh___035_ _ = ()
-    method c_Cons fmt _ x xs =
-      fa fmt x;
-      (match xs with [] -> () | _ -> Format.fprintf fmt ";@,@ %a" fself_list xs)
-  end
-let fmt_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new fmt_list_t) call fa) inh0 subj
-let fmt_list_fix =
-  Fix_fmt_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Ifmt_list.i) ->
-             (match sym with | Ifmt_list.List -> fmt_list_0 f : a)
-       })
-
-module Ihtml_list =
-  (Index_list)(struct type 'a result = unit -> 'a -> HTML.er end)
-module Fix_html_list = (FixV)(Ihtml_list)
-class ['a,'extra_list] html_list_t { Fix_html_list.call = call }
-   fa  fself_list =
-  object
-    inherit  [unit,'a,HTML.er,unit,'extra_list,HTML.er] list_t
-    method c_Nil inh___039_ _ = HTML.ul (HTML.string "[]")
-    method c_Cons inh___040_ _ x xs =
       HTML.ul @@ HTML.seq (
         [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa () x) (x::xs)
-      )
+        )
+(*      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself () xs)) *)
   end
-let html_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new html_list_t) call fa) inh0 subj
-let html_list_fix =
-  Fix_html_list.fixv
-    (fun f ->
-       {
-         call = fun (type a) ->
-           fun (sym : a Ihtml_list.i) ->
-             (match sym with | Ihtml_list.List -> html_list_0 f : a)
-       })
 
-module Ishow_list =
-  (Index_list)(struct type 'a result = unit -> 'a -> string end)
-module Fix_show_list = (FixV)(Ishow_list)
-class ['a,'extra_list] show_list_t _ fa  fself_list =
+class ['a, 'self] show_list_t fa fself =
   object
-    inherit  [unit,'a,string,unit,'extra_list,string] list_t
-    method c_Nil inh___043_ _ = ""
-    method c_Cons inh___044_ _ x xs =
-      (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself_list () xs))
+    inherit [unit, 'a, string, unit, 'self, string] @list
+    method c_Nil  _      = ""
+    method c_Cons _ x xs = (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself () xs))
   end
-let show_list_0 call fa inh0 subj =
-  transform_gc gcata_list ((new show_list_t) call fa) inh0 subj
-let show_list_fix =
-  Fix_show_list.fixv
-    (fun f ->
-       { call = fun (type a) ->
-           fun (sym : a Ishow_list.i) ->
-             (match sym with | Ishow_list.List -> show_list_0 f : a)
-       })
+
+class ['a, 'self] fmt_list_t fa fself =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'self, unit] @list
+    constraint 'inh = Format.formatter
+    method c_Nil  _      = ()
+    method c_Cons fmt x xs =
+      Format.fprintf fmt "%a;@,@ %a" fa x fself xs
+  end
+
+class ['a, 'sa, 'self] gmap_list_t fa fself =
+  object
+    inherit [unit, 'a, 'sa, unit, 'self, 'sa list] @list
+    method c_Nil  _ = []
+    method c_Cons _ x xs = (fa () x) :: (fself () xs)
+  end
+class ['a, 'sa, 'env, 'self] eval_list_t fa fself =
+  object
+    inherit ['env, 'a, 'sa, 'env, 'self, 'sa list] @list
+    method c_Nil  _ = []
+    method c_Cons env x xs = (fa env x) :: (fself env xs)
+  end
+class ['a, 'sa, 'env, 'self] stateful_list_t fa fself =
+  object
+    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa list] @list
+    method c_Nil  env = (env, [])
+    method c_Cons env0 x xs : 'env * 'sa list =
+      let env1,h  = fa    env0 x  in
+      let env2,tl = fself env1 xs in
+      env2, (h::tl)
+  end
+
+class ['a, 'syn, 'self] foldl_list_t fa fself =
+  object
+    inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @list
+    method c_Nil  s = s
+    method c_Cons s x xs = fself  (fa s x) xs
+  end
+
+class ['a, 'syn, 'self] foldr_list_t fa fself =
+  object
+    inherit ['a, 'syn, 'self] @list[foldl] fa fself
+    method c_Cons s x xs = fa (fself s xs) x
+  end
+
+class ['a, 'self] eq_list_t fa fself =
+  object
+    inherit ['a, 'a, bool, 'a list, 'self, bool] @list
+    method c_Nil inh  = (inh = [])
+    method c_Cons inh x xs =
+      match inh with
+      | y::ys -> fa y x && fself ys xs
+      | _ -> false
+  end
+
+class ['a, 'self] compare_list_t fa fself =
+  object
+    inherit ['a, 'a, comparison, 'a list, 'self, comparison] @list
+    method c_Nil inh =
+      match inh with
+      | [] -> EQ
+      |  _ -> GT
+    method c_Cons inh x xs =
+      match inh with
+      | [] -> LT
+      | (y::ys) -> (match fa y x with
+                   | EQ -> fself ys xs
+                   | c  -> c
+                   )
+  end
 
 let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
             < show    : ('a -> string)      -> 'a list -> string;
@@ -421,31 +216,31 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
               eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool;
               compare : ('a -> 'a -> comparison) -> 'a list -> 'a list -> comparison;
             >) t =
-  {
-    gcata = gcata_list;
-    plugins =
-      (object
-         method eq = eq_list_0 eq_list_fix
-         method compare = compare_list_0 compare_list_fix
-         method foldr = foldr_list_0 foldr_list_fix
-         method foldl = foldl_list_0 foldl_list_fix
-         method stateful = stateful_list_0 stateful_list_fix
-         method eval = eval_list_0 eval_list_fix
-         method gmap fa subj =
-           gmap_list_fix.call Igmap_list.List (lift fa) () subj
-         method fmt fa fmt s  =
-           Format.fprintf fmt "[ @[%a@] ]@," (fmt_list_0 fmt_list_fix fa) s
-         method html fa subj =
-           html_list_fix.call Ihtml_list.List (lift fa) () subj
-         method show fa subj =
-           Printf.sprintf "[%a]" (show_list_fix.call Ishow_list.List (lift fa)) subj
-       end)
+  {gcata   = gcata_list;
+   plugins = object
+               method show fa l =
+                 sprintf "[%a]" (transform_gc gcata_list (new @list[show] (lift fa))) l
+               method html    fa   = transform_gc gcata_list (new @list[html] (lift fa)) ()
+               method gmap    fa   = transform_gc gcata_list (new @list[gmap] (lift fa)) ()
+
+               method fmt fa inh l =
+                 Format.fprintf inh "[@[%a@]]@,"
+                   (transform_gc gcata_list (new @list[fmt] fa)) l
+
+               method stateful fa  = transform_gc gcata_list (new @list[stateful] fa)
+               method eval     fa  = transform_gc gcata_list (new @list[eval] fa)
+               method eq       fa  = transform_gc gcata_list (new @list[eq] fa)
+               method compare  fa  = transform_gc gcata_list (new @list[compare] fa)
+               method foldl    fa  = transform_gc gcata_list (new @list[foldl] fa)
+               method foldr    fa  = transform_gc gcata_list (new @list[foldr] fa)
+             end
   }
 
 
 module Lazy =
   struct
-    type ('a,'b) t' = ('a,'b) t (* becase Lazy hides type t *)
+
+    type ('a, 'b) t' = ('a, 'b) t
 
     include Lazy
 
@@ -455,185 +250,31 @@ module Lazy =
     let gcata_t tr inh subj = tr#t_t inh subj
     let gcata_lazy = gcata_t
 
-module type IndexResult_t = sig
-  type 'a result
-
-  type 'dummy0 i = T : ('a result -> 'a t result) i
-end
-
-module Index_t (S : sig
-  type 'a result
-end) =
-struct
-  type 'a result = 'a S.result
-
-  type 'dummy0 i = T : ('a result -> 'a t result) i
-end
-
-module type IndexResult2_t = sig
-  type ('a, 'b) result
-
-  type 'dummy0 i = T : (('a, 'a2) result -> ('a t, 'a2 t) result) i
-end
-
-module Index2_t (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-  type 'dummy0 i = T : (('a, 'a2) result -> ('a t, 'a2 t) result) i
-end
-
-module type IndexResult_fold_t = sig
-  type ('a, 'syn) result
-
-  type 'dummy0 i = T : (('a, 'syn) result -> ('a t, 'syn) result) i
-end
-
-module Index_fold_t (S : sig
-  type ('a, 'syn) result
-end) =
-struct
-  type ('a, 'syn) result = ('a, 'syn) S.result
-
-  type 'dummy0 i = T : (('a, 'syn) result -> ('a t, 'syn) result) i
-end
-
-module type IndexResult_stateful_t = sig
-  type ('env, 'a, 'b) result
-
-  type 'dummy0 i =
-    | T : (('env, 'a, 'a2) result -> ('env, 'a t, 'a2 t) result) i
-end
-
-module Index_stateful_t (S : sig
-  type ('env, 'a, 'b) result
-end) =
-struct
-  type ('env, 'a, 'b) result = ('env, 'a, 'b) S.result
-
-  type 'dummy0 i =
-    | T : (('env, 'a, 'a2) result -> ('env, 'a t, 'a2 t) result) i
-end
-
-module Ishow_t = Index_t (struct
-  type 'a result = unit -> 'a -> string
-end)
-
-module Fix_show_t = FixV (Ishow_t)
-
-    class ['a, 'self ] show_t_t _ fa _fself =
+    class ['a, 'self ] show_t_t fa _fself =
       object
         inherit [unit, 'a, string, unit, 'self, string ] @t
         method t_t inh subj = fa () @@ Lazy.force subj
       end
 
-let show_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new show_t_t call fa) inh0 subj
-
-let show_t_fix =
-  Fix_show_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ishow_t.i) ->
-            (match sym with Ishow_t.T -> show_t_0 f : a) ) } )
-
-module Ifmt_t = Index_t (struct
-  type 'a result = Format.formatter -> 'a -> unit
-end)
-
-module Fix_fmt_t = FixV (Ifmt_t)
-class ['a, 'extra_t] fmt_t_t _ fa _fself =
-  object
-    inherit [Format.formatter, 'a, unit, Format.formatter, 'extra_t, unit] t_t
-
-    method t_t inh___004_ subj =
-      Format.fprintf inh___004_ "@[(@,%a@,)@]" fa (Lazy.force subj)
-  end
-
-let fmt_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new fmt_t_t call fa) inh0 subj
-
-let fmt_t_fix =
-  Fix_fmt_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifmt_t.i) ->
-            (match sym with Ifmt_t.T -> fmt_t_0 f : a) ) } )
-
-module Ihtml_t = Index_t (struct
-  type 'a result = unit -> 'a -> HTML.er
-end)
-
-module Fix_html_t = FixV (Ihtml_t)
-
-    class ['a, 'self ] html_t_t _ fa _fself =
+    class ['a, 'self ] html_t_t fa _fself =
       object
         inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer ] @t
         method t_t inh subj = fa () @@ Lazy.force subj
       end
 
-let html_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new html_t_t call fa) inh0 subj
-
-let html_t_fix =
-  Fix_html_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ihtml_t.i) ->
-            (match sym with Ihtml_t.T -> html_t_0 f : a) ) } )
-
-module Igmap_t = Index2_t (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_gmap_t = FixV (Igmap_t)
-
-    class ['a, 'sa, 'self ] gmap_t_t _ fa _ =
+    class ['a, 'sa, 'self ] gmap_t_t fa _fself =
       object
         inherit [unit, 'a, 'sa, unit, 'self, 'sa t ] @t
         method t_t inh subj = lazy (fa () @@ Lazy.force subj)
       end
 
-let gmap_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new gmap_t_t call fa) inh0 subj
-
-
-
-let gmap_t_fix =
-  Fix_gmap_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Igmap_t.i) ->
-            (match sym with Igmap_t.T -> gmap_t_0 f : a) ) } )
-
-module Ieval_t = Index2_t (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_eval_t = FixV (Ieval_t)
-
-
-    class ['a, 'sa, 'env, 'self ] eval_t_t _ fa _fself =
+    class ['a, 'sa, 'env, 'self ] eval_t_t fa _fself =
       object
         inherit ['env, 'a, 'sa, 'env, 'self, 'sa t ] @t
         method t_t env subj = lazy (fa env @@ Lazy.force subj)
       end
 
-let eval_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new eval_t_t call fa) inh0 subj
-
-let eval_t_fix =
-  Fix_eval_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieval_t.i) ->
-            (match sym with Ieval_t.T -> eval_t_0 f : a) ) } )
-
-module Istateful_t = Index_stateful_t (struct
-  type ('env, 'a, 'b) result = 'env -> 'a -> 'env * 'b
-end)
-
-module Fix_stateful_t = FixV (Istateful_t)
-
-
-    class ['a, 'sa, 'env, 'self ] stateful_t_t _ fa _fself =
+    class ['a, 'sa, 'env, 'self ] stateful_t_t fa _fself =
       object
         inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa t ] @t
         method t_t env subj =
@@ -641,104 +282,34 @@ module Fix_stateful_t = FixV (Istateful_t)
           in env1, Lazy.from_fun (fun () -> r)
           (* THE SAME AS eval *)
       end
-let stateful_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new stateful_t_t call fa) inh0 subj
 
-let stateful_t_fix =
-  Fix_stateful_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Istateful_t.i) ->
-            (match sym with Istateful_t.T -> stateful_t_0 f : a) ) } )
-
-module Icompare_t = Index_t (struct
-  type 'a result = 'a -> 'a -> comparison
-end)
-
-module Fix_compare_t = FixV (Icompare_t)
-
-    class ['a, 'self ] compare_t_t _ fa _fself =
+    class ['a, 'syn, 'self ] foldl_t_t fa _fself =
       object
-        inherit ['a, 'a, comparison, 'a t, 'self, comparison ] @t
-        method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
+        inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn ] @t
+        method t_t inh subj = fa inh @@ Lazy.force subj
       end
-let compare_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new compare_t_t call fa) inh0 subj
 
-let compare_t_fix =
-  Fix_compare_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Icompare_t.i) ->
-            (match sym with Icompare_t.T -> compare_t_0 f : a) ) } )
+    class ['a, 'syn, 'self ] foldr_t_t fa fself =
+      object
+        inherit ['a, 'syn, 'self ] @t[foldl] fself fa
+      end
 
-module Ieq_t = Index_t (struct
-  type 'a result = 'a -> 'a -> bool
-end)
-
-module Fix_eq_t = FixV (Ieq_t)
-
-    class ['a, 'self ] eq_t_t _ fa _fself =
+    class ['a, 'self ] eq_t_t fa _fself =
       object
         inherit ['a, 'a, bool, 'a t, 'self, bool ] @t
         method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
 
-let eq_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new eq_t_t call fa) inh0 subj
-
-let eq_t_fix =
-  Fix_eq_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieq_t.i) ->
-            (match sym with Ieq_t.T -> eq_t_0 f : a) ) } )
-
-module Ifoldl_t = Index_fold_t (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldl_t = FixV (Ifoldl_t)
-
-    class ['a, 'syn, 'self ] foldl_t_t _ fa _fself =
+    class ['a, 'self ] compare_t_t fa _fself =
       object
-        inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn ] @t
-        method t_t inh subj = fa inh @@ Lazy.force subj
+        inherit ['a, 'a, comparison, 'a t, 'self, comparison ] @t
+        method t_t inh subj = fa (Lazy.force inh) (Lazy.force subj)
       end
-let foldl_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new foldl_t_t call fa) inh0 subj
-
-let foldl_t_fix =
-  Fix_foldl_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldl_t.i) ->
-            (match sym with Ifoldl_t.T -> foldl_t_0 f : a) ) } )
-
-module Ifoldr_t = Index_fold_t (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldr_t = FixV (Ifoldr_t)
-
-    class ['a, 'syn, 'self ] foldr_t_t _ fa fself =
-      object
-        inherit ['a, 'syn, 'self ] @t[foldl] foldl_t_fix fa fself
-      end
-
-let foldr_t_0 call fa inh0 subj =
-  transform_gc gcata_t (new foldr_t_t call fa) inh0 subj
-
-let foldr_t_fix =
-  Fix_foldr_t.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldr_t.i) ->
-            (match sym with Ifoldr_t.T -> foldr_t_0 f : a) ) } )
 
     let t : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #t_t -> 'inh -> 'a t -> 'syn,
-             < show    : ('a -> string)      ->
-                          'a t -> string;
-               html    : ('a -> HTML.viewer) ->
-                         'a t -> HTML.viewer;
-               fmt     : (Format.formatter -> 'a -> unit) ->
-                         Format.formatter -> 'a t -> unit;
-               gmap    : ( 'a -> 'b) -> 'a t -> 'b t;
+             < show    : ('a -> string)      -> 'a t -> string;
+               html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
+               gmap    : ('a -> 'b)          -> 'a t -> 'b t;
 
                eval    : ('env -> 'a -> 'b) -> 'env -> 'a t -> 'b t;
                stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a t -> 'env * 'b t;
@@ -747,27 +318,19 @@ let foldr_t_fix =
                eq      : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool;
                compare : ('a -> 'a -> comparison) -> 'a t -> 'a t -> comparison;
              >) t' =
-    { gcata   = gcata_lazy;
-      plugins = object
-        method show fa subj = show_t_fix.call Ishow_t.T (lift fa) () subj
+      let fself _ _ = assert false in
+      {gcata   = gcata_lazy;
+       plugins = object
+                   method show     fa  = gcata_lazy (new @t[show] fself (lift fa)) ()
+                   method html     fa  = gcata_lazy (new @t[html] fself (lift fa)) ()
+                   method gmap     fa  = gcata_lazy (new @t[gmap] fself (lift fa)) ()
 
-        method fmt = fmt_t_0 fmt_t_fix
-
-        method html fa subj = html_t_fix.call Ihtml_t.T (lift fa) () subj
-
-        method gmap fa subj = gmap_t_fix.call Igmap_t.T (lift fa) () subj
-
-        method eval = eval_t_0 eval_t_fix
-
-        method stateful = stateful_t_0 stateful_t_fix
-
-        method compare = compare_t_0 compare_t_fix
-
-        method eq = eq_t_0 eq_t_fix
-
-        method foldl = foldl_t_0 foldl_t_fix
-
-        method foldr = foldr_t_0 foldr_t_fix
+                   method eval     fa  = gcata_lazy (new @t[eval] fself fa)
+                   method stateful fa  = gcata_lazy (new @t[stateful] fself fa)
+                   method eq      fa   = gcata_lazy (new @t[eq] fself fa)
+                   method compare fa   = gcata_lazy (new @t[compare] fself fa)
+                   method foldl   fa   = gcata_lazy (new @t[foldl] fself fa)
+                   method foldr   fa   = gcata_lazy (new @t[foldr] fself fa)
                  end
       }
   end
@@ -776,353 +339,94 @@ let foldr_t_fix =
 type 'a poption = 'a option
 type 'a option = 'a poption
 
-class virtual ['ia, 'a, 'sa, 'inh, 'extra, 'syn] option_t =
+class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] option_t =
   object
-    method virtual c_None : 'inh -> 'a option -> 'syn
-
-    method virtual c_Some : 'inh -> 'a option -> 'a -> 'syn
+    method virtual c_None :   'inh -> 'a option       -> 'syn
+    method virtual c_Some :   'inh -> 'a option -> 'a -> 'syn
   end
 
 let gcata_option tr inh subj =
   match subj with
-  | None -> tr#c_None inh subj
-  | Some _x__001_ -> tr#c_Some inh subj _x__001_
+  | None   -> tr#c_None inh subj
+  | Some x -> tr#c_Some inh subj x
 
-module type IndexResult_option = sig
-  type 'a result
-
-  type 'dummy i = Option : ('a result -> 'a option result) i
-end
-
-module Index_option (S : sig
-  type 'a result
-end) =
-struct
-  type 'a result = 'a S.result
-
-  type 'dummy i = Option : ('a result -> 'a option result) i
-end
-
-module type IndexResult2_option = sig
-  type ('a, 'b) result
-
-  type 'dummy i = Option : (('a, 'a2) result -> ('a option, 'a2 option) result) i
-end
-
-module Index2_option (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-  type 'dummy i = Option : (('a, 'a2) result -> ('a option, 'a2 option) result) i
-end
-
-module type IndexResult_fold_option = sig
-  type ('a, 'b) result
-
-  type 'dummy i = Option : (('a, 'a2) result -> ('a option, 'a2) result) i
-end
-
-module Index_fold_option (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-  type 'dummy i = Option : (('a, 'a2) result -> ('a option, 'a2) result) i
-end
-
-module type IndexResult_stateful_option = sig
-  type ('env, 'a, 'b) result
-
-  type 'dummy i =
-    | Option
-        : (('env, 'a, 'a2) result -> ('env, 'a option, 'a2 option) result) i
-end
-
-module Index_stateful_option (S : sig
-  type ('env, 'a, 'b) result
-end) =
-struct
-  type ('env, 'a, 'b) result = ('env, 'a, 'b) S.result
-
-  type 'dummy i =
-    | Option
-        : (('env, 'a, 'a2) result -> ('env, 'a option, 'a2 option) result) i
-end
-
-module Ieq_option = Index_option (struct
-  type 'a result = 'a -> 'a -> bool
-end)
-
-module Fix_eq_option = FixV (Ieq_option)
-
-class ['a, 'extra_option] eq_option_t _ fa fself_option =
+class ['a, 'self] show_option_t fa _fself =
   object
-    inherit ['a, 'a, bool, 'a option, 'extra_option, bool] option_t
-
-    method c_None inh___002_ _ =
-      match inh___002_ with None -> true | other -> false
-
-    method c_Some inh___003_ _ _x__004_ =
-      match inh___003_ with
-      | Some _x__005_ -> true && fa _x__005_ _x__004_
-      | other -> false
+    inherit [ unit, 'a, string, unit, 'self, string] @option
+    method c_None () _   = "None"
+    method c_Some () _ x = Printf.sprintf "Some (%a)" fa x
+  end
+class ['a, 'self] html_option_t fa _fself =
+  object
+    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @option
+    method c_None () _   = HTML.string "None"
+    method c_Some () _ x = View.concat (HTML.string "Some") (HTML.ul (fa () x))
+  end
+class ['a, 'sa, 'self] gmap_option_t fa _fself =
+  object
+    inherit [unit, 'a, 'sa, unit, 'self, 'sa option] @option
+    method c_None () _ = None
+    method c_Some () _ x = Some (fa () x)
   end
 
-let eq_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new eq_option_t call fa) inh0 subj
-
-let eq_option_fix =
-  Fix_eq_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieq_option.i) ->
-            (match sym with Ieq_option.Option -> eq_option_0 f : a) ) } )
-
-module Icompare_option = Index_option (struct
-  type 'a result = 'a -> 'a -> comparison
-end)
-
-module Fix_compare_option = FixV (Icompare_option)
-
-class ['a, 'extra_option] compare_option_t _ fa fself_option =
+class ['a, 'self] fmt_option_t fa _fself =
   object
-    inherit
-      ['a, 'a, comparison, 'a option, 'extra_option, comparison] option_t
+    inherit [ Format.formatter, 'a, unit, Format.formatter, 'self, unit] @option
+    method c_None fmt _   = Format.fprintf fmt "None"
+    method c_Some fmt _ x = Format.fprintf fmt "Some (%a)" fa x
+  end
 
-    method c_None inh___006_ _ =
-      match inh___006_ with
+class ['a, 'sa, 'env, 'self] eval_option_t fa _fself =
+  object
+    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'sa option] @option
+    method c_None _   _   = None
+    method c_Some env _ x = Some (fa env x)
+  end
+
+class ['a, 'sa, 'env, 'self] stateful_option_t fa _fself =
+  object
+    inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa option] @option
+    method c_None env _   = (env,None)
+    method c_Some env _ x =
+      let env1,r = fa env x in
+      (env1, Some r)
+  end
+
+class ['a, 'syn, 'self] foldl_option_t fa _fself =
+  object
+    inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @option
+    method c_None s _   = s
+    method c_Some s _ x = fa s x
+  end
+
+class ['a, 'syn, 'self] foldr_option_t fa _fself =
+  object
+    inherit ['a, 'syn, 'self] @option[foldl] fa _fself
+  end
+
+class ['a, 'self] eq_option_t fa _fself =
+  object
+    inherit ['a, 'a, bool, 'a option, 'self, bool] @option
+    method c_None inh _   = (inh = None)
+    method c_Some inh _ x =
+      match inh with
+      | Some y -> fa y x
+      | _ -> false
+  end
+
+class ['a, 'self] compare_option_t fa _fself =
+  object
+    inherit ['a, 'a, comparison, 'a option, 'self, comparison] @option
+    method c_None inh _ = match inh with
       | None -> EQ
-      | other -> compare_vari other None
-
-    method c_Some inh___007_ _ _x__008_ =
-      match inh___007_ with
-      | Some _x__009_ -> chain_compare EQ (fun () -> fa _x__009_ _x__008_)
-      | other -> compare_vari other (Some (Obj.magic ()))
+      | _  -> GT
+    method c_Some inh _ x =
+      match inh with
+      | None -> LT
+      | Some y -> fa y x
   end
 
-let compare_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new compare_option_t call fa) inh0 subj
-
-let compare_option_fix =
-  Fix_compare_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Icompare_option.i) ->
-            (match sym with Icompare_option.Option -> compare_option_0 f : a)
-            ) } )
-
-module Ifoldr_option = Index_fold_option (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldr_option = FixV (Ifoldr_option)
-
-class ['a, 'syn, 'extra_option] foldr_option_t _ fa fself_option =
-  object
-    inherit ['syn, 'a, 'syn, 'syn, 'extra_option, 'syn] option_t
-
-    method c_None inh___010_ _ = inh___010_
-
-    method c_Some inh___011_ _ _x__012_ = fa inh___011_ _x__012_
-  end
-
-let foldr_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new foldr_option_t call fa) inh0 subj
-
-let foldr_option_fix =
-  Fix_foldr_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldr_option.i) ->
-            (match sym with Ifoldr_option.Option -> foldr_option_0 f : a) ) }
-  )
-
-module Ifoldl_option = Index_fold_option (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldl_option = FixV (Ifoldl_option)
-
-class ['a, 'syn, 'extra_option] foldl_option_t _ fa fself_option =
-  object
-    inherit ['syn, 'a, 'syn, 'syn, 'extra_option, 'syn] option_t
-
-    method c_None inh___013_ _ = inh___013_
-
-    method c_Some inh___014_ _ _x__015_ = fa inh___014_ _x__015_
-  end
-
-let foldl_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new foldl_option_t call fa) inh0 subj
-
-let foldl_option_fix =
-  Fix_foldl_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldl_option.i) ->
-            (match sym with Ifoldl_option.Option -> foldl_option_0 f : a) ) }
-  )
-
-module Istateful_option = Index_stateful_option (struct
-  type ('env, 'a, 'b) result = 'env -> 'a -> 'env * 'b
-end)
-
-module Fix_stateful_option = FixV (Istateful_option)
-
-class ['a, 'a_2, 'env, 'extra_option] stateful_option_t _ fa fself_option =
-  object
-    inherit
-      ['env, 'a, 'env * 'a_2, 'env, 'extra_option, 'env * 'a_2 option] option_t
-
-    method c_None inh___016_ _ = (inh___016_, None)
-
-    method c_Some inh___017_ _ _x__018_ =
-      let env1, _x__018__rez = fa inh___017_ _x__018_ in
-      (env1, Some _x__018__rez)
-  end
-
-let stateful_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new stateful_option_t call fa) inh0 subj
-
-let stateful_option_fix =
-  Fix_stateful_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Istateful_option.i) ->
-            ( match sym with Istateful_option.Option -> stateful_option_0 f
-              : a ) ) } )
-
-module Ieval_option = Index2_option (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_eval_option = FixV (Ieval_option)
-
-class ['a, 'a_2, 'env, 'extra_option] eval_option_t _ fa fself_option =
-  object
-    inherit ['env, 'a, 'a_2, 'env, 'extra_option, 'a_2 option] option_t
-
-    method c_None inh___019_ _ = None
-
-    method c_Some inh___020_ _ _x__021_ = Some (fa inh___020_ _x__021_)
-  end
-
-let eval_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new eval_option_t call fa) inh0 subj
-
-let eval_option_fix =
-  Fix_eval_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieval_option.i) ->
-            (match sym with Ieval_option.Option -> eval_option_0 f : a) ) } )
-
-module Igmap_option = Index2_option (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_gmap_option = FixV (Igmap_option)
-
-class ['a, 'a_2, 'extra_option] gmap_option_t _ fa fself_option =
-  object
-    inherit [unit, 'a, 'a_2, unit, 'extra_option, 'a_2 option] option_t
-
-    method c_None inh___022_ _ = None
-
-    method c_Some inh___023_ _ _x__024_ = Some (fa inh___023_ _x__024_)
-  end
-
-let gmap_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new gmap_option_t call fa) inh0 subj
-
-let gmap_option_fix =
-  Fix_gmap_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Igmap_option.i) ->
-            (match sym with Igmap_option.Option -> gmap_option_0 f : a) ) } )
-
-module Ifmt_option = Index_option (struct
-  type 'a result = Format.formatter -> 'a -> unit
-end)
-
-module Fix_fmt_option = FixV (Ifmt_option)
-
-class ['a, 'extra_option] fmt_option_t _
-  fa fself_option =
-  object
-    inherit
-      [Format.formatter, 'a, unit, Format.formatter, 'extra_option, unit] option_t
-
-    method c_None inh___025_ _ = Format.fprintf inh___025_ "None"
-
-    method c_Some inh___026_ _ _x__027_ =
-      Format.fprintf inh___026_ "Some@ @[(@,%a@,)@]" fa _x__027_
-  end
-
-let fmt_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new fmt_option_t call fa) inh0 subj
-
-let fmt_option_fix =
-  Fix_fmt_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifmt_option.i) ->
-            (match sym with Ifmt_option.Option -> fmt_option_0 f : a) ) } )
-
-module Ihtml_option = Index_option (struct
-  type 'a result = unit -> 'a -> HTML.er
-end)
-
-module Fix_html_option = FixV (Ihtml_option)
-
-class ['a, 'extra_option] html_option_t _ fa fself_option =
-  object
-    inherit [unit, 'a, HTML.er, unit, 'extra_option, HTML.er] option_t
-
-    method c_None inh___028_ _ =
-      HTML.ul (HTML.seq (List.cons (HTML.string "None") []))
-
-    method c_Some inh___029_ _ _x__030_ =
-      HTML.ul
-        (HTML.seq
-           (List.cons
-              (HTML.li (HTML.seq (List.cons (HTML.string "Some") [])))
-              (List.cons
-                 (HTML.li (HTML.seq (List.cons (fa () _x__030_) [])))
-                 [])))
-  end
-
-let html_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new html_option_t call fa) inh0 subj
-
-let html_option_fix =
-  Fix_html_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ihtml_option.i) ->
-            (match sym with Ihtml_option.Option -> html_option_0 f : a) ) } )
-
-module Ishow_option = Index_option (struct
-  type 'a result = unit -> 'a -> string
-end)
-
-module Fix_show_option = FixV (Ishow_option)
-
-class ['a, 'extra_option] show_option_t _ fa fself_option =
-  object
-    inherit [unit, 'a, string, unit, 'extra_option, string] option_t
-
-    method c_None inh___031_ _ = "None"
-
-    method c_Some inh___032_ _ _x__033_ =
-      Printf.sprintf "Some (%s)" (fa () _x__033_)
-  end
-
-let show_option_0 call fa inh0 subj =
-  transform_gc gcata_option (new show_option_t call fa) inh0 subj
-
-let show_option_fix =
-  Fix_show_option.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ishow_option.i) ->
-            (match sym with Ishow_option.Option -> show_option_0 f : a) ) } )
-
-let option: ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> 'syn,
+let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> 'syn,
               < show    : ('a -> string)      -> 'a option -> string;
                 html    : ('a -> HTML.viewer) -> 'a option -> HTML.viewer;
                 gmap    : ('a -> 'b)          -> 'a option -> 'b option;
@@ -1136,33 +440,21 @@ let option: ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> 's
                 eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool;
                 compare : ('a -> 'a -> comparison) -> 'a option -> 'a option -> comparison;
               >) t =
-  { gcata= gcata_option
-  ; plugins=
-      object
-        method eq = eq_option_0 eq_option_fix
+  {gcata   = gcata_option;
+   plugins = object
+               method show     fa = transform_gc gcata_option (new @option[show] (lift fa)) ()
+               method html     fa = transform_gc gcata_option (new @option[html] (lift fa)) ()
+               method gmap     fa = transform_gc gcata_option (new @option[gmap] (lift fa)) ()
 
-        method compare = compare_option_0 compare_option_fix
-
-        method foldr = foldr_option_0 foldr_option_fix
-
-        method foldl = foldl_option_0 foldl_option_fix
-
-        method stateful = stateful_option_0 stateful_option_fix
-
-        method eval = eval_option_0 eval_option_fix
-
-        method gmap fa subj =
-          gmap_option_fix.call Igmap_option.Option (lift fa) () subj
-
-        method fmt = fmt_option_0 fmt_option_fix
-
-        method html fa subj =
-          html_option_fix.call Ihtml_option.Option (lift fa) () subj
-
-        method show fa subj =
-          show_option_fix.call Ishow_option.Option (lift fa) () subj
-      end }
-
+               method fmt      fa = transform_gc gcata_option (new @option[fmt] fa)
+               method stateful fa = transform_gc gcata_option (new @option[stateful] fa)
+               method eval     fa = transform_gc gcata_option (new @option[eval] fa)
+               method eq       fa = transform_gc gcata_option (new @option[eq] fa)
+               method compare  fa = transform_gc gcata_option (new @option[compare] fa)
+               method foldl    fa = transform_gc gcata_option (new @option[foldl] fa)
+               method foldr    fa = transform_gc gcata_option (new @option[foldr] fa)
+             end
+  }
 
 (* ************************************************************************* *)
 (* Antiphantom type *)
@@ -1172,308 +464,65 @@ class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] free_t = object
 end
 let gcata_free tr inh subj = tr#c_Free inh subj subj
 
-module type IndexResult_free = sig
-  type 'a result
-
-  type 'dummy0 i = Free : ('a result -> 'a free result) i
-end
-
-module Index_free (S : sig
-  type 'a result
-end) =
-struct
-  type 'a result = 'a S.result
-
-  type 'dummy0 i = Free : ('a result -> 'a free result) i
-end
-
-module type IndexResult2_free = sig
-  type ('a, 'b) result
-
-  type 'dummy0 i = Free : (('a, 'a2) result -> ('a free, 'a2 free) result) i
-end
-
-module Index2_free (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-  type 'dummy0 i = Free : (('a, 'a2) result -> ('a free, 'a2 free) result) i
-end
-
-module type IndexResult_fold_free = sig
-  type ('a, 'syn) result
-
-  type 'dummy0 i = Free : (('a, 'syn) result -> ('a free, 'syn) result) i
-end
-
-module Index_fold_free (S : sig
-  type ('a, 'syn) result
-end) =
-struct
-  type ('a, 'syn) result = ('a, 'syn) S.result
-
-  type 'dummy0 i = Free : (('a, 'syn) result -> ('a free, 'syn) result) i
-end
-
-module type IndexResult_stateful_free = sig
-  type ('env, 'a, 'b) result
-
-  type 'dummy0 i =
-    | Free : (('env, 'a, 'a2) result -> ('env, 'a free, 'a2 free) result) i
-end
-
-module Index_stateful_free (S : sig
-  type ('env, 'a, 'b) result
-end) =
-struct
-  type ('env, 'a, 'b) result = ('env, 'a, 'b) S.result
-
-  type 'dummy0 i =
-    | Free : (('env, 'a, 'a2) result -> ('env, 'a free, 'a2 free) result) i
-end
-
-
-module Ishow_free = Index_free (struct
-  type 'a result = unit -> 'a -> string
-end)
-
-module Fix_show_free = FixV (Ishow_free)
-
-class ['a, 'extra_free] show_free_t _ fa  fself_free =
+class ['a, 'self] show_free_t fa _ =
   object
-    inherit [unit, 'a, string, unit, 'extra_free, string] free_t
-
-    method c_Free inh___002_ _ _x__003_ =
-      Printf.sprintf "(%s)" (fa () _x__003_)
+    inherit [unit, 'a, string, unit, 'self, string] free_t
+    method c_Free () _ x = Printf.sprintf "(%a)" fa x
+  end
+class ['a, 'self] html_free_t fa _ =
+  object
+    inherit [unit, 'a, 'syn, unit, 'self, 'syn] free_t
+    constraint 'syn = HTML.viewer
+    method c_Free () _ x = fa () x
+  end
+class ['a, 'sa, 'self] gmap_free_t fa _ =
+  object
+    inherit [unit, 'a, 'sa, unit, 'self, 'sa free] free_t
+    method c_Free () _ x = fa () x
   end
 
-let show_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new show_free_t call fa) inh0 subj
-
-let show_free_fix =
-  Fix_show_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ishow_free.i) ->
-            (match sym with Ishow_free.Free -> show_free_0 f : a) ) } )
-
-module Ifmt_free = Index_free (struct
-  type 'a result = Format.formatter -> 'a -> unit
-end)
-
-module Fix_fmt_free = FixV (Ifmt_free)
-
-class ['a, 'extra_free] fmt_free_t _ fa
-  fself_free =
+class ['a, 'self] fmt_free_t fa _ =
   object
-    inherit
-      [Format.formatter, 'a, unit, Format.formatter, 'extra_free, unit] free_t
-
-    method c_Free inh___004_ _ _x__005_ =
-      Format.fprintf inh___004_ "@[(@,%a@,)@]" fa _x__005_
+    inherit ['inh, 'a, unit, 'inh, 'self, unit] free_t
+    constraint 'inh = Format.formatter
+    method c_Free fmt _ x = Format.fprintf fmt "(%a)" fa x
+  end
+class ['a, 'sa, 'env, 'self] eval_free_t fa _ =
+  object
+    inherit ['emv, 'a, 'sa, 'env, 'self, 'sa free] free_t
+    method c_Free env _ x = fa env x
   end
 
-let fmt_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new fmt_free_t call fa) inh0 subj
-
-let fmt_free_fix =
-  Fix_fmt_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifmt_free.i) ->
-            (match sym with Ifmt_free.Free -> fmt_free_0 f : a) ) } )
-
-module Ihtml_free = Index_free (struct
-  type 'a result = unit -> 'a -> HTML.er
-end)
-
-module Fix_html_free = FixV (Ihtml_free)
-
-class ['a, 'extra_free] html_free_t _ fa
-  fself_free =
+class ['a, 'sa, 'env, 'self] stateful_free_t fa _ =
   object
-    inherit [unit, 'a, HTML.er, unit, 'extra_free, HTML.er] free_t
-
-    method c_Free inh___006_ _ _x__007_ =
-      HTML.ul
-        (HTML.seq
-           (List.cons
-              (HTML.li (HTML.seq (List.cons (HTML.string "Free") [])))
-              (List.cons
-                 (HTML.li (HTML.seq (List.cons (fa () _x__007_) [])))
-                 [])))
+    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa free] free_t
+    method c_Free env _ x = fa env x
   end
 
-let html_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new html_free_t call fa) inh0 subj
-
-let html_free_fix =
-  Fix_html_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ihtml_free.i) ->
-            (match sym with Ihtml_free.Free -> html_free_0 f : a) ) } )
-
-module Igmap_free = Index2_free (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_gmap_free = FixV (Igmap_free)
-
-class ['a, 'a_2, 'extra_free] gmap_free_t _ fa fself_free =
+class ['a, 'syn, 'self] foldl_free_t fa _ =
   object
-    inherit [unit, 'a, 'a_2, unit, 'extra_free, 'a_2 free] free_t
-
-    method c_Free inh___008_ _ _x__009_ = (fa inh___008_ _x__009_)
+    inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] free_t
+    method c_Free inh _ x = fa inh x
   end
 
-let gmap_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new gmap_free_t call fa) inh0 subj
-
-let gmap_free_fix =
-  Fix_gmap_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Igmap_free.i) ->
-            (match sym with Igmap_free.Free -> gmap_free_0 f : a) ) } )
-
-module Ieval_free = Index2_free (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_eval_free = FixV (Ieval_free)
-
-class ['a, 'a_2, 'env, 'extra_free] eval_free_t _ fa fself_free =
+class ['a, 'syn, 'self] foldr_free_t fa _ =
   object
-    inherit ['env, 'a, 'a_2, 'env, 'extra_free, 'a_2 free] free_t
-
-    method c_Free inh___010_ _ _x__011_ = (fa inh___010_ _x__011_)
+    inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] free_t
+    method c_Free inh _ x = fa inh x
   end
 
-let eval_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new eval_free_t call fa) inh0 subj
-
-let eval_free_fix =
-  Fix_eval_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieval_free.i) ->
-            (match sym with Ieval_free.Free -> eval_free_0 f : a) ) } )
-
-module Istateful_free = Index_stateful_free (struct
-  type ('env, 'a, 'b) result = 'env -> 'a -> 'env * 'b
-end)
-
-module Fix_stateful_free = FixV (Istateful_free)
-
-class ['a, 'a_2, 'env, 'extra_free] stateful_free_t _ fa fself_free =
+class ['a, 'self] eq_free_t fa _ =
   object
-    inherit ['env, 'a, 'env * 'a_2, 'env, 'extra_free, 'env * 'a_2 free] free_t
-
-    method c_Free inh___012_ _ _x__013_ =
-      let env1, _x__013__rez = fa inh___012_ _x__013_ in
-      (env1,  _x__013__rez)
+    inherit ['a, 'a, bool, 'a free, 'self, bool] free_t
+    method c_Free inh _ x = fa inh x
   end
 
-let stateful_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new stateful_free_t call fa) inh0 subj
-
-let stateful_free_fix =
-  Fix_stateful_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Istateful_free.i) ->
-            (match sym with Istateful_free.Free -> stateful_free_0 f : a) ) }
-  )
-
-module Icompare_free = Index_free (struct
-  type 'a result = 'a -> 'a -> comparison
-end)
-
-module Fix_compare_free = FixV (Icompare_free)
-
-class ['a, 'extra_free] compare_free_t _  fa fself_free =
+class ['a, 'self] compare_free_t fa _ =
   object
-    inherit ['a, 'a, comparison, 'a free, 'extra_free, comparison] free_t
-
-    method c_Free inh___014_ _ _x__015_ =
-      match inh___014_ with
-      | _x__016_ -> chain_compare EQ (fun () -> fa _x__016_ _x__015_)
+    inherit ['a, 'a, 'syn, 'a free, 'self, 'syn] free_t
+    constraint 'syn = comparison
+    method c_Free z _ x = fa z x
   end
-
-let compare_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new compare_free_t call fa) inh0 subj
-
-let compare_free_fix =
-  Fix_compare_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Icompare_free.i) ->
-            (match sym with Icompare_free.Free -> compare_free_0 f : a) ) } )
-
-module Ieq_free = Index_free (struct
-  type 'a result = 'a -> 'a -> bool
-end)
-
-module Fix_eq_free = FixV (Ieq_free)
-
-class ['a, 'extra_free] eq_free_t _ fa
-  fself_free =
-  object
-    inherit ['a, 'a, bool, 'a free, 'extra_free, bool] free_t
-
-    method c_Free inh___017_ _ _x__018_ =
-      match inh___017_ with
-      | _x__019_ -> true && fa _x__019_ _x__018_
-  end
-
-let eq_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new eq_free_t call fa) inh0 subj
-
-let eq_free_fix =
-  Fix_eq_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieq_free.i) ->
-            (match sym with Ieq_free.Free -> eq_free_0 f : a) ) } )
-
-module Ifoldl_free = Index_fold_free (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldl_free = FixV (Ifoldl_free)
-
-class ['a, 'syn, 'extra_free] foldl_free_t _  fa fself_free =
-  object
-    inherit ['syn, 'a, 'syn, 'syn, 'extra_free, 'syn] free_t
-
-    method c_Free inh___020_ _ _x__021_ = fa inh___020_ _x__021_
-  end
-
-let foldl_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new foldl_free_t call fa) inh0 subj
-
-let foldl_free_fix =
-  Fix_foldl_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldl_free.i) ->
-            (match sym with Ifoldl_free.Free -> foldl_free_0 f : a) ) } )
-
-module Ifoldr_free = Index_fold_free (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldr_free = FixV (Ifoldr_free)
-
-class ['a, 'syn, 'extra_free] foldr_free_t _ fa fself_free =
-  object
-    inherit ['syn, 'a, 'syn, 'syn, 'extra_free, 'syn] free_t
-
-    method c_Free inh___022_ _ _x__023_ = fa inh___022_ _x__023_
-  end
-
-let foldr_free_0 call fa inh0 subj =
-  transform_gc gcata_free (new foldr_free_t call fa) inh0 subj
-
-let foldr_free_fix =
-  Fix_foldr_free.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldr_free.i) ->
-            (match sym with Ifoldr_free.Free -> foldr_free_0 f : a) ) } )
 
 let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               < show    : ('a -> string)      -> 'a free -> string;
@@ -1493,440 +542,104 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
               >) t =
   {gcata   = gcata_free;
    plugins = object
-        method show fa subj =
-          show_free_fix.call Ishow_free.Free (lift fa) () subj
+       method show     fa = transform_gc gcata_free (new @free[show] (lift fa)) ()
+       method gmap     fa = transform_gc gcata_free (new @free[gmap] (lift fa)) ()
+       method html     fa = transform_gc gcata_free (new @free[html] (lift fa)) ()
 
-        method fmt = fmt_free_0 fmt_free_fix
-
-        method html fa subj =
-          html_free_fix.call Ihtml_free.Free (lift fa) () subj
-
-        method gmap fa subj =
-          gmap_free_fix.call Igmap_free.Free (lift fa) () subj
-
-        method eval = eval_free_0 eval_free_fix
-
-        method stateful = stateful_free_0 stateful_free_fix
-
-        method compare = compare_free_0 compare_free_fix
-
-        method eq = eq_free_0 eq_free_fix
-
-        method foldl = foldl_free_0 foldl_free_fix
-
-        method foldr = foldr_free_0 foldr_free_fix
+       method fmt      fa = transform_gc gcata_free (new @free[fmt] fa)
+       method eval     fa = transform_gc gcata_free (new @free[eval]  fa)
+       method stateful fa = transform_gc gcata_free (new @free[stateful] fa)
+       method eq       fa = transform_gc gcata_free (new @free[eq] fa)
+       method compare  fa = transform_gc gcata_free (new @free[compare] fa)
+       method foldl    fa = transform_gc gcata_free (new @free[foldl] fa)
+       method foldr    fa = transform_gc gcata_free (new @free[foldr] fa)
   end
   }
 
-(* *************************************************************************** *)
+
 (* Pairs and other stuff without explicit structure *)
 type ('a, 'b) pair = 'a * 'b
 
-class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'extra, 'syn] pair_t =
+let gcata_pair tr inh p =
+  match p with
+  | (a, b) -> tr#c_Pair inh p a b
+
+class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t =
   object
-    method virtual c_Pair : 'inh -> ('a, 'b) pair -> 'a -> 'b -> 'syn
+    method virtual c_Pair : 'inh -> 'a*'b -> 'a -> 'b -> 'syn
   end
 
-let gcata_pair tr inh subj =
-  match subj with  (_x__001_, _x__002_) -> tr#c_Pair inh subj _x__001_ _x__002_
-
-module type IndexResult_pair = sig
-  type 'a result
-
-type 'dummy1 i = Pair : ('a result -> 'b result -> ('a, 'b) pair result) i
-end
-
-module Index_pair (S : sig
-  type 'a result
-end) =
-struct
-  type 'a result = 'a S.result
-
-type 'dummy1 i = Pair : ('a result -> 'b result -> ('a, 'b) pair result) i
-end
-
-module type IndexResult2_pair = sig
-  type ('a, 'b) result
-
-type 'dummy1 i =
-    | Pair
-        : (   ('a, 'a2) result
-           -> ('b, 'b2) result
-           -> (('a, 'b) pair, ('a2, 'b2) pair) result)
-          i
-end
-
-module Index2_pair (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-type 'dummy1 i =
-    | Pair
-        : (   ('a, 'a2) result
-           -> ('b, 'b2) result
-           -> (('a, 'b) pair, ('a2, 'b2) pair) result)
-          i
-end
-
-module type IndexResult_fold_pair = sig
-  type ('a, 'b) result
-
-  type 'dummy1 i =
-    | Pair
-        : (   ('a, 'a2) result
-           -> ('b, 'b2) result
-           -> (('a, 'b) pair, 'a2) result)
-          i
-end
-
-module Index_fold_pair (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-type 'dummy1 i =
-    | Pair
-        : (   ('a, 's) result
-           -> ('b, 's) result
-           -> (('a, 'b) pair, 's) result)
-          i
-end
-
-module type IndexResult_stateful_pair = sig
-  type ('env, 'a, 'b) result
-
-type 'dummy1 i =
-    | Pair
-        : (   ('env, 'a, 'a2) result
-           -> ('env, 'b, 'b2) result
-           -> ('env, ('a, 'b) pair, ('a2, 'b2) pair) result)
-          i
-end
-
-module Index_stateful_pair (S : sig
-  type ('env, 'a, 'b) result
-end) =
-struct
-  type ('env, 'a, 'b) result = ('env, 'a, 'b) S.result
-
-type 'dummy1 i =
-    | Pair
-        : (   ('env, 'a, 'a2) result
-           -> ('env, 'b, 'b2) result
-           -> ('env, ('a, 'b) pair, ('a2, 'b2) pair) result)
-          i
-end
-
-module Ieq_pair = Index_pair (struct
-  type 'a result = 'a -> 'a -> bool
-end)
-
-module Fix_eq_pair = FixV (Ieq_pair)
-
-class ['a, 'b, 'extra_pair] eq_pair_t _  fa fb fself_pair =
+class ['a, 'b, 'self] show_pair_t fa fb _ =
   object
-    inherit
-      ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, 'extra_pair, bool] pair_t
-
-    method c_Pair inh___003_ _ _x__004_ _x__005_ =
-      match inh___003_ with
-      |  (_x__006_, _x__007_) ->
-          (true && fa _x__006_ _x__004_) && fb _x__007_ _x__005_
+    inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] pair_t
+    method c_Pair () _ x y = Printf.sprintf "(%a, %a)" fa x fb y
+  end
+class ['a, 'b, 'self] fmt_pair_t fa fb _ =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] pair_t
+    constraint 'inh = Format.formatter
+    method c_Pair fmt _ x y = Format.fprintf fmt "(%a,%a)" fa x fb y
   end
 
-let eq_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new eq_pair_t call fa fb) inh0 subj
-
-let eq_pair_fix =
-  Fix_eq_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieq_pair.i) ->
-            (match sym with Ieq_pair.Pair -> eq_pair_0 f : a) ) } )
-
-module Icompare_pair = Index_pair (struct
-  type 'a result = 'a -> 'a -> comparison
-end)
-
-module Fix_compare_pair = FixV (Icompare_pair)
-
-class ['a, 'b, 'extra_pair] compare_pair_t _  fa fb fself_pair =
+class ['a, 'b, 'self] html_pair_t fa fb _ =
   object
-    inherit
-      [ 'a
-      , 'a
-      , comparison
-      , 'b
-      , 'b
-      , comparison
-      , ('a, 'b) pair
-      , 'extra_pair
-      , comparison ]
-      pair_t
-
-    method c_Pair inh___008_ _ _x__009_ _x__010_ =
-      match inh___008_ with
-      |  (_x__011_, _x__012_) ->
-          chain_compare
-            (chain_compare EQ (fun () -> fa _x__011_ _x__009_))
-            (fun () -> fb _x__012_ _x__010_)
+    inherit [unit, 'a, 'syn, unit, 'b, 'syn, unit, 'self, 'syn] pair_t
+    constraint 'syn = HTML.viewer
+    method c_Pair () _ x y =
+      List.fold_left View.concat View.empty
+         [ HTML.ul (fa () x)
+         ; HTML.ul (fb () y)
+         ]
   end
 
-let compare_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new compare_pair_t call fa fb) inh0 subj
-
-let compare_pair_fix =
-  Fix_compare_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Icompare_pair.i) ->
-            (match sym with Icompare_pair.Pair -> compare_pair_0 f : a)
-            ) } )
-
-module Ifoldr_pair = Index_fold_pair (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldr_pair = FixV (Ifoldr_pair)
-
-class ['a, 'b, 'syn, 'extra_pair] foldr_pair_t _  fa fb fself_pair =
+class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t (fa: unit -> 'a -> 'sa) fb _ =
   object
-    inherit
-      ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'extra_pair, 'syn] pair_t
-
-    method c_Pair inh___013_ _ _x__014_ _x__015_ =
-      fa (fb inh___013_ _x__015_) _x__014_
+    inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, ('sa, 'sb) pair] pair_t
+    method c_Pair () _ x y = (fa () x, fb () y)
   end
 
-let foldr_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new foldr_pair_t call fa fb) inh0 subj
-
-let foldr_pair_fix =
-  Fix_foldr_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldr_pair.i) ->
-            (match sym with Ifoldr_pair.Pair -> foldr_pair_0 f : a) ) }
-  )
-
-module Ifoldl_pair = Index_fold_pair (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldl_pair = FixV (Ifoldl_pair)
-
-class ['a, 'b, 'syn, 'extra_pair] foldl_pair_t _  fa fb fself_pair =
+class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_pair_t fa fb _ =
   object
-    inherit
-      ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'extra_pair, 'syn] pair_t
-
-    method c_Pair inh___016_ _ _x__017_ _x__018_ =
-      fb (fa inh___016_ _x__017_) _x__018_
+    inherit ['env, 'a, 'sa, 'env, 'b, 'sb, 'env, 'self, ('sa, 'sb) pair] pair_t
+    method c_Pair env _ x y = (fa env x, fb env y)
+  end
+class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t fa fb _ =
+  object
+    inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * ('sa, 'sb) pair] pair_t
+    method c_Pair env _ x y =
+      let env1,l = fa env x in
+      let env2,r = fb env y in
+      env, (l,r)
   end
 
-let foldl_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new foldl_pair_t call fa fb) inh0 subj
-
-let foldl_pair_fix =
-  Fix_foldl_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldl_pair.i) ->
-            (match sym with Ifoldl_pair.Pair -> foldl_pair_0 f : a) ) }
-  )
-
-module Istateful_pair = Index_stateful_pair (struct
-  type ('env, 'a, 'b) result = 'env -> 'a -> 'env * 'b
-end)
-
-module Fix_stateful_pair = FixV (Istateful_pair)
-
-class ['a, 'a_2, 'b, 'b_2, 'env, 'extra_pair] stateful_pair_t _  fa fb fself_pair =
+class ['a, 'b, 'syn, 'self] foldl_pair_t fa fb _ =
   object
-    inherit
-      [ 'env
-      , 'a
-      , 'env * 'a_2
-      , 'env
-      , 'b
-      , 'env * 'b_2
-      , 'env
-      , 'extra_pair
-      , 'env * ('a_2, 'b_2) pair ]
-      pair_t
-
-    method c_Pair inh___019_ _ _x__020_ _x__021_ =
-      let env1, _x__020__rez = fa inh___019_ _x__020_ in
-      let env2, _x__021__rez = fb env1 _x__021_ in
-      (env2,  (_x__020__rez, _x__021__rez))
+    inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] pair_t
+    method c_Pair s _ x y = fb (fa s x) y
   end
 
-let stateful_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new stateful_pair_t call fa fb) inh0 subj
-
-let stateful_pair_fix =
-  Fix_stateful_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Istateful_pair.i) ->
-            ( match sym with Istateful_pair.Pair -> stateful_pair_0 f
-              : a ) ) } )
-
-module Ieval_pair = Index2_pair (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_eval_pair = FixV (Ieval_pair)
-
-class ['a, 'a_2, 'b, 'b_2, 'env, 'extra_pair] eval_pair_t _  fa fb fself_pair =
+class ['a, 'b, 'syn, 'self] foldr_pair_t fa fb _ =
   object
-    inherit
-      [ 'env
-      , 'a
-      , 'a_2
-      , 'env
-      , 'b
-      , 'b_2
-      , 'env
-      , 'extra_pair
-      , ('a_2, 'b_2) pair ]
-      pair_t
-
-    method c_Pair inh___022_ _ _x__023_ _x__024_ =
-       (fa inh___022_ _x__023_, fb inh___022_ _x__024_)
+    inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] pair_t
+    method c_Pair s _ x y = fa (fb s y) x
   end
 
-let eval_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new eval_pair_t call fa fb) inh0 subj
-
-let eval_pair_fix =
-  Fix_eval_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieval_pair.i) ->
-            (match sym with Ieval_pair.Pair -> eval_pair_0 f : a) ) } )
-
-module Igmap_pair = Index2_pair (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_gmap_pair = FixV (Igmap_pair)
-
-class ['a, 'a_2, 'b, 'b_2, 'extra_pair] gmap_pair_t _  fa fb fself_pair =
+class ['a, 'b, 'self] eq_pair_t fa fb _ =
   object
-    inherit
-      [ unit
-      , 'a
-      , 'a_2
-      , unit
-      , 'b
-      , 'b_2
-      , unit
-      , 'extra_pair
-      , ('a_2, 'b_2) pair ]
-      pair_t
-
-    method c_Pair inh___025_ _ _x__026_ _x__027_ =
-       (fa inh___025_ _x__026_, fb inh___025_ _x__027_)
+    inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) pair, 'self, bool] pair_t
+    method c_Pair inh _ x y =
+      match inh with
+      (z, t) -> fa z x && fb t y
   end
 
-let gmap_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new gmap_pair_t call fa fb) inh0 subj
-
-let gmap_pair_fix =
-  Fix_gmap_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Igmap_pair.i) ->
-            (match sym with Igmap_pair.Pair -> gmap_pair_0 f : a) ) } )
-
-module Ifmt_pair = Index_pair (struct
-  type 'a result = Format.formatter -> 'a -> unit
-end)
-
-module Fix_fmt_pair = FixV (Ifmt_pair)
-
-class ['a, 'b, 'extra_pair] fmt_pair_t _  fa fb fself_pair =
+class ['a, 'b, 'self] compare_pair_t fa fb _ =
   object
-    inherit
-      [ Format.formatter
-      , 'a
-      , unit
-      , Format.formatter
-      , 'b
-      , unit
-      , Format.formatter
-      , 'extra_pair
-      , unit ]
-      pair_t
-
-    method c_Pair inh___028_ _ _x__029_ _x__030_ =
-      Format.fprintf inh___028_ "@[(@,%a,@,@ %a@,)@]" fa _x__029_ fb
-        _x__030_
+    inherit ['a, 'a, 'syn, 'b, 'b, 'syn, ('a, 'b) pair, 'self, 'syn] pair_t
+    constraint 'syn = comparison
+    method c_Pair (z,t) _ x y = (match fa z x with EQ -> fb t y | c -> c)
   end
 
-let fmt_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new fmt_pair_t call fa fb) inh0 subj
-
-let fmt_pair_fix =
-  Fix_fmt_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifmt_pair.i) ->
-            (match sym with Ifmt_pair.Pair -> fmt_pair_0 f : a) ) } )
-
-module Ihtml_pair = Index_pair (struct
-  type 'a result = unit -> 'a -> HTML.er
-end)
-
-module Fix_html_pair = FixV (Ihtml_pair)
-
-class ['a, 'b, 'extra_pair] html_pair_t _  fa fb fself_pair =
-  object
-    inherit
-      [unit, 'a, HTML.er, unit, 'b, HTML.er, unit, 'extra_pair, HTML.er] pair_t
-
-    method c_Pair inh___031_ _ _x__032_ _x__033_ =
-      HTML.ul
-        (HTML.seq
-           (List.cons
-              (HTML.li (HTML.seq (List.cons (HTML.string "") [])))
-              (List.cons
-                 (HTML.li (HTML.seq (List.cons (fa () _x__032_) [])))
-                 (List.cons
-                    (HTML.li (HTML.seq (List.cons (fb () _x__033_) [])))
-                    []))))
-  end
-
-let html_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new html_pair_t call fa fb) inh0 subj
-
-let html_pair_fix =
-  Fix_html_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ihtml_pair.i) ->
-            (match sym with Ihtml_pair.Pair -> html_pair_0 f : a) ) } )
-
-module Ishow_pair = Index_pair (struct
-  type 'a result = unit -> 'a -> string
-end)
-
-module Fix_show_pair = FixV (Ishow_pair)
-
-class ['a, 'b, 'extra_pair] show_pair_t _  fa fb fself_pair =
-  object
-    inherit
-      [unit, 'a, string, unit, 'b, string, unit, 'extra_pair, string] pair_t
-
-    method c_Pair inh___034_ _ _x__035_ _x__036_ =
-      Printf.sprintf "(%s, %s)" (fa () _x__035_) (fb () _x__036_)
-  end
-
-let show_pair_0 call fa fb inh0 subj =
-  transform_gc gcata_pair (new show_pair_t call fa fb) inh0 subj
-
-let show_pair_fix =
-  Fix_show_pair.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ishow_pair.i) ->
-            (match sym with Ishow_pair.Pair -> show_pair_0 f : a) ) } )
-
-let pair :
+let pair:
   ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, _, 'syn) #pair_t -> 'inh -> ('a, 'b) pair -> 'syn,
               < show    : ('a -> string) -> ('b -> string) ->
                           ('a, 'b) pair -> string;
@@ -1950,35 +663,24 @@ let pair :
                 compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) ->
                           ('a, 'b) pair -> ('a, 'b) pair -> comparison;
               >) t =
-  { gcata= gcata_pair
-  ; plugins=
-      object
-        method eq = eq_pair_0 eq_pair_fix
+  {gcata   = gcata_pair;
+   plugins =
+     let tr  obj subj     = transform_gc gcata_pair obj ()  subj in
+     let tr1 obj inh subj = transform_gc gcata_pair obj inh subj in
+     object
+       method show     fa fb = tr  (new @pair[show] (lift fa) (lift fb))
+       method html     fa fb = tr  (new @pair[html] (lift fa) (lift fb))
+       method gmap     fa fb = tr  (new @pair[gmap] (lift fa) (lift fb))
 
-        method compare = compare_pair_0 compare_pair_fix
-
-        method foldr = foldr_pair_0 foldr_pair_fix
-
-        method foldl = foldl_pair_0 foldl_pair_fix
-
-        method stateful = stateful_pair_0 stateful_pair_fix
-
-        method eval = eval_pair_0 eval_pair_fix
-
-        method gmap fa fb subj =
-          gmap_pair_fix.call Igmap_pair.Pair (lift fa) (lift fb) ()
-            subj
-
-        method fmt = fmt_pair_0 fmt_pair_fix
-
-        method html fa fb subj =
-          html_pair_fix.call Ihtml_pair.Pair (lift fa) (lift fb) ()
-            subj
-
-        method show fa fb subj =
-          show_pair_fix.call Ishow_pair.Pair (lift fa) (lift fb) ()
-            subj
-      end }
+       method fmt      fa fb = tr1 (new @pair[fmt]  fa fb)
+       method eval     fa fb = tr1 (new @pair[eval] fa fb)
+       method stateful fa fb = tr1 (new @pair[stateful] fa fb)
+       method eq       fa fb = tr1 (new @pair[eq]   fa fb)
+       method compare  fa fb = tr1 (new @pair[compare] fa fb)
+       method foldl    fa fb = tr1 (new @pair[foldl] fa fb)
+       method foldr    fa fb = tr1 (new @pair[foldr] fa fb)
+  end
+ }
 
 class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] tuple2_t = object
       inherit ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] pair_t
@@ -1987,546 +689,149 @@ let gcata_tuple2 = gcata_pair
 let tuple2 = pair
 
 (* Just aliases *)
-class ['a, 'b, 'self] show_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'self] show_pair_t m fa fb fself
+class ['a, 'b, 'self] show_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] show_pair_t fa fb fself
 end
-let show_tuple2_fix = show_pair_fix
-class ['a, 'b, 'self] fmt_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'self] fmt_pair_t m fa fb fself
+class ['a, 'b, 'self] fmt_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] fmt_pair_t fa fb fself
 end
-let fmt_tuple2_fix = fmt_pair_fix
-class ['a, 'b, 'self] html_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'self] html_pair_t m fa fb fself
+class ['a, 'b, 'self] html_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] html_pair_t fa fb fself
 end
-let html_tuple2_fix = html_pair_fix
-class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t m fa fb fself
+class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t fa fb fself
 end
-let gmap_tuple2_fix = gmap_pair_fix
-class ['a, 'a2, 'b, 'b2, 'env, 'self] eval_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] eval_pair_t m fa fb fself
+class ['a, 'a2, 'b, 'b2, 'env, 'self] eval_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] eval_pair_t fa fb fself
 end
-let eval_tuple2_fix = eval_pair_fix
-class ['a, 'a2, 'b, 'b2, 'env, 'self] stateful_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] stateful_pair_t m fa fb fself
+class ['a, 'a2, 'b, 'b2, 'env, 'self] stateful_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] stateful_pair_t fa fb fself
 end
-let stateful_tuple2_fix = stateful_pair_fix
-class ['a, 'b, 'self] compare_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'self] compare_pair_t m fa fb fself
+class ['a, 'b, 'self] compare_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] compare_pair_t fa fb fself
 end
-let compare_tuple2_fix = compare_pair_fix
-class ['a, 'b, 'self] eq_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'self] eq_pair_t m fa fb fself
+class ['a, 'b, 'self] eq_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'self] eq_pair_t fa fb fself
 end
-let eq_tuple2_fix = eq_pair_fix
-class ['a, 'b, 'syn, 'self] foldl_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'syn, 'self] foldl_pair_t m fa fb fself
+class ['a, 'b, 'syn, 'self] foldl_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'syn, 'self] foldl_pair_t fa fb fself
 end
-let foldl_tuple2_fix = foldl_pair_fix
-class ['a, 'b, 'syn, 'self] foldr_tuple2_t m fa fb fself = object
-  inherit [ 'a, 'b, 'syn, 'self] foldr_pair_t m fa fb fself
+class ['a, 'b, 'syn, 'self] foldr_tuple2_t fa fb fself = object
+  inherit [ 'a, 'b, 'syn, 'self] foldr_pair_t fa fb fself
 end
-let foldr_tuple2_fix = foldr_pair_fix
 
 (*******************************************************************************)
 (* Tuples of size 3 *)
 type ('a,'b,'c) triple = 'a * 'b * 'c
+class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'inh, 'e, 'syn] triple_t = object
+  method virtual c_Triple : 'inh -> 'a -> 'b -> 'c -> 'syn
+end
+class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'inh, 'e, 'syn] tuple3_t = object
+  inherit     ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'inh, 'e, 'syn] triple_t
+end
+let gcata_triple tr inh (a,b,c) = tr#c_Triple inh a b c
+let gcata_tuple3 = gcata_triple
 
-class virtual
-  ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'inh, 'extra, 'syn] triple_t =
+class ['a, 'b, 'c, 'self] show_triple_t fa fb fc _ =
   object
-    method virtual c_Triple
-        : 'inh -> ('a, 'b, 'c) triple -> 'a -> 'b -> 'c -> 'syn
+    inherit [ unit, 'a, string
+            , unit, 'b, string
+            , unit, 'c, string
+            , unit, 'self, string] @triple
+    method c_Triple () x y z = Printf.sprintf "(%a, %a, %a)"
+      fa x fb y fc z
+end
+class ['a, 'b, 'c, 'self] fmt_triple_t fa fb fc _ =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'c, unit, 'inh, 'self, unit] triple_t
+    constraint 'inh = Format.formatter
+    method c_Triple fmt x y z = Format.fprintf fmt "(%a,%a,%a)" fa x fb y fc z
   end
-let gcata_triple tr inh ((a,b,c) as subj) = tr#c_Triple inh subj a b c
 
-module type IndexResult_triple = sig
-  type 'a result
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t fa fb fc _ =
+  object
+    inherit [ unit, 'a, 'a2
+            , unit, 'b, 'b2
+            , unit, 'c, 'c2
+            , unit, 'self, ('a2,'b2,'c2) triple ] @triple
+    method c_Triple () x y z = ( fa () x, fb () y, fc () z)
+end
+class ['a, 'b, 'c, 'self] html_triple_t fa fb fc _ =
+  object
+    inherit [ unit, 'a, 'syn, unit, 'b, 'syn, unit, 'c, 'syn
+            , unit, 'self, 'syn] triple_t
+    constraint 'syn = HTML.viewer
+    method c_Triple () x y z =
+      List.fold_left View.concat View.empty
+         [ HTML.string "("
+         ; HTML.ul (fa () x)
+         ; HTML.string ", "
+         ; HTML.ul (fb () y)
+         ; HTML.string ", "
+         ; HTML.ul (fc () z)
+         ; HTML.string ")"]
+  end
 
-  type 'dummy0 i =
-    | Triple
-        : ('a result -> 'b result -> 'c result -> ('a, 'b, 'c) triple result) i
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] eval_triple_t fa fb fc _ =
+  object
+    inherit [ 'env, 'a, 'a2
+            , 'env, 'b, 'b2
+            , 'env, 'c, 'c2
+            , 'env, 'self, ('a2,'b2,'c2) triple ] @triple
+    method c_Triple e x y z = ( (fa e x), (fb e y), (fc e z) )
+end
+class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] stateful_triple_t fa fb fc _ =
+  object
+    inherit [ 'env, 'a, 'env * 'a2
+            , 'env, 'b, 'env * 'b2
+            , 'env, 'c, 'env * 'c2
+            , 'env, 'self, 'env * ('a2,'b2,'c2) triple ] @triple
+    method c_Triple env0 x y z =
+      let env1,a = fa env0 x in
+      let env2,b = fb env1 y in
+      let env3,c = fc env2 z in
+      env3, (a,b,c)
+end
+class ['a, 'b, 'c, 'self] compare_triple_t fa fb fc _ =
+  object
+    inherit [ 'a, 'a, 'syn
+            , 'b, 'b, 'syn
+            , 'c, 'c, 'syn
+            , 'inh, 'self, 'syn ] @triple
+    constraint 'inh = ('a, 'b, 'c) triple
+    constraint 'syn = comparison
+    method c_Triple (a,b,c) x y z =
+      chain_compare (fa a x) @@ fun _ ->
+      chain_compare (fb b y) @@ fun _ ->
+       (fc c z)
 end
 
-module Index_triple (S : sig
-  type 'a result
-end) =
-struct
-  type 'a result = 'a S.result
-
-  type 'dummy0 i =
-    | Triple
-        : ('a result -> 'b result -> 'c result -> ('a, 'b, 'c) triple result) i
-end
-
-module type IndexResult2_triple = sig
-  type ('a, 'b) result
-
-  type 'dummy0 i =
-    | Triple
-        : (   ('a, 'a2) result
-           -> ('b, 'b2) result
-           -> ('c, 'c2) result
-           -> (('a, 'b, 'c) triple, ('a2, 'b2, 'c2) triple) result)
-          i
-end
-
-module Index2_triple (S : sig
-  type ('a, 'b) result
-end) =
-struct
-  type ('a, 'b) result = ('a, 'b) S.result
-
-  type 'dummy0 i =
-    | Triple
-        : (   ('a, 'a2) result
-           -> ('b, 'b2) result
-           -> ('c, 'c2) result
-           -> (('a, 'b, 'c) triple, ('a2, 'b2, 'c2) triple) result)
-          i
-end
-
-module type IndexResult_fold_triple = sig
-  type ('a, 'syn) result
-
-  type 'dummy0 i =
-    | Triple
-        : (   ('a, 'syn) result
-           -> ('b, 'syn) result
-           -> ('c, 'syn) result
-           -> (('a, 'b, 'c) triple, 'syn) result)
-          i
-end
-
-module Index_fold_triple (S : sig
-  type ('a, 'syn) result
-end) =
-struct
-  type ('a, 'syn) result = ('a, 'syn) S.result
-
-  type 'dummy0 i =
-    | Triple
-        : (   ('a, 'syn) result
-           -> ('b, 'syn) result
-           -> ('c, 'syn) result
-           -> (('a, 'b, 'c) triple, 'syn) result)
-          i
-end
-
-module type IndexResult_stateful_triple = sig
-  type ('env, 'a, 'b) result
-
-  type 'dummy0 i =
-    | Triple
-        : (   ('env, 'a, 'a2) result
-           -> ('env, 'b, 'b2) result
-           -> ('env, 'c, 'c2) result
-           -> ('env, ('a, 'b, 'c) triple, ('a2, 'b2, 'c2) triple) result)
-          i
-end
-
-module Index_stateful_triple (S : sig
-  type ('env, 'a, 'b) result
-end) =
-struct
-  type ('env, 'a, 'b) result = ('env, 'a, 'b) S.result
-
-  type 'dummy0 i =
-    | Triple
-        : (   ('env, 'a, 'a2) result
-           -> ('env, 'b, 'b2) result
-           -> ('env, 'c, 'c2) result
-           -> ('env, ('a, 'b, 'c) triple, ('a2, 'b2, 'c2) triple) result)
-          i
-end
-
-module Ishow_triple = Index_triple (struct
-  type 'a result = unit -> 'a -> string
-end)
-
-module Fix_show_triple = FixV (Ishow_triple)
-
-class ['a, 'b, 'c, 'extra_triple] show_triple_t _ fa fb fc fself_triple =
+class ['a, 'b, 'c, 'self] eq_triple_t fa fb fc _ =
   object
-    inherit
-      [ unit
-      , 'a
-      , string
-      , unit
-      , 'b
-      , string
-      , unit
-      , 'c
-      , string
-      , unit
-      , 'extra_triple
-      , string ]
-      triple_t
-
-    method c_Triple inh___004_ _ _x__005_ _x__006_ _x__007_ =
-      Printf.sprintf "(%s, %s, %s)" (fa () _x__005_) (fb () _x__006_)
-        (fc () _x__007_)
+    inherit [ 'a, 'a, bool
+            , 'b, 'b, bool
+            , 'c, 'c, bool
+            , ('a, 'b, 'c) triple, 'self, bool] @triple
+    method c_Triple inh x y z =
+      match inh with
+      (a, b, c) -> fa a x && fb b y && fc c z
   end
 
-let show_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new show_triple_t call fa fb fc) inh0 subj
-
-let show_triple_fix =
-  Fix_show_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ishow_triple.i) ->
-            (match sym with Ishow_triple.Triple -> show_triple_0 f : a) ) } )
-
-module Ifmt_triple = Index_triple (struct
-  type 'a result = Format.formatter -> 'a -> unit
-end)
-
-module Fix_fmt_triple = FixV (Ifmt_triple)
-
-class ['a, 'b, 'c, 'extra_triple] fmt_triple_t _ fa fb fc fself_triple =
+class ['a, 'b, 'c, 'syn, 'self] foldl_triple_t fa fb fc _ =
   object
-    inherit
-      [ Format.formatter
-      , 'a
-      , unit
-      , Format.formatter
-      , 'b
-      , unit
-      , Format.formatter
-      , 'c
-      , unit
-      , Format.formatter
-      , 'extra_triple
-      , unit ]
-      triple_t
-
-    method c_Triple inh___008_ _ _x__009_ _x__010_ _x__011_ =
-      Format.fprintf inh___008_ "Triple@ @[(@,%a,@,@ %a,@,@ %a@,)@]" fa
-        _x__009_ fb _x__010_ fc _x__011_
+    inherit [ 'syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'c, 'syn
+            , 'syn, 'self, 'syn] @triple
+    method c_Triple s x y z = fc (fb (fa s x) y) z
   end
 
-let fmt_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new fmt_triple_t call fa fb fc) inh0 subj
-
-let fmt_triple_fix =
-  Fix_fmt_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifmt_triple.i) ->
-            (match sym with Ifmt_triple.Triple -> fmt_triple_0 f : a) ) } )
-
-module Ihtml_triple = Index_triple (struct
-  type 'a result = unit -> 'a -> HTML.er
-end)
-
-module Fix_html_triple = FixV (Ihtml_triple)
-
-class ['a, 'b, 'c, 'extra_triple] html_triple_t _ fa fb fc fself_triple =
+class ['a, 'b, 'c, 'syn, 'self] foldr_triple_t fa fb fc _ =
   object
-    inherit
-      [ unit
-      , 'a
-      , HTML.er
-      , unit
-      , 'b
-      , HTML.er
-      , unit
-      , 'c
-      , HTML.er
-      , unit
-      , 'extra_triple
-      , HTML.er ]
-      triple_t
-
-    method c_Triple inh___012_ _ _x__013_ _x__014_ _x__015_ =
-      HTML.ul
-        (HTML.seq
-           (List.cons
-              (HTML.li (HTML.seq (List.cons (HTML.string "Triple") [])))
-              (List.cons
-                 (HTML.li (HTML.seq (List.cons (fa () _x__013_) [])))
-                 (List.cons
-                    (HTML.li (HTML.seq (List.cons (fb () _x__014_) [])))
-                    (List.cons
-                       (HTML.li (HTML.seq (List.cons (fc () _x__015_) [])))
-                       [])))))
+    inherit [ 'syn, 'a, 'syn
+            , 'syn, 'b, 'syn
+            , 'syn, 'c, 'syn
+            , 'syn, 'self, 'syn] triple_t
+    method c_Triple s x y z = fa (fb (fc s z) y) x
   end
-
-let html_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new html_triple_t call fa fb fc) inh0 subj
-
-let html_triple_fix =
-  Fix_html_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ihtml_triple.i) ->
-            (match sym with Ihtml_triple.Triple -> html_triple_0 f : a) ) } )
-
-module Igmap_triple = Index2_triple (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_gmap_triple = FixV (Igmap_triple)
-
-class ['a, 'a_2, 'b, 'b_2, 'c, 'c_2, 'extra_triple] gmap_triple_t _ fa fb fc fself_triple =
-  object
-    inherit
-      [ unit
-      , 'a
-      , 'a_2
-      , unit
-      , 'b
-      , 'b_2
-      , unit
-      , 'c
-      , 'c_2
-      , unit
-      , 'extra_triple
-      , ('a_2, 'b_2, 'c_2) triple ]
-      triple_t
-
-    method c_Triple inh___016_ _ _x__017_ _x__018_ _x__019_ =
-        (fa inh___016_ _x__017_, fb inh___016_ _x__018_, fc inh___016_ _x__019_)
-  end
-
-let gmap_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new gmap_triple_t call fa fb fc) inh0 subj
-
-let gmap_triple_fix =
-  Fix_gmap_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Igmap_triple.i) ->
-            (match sym with Igmap_triple.Triple -> gmap_triple_0 f : a) ) } )
-
-module Ieval_triple = Index2_triple (struct
-  type ('a, 'b) result = unit -> 'a -> 'b
-end)
-
-module Fix_eval_triple = FixV (Ieval_triple)
-
-class ['a, 'a_2, 'b, 'b_2, 'c, 'c_2, 'env, 'extra_triple] eval_triple_t _ fa fb fc fself_triple =
-  object
-    inherit
-      [ 'env
-      , 'a
-      , 'a_2
-      , 'env
-      , 'b
-      , 'b_2
-      , 'env
-      , 'c
-      , 'c_2
-      , 'env
-      , 'extra_triple
-      , ('a_2, 'b_2, 'c_2) triple ]
-      triple_t
-
-    method c_Triple inh___020_ _ _x__021_ _x__022_ _x__023_ =
-        (fa inh___020_ _x__021_, fb inh___020_ _x__022_, fc inh___020_ _x__023_)
-  end
-
-let eval_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new eval_triple_t call fa fb fc) inh0 subj
-
-let eval_triple_fix =
-  Fix_eval_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieval_triple.i) ->
-            (match sym with Ieval_triple.Triple -> eval_triple_0 f : a) ) } )
-
-module Istateful_triple = Index_stateful_triple (struct
-  type ('env, 'a, 'b) result = 'env -> 'a -> 'env * 'b
-end)
-
-module Fix_stateful_triple = FixV (Istateful_triple)
-
-class ['a, 'a_2, 'b, 'b_2, 'c, 'c_2, 'env, 'extra_triple] stateful_triple_t _ fa fb fc fself_triple =
-  object
-    inherit
-      [ 'env
-      , 'a
-      , 'env * 'a_2
-      , 'env
-      , 'b
-      , 'env * 'b_2
-      , 'env
-      , 'c
-      , 'env * 'c_2
-      , 'env
-      , 'extra_triple
-      , 'env * ('a_2, 'b_2, 'c_2) triple ]
-      triple_t
-
-    method c_Triple inh___024_ _ _x__025_ _x__026_ _x__027_ =
-      let env1, _x__025__rez = fa inh___024_ _x__025_ in
-      let env2, _x__026__rez = fb env1 _x__026_ in
-      let env3, _x__027__rez = fc env2 _x__027_ in
-      (env3, (_x__025__rez, _x__026__rez, _x__027__rez))
-  end
-
-let stateful_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new stateful_triple_t call fa fb fc) inh0 subj
-
-let stateful_triple_fix =
-  Fix_stateful_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Istateful_triple.i) ->
-            ( match sym with Istateful_triple.Triple -> stateful_triple_0 f
-              : a ) ) } )
-
-module Icompare_triple = Index_triple (struct
-  type 'a result = 'a -> 'a -> comparison
-end)
-
-module Fix_compare_triple = FixV (Icompare_triple)
-
-class ['a, 'b, 'c, 'extra_triple] compare_triple_t _  fa fb fc fself_triple =
-  object
-    inherit
-      [ 'a
-      , 'a
-      , comparison
-      , 'b
-      , 'b
-      , comparison
-      , 'c
-      , 'c
-      , comparison
-      , ('a, 'b, 'c) triple
-      , 'extra_triple
-      , comparison ]
-      triple_t
-
-    method c_Triple inh___028_ _ _x__029_ _x__030_ _x__031_ =
-      match inh___028_ with
-      |  (_x__032_, _x__033_, _x__034_) ->
-          chain_compare
-            (chain_compare
-               (chain_compare EQ (fun () -> fa _x__032_ _x__029_))
-               (fun () -> fb _x__033_ _x__030_))
-            (fun () -> fc _x__034_ _x__031_)
-  end
-
-let compare_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new compare_triple_t call fa fb fc) inh0 subj
-
-let compare_triple_fix =
-  Fix_compare_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Icompare_triple.i) ->
-            (match sym with Icompare_triple.Triple -> compare_triple_0 f : a)
-            ) } )
-
-module Ieq_triple = Index_triple (struct
-  type 'a result = 'a -> 'a -> bool
-end)
-
-module Fix_eq_triple = FixV (Ieq_triple)
-
-class ['a, 'b, 'c, 'extra_triple] eq_triple_t _  fa fb fc fself_triple =
-  object
-    inherit
-      [ 'a
-      , 'a
-      , bool
-      , 'b
-      , 'b
-      , bool
-      , 'c
-      , 'c
-      , bool
-      , ('a, 'b, 'c) triple
-      , 'extra_triple
-      , bool ]
-      triple_t
-
-    method c_Triple inh___035_ _ _x__036_ _x__037_ _x__038_ =
-      match inh___035_ with
-      | (_x__039_, _x__040_, _x__041_) ->
-          ((true && fa _x__039_ _x__036_) && fb _x__040_ _x__037_)
-          && fc _x__041_ _x__038_
-  end
-
-let eq_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new eq_triple_t call fa fb fc) inh0 subj
-
-let eq_triple_fix =
-  Fix_eq_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ieq_triple.i) ->
-            (match sym with Ieq_triple.Triple -> eq_triple_0 f : a) ) } )
-
-module Ifoldl_triple = Index_fold_triple (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldl_triple = FixV (Ifoldl_triple)
-
-class ['a, 'b, 'c, 'syn, 'extra_triple] foldl_triple_t _  fa fb fc fself_triple =
-  object
-    inherit
-      [ 'syn
-      , 'a
-      , 'syn
-      , 'syn
-      , 'b
-      , 'syn
-      , 'syn
-      , 'c
-      , 'syn
-      , 'syn
-      , 'extra_triple
-      , 'syn ]
-      triple_t
-
-    method c_Triple inh___042_ _ _x__043_ _x__044_ _x__045_ =
-      fc (fb (fa inh___042_ _x__043_) _x__044_) _x__045_
-  end
-
-let foldl_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new foldl_triple_t call fa fb fc) inh0 subj
-
-let foldl_triple_fix =
-  Fix_foldl_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldl_triple.i) ->
-            (match sym with Ifoldl_triple.Triple -> foldl_triple_0 f : a) ) }
-  )
-
-module Ifoldr_triple = Index_fold_triple (struct
-  type ('a, 'b) result = 'b -> 'a -> 'b
-end)
-
-module Fix_foldr_triple = FixV (Ifoldr_triple)
-
-class ['a, 'b, 'c, 'syn, 'extra_triple] foldr_triple_t _  fa fb fc fself_triple =
-  object
-    inherit
-      [ 'syn
-      , 'a
-      , 'syn
-      , 'syn
-      , 'b
-      , 'syn
-      , 'syn
-      , 'c
-      , 'syn
-      , 'syn
-      , 'extra_triple
-      , 'syn ]
-      triple_t
-
-    method c_Triple inh___046_ _ _x__047_ _x__048_ _x__049_ =
-      fa (fb (fc inh___046_ _x__049_) _x__048_) _x__047_
-  end
-
-let foldr_triple_0 call fa fb fc inh0 subj =
-  transform_gc gcata_triple (new foldr_triple_t call fa fb fc) inh0 subj
-
-let foldr_triple_fix =
-  Fix_foldr_triple.fixv (fun f ->
-      { call=
-          (fun (type a) (sym : a Ifoldr_triple.i) ->
-            (match sym with Ifoldr_triple.Triple -> foldr_triple_0 f : a) ) }
-  )
 
 let triple :
     ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'ic, 'c, 'sc, 'inh, _, 'syn ) #triple_t ->
@@ -2578,85 +883,59 @@ let triple :
                   'syn;
       >) t =
   {gcata   = gcata_triple;
-   plugins = object
-        method show fa fb fc subj =
-          show_triple_fix.call Ishow_triple.Triple (lift fa) (lift fb)
-            (lift fc) () subj
+   plugins =
+     let tr  obj subj     = transform_gc gcata_triple obj  () subj in
+     let tr1 obj inh subj = transform_gc gcata_triple obj inh subj in
+     object
+       method show     fa fb fc = tr  (new @triple[show] (lift fa) (lift fb) (lift fc))
+       method html     fa fb fc = tr  (new @triple[html] (lift fa) (lift fb) (lift fc))
+       method gmap     fa fb fc = tr  (new @triple[gmap] (lift fa) (lift fb) (lift fc))
 
-        method fmt = fmt_triple_0 fmt_triple_fix
-
-        method html fa fb fc subj =
-          html_triple_fix.call Ihtml_triple.Triple (lift fa) (lift fb)
-            (lift fc) () subj
-
-        method gmap fa fb fc subj =
-          gmap_triple_fix.call Igmap_triple.Triple (lift fa) (lift fb)
-            (lift fc) () subj
-
-        method eval = eval_triple_0 eval_triple_fix
-
-        method stateful = stateful_triple_0 stateful_triple_fix
-
-        method compare = compare_triple_0 compare_triple_fix
-
-        method eq = eq_triple_0 eq_triple_fix
-
-        method foldl = foldl_triple_0 foldl_triple_fix
-
-        method foldr = foldr_triple_0 foldr_triple_fix
+       method fmt      fa fb fc = tr1 (new @triple[fmt]  fa fb fc)
+       method eval     fa fb fc = tr1 (new @triple[eval] fa fb fc)
+       method stateful fa fb fc = tr1 (new @triple[stateful] fa fb fc)
+       method eq       fa fb fc = tr1 (new @triple[eq]   fa fb fc)
+       method compare  fa fb fc = tr1 (new @triple[compare] fa fb fc)
+       method foldl    fa fb fc = tr1 (new @triple[foldl] fa fb fc)
+       method foldr    fa fb fc = tr1 (new @triple[foldr] fa fb fc)
   end
  }
 
 let tuple3 = triple
 
-class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'inh, 'e, 'syn] tuple3_t = object
-  inherit     ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'inh, 'e, 'syn] triple_t
+class ['a, 'b, 'c, 'self] show_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] show_triple_t fa fb fc fself
 end
-let gcata_tuple3 = gcata_triple
-
-class ['a, 'b, 'c, 'self] show_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'self] show_triple_t _fix fa fb fc fself
+class ['a, 'b, 'c, 'self] fmt_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[fmt] fa fb fc fself
 end
-let show_tuple3_fix = show_triple_fix
-class ['a, 'b, 'c, 'self] fmt_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'self] @triple[fmt] _fix fa fb fc fself
+class ['a, 'b, 'c, 'self] html_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[html] fa fb fc fself
 end
-let fmt_tuple3_fix = fmt_triple_fix
-class ['a, 'b, 'c, 'self] html_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'self] @triple[html] _fix fa fb fc fself
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] @triple[gmap] fa fb fc fself
 end
-let html_tuple3_fix = html_triple_fix
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] @triple[gmap] _fix fa fb fc fself
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] eval_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[eval] fa fb fc fself
 end
-let gmap_tuple3_fix = gmap_triple_fix
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] eval_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[eval] _fix fa fb fc fself
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] stateful_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[stateful] fa fb fc fself
 end
-let eval_tuple3_fix = eval_triple_fix
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] stateful_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[stateful] _fix fa fb fc fself
+class ['a, 'b, 'c, 'self] compare_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] compare_triple_t fa fb fc fself
 end
-let stateful_tuple3_fix = stateful_triple_fix
-class ['a, 'b, 'c, 'self] compare_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'self] compare_triple_t _fix fa fb fc fself
+class ['a, 'b, 'c, 'self] eq_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'self] @triple[eq] fa fb fc fself
 end
-let compare_tuple3_fix = compare_triple_fix
-class ['a, 'b, 'c, 'self] eq_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'self] @triple[eq] _fix fa fb fc fself
+class ['a, 'b, 'c, 'syn, 'self] foldl_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'syn, 'self] @triple[foldl] fa fb fc fself
 end
-let eq_tuple3_fix = eq_triple_fix
-class ['a, 'b, 'c, 'syn, 'self] foldl_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'syn, 'self] @triple[foldl] _fix fa fb fc fself
+class ['a, 'b, 'c, 'syn, 'self] foldr_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'b, 'c, 'syn, 'self] @triple[foldr] fa fb fc fself
 end
-let foldl_tuple3_fix = foldl_triple_fix
-class ['a, 'b, 'c, 'syn, 'self] foldr_tuple3_t _fix fa fb fc fself = object
-  inherit [ 'a, 'b, 'c, 'syn, 'self] @triple[foldr] _fix fa fb fc fself
-end
-let foldr_tuple3_fix = foldr_triple_fix
 
 (*******************************************************************************)
-(* Tuples of size 4 *)
+(* Tuples of size 3 *)
 type ('a, 'b, 'c, 'd) tuple4 = 'a * 'b * 'c * 'd
 class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'id,'d,'sd, 'inh, 'e, 'syn] tuple4_t =
 object
