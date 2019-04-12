@@ -102,7 +102,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
   method virtual eta_and_exp: center:'exp -> Ppxlib.type_declaration -> 'exp
   method virtual make_final_trans_function_typ : loc:'loc -> Ppxlib.type_declaration -> 'typ
 
-  method virtual index_module_name: string
+  (* method virtual index_module_name: string *)
 end
 
 (** Functor that takes AST construction functions for a specific backend and

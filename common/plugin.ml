@@ -207,7 +207,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                   (Cty.arrow ~loc for_self sign)
               in
 
-              Cty.arrow ~loc (Typ.access2 ~loc self#fix_module_name "fn")
+              (* Cty.arrow ~loc (Typ.access2 ~loc self#fix_module_name "fn") *)
                 funcs_for_args
             )
           ((self#extra_class_sig_members tdecl) @ fields)
@@ -512,9 +512,11 @@ class virtual generator initial_args tdecls = object(self: 'self)
     is_rec:bool -> string list -> type_declaration list -> Sig.t list
     = fun ~loc ~is_rec mutal_names tdecls ->
 
-      [ Sig.value ~loc ~name:(self#fix_func_name ()) @@
-          Typ.access2 ~loc self#fix_module_name "fn"
-      ]
+      []
+      (* TODO: *)
+      (* [ Sig.value ~loc ~name:(self#fix_func_name ()) @@
+       *     Typ.access2 ~loc self#fix_module_name "fn"
+       * ] *)
 
   method make_class_name ?(is_mutal=false) tdecl =
     sprintf "%s%s"
@@ -593,6 +595,10 @@ class virtual generator initial_args tdecls = object(self: 'self)
           [value_binding ~loc
             ~pat:(Pat.sprintf ~loc "%s" @@ Naming.trf_function self#trait_name tdecl.ptype_name.txt)
             ~expr:(
+              Exp.fun_list ~loc
+                (map_type_param_names tdecl.ptype_params
+                   ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
+              @@
               self#make_trans_function_body ~loc
                 (self#make_class_name ~is_mutal:false tdecl)
                 tdecl
@@ -667,7 +673,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method do_single_sig ~loc ~is_rec tdecl =
     List.concat
-      [ self#make_indexes_sig ~loc
+      [ [] (* self#make_indexes_sig ~loc *)
       ; self#make_class_sig ~loc ~is_rec tdecl []
       (* Need to fix drawing a signature by specializing for show|gmap case *)
       ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
@@ -730,27 +736,27 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ; self#make_shortend_class ~loc tdecls
       ]
 
-  method make_indexes_sig ~loc : Sig.t list =
-    [ Sig.module_ ~loc @@ module_declaration ~loc ~name:self#index_module_name @@
-      Mt.with_ ~loc
-        (Mt.ident ~loc (Lident (self#index_modtyp_name tdecls)))
-        [ WC.typ ~loc ~params:self#trf_scheme_params "result" @@
-          self#trf_scheme ~loc
-        ]
-    ; Sig.module_ ~loc @@ module_declaration ~loc ~name:self#fix_module_name @@
-      Mt.with_ ~loc
-        (Mt.ident ~loc (Ldot (Lident "GT", "FixVR")))
-        [ WC.typ ~loc ~params:["w"] "s" @@
-          Typ.constr ~loc (Ldot (Lident self#index_module_name, "i")) @@
-          List.map ["w"] ~f:(Typ.var ~loc)
-        ]
-    ]
+  (* method make_indexes_sig ~loc : Sig.t list =
+   *   [ Sig.module_ ~loc @@ module_declaration ~loc ~name:self#index_module_name @@
+   *     Mt.with_ ~loc
+   *       (Mt.ident ~loc (Lident (self#index_modtyp_name tdecls)))
+   *       [ WC.typ ~loc ~params:self#trf_scheme_params "result" @@
+   *         self#trf_scheme ~loc
+   *       ]
+   *   ; Sig.module_ ~loc @@ module_declaration ~loc ~name:self#fix_module_name @@
+   *     Mt.with_ ~loc
+   *       (Mt.ident ~loc (Ldot (Lident "GT", "FixVR")))
+   *       [ WC.typ ~loc ~params:["w"] "s" @@
+   *         Typ.constr ~loc (Ldot (Lident self#index_module_name, "i")) @@
+   *         List.map ["w"] ~f:(Typ.var ~loc)
+   *       ]
+   *   ] *)
 
   (* name of module that contains a fixpoint for this trait *)
-  method fix_module_name =
-    Naming.hack_index_name self#tdecls @@ sprintf "Fix_%s" self#trait_name
-  method index_module_name =
-    Naming.hack_index_name self#tdecls @@ sprintf "I%s" self#trait_name
+  (* method fix_module_name =
+   *   Naming.hack_index_name self#tdecls @@ sprintf "Fix_%s" self#trait_name
+   * method index_module_name =
+   *   Naming.hack_index_name self#tdecls @@ sprintf "I%s" self#trait_name *)
 
   (* method make_indexes ~loc =
    *   [ Str.module_ ~loc self#index_module_name @@
@@ -931,6 +937,27 @@ class virtual generator initial_args tdecls = object(self: 'self)
    *         (List.Assoc.find ~equal:String.equal map s)
    *       ) *)
 
+  method make_shortend_class_sig ~loc =
+    List.map self#tdecls ~f:(fun tdecl ->
+        let typname = tdecl.ptype_name.txt in
+        let class_name =
+          Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
+        in
+        let params = self#plugin_class_params tdecl in
+        let stub_name = "asdf" in
+        Sig.class_ ~loc ~name:class_name
+          ~params
+          [ Ctf.inherit_ ~loc @@ Cty.arrow ~loc
+              (Typ.unit ~loc)
+              (Cty.constr ~loc (Lident stub_name) @@
+               List.map ~f:(Typ.of_type_arg ~loc) params)
+              (* (mut_funcs ::
+               *  [Exp.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt] @
+               *  (self#apply_fas_in_new_object ~loc tdecl)) *)
+          ]
+      )
+
+
   (* shortened class only used for mutally recursive declarations *)
   method make_shortend_class ~loc tdecls =
     List.map tdecls ~f:(fun tdecl ->
@@ -950,21 +977,21 @@ class virtual generator initial_args tdecls = object(self: 'self)
             )
         in
 
-      let params = self#plugin_class_params tdecl in
-      Str.class_single ~loc ~name:class_name
-        ~wrap:(fun cl ->
-            Cl.fun_ ~loc (Pat.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt) @@
-            Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl
-          )
-        ~params
-        [ Cf.inherit_ ~loc @@ Cl.apply ~loc
-            (Cl.constr ~loc (Lident stub_name) @@
-             List.map ~f:(Typ.of_type_arg ~loc) params)
-            (mut_funcs ::
-             [Exp.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt] @
-             (self#apply_fas_in_new_object ~loc tdecl))
-        ]
-    )
+        let params = self#plugin_class_params tdecl in
+        Str.class_single ~loc ~name:class_name
+          ~wrap:(fun cl ->
+              Cl.fun_ ~loc (Pat.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt) @@
+              Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl
+            )
+          ~params
+          [ Cf.inherit_ ~loc @@ Cl.apply ~loc
+              (Cl.constr ~loc (Lident stub_name) @@
+               List.map ~f:(Typ.of_type_arg ~loc) params)
+              (mut_funcs ::
+               [Exp.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt] @
+               (self#apply_fas_in_new_object ~loc tdecl))
+          ]
+      )
 
   method virtual on_record_constr: loc:loc ->
     is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
@@ -1144,18 +1171,19 @@ class virtual generator initial_args tdecls = object(self: 'self)
             in
             Exp.ident ~loc (self#self_arg_name cname)
           | `Nonregular ->
-            let args = List.map params
-                ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
-            in
-            let cname =
-              let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
-              helper txt
-            in
-            Exp.(app_list ~loc (ident ~loc Naming.mut_arg_composite) @@
-                 [construct ~loc (Ldot (Lident self#index_module_name,
-                                        Naming.cname_index cname)) []] @
-                 args
-                )
+            failwith "non-regular types are not supported"
+            (* let args = List.map params
+             *     ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+             * in
+             * let cname =
+             *   let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
+             *   helper txt
+             * in
+             * Exp.(app_list ~loc (ident ~loc Naming.mut_arg_composite) @@
+             *      [construct ~loc (Ldot (Lident self#index_module_name,
+             *                             Naming.cname_index cname)) []] @
+             *      args
+             *     ) *)
 
           | `Nonrecursive -> begin
               (* it is not a recursion but it can be a mutual recursion *)
