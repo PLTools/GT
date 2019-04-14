@@ -764,7 +764,6 @@ let do_mutual_types ~loc sis plugins tdecls =
     ; List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])
     ; catas
     ; fix_str ~loc tdecls
-    (* ; indexes_str ~loc plugins tdecls *)
     ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new)
     ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
     ]
@@ -780,15 +779,15 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; [intf_class; gcata]
-    (* ; indexes_sig ~loc plugins [tdecl] *)
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; [ collect_plugins_sig ~loc tdecl plugins ]
     ]
 
-let do_mutal_types_sig ~loc sis plugins tdecls =
+let do_mutual_types_sig ~loc sis plugins tdecls =
   (* TODO: it could be a bug with topological sorting here *)
   sis @
-  List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls
+  List.concat_map plugins ~f:(fun p -> (p tdecls)#do_mutuals_sigs ~loc ~is_rec:true)
+  (* List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls *)
 
 let wrap_plugin name = function
   | Skip -> id
@@ -837,7 +836,7 @@ let sig_type_decl_many_plugins ~loc si plugins_info declaration =
   | Recursive, [tdecl] -> do_typ_sig si ~loc plugins true tdecl
   | Recursive, ts      ->
     (* Stdio.printf "Got %d declarations\n%!" (List.length ts); *)
-    do_mutal_types_sig ~loc si plugins ts
+    do_mutual_types_sig ~loc si plugins ts
   | Nonrecursive, tdls ->
       List.concat_map ~f:(do_typ_sig ~loc si plugins false) tdls
 

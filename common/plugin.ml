@@ -88,8 +88,13 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method cur_name tdecl = tdecl.ptype_name.txt
 
   (* preparing class of transformation for [tdecl] *)
-  method make_class ~loc ~is_rec mutal_decls tdecl =
+  method make_class ~loc ~is_rec tdecl =
     let cur_name = self#cur_name tdecl in
+    let mutual_decls =
+      List.filter self#tdecls ~f:(fun {ptype_name={txt}} ->
+          String.(<>) txt tdecl.ptype_name.txt
+        )
+    in
     let k fields =
       let inh_params =
         prepare_param_triples ~loc
@@ -101,7 +106,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                   sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
           (map_type_param_names tdecl.ptype_params ~f:id)
       in
-      self#wrap_class_definition ~loc mutal_decls tdecl ~inh_params
+      self#wrap_class_definition ~loc mutual_decls tdecl ~inh_params
         ((self#extra_class_str_members tdecl) @ fields)
     in
 
@@ -129,18 +134,20 @@ class virtual generator initial_args tdecls = object(self: 'self)
           :> [ `Regular | `Nonregular | `Nonrecursive])
       | _ -> `Nonrecursive
     in
-    self#got_typedecl ~loc tdecl ~is_self_rec ~mutal_decls k
+    self#got_typedecl ~loc ~is_self_rec ~mutual_decls
+      tdecl k
 
   method prepare_fa_args ~loc tdecl =
     map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
 
-  method wrap_class_definition ~loc ~inh_params mutal_decls tdecl fields =
+  method wrap_class_definition ~loc ~inh_params mutual_decls tdecl fields =
     let cur_name = self#cur_name tdecl in
     (* inherit class_t and prepare to put other members *)
 
+    let mutual_decls = self#tdecls in
     Str.class_single ~loc
       ~params:(self#plugin_class_params tdecl)
-      ~name:(self#make_class_name ~is_mutal:(not (List.is_empty mutal_decls)) tdecl)
+      ~name:(self#make_class_name ~is_mutal:(List.length mutual_decls > 1) tdecl)
       ~virt:false
       ~wrap:(fun body ->
           (* constructor arguments are *)
@@ -153,8 +160,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
             (self#prepare_fa_args ~loc tdecl) @
             [ Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt ]
             |> (fun ps ->
-                match mutal_decls with
-                | [] -> ps
+                match mutual_decls with
+                | [] -> assert false
+                | [_] -> ps
                 | tdecls ->
                   (Pat.tuple ~loc @@
                    List.map self#tdecls ~f:(fun {ptype_name} ->
@@ -186,13 +194,13 @@ class virtual generator initial_args tdecls = object(self: 'self)
    *           (fun x -> x)
    *       ) *)
 
+
   (* signature for a plugin class *)
-  method make_class_sig ~loc tdecl ~is_rec mutal_decls =
-    let (_:string list) = mutal_decls in
+  method make_class_sig ~loc ?(a_stub=false) ~is_rec tdecl =
     let k fields =
       [ Sig.class_ ~loc
           ~params:(self#plugin_class_params tdecl)
-          ~name:(self#make_class_name ~is_mutal:false tdecl)
+          ~name:(self#make_class_name ~is_mutal:a_stub tdecl)
           ~virt:false
           ~wrap:(fun sign ->
               let for_self = self#make_typ_of_self_trf ~loc ~in_class:true tdecl in
@@ -208,7 +216,17 @@ class virtual generator initial_args tdecls = object(self: 'self)
               in
 
               (* Cty.arrow ~loc (Typ.access2 ~loc self#fix_module_name "fn") *)
-                funcs_for_args
+              funcs_for_args
+              |> (fun tl ->
+                  if not a_stub then tl
+                  else
+                    Cty.arrow ~loc
+                      (Typ.tuple ~loc @@ List.map self#tdecls ~f:(fun tdecl ->
+                           self#long_trans_function_typ ~loc tdecl
+                             (* TODO: rename *)
+                         ))
+                      tl
+                )
             )
           ((self#extra_class_sig_members tdecl) @ fields)
       ]
@@ -418,7 +436,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       failwith "conjunction types are not supported but"
     )
 
-  method got_typedecl ~loc ~is_self_rec ~mutal_decls tdecl (k: Cf.t list -> _) =
+  method got_typedecl ~loc ~is_self_rec ~mutual_decls tdecl (k: Cf.t list -> _) =
     k @@
     visit_typedecl ~loc tdecl
     ~onmanifest:(fun typ ->
@@ -441,22 +459,22 @@ class virtual generator initial_args tdecls = object(self: 'self)
               else Option.some @@ ptyp_var ~loc as_
               ) |> helper
           | Ptyp_constr (cid, params) ->
-              self#got_constr ~loc ~is_self_rec tdecl mutal_decls
-                (self#do_typ_gen ~mutal_decls ~is_self_rec tdecl)
+              self#got_constr ~loc ~is_self_rec tdecl mutual_decls
+                (self#do_typ_gen ~mutal_decls:mutual_decls ~is_self_rec tdecl)
                 cid params (fun x -> x)
 
           | Ptyp_tuple ts ->
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc:typ.ptyp_loc ts
           | Ptyp_variant (rows,_,_) ->
-            self#got_polyvar ~loc tdecl (self#do_typ_gen ~mutal_decls ~is_self_rec tdecl)
-              ~is_self_rec ~mutal_decls rows (fun x -> x)
+            self#got_polyvar ~loc tdecl (self#do_typ_gen ~mutal_decls:mutual_decls ~is_self_rec tdecl)
+              ~is_self_rec ~mutal_decls:mutual_decls  rows (fun x -> x)
         | _ -> assert false
         in
         helper typ
     )
-    ~onvariant:(fun cds -> self#on_variant ~loc ~mutal_decls ~is_self_rec tdecl cds id)
-    ~onrecord:(self#on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl)
+    ~onvariant:(fun cds -> self#on_variant ~loc ~mutal_decls:mutual_decls ~is_self_rec tdecl cds id)
+    ~onrecord:(self#on_record_declaration ~loc ~is_self_rec ~mutal_decls:mutual_decls tdecl)
     ~onopen:(fun () -> [])
 
   method virtual on_record_declaration: loc:loc ->
@@ -504,13 +522,13 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method make_trans_function_name tdecl =
     sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt
 
-  method make_trf_init_typ ~loc tdecl =
-    Typ.arrow ~loc (Typ.access2 ~loc (sprintf "For_%s" self#trait_name) "fn") @@
-    self#make_trans_function_typ ~loc tdecl
+  (* method make_trf_init_typ ~loc tdecl =
+   *   Typ.arrow ~loc (Typ.access2 ~loc (sprintf "For_%s" self#trait_name) "fn") @@
+   *   self#make_trans_function_typ ~loc tdecl *)
 
   method make_trans_functions_sig: loc:loc ->
-    is_rec:bool -> string list -> type_declaration list -> Sig.t list
-    = fun ~loc ~is_rec mutal_names tdecls ->
+    is_rec:bool -> type_declaration list -> Sig.t list
+    = fun ~loc ~is_rec tdecls ->
 
       []
       (* TODO: *)
@@ -533,9 +551,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method virtual make_trans_function_body: loc:loc -> ?rec_typenames: string list ->
     string -> type_declaration -> Exp.t
 
-  method make_trans_functions: loc:loc ->
-    is_rec:bool -> Str.t list
-    = fun ~loc ~is_rec  ->
+  method make_trans_functions: loc:loc -> is_rec:bool -> Str.t list
+    = fun ~loc ~is_rec ->
       (* we will generate mutally recursive showers here
 
          (* n functions like *)
@@ -544,7 +561,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
          let knot = ... using fix
       *)
       let mutal_names = List.map self#tdecls ~f:(fun {ptype_name={txt}} -> txt) in
-      let on_tdecl =
+      let intials =
         if (List.length self#tdecls > 1)
         then
           List.map self#tdecls ~f:(fun tdecl ->
@@ -561,9 +578,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
             )
         else []
       in
-      (* let accI s = Ldot (Lident (Naming.hack_index_name tdecls @@
-       *                            sprintf "I%s" self#trait_name), s) in *)
-      let make_pack () =
+
+      let app_fix () =
         match self#tdecls with
         | [] -> []
         | [tdecl] -> []
@@ -593,7 +609,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
         | [] -> []
         | [tdecl] ->
           [value_binding ~loc
-            ~pat:(Pat.sprintf ~loc "%s" @@ Naming.trf_function self#trait_name tdecl.ptype_name.txt)
+             ~pat:(Pat.sprintf ~loc "%s" @@
+                   Naming.trf_function self#trait_name tdecl.ptype_name.txt)
             ~expr:(
               Exp.fun_list ~loc
                 (map_type_param_names tdecl.ptype_params
@@ -661,9 +678,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
             )
       in
       List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive)
-        (on_tdecl @
+        (intials @
          knots @
-         (make_pack ())
+         (app_fix ())
         )
 
   method fix_func_name ?for_ () =
@@ -673,104 +690,39 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method do_single_sig ~loc ~is_rec tdecl =
     List.concat
-      [ [] (* self#make_indexes_sig ~loc *)
-      ; self#make_class_sig ~loc ~is_rec tdecl []
+      [ self#make_class_sig ~loc ~is_rec tdecl
       (* Need to fix drawing a signature by specializing for show|gmap case *)
-      ; self#make_trans_functions_sig ~loc ~is_rec [] [tdecl]
+      ; self#make_trans_functions_sig ~loc ~is_rec [tdecl]
       ]
 
   method do_single ~loc ~is_rec tdecl =
     List.concat
-      [ []
-      (* ; self#make_indexes ~loc *)
-      ; [ self#make_class ~loc ~is_rec [] tdecl ]
+      [ [ ((self#make_class ~loc ~is_rec tdecl) : Str.t ) ]
       ; self#make_trans_functions ~loc ~is_rec
       ]
   method final_typ_params_for_alias ~loc tdecl rhs =
     self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
+  method do_mutuals_sigs ~loc ~is_rec =
+    List.concat_map self#tdecls ~f:(fun tdecl ->
+        List.concat
+          [ [] (* self#make_indexes_sig ~loc *)
+          ; self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
+          ; self#make_class_sig ~loc ~is_rec tdecl
+          (* Need to fix drawing a signature by specializing for show|gmap case *)
+          ; self#make_trans_functions_sig ~loc ~is_rec [tdecl]
+          ]
+      )
+
   method do_mutuals ~loc ~is_rec tdecls : Str.t list =
     (* for mutal recursion we need to generate two classes, one transformation
-       function many structures, fixpoint, etc.
-    *)
-    (* let mut_names = List.map tdecls ~f:(fun td -> td.ptype_name.txt) in *)
-    (* List.map tdecls ~f:(self#make_trf_field_tdecl ~loc) @
-     * [ let name = Naming.prereq_name self#plugin_name
-     *       (List.hd_exn tdecls).ptype_name.txt
-     *   in
-     *   Str.tdecl_record ~loc ~name ~params:[] @@
-     *   List.map tdecls ~f:(fun tdecl ->
-     *       let lab_name = Naming.typ1_for_class_arg ~plugin:self#plugin_name
-     *           tdecl.ptype_name.txt  in
-     *       lab_decl ~loc (Naming.trf_function self#plugin_name tdecl.ptype_name.txt)
-     *         false
-     *         (Typ.ident ~loc lab_name)
-     *     )
-     * ] @ *)
-    (* List.map tdecls ~f:(self#make_class ~loc ~is_rec:true tdecls) @
-     * (self#make_universal_types  ~loc ~mut_names tdecls) @
-     * [self#make_mutal_fix ~loc tdecls] @
-     * (self#apply_mutal_fix ~loc tdecls) @ *)
-    (* (self#make_shortend_class ~loc tdecls) @ *)
+       function many structures, fixpoint, etc. *)
     List.concat
-      [ (* self#make_indexes ~loc *)
-        (* self#make_universal_types ~loc *)
-        (* (let name = Naming.prereq_name self#plugin_name
-         *      (List.hd_exn tdecls).ptype_name.txt
-         *  in
-         *  [Str.tdecl_record ~loc ~name ~params:[] @@
-         *   List.map tdecls ~f:(fun tdecl ->
-         *       let lab_name = Naming.typ1_for_class_arg ~plugin:self#plugin_name
-         *           tdecl.ptype_name.txt  in
-         *       lab_decl ~loc (Naming.trf_function self#plugin_name
-         *                        tdecl.ptype_name.txt)
-         *         false
-         *         (Typ.ident ~loc lab_name)
-         *     )
-         *  ]
-         * ) *)
-        []
-      ; List.map tdecls ~f:(self#make_class ~loc ~is_rec:true tdecls)
+      [ List.map tdecls ~f:(self#make_class ~loc ~is_rec:true)
       ; self#make_trans_functions ~loc ~is_rec
       ; self#make_shortend_class ~loc tdecls
       ]
-
-  (* method make_indexes_sig ~loc : Sig.t list =
-   *   [ Sig.module_ ~loc @@ module_declaration ~loc ~name:self#index_module_name @@
-   *     Mt.with_ ~loc
-   *       (Mt.ident ~loc (Lident (self#index_modtyp_name tdecls)))
-   *       [ WC.typ ~loc ~params:self#trf_scheme_params "result" @@
-   *         self#trf_scheme ~loc
-   *       ]
-   *   ; Sig.module_ ~loc @@ module_declaration ~loc ~name:self#fix_module_name @@
-   *     Mt.with_ ~loc
-   *       (Mt.ident ~loc (Ldot (Lident "GT", "FixVR")))
-   *       [ WC.typ ~loc ~params:["w"] "s" @@
-   *         Typ.constr ~loc (Ldot (Lident self#index_module_name, "i")) @@
-   *         List.map ["w"] ~f:(Typ.var ~loc)
-   *       ]
-   *   ] *)
-
-  (* name of module that contains a fixpoint for this trait *)
-  (* method fix_module_name =
-   *   Naming.hack_index_name self#tdecls @@ sprintf "Fix_%s" self#trait_name
-   * method index_module_name =
-   *   Naming.hack_index_name self#tdecls @@ sprintf "I%s" self#trait_name *)
-
-  (* method make_indexes ~loc =
-   *   [ Str.module_ ~loc self#index_module_name @@
-   *     Me.apply ~loc (Me.ident ~loc (Lident (self#index_functor self#tdecls)))
-   *       (Me.structure ~loc
-   *          [ Str.tdecl ~loc ~name:"result"
-   *              ~params:self#trf_scheme_params
-   *              (self#trf_scheme ~loc)
-   *          ])
-   *   ; Str.module_ ~loc self#fix_module_name @@
-   *     Me.(apply ~loc
-   *           (ident ~loc (Ldot (Lident "GT","FixV")))
-   *           (ident ~loc (Lident self#index_module_name)))
-   *   ] *)
 
   method virtual trf_scheme: loc:loc -> Typ.t
 
@@ -1191,7 +1143,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
               | Lident s when List.mem mutal_names s ~equal:String.equal ->
                 (* we should use local trf object *)
                 let args = List.map params
-                    ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+                    ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls:mutal_decls tdecl)
                 in
                 let open Exp in
                 app_list ~loc
@@ -1246,7 +1198,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
             in
             let onrow lab bindings =
               Exp.app_list ~loc
-                (self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls
+                (self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls:mutal_decls
                    ~inhe:(Exp.sprintf ~loc "inh")
                    tdecl
                    (`Poly lab.txt)

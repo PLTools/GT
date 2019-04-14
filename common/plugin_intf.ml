@@ -97,6 +97,9 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
     is_rec:bool ->
     Ppxlib.type_declaration list -> 'str list
 
+  method virtual do_mutuals_sigs : loc:'loc -> is_rec:bool -> 'sign list
+
+
   method virtual need_inh_attr : bool
 
   method virtual eta_and_exp: center:'exp -> Ppxlib.type_declaration -> 'exp

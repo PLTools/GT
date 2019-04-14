@@ -1,3 +1,4 @@
+(* currently disabled *)
 open Printf
 
 type 'l a = A of b     | C | E of 'l a | D of 'l

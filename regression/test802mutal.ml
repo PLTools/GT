@@ -1,10 +1,17 @@
 open Printf
 
-type a = [`A of b | `C of GT.int   ]
-and  b = [`B of a | `D of GT.string]
-[@@deriving gt ~options:{show;gmap}]
+module PV: sig
+  type a = [`A of b | `C of GT.int   ]
+  and  b = [`B of a | `D of GT.string]
+  [@@deriving gt ~options:{show;gmap}]
+end = struct
+  type a = [`A of b | `C of GT.int   ]
+  and  b = [`B of a | `D of GT.string]
+  [@@deriving gt ~options:{show;gmap}]
+end
 
 module Show2 = struct
+  open PV
   class ['self] show_b_t_stub2 (for_a,for_b) fself = object
     inherit ['self] show_b_t_stub (for_a,for_b) fself
     method c_C () (_ :b) a  = Printf.sprintf "new C (%s)" (for_a () a)
@@ -23,10 +30,12 @@ module Show2 = struct
   let _ = Printf.printf "%s\n" (show_a () (`A (`B (`A (`D "4")))))
 end
 
-type c = [ b | `E of GT.int ]
+type c = [ PV.b | `E of GT.int ]
 [@@deriving gt ~options:{show}]
 
 module ShowC = struct
+  open PV
+
   class ['self] show_c_stub2 make_clas (fself: _ -> _ -> _) =
     let show_a2,show_b2 =
       Show2.(fix_a
