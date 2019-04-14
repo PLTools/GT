@@ -1,6 +1,15 @@
+new!
+new!
+new!
+new!
+`A (`B (`A (new D 4)))
 `A (`B (`C (3)))
 `B (`A (`D ("3")))
 `E ([1; 2; 3])
 `B (`A (`D ("3")))
-new `E ([1; 2; 3])
-new `B (`A (new `D ("3")))
+new c0!
+new `E [1; 2; 3]
+new c0!
+new!
+new c0!
+new `B (`A (new `D 3))

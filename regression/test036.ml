@@ -1,13 +1,14 @@
 open GT
 
-@type expr = Sub of (expr * expr) | Add of expr * expr | Ident of string | Const of int
-      with show, html, gmap, foldl, foldr, eq, compare
+@type expr =
+  | Sub of (expr * expr) | Add of expr * expr | Ident of string | Const of int
+  with show, html, gmap, foldl, foldr, eq, compare
 
 let etoHTML e =
   HTML.toHTML (
     HTML.html (
       HTML.ul (
-        HTML.li (transform(expr) (new @expr[html] html_expr_fix) () e)
+        HTML.li (transform(expr) (new @expr[html]) () e)
       )
     )
   );;
@@ -18,7 +19,7 @@ let stoHTML e =
   HTML.toHTML (
     HTML.html (
       HTML.ul (
-        HTML.li (transform(str) (new @str[html] html_str_fix ) () e)
+        HTML.li (transform(str) (new @str[html]) () e)
       )
     )
   )

@@ -8,8 +8,8 @@ let _ =
   let z'' = C [] in
   let compare x y =
     let open GT in
-    match transform(t) (new @t[compare] compare_t_fix
-                         (fun y -> transform(int) (new @int[compare] compare_int_fix) y)) x y with
+    match transform(t) (new @t[compare]
+                         (fun y -> transform(int) (new @int[compare]) y)) x y with
     | GT.GT -> "GT"
     | GT.LT -> "LT"
     | GT.EQ -> "EQ"

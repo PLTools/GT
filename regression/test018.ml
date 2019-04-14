@@ -6,7 +6,7 @@ let _ =
   let z = C "4" in
   let compare x y =
     match GT.transform(t)
-     (new @t[compare] compare_t_fix GT.compare_primitive GT.compare_primitive GT.compare_primitive) x y
+     (new @t[compare] GT.compare_primitive GT.compare_primitive GT.compare_primitive) x y
     with
     | GT.EQ -> "EQ"
     | GT.LT -> "LT"

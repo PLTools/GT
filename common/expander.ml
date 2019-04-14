@@ -557,14 +557,14 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
         Cf.method_concrete ~loc p#trait_name @@
         if p#need_inh_attr
         then
-          Exp.(app ~loc
-                 (sprintf ~loc "%s" @@
-                  Naming.init_trf_function p#trait_name tdecl.ptype_name.txt)
-                 (sprintf ~loc "%s" @@
-                  Naming.fix_func_name ~for_:tdecl.ptype_name.txt p#trait_name)
-              )
-          (* Exp.sprintf ~loc "%s" @@
-           * Naming.init_trf_function p#trait_name tdecl.ptype_name.txt *)
+          (* Exp.(app ~loc
+           *        (sprintf ~loc "%s" @@
+           *         Naming.init_trf_function p#trait_name tdecl.ptype_name.txt)
+           *        (sprintf ~loc "%s" @@
+           *         Naming.fix_func_name ~for_:tdecl.ptype_name.txt p#trait_name)
+           *     ) *)
+          Exp.sprintf ~loc "%s" @@
+          Naming.trf_function p#trait_name tdecl.ptype_name.txt
         else wrap p tdecl fname p#trait_name
       )
   in

@@ -19,10 +19,10 @@ let _ =
   let c x y = if x = y then GT.EQ else if x < y then LT else GT in
   let x = (1, ("2", ("a", `B))) in
   let y = (1, ("2", ("3", `B))) in
-  let eq1 a b = GT.transform(t) (new @t[eq] eq_t_fix (=) (=)) a b in
+  let eq1 a b = GT.transform(t) (new @t[eq] (=) (=)) a b in
   Printf.printf "x == x: %b\n" (eq1 x x);
   Printf.printf "x == y: %b\n" (eq1 x y);
-  let cmp1 a b = GT.transform(t) (new @t[compare] compare_t_fix c c) a b in
+  let cmp1 a b = GT.transform(t) (new @t[compare] c c) a b in
   Printf.printf "compare (x, x) = %s\n" (cs @@ cmp1 x x);
   Printf.printf "compare (x, y) = %s\n" (cs @@ cmp1 x y);
   Printf.printf "compare (y, x) = %s\n" (cs @@ cmp1 y x);
