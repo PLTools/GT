@@ -40,4 +40,3 @@ let _ =
   printf "%s\n" @@ show_all                  [A(K J)];
 
   ()
-

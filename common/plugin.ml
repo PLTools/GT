@@ -194,6 +194,36 @@ class virtual generator initial_args tdecls = object(self: 'self)
    *           (fun x -> x)
    *       ) *)
 
+  method class_constructor_sig ~loc ?(a_stub=false) tdecl : Typ.t =
+    let tl =
+      Typ.arrow ~loc
+        (self#make_typ_of_self_trf ~loc ~in_class:true tdecl) @@
+      Typ.constr ~loc
+        (Lident (self#make_class_name ~is_mutal:a_stub tdecl))
+        (List.map (self#plugin_class_params tdecl) ~f:(Typ.of_type_arg ~loc))
+    in
+    let funcs_for_args =
+      let names = map_type_param_names tdecl.ptype_params ~f:id in
+      List.fold_left names
+        ~init:id
+        ~f:(fun acc name ->
+            self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name
+              (fun f arg -> acc @@ f arg)
+          )
+        tl
+    in
+    let ans =
+      if not a_stub
+      then funcs_for_args
+      else
+        Typ.arrow ~loc
+          (Typ.tuple ~loc @@ List.map self#tdecls ~f:(fun tdecl ->
+               self#long_trans_function_typ ~loc tdecl
+               (* TODO: rename *)
+             ))
+          tl
+    in
+    ans
 
   (* signature for a plugin class *)
   method make_class_sig ~loc ?(a_stub=false) ~is_rec tdecl =
@@ -526,11 +556,33 @@ class virtual generator initial_args tdecls = object(self: 'self)
    *   Typ.arrow ~loc (Typ.access2 ~loc (sprintf "For_%s" self#trait_name) "fn") @@
    *   self#make_trans_function_typ ~loc tdecl *)
 
+  (* generate obly for this type *)
   method make_trans_functions_sig: loc:loc ->
     is_rec:bool -> type_declaration list -> Sig.t list
-    = fun ~loc ~is_rec tdecls ->
+    = fun ~loc ~is_rec tdecl ->
+      (* we skip initial functions in the interface *)
 
-      []
+      let fixt =
+        if List.length self#tdecls <= 1 then []
+        else
+          (* List.map self#tdecls ~f:(fun tdecl -> *)
+          [
+            Sig.value ~loc
+              ~name:(sprintf "%s_%s_fix" self#trait_name tdecl.ptype_name.txt) @@
+            Typ.arrow ~loc
+              (Typ.tuple ~loc @@
+               List.map self#tdecls ~f:(fun tdecl ->
+                   (self#class_constructor_sig ~loc ~a_stub:true tdecl)
+                 ))
+              (Typ.unit ~loc)
+          ]
+            (* ) *)
+      in
+
+      List.concat
+        [ []
+        ; fixt
+        ]
       (* TODO: *)
       (* [ Sig.value ~loc ~name:(self#fix_func_name ()) @@
        *     Typ.access2 ~loc self#fix_module_name "fn"
@@ -562,7 +614,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       *)
       let mutal_names = List.map self#tdecls ~f:(fun {ptype_name={txt}} -> txt) in
       let intials =
-        if (List.length self#tdecls > 1)
+        if List.length self#tdecls > 1
         then
           List.map self#tdecls ~f:(fun tdecl ->
               value_binding ~loc
