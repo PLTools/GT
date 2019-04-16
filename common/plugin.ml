@@ -16,6 +16,40 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module Intf = Plugin_intf.Make(AstHelpers)
 
+(* let class_constructor_typ ~loc ?(a_stub=false) tdecl : Typ.t =
+ *   let loc = loc_from_caml tdecl.ptype_loc in
+ *   let tl =
+ *     Typ.arrow ~loc
+ *       (self#make_typ_of_self_trf ~loc ~in_class:true tdecl) @@
+ *     Typ.constr ~loc
+ *       (Lident (self#make_class_name ~is_mutal:a_stub tdecl))
+ *       (List.map (self#plugin_class_params tdecl) ~f:(Typ.of_type_arg ~loc))
+ *   in
+ *   let funcs_for_args =
+ *     let names = map_type_param_names tdecl.ptype_params ~f:id in
+ *     List.fold_left names
+ *       ~init:id
+ *       ~f:(fun acc name ->
+ *           self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name
+ *             (fun f arg -> acc @@ f arg)
+ *         )
+ *       tl
+ *   in
+ *   let ans =
+ *     if not a_stub
+ *     then funcs_for_args
+ *     else
+ *       Typ.arrow ~loc
+ *         (Typ.tuple ~loc @@ List.map self#tdecls ~f:(fun tdecl ->
+ *              self#long_trans_function_typ ~loc tdecl
+ *              (\* TODO: rename *\)
+ *            ))
+ *         tl
+ *   in
+ *   ans *)
+
+
+
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
@@ -558,7 +592,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   (* generate obly for this type *)
   method make_trans_functions_sig: loc:loc ->
-    is_rec:bool -> type_declaration list -> Sig.t list
+    is_rec:bool -> type_declaration  -> Sig.t list
     = fun ~loc ~is_rec tdecl ->
       (* we skip initial functions in the interface *)
 
@@ -581,12 +615,11 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
       List.concat
         [ []
-        ; fixt
+        (* ; fixt *)
+        (* ; [Sig.value ~loc
+         *      ~name:(Naming.trf_function self#trait_name tdecl.ptype_name.txt)
+         *      (self#make_final_trans_function_typ ~loc tdecl)] *)
         ]
-      (* TODO: *)
-      (* [ Sig.value ~loc ~name:(self#fix_func_name ()) @@
-       *     Typ.access2 ~loc self#fix_module_name "fn"
-       * ] *)
 
   method make_class_name ?(is_mutal=false) tdecl =
     sprintf "%s%s"
@@ -631,31 +664,31 @@ class virtual generator initial_args tdecls = object(self: 'self)
         else []
       in
 
-      let app_fix () =
-        match self#tdecls with
-        | [] -> []
-        | [tdecl] -> []
-        | tdecls ->
-          let tdecl1 = List.hd_exn tdecls in
-          let e1 =
-            value_binding ~loc
-              ~pat:(Pat.sprintf ~loc "%s_%s_fix" self#trait_name tdecl1.ptype_name.txt)
-              ~expr:(
-                Exp.tuple ~loc @@
-                List.map self#tdecls ~f:(fun {ptype_name={txt}} ->
-                    Exp.sprintf ~loc "%s_%s" self#trait_name txt
-                  )
-              )
-          in
-          let others =
-            List.map (List.tl_exn self#tdecls) ~f:(fun {ptype_name={txt}} ->
-                value_binding ~loc
-                  ~pat:(Pat.sprintf ~loc "%s_%s_fix" self#trait_name txt)
-                  ~expr:(Exp.sprintf ~loc "%s_%s_fix" self#trait_name tdecl1.ptype_name.txt)
-              )
-          in
-          e1::others
-      in
+      (* let app_fix () =
+       *   match self#tdecls with
+       *   | [] -> []
+       *   | [tdecl] -> []
+       *   | tdecls ->
+       *     let tdecl1 = List.hd_exn tdecls in
+       *     let e1 =
+       *       value_binding ~loc
+       *         ~pat:(Pat.sprintf ~loc "%s_%s_fix" self#trait_name tdecl1.ptype_name.txt)
+       *         ~expr:(
+       *           Exp.tuple ~loc @@
+       *           List.map self#tdecls ~f:(fun {ptype_name={txt}} ->
+       *               Exp.sprintf ~loc "%s_%s" self#trait_name txt
+       *             )
+       *         )
+       *     in
+       *     let others =
+       *       List.map (List.tl_exn self#tdecls) ~f:(fun {ptype_name={txt}} ->
+       *           value_binding ~loc
+       *             ~pat:(Pat.sprintf ~loc "%s_%s_fix" self#trait_name txt)
+       *             ~expr:(Exp.sprintf ~loc "%s_%s_fix" self#trait_name tdecl1.ptype_name.txt)
+       *         )
+       *     in
+       *     e1::others
+       * in *)
       let knots =
         match self#tdecls with
         | [] -> []
@@ -732,7 +765,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
       List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive)
         (intials @
          knots @
-         (app_fix ())
+         (* (app_fix ()) @ *)
+         []
         )
 
   method fix_func_name ?for_ () =
@@ -744,7 +778,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
     List.concat
       [ self#make_class_sig ~loc ~is_rec tdecl
       (* Need to fix drawing a signature by specializing for show|gmap case *)
-      ; self#make_trans_functions_sig ~loc ~is_rec [tdecl]
+      ; self#make_trans_functions_sig ~loc ~is_rec tdecl
       ]
 
   method do_single ~loc ~is_rec tdecl =
@@ -757,15 +791,19 @@ class virtual generator initial_args tdecls = object(self: 'self)
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
   method do_mutuals_sigs ~loc ~is_rec =
-    List.concat_map self#tdecls ~f:(fun tdecl ->
-        List.concat
-          [ [] (* self#make_indexes_sig ~loc *)
-          ; self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
-          ; self#make_class_sig ~loc ~is_rec tdecl
-          (* Need to fix drawing a signature by specializing for show|gmap case *)
-          ; self#make_trans_functions_sig ~loc ~is_rec [tdecl]
-          ]
-      )
+    List.concat
+      [
+        List.concat_map self#tdecls ~f:(fun tdecl ->
+            List.concat
+              [ self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
+              ; self#make_class_sig ~loc ~is_rec tdecl
+              ]
+          )
+      ; List.concat_map self#tdecls ~f:(fun tdecl ->
+            (* Need to fix drawing a signature by specializing for show|gmap case *)
+            self#make_trans_functions_sig ~loc ~is_rec tdecl
+          )
+      ]
 
   method do_mutuals ~loc ~is_rec tdecls : Str.t list =
     (* for mutal recursion we need to generate two classes, one transformation

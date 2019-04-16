@@ -596,7 +596,6 @@ let collect_plugins_sig ~loc tdecl plugins =
       )
     ]
 
-
 let rename_params tdecl =
   let loc = tdecl.ptype_loc in
   visit_typedecl ~loc tdecl
@@ -693,6 +692,12 @@ let do_typ ~loc sis plugins is_rec tdecl =
     ; collect_plugins_str ~loc tdecl plugins
     ]
 
+let fix_sig ~loc tdecls =
+  (* TODO: *)
+  Sig.value ~loc
+    ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
+    (Typ.unit ~loc)
+
 let fix_str ~loc tdecls =
   value_binding ~loc
     ~pat:(Pat.sprintf ~loc "%s" @@ Naming.make_fix_name tdecls)
@@ -786,6 +791,12 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
 let do_mutual_types_sig ~loc sis plugins tdecls =
   (* TODO: it could be a bug with topological sorting here *)
   sis @
+  List.concat_map tdecls ~f:(fun tdecl ->
+      [ make_interface_class_sig ~loc tdecl
+      ; make_gcata_sig ~loc tdecl
+      ]
+    ) @
+  [ fix_sig ~loc tdecls ] @
   List.concat_map plugins ~f:(fun p -> (p tdecls)#do_mutuals_sigs ~loc ~is_rec:true)
   (* List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls *)
 
