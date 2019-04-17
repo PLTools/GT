@@ -391,36 +391,8 @@ Please note the implementation of method \lstinline{c_Abs}~--- now it returns a 
 argument. In short, we defined a transformation into a nameless representation, which completely removes the names in binder
 positions.
 
-\section{Related Works}
-
-Among existing generic programming frameworks for OCaml we can name two, which resemble ours: \cd{ppx\_deriving} and \cd{Visitors}~\cite{Visitors}.
-
-As \cd{ppx\_deriving} implements a purely combinatorial approach, based on higher-order functions, we suppose, that our library subsumes it in terms
-of expressivity (at least potentially).
-
-\cd{Visitors}, on the other hand, explore a similar to ours object-oriented approach, in which many decisions, rejected by us, were taken (and vice versa). Here
-we summarize the main differences:
-
-\begin{itemize}
-   \item \cd{Visitors} are excessively object-oriented~--- in order to use them one needs to instantiate some object and call a proper method. In our case as long as
-     only predefined features are required a user can use a more native combinatorial interface.
-     
-   \item \cd{Visitors} implement a number of useful transformations in an \emph{ad-hoc} manner; in our case all transformations are instances of the
-     same generic scheme. It is possible to combine different transformations via inheritance as long as the types of underlying scheme unify. We also argue, that
-     in our framework the implementation of user-defined plugins is much easier.
-     
-   \item Following SYB, \cd{Visitors} take a type-discriminating route: for each type of interest (including the built-in ones) there is a dedicated
-     transformation method in each object, representing a transformation. While this solution indeed adds some flexibility, we firmly oppose it, since it
-     breaks the abstraction: inspecting the methods of a transformation (which cannot be hidden in a module signature) one can retrieve some
-     information about the implementation of encapsulated types. Even worse, the data structures of abstract types can be manipulated in an unprescribed
-     manner using the public type-transforming interface.
-
-   \item In our case the type parameters for transformation classes have to be specified by an end user. With \cd{Visitors} this burden is offloaded to the
-     compiler with the aid of some neat trick. However, this trick makes it impossible to use \cd{Visitors} syntax extension in module signatures. There is no
-     such problem in our case~--- our framework can be equally used in both implementation and interface files.
-
-   \item \cd{Visitors} in their current state do not support polymorphic variants.
-\end{itemize}
+\input{related.tex}
+\input{visitors.tex}
 
 \section{Conclusion}
 In this paper we presented an improved version of Generic Transformers, extended by support of PPX rewriters and type abbrevations. Although it 
