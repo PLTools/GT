@@ -694,9 +694,36 @@ let do_typ ~loc sis plugins is_rec tdecl =
 
 let fix_sig ~loc tdecls =
   (* TODO: *)
+  let idx = ref (List.length ps) in
+  let next () = Int.incr idx; !idx in
+
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-    (Typ.unit ~loc)
+    (Typ.arrow ~loc
+       (Typ.unit ~loc)
+       (Typ.tuple ~loc @@
+
+        let _ = List.map tdecls ~f:(fun tdecl ->
+            N
+          )
+        in
+        List.map tdecls ~f:(fun tdecl ->
+            let ps = map_type_param_names tdecl.ptype_params ~f:id in
+            let fas tl =
+              List.fold_right ~init:tl ps
+                ~f:(fun s acc ->
+
+                  )
+
+
+            Typ.arrow ~loc
+              (Typ.var ~loc (sprintf "inh%d" @@ next ())) @@
+            Typ.arrow ~loc
+              (Typ.use_tdecl tdecl)
+              (Typ.var ~loc (sprintf "syn%d" @@ next ()))
+          )
+       )
+    )
 
 let fix_str ~loc tdecls =
   value_binding ~loc
