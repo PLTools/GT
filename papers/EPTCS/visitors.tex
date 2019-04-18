@@ -1,6 +1,10 @@
 \section{GT vs. Visitors}
 
-Among existing generic programming frameworks for OCaml we can name two, which resemble ours: \cd{ppx\_deriving} and \cd{Visitors}~\cite{Visitors}.
+Among existing generic programming frameworks for OCaml we can name two, which resemble ours: \cd{ppx\_deriving}, \cd{ppx\_traverse}\footnote{Both \cd{ppx\_deriving} and \cd{ppx\_traverse} are now a part of \url{https://github.com/ocaml-ppx/ppxlib}} and \cd{Visitors}~\cite{Visitors}.
+
+% \cd{ppx\_deriving} is the most simple from the others. It generated transformation functions that are not extensible.
+
+\cd{ppx\_traverse} allows extensible transformation due to it represents transformations as object (the same as GT and \cd{Visitors}). However,  there is no way to specify inherited attributes in the generated code, so some transformation traits like equality and comparison are not expressible.
 
 \cd{Visitors}, on the other hand, explore a similar to ours object-oriented approach, in which many decisions, rejected by us, were taken (and vice versa). Here
 we summarize the main differences:
