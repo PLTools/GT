@@ -83,18 +83,9 @@ Dmitry Boulytchev
   Abstract gies here
 \end{abstract}
 
-\section{Introduction}
+\input{intro.tex}
+\section{Design}
 
-Generic programming in the context of OCaml lately gains additional attention~\cite{Staged,Visitors,GenericOCaml}. 
-We present a generic programming library GT\footnote{\url{https://github.com/kakadu/GT/tree/ppx-new}} (Generic Transformers), which has been in an active development and use since
-2014. This library is an inheritor of our earlier work~\cite{SYBOCaml} on implementation of ``Scrap Your Boilerplate''
-approach~\cite{SYB,SYB1,SYB2}. However, our experience has shown, that the extensibility of SYB is insufficient; in addition
-the uniform transformations, based solely on type discrimination, turned out to be inconvenient to use (for example, they can allow
-one to break through the encapsulation barrier). Our idea initially was to combine combinator and object-oriented approaches~--- the former
-would provide means for parameterization, while the latter~--- for extensibility via late binding utilization. This idea in the form of
-a certain design pattern was successfully evaluated~\cite{SCICO} and then reified in a library and a syntax extension~\cite{TransformationObjects}.
-Our follow-up experience with the library~\cite{OCanren} has (once again) shown some flaws in the implementation. The version we present here is
-almost a complete re-implementation with these flaws fixed.
 
 From an end user perspective, our library is comprised of four layers:
 
@@ -117,7 +108,7 @@ In fact, there is also an underground layer~--- all generic features are combine
 currently the library does not contain any conventional interface to deal with the object, it can be provided in the future (which opens a potentially
 interesting opportunities for integration with existing proposals for \emph{ad-hoc} polymorphism~\cite{ModularImplicits}).
 
-\section{Design}
+
 
 The design of the library is based on the idea to describe transformations (e.g. catamorphisms~\cite{Bananas}) in terms of transformations, described by
 attribute grammars~\cite{AGKnuth,AGSwierstra}. In short, we consider only the transformations of the following type

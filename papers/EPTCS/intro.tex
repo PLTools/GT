@@ -1,0 +1,53 @@
+\section{Introduction}
+
+In statically typed languages, as a rule, types are completely erased after the compilation and do not retained in runtime. This has a huge advantage over
+dynamic typing as, first, programs do not need to inspect types at runtime anymore and, second, a whole class of bad runtime behaviors~--- type errors~---
+is eliminated. The other side of the coin, however, is that now some transformations, which in untyped languages can be implemented ``once and for all'',
+can not be typed and have to be re-implemented for each type of interest. One way to overcome this defficiency is to develop a more powerful type system in
+which more functions can be typed; as an example we may mention the support for \emph{ad-hoc} polymorphism in \textsc{Haskell} in the forms of type
+classes~\cite{TypeClasses} and type families~\cite{TypeFamilies}. However, due to the totality of typechecking and fundamental undecidability results there
+will always be some ``good'' functions which cannot be typed. Another approach, \emph{datatype-generic programming}~\cite{DGP}, is aimed at developing techniques for
+implementation of practically important families of type-indexed functions using existing language features. For example, types can be encoded in a substrate
+language~\cite{Hinze,InstantGenerics,GenericOCaml}, or a part of type information can be saved for runtime~\cite{SYBOCaml}, or generic functions for a given
+type can be generated at compile-time automatically~\cite{Yallop,PPXDeriving}. The two approaches we mentioned are in fact complementary~--- the more powerful
+type system is the more means for datatype-generic programming the language can incorporate natively. For example, parametric polymorphism makes it possible
+to natively express many generic functions like length of list of arbitrary elements, etc.
+
+We present a generic programming library \textsc{GT}\footnote{\url{https://github.com/kakadu/GT/tree/ppx}} (\emph{Generic Transformers}), which has been in an
+active development and use since 2014. One of the important observations, which motivated the development of our framework, was that many generic functions
+can be considered as a modifications of some other generic functions. While our approach is generative~--- we generate generic functioinality from type definitions~---
+it also makes possible for end users to easily derive variants of generated functions by redefining some parts of their functionality. This is achieved using
+a method-per-constructor encoding for concrete transformations, which resembles the approach of object algebras~\cite{ObjectAlgebras}.
+
+The main properties of our solution are as follows:
+
+\begin{itemize}
+\item 
+\item
+\end{itemize}
+
+
+The library we present is an inheritor of our earlier work~\cite{SYBOCaml} on implementation of ``Scrap Your Boilerplate'' approach~\cite{SYB,SYB1,SYB2}. However,
+our experience has shown, that the extensibility of SYB is insufficient; in addition the uniform transformations, based solely on type discrimination, turned out to be
+inconvenient to use. Our idea initially was to combine combinator and object-oriented approaches~--- the former would provide means for parameterization, while the
+latter~--- for extensibility via late binding utilization. This idea in the form of a certain design pattern was successfully evaluated~\cite{SCICO} and then reified
+in a library and a syntax extension~\cite{TransformationObjects}. Our follow-up experience with the library~\cite{OCanren} has (once again) shown some flaws in the
+implementation. The version we present here is almost a complete re-implementation with these flaws fixed.
+
+The practical need for datatype-generic programming can be justified in terms of various software qualities, for example, code reuse. Indeed, by its nature
+a generic function describes some common computational scenario for a family of data structures, so, at best, a unique implementation is expected. As there can be
+other important qualities (extensibility, modularity, etc.) the question of evaluation criteria for datatype-generic framework arises. One of commonly used set
+of requirements, known as ``The Expression Problem'', was formulated by Philip Wadler~\cite{ExpressionProblem}, and measures the extensibilty of 
+
+\begin{itemize}
+\item Extensibility: 
+\item Strong static type safety: It should be impossible to
+apply a processor to a data variant which it cannot
+handle.
+\item No modification or duplication: Existing code should
+neither be modified nor duplicated.
+\item Separate compilation: Compiling datatype extensions or adding new processors should not encompass re-type-checking the original datatype or existing processors.
+\end{itemize}
+
+These requirements were initially proposed as a mean to evaluate the extensibility of a solution in question; we consider them as a good ``litmus test'' for
+a datatype-generic programming framework as well~\cite{ObjectAlgebras}.

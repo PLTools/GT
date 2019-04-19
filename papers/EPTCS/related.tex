@@ -28,8 +28,13 @@ kinds of transformations are supported: \emph{queries}, which collect and return
 criterion, and \emph{transformations}, which uniformly propagate some type-preserving transformation for a datatype of interest. In the follow-up papers
 the approach was extended to deal with transformations which traverse pairs of data structures~\cite{SYB1} and to support the extension of already implemented
 transformations with new type cases~\cite{SYB2}. Later the approach was implemented  for other languages, including \textsc{OCaml}~\cite{SYBOCaml,Staged}.
-Unlike our casee, SYB takes the route of discriminating on a whole type, not individual constructors. In addition the shape of available transformations
-look rather restrictive, and, once implemented, transformations for a given type can not be modified.
+Unlike our case, SYB takes the route of discriminating on a whole type, not individual constructors. In addition the shape of available transformations look rather
+restrictive, and, once implemented, transformations for a given type can not be modified. It is interesting, that, potentially, SYB-style generic functions
+can ``break through the ensapsulation barrier''~--- indeed, they can identify the occurrencies of values of type of interest inside \emph{arbitrarily typed}
+data structures. Thus, their behaviour depend on the actual details of data structure organization, including those which were intentionally hidden by encapsulation.
+This may result in, first, the possibility for undesirable reverse-engineering (by applying various type-sensitive transformations and analysing the results) and,
+second, in fragility of interfaces~--- after a modification of data structure implementation generic functions for \emph{old} version can still be applied with
+nither static nor dynamic error, but with wrong (or undesirable) results. 
 
 There is a certain similarity between our approach and \emph{object algebras}~\cite{ObjectAlgebras}. Object algebras were proposed as a solution
 for expression problem in mainstream object-oriented languages (\textsc{Java}, \textsc{C++}, \textsc{C\#}), which would not require advanced type system features besides
