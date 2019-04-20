@@ -1,6 +1,18 @@
 \section{Introduction}
 
-In statically typed languages, as a rule, types are completely erased after the compilation and do not retained in runtime. This has a huge advantage over
+Frederic Brooks in his seminal book on software engineering ``The Mythical Man-Month''~\cite{MMM} characterizes the essence of programming with the following (pretty precise
+but a bit too figurative) words:
+
+\blockquote{``The programmer, like the poet, works only slightly removed from pure thought-stuff. He builds his castles in the air, from air, creating by exertion of the imagination. Few media of
+creation are so flexible, so easy to polish and rework, so readily capable of realizing grand conceptual structures. (As we shall see later, this very tractability has its own problems.)''}
+
+Indeed, the virtuality of programs and flexibility of their media call for structuring; the lack of proper structure easily leads to disastrous consequences
+(as it happened to some real-world industrial projects in past and constanlty happens to some student projects in present). One of commonly used ways to bring a
+structure in software are \emph{datatypes}. Datatypes allow to describe the properties of data, what can and cannot be done, and to some extent they prescribe
+semantics to data structures. Being kept in runtime, datatypes make it possible to implement meta-transformations by analyzing types (introspection)
+or even creating new types on the fly (reflection).
+
+However, in statically typed languages, as a rule, types are completely erased after the compilation and do not retained in runtime. This has a huge advantage over
 dynamic typing as, first, programs do not need to inspect types at runtime anymore and, second, a whole class of bad runtime behaviors~--- type errors~---
 is eliminated. The other side of the coin, however, is that now some transformations, which in untyped languages can be implemented ``once and for all'',
 can not be typed and have to be re-implemented for each type of interest. One way to overcome this defficiency is to develop a more powerful type system in
@@ -8,8 +20,8 @@ which more functions can be typed; as an example we may mention the support for 
 classes~\cite{TypeClasses} and type families~\cite{TypeFamilies}. However, due to the totality of typechecking and fundamental undecidability results there
 will always be some ``good'' functions which cannot be typed. Another approach, \emph{datatype-generic programming}~\cite{DGP}, is aimed at developing techniques for
 implementation of practically important families of type-indexed functions using existing language features. For example, types can be encoded in a substrate
-language~\cite{Hinze,InstantGenerics,GenericOCaml}, or a part of type information can be saved for runtime~\cite{SYBOCaml}, or generic functions for a given
-type can be generated at compile-time automatically~\cite{Yallop,PPXDeriving}. The two approaches we mentioned are in fact complementary~--- the more powerful
+language~\cite{Hinze,InstantGenerics,GenericOCaml}, or a part of type information can be saved for runtime~\cite{SYB,SYBOCaml}, or generic functions for a given
+type can be generated at compile-time automatically~\cite{Yallop,PPXLib}. The two approaches we mentioned are in fact complementary~--- the more powerful
 type system is the more means for datatype-generic programming the language can incorporate natively. For example, parametric polymorphism makes it possible
 to natively express many generic functions like length of list of arbitrary elements, etc.
 
@@ -22,32 +34,22 @@ a method-per-constructor encoding for concrete transformations, which resembles 
 The main properties of our solution are as follows:
 
 \begin{itemize}
-\item 
-\item
+\item each transformation is expressed in terms of a \emph{traversal function} and a \emph{transformation object}, which encapsulate the ``interesting part''
+  of the transformation;
+\item the traversal function is unique for given type and all transformation objects for the type are instances of a unique class;
+\item both the traversal function and the class are generated from type definition; we support regular ADTs, structures, polymorphic variants and predefined types;
+\item we provide a number of plugins which generate practically important transformations in the form of concrete transformation classes;
+\item the plugin system is extensible: end users can implement their own plugins.
 \end{itemize}
 
-
 The library we present is an inheritor of our earlier work~\cite{SYBOCaml} on implementation of ``Scrap Your Boilerplate'' approach~\cite{SYB,SYB1,SYB2}. However,
-our experience has shown, that the extensibility of SYB is insufficient; in addition the uniform transformations, based solely on type discrimination, turned out to be
+our experience has shown, that the expressivity and extensibility of SYB is insufficient; in addition the uniform transformations, based solely on type discrimination, turned out to be
 inconvenient to use. Our idea initially was to combine combinator and object-oriented approaches~--- the former would provide means for parameterization, while the
 latter~--- for extensibility via late binding utilization. This idea in the form of a certain design pattern was successfully evaluated~\cite{SCICO} and then reified
 in a library and a syntax extension~\cite{TransformationObjects}. Our follow-up experience with the library~\cite{OCanren} has (once again) shown some flaws in the
 implementation. The version we present here is almost a complete re-implementation with these flaws fixed.
 
-The practical need for datatype-generic programming can be justified in terms of various software qualities, for example, code reuse. Indeed, by its nature
-a generic function describes some common computational scenario for a family of data structures, so, at best, a unique implementation is expected. As there can be
-other important qualities (extensibility, modularity, etc.) the question of evaluation criteria for datatype-generic framework arises. One of commonly used set
-of requirements, known as ``The Expression Problem'', was formulated by Philip Wadler~\cite{ExpressionProblem}, and measures the extensibilty of 
+The rest of the paper is organized as follows. ...
 
-\begin{itemize}
-\item Extensibility: 
-\item Strong static type safety: It should be impossible to
-apply a processor to a data variant which it cannot
-handle.
-\item No modification or duplication: Existing code should
-neither be modified nor duplicated.
-\item Separate compilation: Compiling datatype extensions or adding new processors should not encompass re-type-checking the original datatype or existing processors.
-\end{itemize}
+Acknowledgements ...
 
-These requirements were initially proposed as a mean to evaluate the extensibility of a solution in question; we consider them as a good ``litmus test'' for
-a datatype-generic programming framework as well~\cite{ObjectAlgebras}.
