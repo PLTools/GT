@@ -3,7 +3,7 @@
 \usepackage{breakurl}             % Not needed if you use pdflatex only.
 \usepackage{underscore}           % Only needed if you use pdflatex.
 
-
+\usepackage{marginnote}
 \usepackage{booktabs} 
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -27,6 +27,7 @@
 \usepackage{ragged2e}
 \usepackage{soul}
 \usepackage{csquotes}
+\usepackage{inconsolata}
 
 \lstdefinelanguage{ocaml}{
 keywords={@type, function, fun, let, in, match, with, when, class, type,
@@ -35,7 +36,7 @@ new, module, sig, deriving, datatype, struct, if, then, else, open, private, vir
 assert, true, false, end},
 sensitive=true,
 commentstyle=\small\itshape\ttfamily,
-keywordstyle=\ttfamily\underbar,
+keywordstyle=\ttfamily\bfseries, %\underbar,
 identifierstyle=\ttfamily,
 basewidth={0.5em,0.5em},
 columns=fixed,
@@ -181,17 +182,18 @@ although \cd{ppxlib} plugin can be used equally.
 First, we consider a simple type to represent arithmetic expressions:
 
 \begin{lstlisting}
-  @type expr  = Var   of string
-	      | Add   of expr * expr
-	      | Mul   of expr * expr
-	      | Div   of expr * expr
-	      | Const of int with fmap
+@type expr = Var   of string
+           | Add   of expr * expr
+           | Mul   of expr * expr
+           | Div   of expr * expr
+           | Const of int         with fmap
 \end{lstlisting}
 
 Here we requested a feature \cd{fmap}, which implements the conventional functor semantics. Since the type is not polymorphic, the function \cd{fmap(expr)}
 just copies its argument. Although the copying can be considered useful on its own, this result a bit disappointing. However, with the aid of our framework we
 actually can acquire a number of useful transformations, taking the copying as the starting point. For example, given a state \cd{st} we can substitute the
 values of all variables in this state in an expression:
+\marginnote{We omitted a method's argument for value being transformed. Is it intentional?}
 
 \begin{lstlisting}
   let substitute st e = fix
@@ -214,7 +216,8 @@ simple arithmetic equalities like $0*x=0$ or $0+x=x$:
 
 \begin{lstlisting}
   class simplifier f =
-  object inherit [_] @expr[fmap] f
+  object 
+    inherit [_] @expr[fmap] f
     method c_Div _ x y =
       match f x, f y with
       | Const x, Const y -> Const (x / y)
@@ -245,20 +248,21 @@ a non-strict simplifier on top of the strict one:
 
 \begin{lstlisting}
   class ns_simplifier f =
-  object inherit simplifier f 
+  object 
+    inherit simplifier f 
     method c_Mul _ x y =
       match f x with
       | Const 0 -> Const 0
       | Const 1 -> f y
-      | Const x -> (match f y with                      
+      | Const x -> (match f y with
                     | Const y -> Const (x * y)
                     | y       -> Mul   (Const x, y)
-                   )
+                    )
       | x       -> (match f y with
                     | Const 0 -> Const 0
                     | Const 1 -> x
                     | y       -> Mul (x, y)
-                   )
+                    )
   end
 \end{lstlisting}
 
@@ -326,7 +330,7 @@ Now we can combine two types into the single type for lambda terms:
 
 Here we distinguish names in binder positions (\lstinline{'b}) and bound positions (\lstinline{'n}) since their behavior during the
 transformation essentially different: names in binder positions are erased, while in bound positions are substituted with corresponding
-DeBruijn index. We also define shortcuts for the terms in named and nameless representations.
+de Bruijn index. We also define shortcuts for the terms in named and nameless representations.
 
 Similarly to the types, the transformations can be combined as well:
 

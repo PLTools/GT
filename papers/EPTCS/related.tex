@@ -56,7 +56,7 @@ Supporting polymorphic variants as a mean for datatype extensibility requires a 
 Finally, among existing generic programming frameworks for \textsc{OCaml} we can name two, which resemble ours: \textsc{ppx\_deriving}/\textsc{ppx\_traverse}
 (a part of \textsc{ppxlib}~\cite{PPXLib}) and \textsc{Visitors}~\cite{Visitors}.
 
-\textsc{ppx\_deriving} is
+\textsc{ppx\_deriving} is the simplest approach possible: type declarations are mapped one-to-one to recursive functions representing a specific kind of transformation. It is the most effective implementation (functions are called directly, no late biding involved) but it is not extensible. If the end user needs to modify slightly the generated function, he or she should copy and paste generated code to modify it manually. The amount of work to support new transformation will drastically increase if type definitions will change during development cycle.
 
 In \textsc{ppx\_traverse} extensible transformations are represented as objects; unlike our case, method-per-type approach is used. In addition 
 \textsc{ppx\_traverse} does not make use of inherited attributes, thus some transformations like equality or comparison are not representable.
