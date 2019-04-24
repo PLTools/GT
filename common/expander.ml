@@ -694,35 +694,71 @@ let do_typ ~loc sis plugins is_rec tdecl =
 
 let fix_sig ~loc tdecls =
   (* TODO: *)
-  let idx = ref (List.length ps) in
+  let idx = ref (0) in
   let next () = Int.incr idx; !idx in
+
+  let make_triple () =
+    let a = Typ.var ~loc @@ sprintf "a%d" (next ()) in
+    let b = Typ.var ~loc @@ sprintf "a%d" (next ()) in
+    let c = Typ.var ~loc @@ sprintf "a%d" (next ()) in
+    (a,b,c)
+  in
+  let arr3 a b c = Typ.arrow ~loc  a (Typ.arrow ~loc b c) in
 
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-    (Typ.arrow ~loc
-       (Typ.unit ~loc)
-       (Typ.tuple ~loc @@
+       (
 
-        let _ = List.map tdecls ~f:(fun tdecl ->
-            N
+        let big_trf tdecl =
+            let inh_  = sprintf "i%d" (next ()) in
+            let syn_  = sprintf "s%d" (next ()) in
+            let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
+            let typ =
+              Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+              List.map ps ~f:(fun (_,x,_) -> x)
+            in
+            arr3  (Typ.var ~loc inh_) typ              (Typ.var ~loc syn_ )
+        in
+        let xs = List.map tdecls ~f:(fun tdecl ->
+            let inh_  = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
+            let self_ = Typ.var ~loc @@ sprintf "self%d" (next ()) in
+            let syn_  = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
+
+            let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
+            let class_typ =
+              Typ.constr ~loc
+                (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
+                (List.concat_map ps ~f:(fun (i,a,s) ->
+                     List.map [i;a;s] ~f:(id)
+                   )
+                 @ (List.map [inh_;self_;syn_] ~f:(id))
+                )
+            in
+            let fself = arr3 inh_ self_ syn_ in
+            let fas =
+              List.map ps ~f:(fun (i,a,s) -> arr3 i a s) in
+            let muts =
+              Typ.tuple ~loc @@
+              List.map tdecls ~f:big_trf
+            in
+
+            let l =
+              List.fold_right ~init:class_typ
+                (muts :: fas @ [fself])
+                ~f:(fun x acc -> Typ.arrow ~loc x acc)
+            in
+            let r =
+              List.fold_right ~init:fself fas
+                ~f:(Typ.arrow ~loc)
+            in
+            (l,r)
           )
         in
-        List.map tdecls ~f:(fun tdecl ->
-            let ps = map_type_param_names tdecl.ptype_params ~f:id in
-            let fas tl =
-              List.fold_right ~init:tl ps
-                ~f:(fun s acc ->
 
-                  )
+        Typ.arrow ~loc
+          (Typ.tuple ~loc @@ List.map xs ~f:fst)
+          (Typ.tuple ~loc @@ List.map xs ~f:snd)
 
-
-            Typ.arrow ~loc
-              (Typ.var ~loc (sprintf "inh%d" @@ next ())) @@
-            Typ.arrow ~loc
-              (Typ.use_tdecl tdecl)
-              (Typ.var ~loc (sprintf "syn%d" @@ next ()))
-          )
-       )
     )
 
 let fix_str ~loc tdecls =
