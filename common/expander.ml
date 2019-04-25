@@ -710,9 +710,7 @@ let fix_sig ~loc tdecls =
 
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-       (
-
-        let big_trf tdecl =
+       (let big_trf tdecl =
             let inh_  = sprintf "i%d" (next ()) in
             let syn_  = sprintf "s%d" (next ()) in
             let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
@@ -761,7 +759,6 @@ let fix_sig ~loc tdecls =
         Typ.arrow ~loc
           (Typ.tuple ~loc @@ List.map xs ~f:fst)
           (Typ.tuple ~loc @@ List.map xs ~f:snd)
-
     )
 
 let fix_str ~loc tdecls =
