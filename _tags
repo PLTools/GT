@@ -1,5 +1,5 @@
 true: debug, bin_annot, short_paths
-<sample>: -traverse
+<sample> or <papers>: -traverse
 
 <common/*>:  package(ppxlib,ocamlgraph,base)
 <common/plugin.*>: package(ppxlib.metaquot)

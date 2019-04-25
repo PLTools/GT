@@ -123,10 +123,12 @@ let make_interface_class_sig ~loc tdecl =
   let name = tdecl.ptype_name in
 
   let k fields =
-    Sig.class_ ~loc ~virt:true
-      ~name:(class_name_for_typ name.txt)
-      ~params:(params_of_interface_class ~loc tdecl.ptype_params)
-      fields
+
+    [ Sig.class_ ~loc ~virt:true
+        ~name:(class_name_for_typ name.txt)
+        ~params:(params_of_interface_class ~loc tdecl.ptype_params)
+        fields
+    ]
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _labels ->
@@ -143,7 +145,7 @@ let make_interface_class_sig ~loc tdecl =
       )
     ~onabstract:(fun () ->
         (* For purely abstract type we can only generate interface class without methods *)
-        k []
+        []
       )
     ~onvariant:(fun cds ->
       k @@
@@ -456,11 +458,18 @@ let make_gcata_typ ~loc tdecl =
   Typ.(chain_arrow ~loc [ tr_t; var ~loc "inh"; subj_t; var ~loc "syn" ])
 
 let make_gcata_sig ~loc ?(shortname=false) tdecl =
-  let type_ = make_gcata_typ ~loc tdecl in
-  let name = if shortname then "gcata"
-    else Printf.sprintf "gcata_%s" tdecl.ptype_name.txt
+  let wrap () =
+    let type_ = make_gcata_typ ~loc tdecl in
+    let name = if shortname then "gcata"
+      else Printf.sprintf "gcata_%s" tdecl.ptype_name.txt
+    in
+    [ Sig.value ~loc ~name type_ ]
   in
-  Sig.value ~loc ~name type_
+  visit_typedecl ~loc tdecl
+    ~onrecord:(fun _ -> wrap ())
+    ~onvariant:(fun _ -> wrap ())
+    ~onmanifest:(fun _ -> wrap ())
+    ~onabstract:(fun () -> [])
 
 let make_gcata_str ~loc tdecl =
   let gcata_pat =
@@ -536,41 +545,25 @@ let make_heading_gen ~loc wrap tdecl = []
 
 
 let collect_plugins_str ~loc tdecl plugins : Str.t list =
-  (* TODO: fix eta expansion& application here *)
-  let wrap p tdecl fname plugin_name =
-    p#eta_and_exp ~center:(Exp.sprintf ~loc "%s_%s" plugin_name tdecl.ptype_name.txt)
-      (* ~center:(Exp.app ~loc
-       *            (Exp.field ~loc
-       *               (Exp.sprintf ~loc "%s" @@
-       *                Naming.fix_func_name ~for_:tdecl.ptype_name.txt plugin_name)
-       *               (Lident "call")
-       *            )
-       *            (Exp.access ~loc p#index_module_name
-       *               (Naming.cname_index tdecl.ptype_name.txt)
-       *            )
-       *         ) *)
+  let wrap p tdecl =
+    p#eta_and_exp
+      ~center:(Exp.sprintf ~loc "%s_%s" p#trait_name tdecl.ptype_name.txt)
       tdecl
   in
   let plugin_fields =
     List.map plugins ~f:(fun p ->
-        let fname = p#make_trans_function_name tdecl in
         Cf.method_concrete ~loc p#trait_name @@
         if p#need_inh_attr
         then
-          (* Exp.(app ~loc
-           *        (sprintf ~loc "%s" @@
-           *         Naming.init_trf_function p#trait_name tdecl.ptype_name.txt)
-           *        (sprintf ~loc "%s" @@
-           *         Naming.fix_func_name ~for_:tdecl.ptype_name.txt p#trait_name)
-           *     ) *)
           Exp.sprintf ~loc "%s" @@
           Naming.trf_function p#trait_name tdecl.ptype_name.txt
-        else wrap p tdecl fname p#trait_name
+        else wrap p tdecl
       )
   in
 
   let tname = tdecl.ptype_name.txt in
 
+  (* The pack itself *)
   (Str.single_value ~loc (Pat.sprintf ~loc "%s" tname) @@
   Exp.record ~loc
     [ Ldot (lident "GT", "gcata"), Exp.sprintf ~loc "gcata_%s" tname
@@ -578,23 +571,33 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
         ~self:(Pat.any ~loc) ~fields:plugin_fields
     ])
   :: (List.filter_map plugins ~f:(fun p ->
-      None
-      (* if p#need_inh_attr then None else
-       *   let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
-       *   Option.some @@
-       *   Str.single_value ~loc
-       *     (Pat.sprintf ~loc "%s" fname)
-       *     (wrap p tdecl fname p#trait_name) *)
+      (* also we generate transformation function with unit preapplied
+         Because we seems to need them in case of abstract type in the interface
+      *)
+      if p#need_inh_attr then None
+      else
+        let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
+        Option.some @@
+        Str.single_value ~loc
+          (Pat.sprintf ~loc "%s" fname)
+          (wrap p tdecl)
     ))
 
 let collect_plugins_sig ~loc tdecl plugins =
-  Sig.value ~loc ~name:tdecl.ptype_name.txt @@
-  Typ.constr ~loc (Ldot (lident "GT", "t"))
-    [ make_gcata_typ ~loc tdecl
-    ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
-        (p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
-      )
-    ]
+  let wrap () =
+  [Sig.value ~loc ~name:tdecl.ptype_name.txt @@
+   Typ.constr ~loc (Ldot (lident "GT", "t"))
+     [ make_gcata_typ ~loc tdecl
+     ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
+           (p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
+         )
+     ]]
+  in
+  visit_typedecl ~loc tdecl
+      ~onmanifest:(fun _ -> wrap ())
+      ~onvariant:(fun _ -> wrap ())
+      ~onabstract:(fun _ -> [] )
+      ~onrecord:(fun _ -> wrap ())
 
 let rename_params tdecl =
   let loc = tdecl.ptype_loc in
@@ -846,18 +849,20 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
    *   psig_type ~loc:tdecl.ptype_loc Nonrecursive [tdecl]; *)
   List.concat
     [ sis
-    ; [intf_class; gcata]
+    ; intf_class
+    ; gcata
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
-    ; [ collect_plugins_sig ~loc tdecl plugins ]
+    ; collect_plugins_sig ~loc tdecl plugins
     ]
 
 let do_mutual_types_sig ~loc sis plugins tdecls =
   (* TODO: it could be a bug with topological sorting here *)
   sis @
   List.concat_map tdecls ~f:(fun tdecl ->
-      [ make_interface_class_sig ~loc tdecl
-      ; make_gcata_sig ~loc tdecl
-      ]
+      List.concat
+        [ make_interface_class_sig ~loc tdecl
+        ; make_gcata_sig ~loc tdecl
+        ]
     ) @
   [ fix_sig ~loc tdecls ] @
   List.concat_map plugins ~f:(fun p -> (p tdecls)#do_mutuals_sigs ~loc ~is_rec:true)

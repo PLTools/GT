@@ -296,7 +296,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ]
     in
     visit_typedecl ~loc tdecl
-      ~onabstract:(fun () -> k [])
+      ~onabstract:(fun () -> [])
       ~onrecord:(fun _fields ->
           k [ Ctf.method_ ~loc (Naming.meth_name_for_record tdecl) ~virt:false @@
               Typ.chain_arrow ~loc @@
@@ -596,29 +596,25 @@ class virtual generator initial_args tdecls = object(self: 'self)
     = fun ~loc ~is_rec tdecl ->
       (* we skip initial functions in the interface *)
 
-      let fixt =
-        if List.length self#tdecls <= 1 then []
-        else
-          (* List.map self#tdecls ~f:(fun tdecl -> *)
-          [
-            Sig.value ~loc
-              ~name:(sprintf "%s_%s_fix" self#trait_name tdecl.ptype_name.txt) @@
-            Typ.arrow ~loc
-              (Typ.tuple ~loc @@
-               List.map self#tdecls ~f:(fun tdecl ->
-                   (self#class_constructor_sig ~loc ~a_stub:true tdecl)
-                 ))
-              (Typ.unit ~loc)
-          ]
-            (* ) *)
-      in
+      (* let fixt =
+       *   if List.length self#tdecls <= 1 then []
+       *   else
+       *     [
+       *       Sig.value ~loc
+       *         ~name:(sprintf "%s_%s_fix" self#trait_name tdecl.ptype_name.txt) @@
+       *       Typ.arrow ~loc
+       *         (Typ.tuple ~loc @@
+       *          List.map self#tdecls ~f:(fun tdecl ->
+       *              (self#class_constructor_sig ~loc ~a_stub:true tdecl)
+       *            ))
+       *         (Typ.unit ~loc)
+       *     ]
+       * in *)
 
       List.concat
-        [ []
-        (* ; fixt *)
-        (* ; [Sig.value ~loc
-         *      ~name:(Naming.trf_function self#trait_name tdecl.ptype_name.txt)
-         *      (self#make_final_trans_function_typ ~loc tdecl)] *)
+        [ [Sig.value ~loc
+             ~name:(Naming.trf_function self#trait_name tdecl.ptype_name.txt)
+             (self#make_final_trans_function_typ ~loc tdecl)]
         ]
 
   method make_class_name ?(is_mutal=false) tdecl =
@@ -636,14 +632,14 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method virtual make_trans_function_body: loc:loc -> ?rec_typenames: string list ->
     string -> type_declaration -> Exp.t
 
-  method make_trans_functions: loc:loc -> is_rec:bool -> Str.t list
+  method make_trans_functions : loc:loc -> is_rec:bool -> Str.t list
     = fun ~loc ~is_rec ->
       (* we will generate mutally recursive showers here
 
          (* n functions like *)
          let show0_typ1 = ...
 
-         let knot = ... using fix
+         let show_typ1 = #5 (fix ....)
       *)
       let mutal_names = List.map self#tdecls ~f:(fun {ptype_name={txt}} -> txt) in
       let intials =
@@ -664,31 +660,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
         else []
       in
 
-      (* let app_fix () =
-       *   match self#tdecls with
-       *   | [] -> []
-       *   | [tdecl] -> []
-       *   | tdecls ->
-       *     let tdecl1 = List.hd_exn tdecls in
-       *     let e1 =
-       *       value_binding ~loc
-       *         ~pat:(Pat.sprintf ~loc "%s_%s_fix" self#trait_name tdecl1.ptype_name.txt)
-       *         ~expr:(
-       *           Exp.tuple ~loc @@
-       *           List.map self#tdecls ~f:(fun {ptype_name={txt}} ->
-       *               Exp.sprintf ~loc "%s_%s" self#trait_name txt
-       *             )
-       *         )
-       *     in
-       *     let others =
-       *       List.map (List.tl_exn self#tdecls) ~f:(fun {ptype_name={txt}} ->
-       *           value_binding ~loc
-       *             ~pat:(Pat.sprintf ~loc "%s_%s_fix" self#trait_name txt)
-       *             ~expr:(Exp.sprintf ~loc "%s_%s_fix" self#trait_name tdecl1.ptype_name.txt)
-       *         )
-       *     in
-       *     e1::others
-       * in *)
       let knots =
         match self#tdecls with
         | [] -> []
@@ -704,41 +675,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
               self#make_trans_function_body ~loc
                 (self#make_class_name ~is_mutal:false tdecl)
                 tdecl
-
-              (* let e k = Exp.fun_list ~loc
-               *      (map_type_param_names tdecl.ptype_params
-               *         ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
-               *      k
-               *  in
-               *  let inhsubj k =
-               *    Exp.fun_list ~loc
-               *      [ Pat.var ~loc "inh";  Pat.var ~loc "subj"]
-               *      k
-               *  in
-               *  let gc  =
-               *    Exp.app_list ~loc
-               *      (Exp.sprintf ~loc "gcata_%s" tdecl.ptype_name.txt)
-               *      [ Exp.app_list ~loc
-               *          (Exp.sprintf ~loc "%s0" tdecl.ptype_name.txt)
-               *          ((Exp.tuple ~loc @@
-               *            List.map tdecls ~f:(fun {ptype_name={txt}} ->
-               *                Exp.sprintf ~loc "trait%s" txt
-               *              ))
-               *           ::
-               *           (map_type_param_names tdecl.ptype_params
-               *              ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
-               *           @
-               *           [Exp.app_list ~loc
-               *              (Exp.sprintf ~loc "trait%s" tdecl.ptype_name.txt)
-               *              (map_type_param_names tdecl.ptype_params
-               *                 ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
-               *           ]
-               *          )
-               *      ; Exp.ident ~loc "inh"
-               *      ; Exp.ident ~loc "subj"
-               *      ]
-               *  in
-               *  self#wrap_tr_function_str ~loc tdecl gc *)
             )]
         | tdecls ->
           List.mapi tdecls ~f:(fun n {ptype_name={txt}} ->
@@ -762,12 +698,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                 )
             )
       in
-      List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive)
-        (intials @
-         knots @
-         (* (app_fix ()) @ *)
-         []
-        )
+      List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive) (intials @ knots)
 
   method fix_func_name ?for_ () =
     match for_ with
@@ -786,6 +717,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       [ [ ((self#make_class ~loc ~is_rec tdecl) : Str.t ) ]
       ; self#make_trans_functions ~loc ~is_rec
       ]
+
   method final_typ_params_for_alias ~loc tdecl rhs =
     self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
