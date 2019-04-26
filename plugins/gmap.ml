@@ -97,8 +97,6 @@ class g args tdecls = object(self: 'self)
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a"; "b"]
 
-  inherit P.index_result2
-
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
     if not (is_polyvariant_tdecl tdecl) then [] else
@@ -122,77 +120,6 @@ class g args tdecls = object(self: 'self)
       ]
 
 
-  (* method! use_tdecl td =
-   *   Typ.var ~loc:(loc_from_caml td.ptype_loc) @@
-   *   Naming.make_extra_param td.ptype_name.txt *)
-
-  (* method! specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
-   *   let param_names,rez_names,_find_param,_blownup_params =
-   *     hack_params tdecl.ptype_params
-   *   in
-   *   let map =
-   *     List.map2_exn param_names rez_names ~f:(fun a b -> (a,b))
-   *     |> List.fold_left ~init:map
-   *       ~f:(fun acc (l, r) ->
-   *           match List.Assoc.find_exn acc ~equal:String.equal l with
-   *           | exception Caml.Not_found -> acc
-   *           | t -> List.Assoc.add acc ~equal:String.equal r t
-   *         )
-   *   in
-   *   Typ.map typ
-   *     ~onvar:(fun s ->
-   *         Option.map ~f:Typ.from_caml @@
-   *         (List.Assoc.find ~equal:String.equal map s)
-   *       ) *)
-
-
-
-  (* method! prepare_fa_args ~loc tdecl =
-   *   let f =
-   *     if is_polyvariant_tdecl tdecl
-   *     then
-   *       (fun name ->
-   *          let chain t _ = Pat.constraint_ ~loc (Pat.sprintf ~loc "f%s" name) t in
-   *          self#make_typ_of_class_argument ~loc tdecl chain name id
-   *            (Pat.sprintf ~loc "anything")
-   *       )
-   *     else Pat.sprintf ~loc "f%s"
-   *   in
-   *   map_type_param_names tdecl.ptype_params ~f
-   *
-   * (\* TODO: refactor next two functions *\)
-   * method! extra_class_sig_members tdecl =
-   *   let loc = loc_from_caml tdecl.ptype_loc in
-   *   if is_polyvariant_tdecl tdecl
-   *   then
-   *     let _param_names,rez_names,_find_param,_blownup_params =
-   *       hack_params tdecl.ptype_params
-   *     in
-   *     let right =
-   *       Typ.variant_of_t ~loc @@
-   *       Typ.constr ~loc (Lident tdecl.ptype_name.txt)
-   *         (List.map ~f:(Typ.var ~loc) rez_names)
-   *     in
-   *     [ Ctf.constraint_ ~loc
-   *         (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-   *         right
-   *     ]
-   *   else []
-   *
-   * method! extra_class_str_members tdecl =
-   *   let loc = loc_from_caml tdecl.ptype_loc in
-   *   if is_polyvariant_tdecl tdecl
-   *   then
-   *     let _param_names,rez_names,_find_param,_blownup_params =
-   *       hack_params tdecl.ptype_params
-   *     in
-   *     let right =
-   *       Typ.variant_of_t ~loc @@
-   *       Typ.constr ~loc (Lident tdecl.ptype_name.txt)
-   *         (List.map ~f:(Typ.var ~loc) rez_names)
-   *     in
-   *     [Cf.constraint_ ~loc (Typ.var ~loc Plugin.extra_param_name) right ]
-   *   else [] *)
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     Exp.fun_list ~loc
@@ -211,14 +138,7 @@ class g args tdecls = object(self: 'self)
         | `Poly s   ->
           let ans =  Exp.variant ~loc s ctuple in
           ans
-          (* Exp.match_ ~loc ans
-           *   [case
-           *      ~lhs:Pat.(alias ~loc (type_ ~loc (Lident tdecl.ptype_name.txt))
-           *                   "wtf")
-           *      ~rhs:(Exp.ident ~loc "wtf")
-           *   ] *)
        )
-
       )
 
 

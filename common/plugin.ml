@@ -749,8 +749,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method virtual trf_scheme: loc:loc -> Typ.t
 
   method virtual trf_scheme_params: string list
-  method virtual index_functor : type_declaration list -> string
-  method virtual index_modtyp_name : type_declaration list -> string
+
+  (* method virtual index_functor : type_declaration list -> string
+   * method virtual index_modtyp_name : type_declaration list -> string *)
 
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
     let names = map_type_param_names tdecl.ptype_params ~f:id in

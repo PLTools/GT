@@ -52,15 +52,6 @@ class g initial_args tdecls = object(self: 'self)
          arrow ~loc (v "a") @@
          pair ~loc (v "env") (v "b") )
 
-  method! index_functor tdecls =
-    assert (List.length tdecls > 0);
-    let name = (List.hd_exn tdecls).ptype_name.txt in
-    sprintf "Index_stateful_%s" name
-  method! index_modtyp_name tdecls =
-    assert (List.length tdecls > 0);
-    let name = (List.hd_exn tdecls).ptype_name.txt in
-    sprintf "IndexResult_stateful_%s" name
-
   method! plugin_class_params tdecl =
     let param_names,_,find_param,blownup_params = G.hack_params tdecl.ptype_params in
     let loc = loc_from_caml tdecl.ptype_loc in
