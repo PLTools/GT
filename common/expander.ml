@@ -594,9 +594,9 @@ let collect_plugins_sig ~loc tdecl plugins =
      ]]
   in
   visit_typedecl ~loc tdecl
+      ~onabstract:(fun _ -> [] )
       ~onmanifest:(fun _ -> wrap ())
       ~onvariant:(fun _ -> wrap ())
-      ~onabstract:(fun _ -> [] )
       ~onrecord:(fun _ -> wrap ())
 
 let rename_params tdecl =
@@ -710,7 +710,7 @@ let fix_sig ~loc tdecls =
 
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-       (let big_trf tdecl =
+       (let big_trf ?openize tdecl =
             let inh_  = sprintf "i%d" (next ()) in
             let syn_  = sprintf "s%d" (next ()) in
             let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
@@ -718,29 +718,41 @@ let fix_sig ~loc tdecls =
               Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
               List.map ps ~f:(fun (_,x,_) -> x)
             in
-            arr3  (Typ.var ~loc inh_) typ              (Typ.var ~loc syn_ )
+            let typ =
+              match openize with
+              | None -> typ
+              | Some name ->
+                Typ.alias ~loc (openize_poly typ) name
+            in
+            arr3 (Typ.var ~loc inh_) typ (Typ.var ~loc syn_ )
         in
+        let self_exp tname = sprintf "self_%s" tname in
         let xs = List.map tdecls ~f:(fun tdecl ->
-            let inh_  = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
-            let self_ = Typ.var ~loc @@ sprintf "self%d" (next ()) in
-            let syn_  = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
+            let inh  = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
+            let self_name = self_exp  tdecl.ptype_name.txt in
+            let self = Typ.var ~loc self_name in
+            let syn  = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
 
             let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
             let class_typ =
               Typ.constr ~loc
                 (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat_map ps ~f:(fun (i,a,s) ->
-                     List.map [i;a;s] ~f:(id)
+                     [i;a;s]
                    )
-                 @ (List.map [inh_;self_;syn_] ~f:(id))
+                 @ [inh; self; syn]
                 )
             in
-            let fself = arr3 inh_ self_ syn_ in
+            let fself = arr3 inh self syn in
             let fas =
               List.map ps ~f:(fun (i,a,s) -> arr3 i a s) in
             let muts =
               Typ.tuple ~loc @@
-              List.map tdecls ~f:big_trf
+              List.map tdecls ~f:(fun tdecl ->
+                  if is_polyvariant_tdecl tdecl
+                  then big_trf ~openize:(self_exp tdecl.ptype_name.txt) tdecl
+                  else big_trf tdecl
+                )
             in
 
             let l =
@@ -756,9 +768,9 @@ let fix_sig ~loc tdecls =
           )
         in
 
-        Typ.arrow ~loc
-          (Typ.tuple ~loc @@ List.map xs ~f:fst)
-          (Typ.tuple ~loc @@ List.map xs ~f:snd)
+        List.fold_right (List.map xs ~f:fst)
+          ~init:(Typ.tuple ~loc @@ List.map xs ~f:snd)
+          ~f:(Typ.arrow ~loc)
     )
 
 let fix_str ~loc tdecls =

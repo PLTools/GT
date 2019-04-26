@@ -17,14 +17,16 @@ module PV: sig
         method  virtual c_D : 'inh -> b -> GT.string -> 'syn
       end
     val gcata_b : ('inh,_,'syn)#b_t -> 'inh -> b -> 'syn
+
     val fix_a :
-      (((('i4 -> ([`A of 'b | `C of GT.int ] as 'a) -> 's5) *
-         ('i6 -> ([`B of 'a | `D of GT.string] as 'b) -> 's7)) ->
-          ('inh1 -> 'self2 -> 'syn3) -> ('inh1, 'a, 'syn3) #a_t)
-        *
-        ((('i11 -> 'a -> 's12) * ('i13 -> 'b -> 's14)) ->
-           ('inh8 -> 'self9 -> 'syn10) -> ('inh8, 'b, 'syn10) #b_t))
-        -> (('inh1 -> 'a -> 'syn3) * ('inh8 -> 'b -> 'syn10))
+      ((('i3 -> ([< a] as 'self_a) -> 's4) *
+         ('i5 -> ([< b] as 'self_b) -> 's6)) ->
+         ('inh1 -> 'self_a -> 'syn2) -> ('inh1, 'self_a, 'syn2) #a_t)
+        ->
+        ((('i9 -> ([< a] as 'self_a) -> 's10) *
+           ('i11 -> ([< b] as 'self_b) -> 's12)) ->
+           ('inh7 -> 'self_b -> 'syn8) -> ('inh7, 'self_b, 'syn8) #b_t)
+          -> (('inh1 -> 'self_a -> 'syn2) * ('inh7 -> 'self_b -> 'syn8))
 
 end = struct
   type a = [`A of b | `C of GT.int   ]
