@@ -15,14 +15,14 @@ We start from a simple example. Let us have the following type definition for ar
    | Binop of string * expr * expr
 \end{lstlisting}
 
-Recursive function ``$\inbr{show_{expr}}$'' (the first evident candidate for generic implementation) converts an expresion into its string representation:
+Recursive function ``$\inbr{show_{expr}}$'' (the first evident candidate for generic implementation) converts an expresion into its string representation: \marginnote{Printf format has \%S modifier which inserts quotes around string. Let's use that!}
 
 \begin{lstlisting}
    let rec $\inbr{show_{expr}}$ = function
    | Const  n        -> "Const " ^ string_of_int n
    | Var    x        -> "Var " ^ x
    | Binop (o, l, r) ->
-      Printf.sprintf "Binop (\"%s\", %s, %s)" o ($\inbr{show_{expr}}$ l) ($\inbr{show_{expr}}$ r)
+      Printf.sprintf "Binop (%S, %s, %s)" o ($\inbr{show_{expr}}$ l) ($\inbr{show_{expr}}$ r)
 \end{lstlisting}
 
 The respresentation, which ``$\inbr{show_{expr}}$'' provides, preserves the names of constructors; this can be convenient for debugging or
@@ -71,9 +71,9 @@ The initial ``$\inbr{show_{expr}}$'' now can be expressed as follows\footnote{Fo
    let rec $\inbr{show_{expr}}$ e = transform
      object
        method $\inbr{Const}$ _ n   = "Const " ^ string_of_int n
-       method $\inbr{Var}$   _ x   = "Var " ^ x
+       method $\inbr{Var}$  $\enspace$   _ x   = "Var " ^ x
        method $\inbr{Binop}$ _ o l r =
-         Printf.sprintf "Binop (\"%s\", %s, %s)" o ($\inbr{show_{expr}}$ l) ($\inbr{show_{expr}}$ r)
+         Printf.sprintf "Binop (%S, %s, %s)" o ($\inbr{show_{expr}}$ l) ($\inbr{show_{expr}}$ r)
      end
      ()
      e
@@ -88,7 +88,7 @@ itself we parameterize the class by the self-transforming function ``\lstinline{
    class virtual [$\iota$, $\sigma$] $\inbr{expr}$ (fself : $\iota$ -> expr -> $\sigma$) =
    object
      method virtual $\inbr{Const}$ : $\iota$ -> int -> $\sigma$
-     method virtual $\inbr{Var}$ : $\iota$ -> string -> $\sigma$
+     method virtual $\inbr{Var}\enspace\;\;$ : $\iota$ -> string -> $\sigma$
      method virtual $\inbr{Binop}$ : $\iota$ -> string -> expr -> expr -> $\sigma$  
    end
 \end{lstlisting}
@@ -97,7 +97,7 @@ And now we can implement, say, pretty-printing class in isolation (not within th
 
 \begin{lstlisting}
    class $\inbr{pretty_{expr}}$ fself =
-   object inherit [int, string] $\inbr{expr}$ fself as super
+   object inherit [int, string] $\inbr{expr}$ fself
      method $\inbr{Const}$ p n = string_of_int n
      method $\inbr{Var}$ p x = x
      method $\inbr{Binop}$ p o l r =
