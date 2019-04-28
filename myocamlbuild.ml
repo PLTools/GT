@@ -26,6 +26,7 @@ let make_plugins_args ~is_byte =
 (*    ; "show_typed" *)
     ; "fmt"
     ; "html"
+    ; "hash"
 (*    ; "htmlTy" *)
     ]
   in

@@ -16,39 +16,6 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module Intf = Plugin_intf.Make(AstHelpers)
 
-(* let class_constructor_typ ~loc ?(a_stub=false) tdecl : Typ.t =
- *   let loc = loc_from_caml tdecl.ptype_loc in
- *   let tl =
- *     Typ.arrow ~loc
- *       (self#make_typ_of_self_trf ~loc ~in_class:true tdecl) @@
- *     Typ.constr ~loc
- *       (Lident (self#make_class_name ~is_mutal:a_stub tdecl))
- *       (List.map (self#plugin_class_params tdecl) ~f:(Typ.of_type_arg ~loc))
- *   in
- *   let funcs_for_args =
- *     let names = map_type_param_names tdecl.ptype_params ~f:id in
- *     List.fold_left names
- *       ~init:id
- *       ~f:(fun acc name ->
- *           self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name
- *             (fun f arg -> acc @@ f arg)
- *         )
- *       tl
- *   in
- *   let ans =
- *     if not a_stub
- *     then funcs_for_args
- *     else
- *       Typ.arrow ~loc
- *         (Typ.tuple ~loc @@ List.map self#tdecls ~f:(fun tdecl ->
- *              self#long_trans_function_typ ~loc tdecl
- *              (\* TODO: rename *\)
- *            ))
- *         tl
- *   in
- *   ans *)
-
-
 
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
@@ -746,9 +713,10 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ; self#make_shortend_class ~loc tdecls
       ]
 
-  method virtual trf_scheme: loc:loc -> Typ.t
-
-  method virtual trf_scheme_params: string list
+  (* TODO: remove *)
+  (* method virtual trf_scheme: loc:loc -> Typ.t
+   *
+   * method virtual trf_scheme_params: string list *)
 
   (* method virtual index_functor : type_declaration list -> string
    * method virtual index_modtyp_name : type_declaration list -> string *)
@@ -762,147 +730,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
             (Typ.arrow ~loc) name
             (fun f arg -> acc @@ f arg)
         )
-
-  (* method make_mutal_fix ~loc tdecls =
-   *   Str.single_value ~loc (Pat.sprintf ~loc "%s" @@
-   *                          Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
-   *   Exp.fun_list_l ~loc (List.map tdecls ~f:(fun tdecl ->
-   *       ( tdecl.ptype_name.txt ^ "0"
-   *       , Exp.record1 ~loc
-   *           (lident @@ Naming.mut_oclass_field ~plugin:self#plugin_name
-   *              tdecl.ptype_name.txt)
-   *           (Exp.new_ ~loc
-   *              (lident @@ Naming.stub_class_name ~plugin:self#plugin_name tdecl)
-   *           )
-   *       )
-   *     )) @@
-   *   Exp.fun_ ~loc (Pat.unit ~loc) @@
-   *   Exp.let_ ~loc ~rec_:true
-   *     (List.concat_map tdecls ~f:(fun tdecl ->
-   *          let typ_name = tdecl.ptype_name.txt in
-   *          let t0field = Naming.mut_oclass_field ~plugin:self#plugin_name typ_name in
-   *          let trf_field = Naming.trf_field ~plugin:self#plugin_name typ_name in
-   *          let trf_r_ident = sprintf "%s_%s" self#plugin_name tdecl.ptype_name.txt in
-   *          let othernames = List.map tdecls ~f:(fun tdecl -> tdecl.ptype_name.txt) in
-   *          let eplugin =
-   *            let open Exp in
-   *            fun_list ~loc
-   *              (map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")) @@
-   *            self#abstract_trf ~loc @@ fun einh esubj ->
-   *            self#app_transformation_expr ~loc
-   *              (self#app_gcata ~loc @@
-   *               let fas = map_type_param_names tdecl.ptype_params
-   *                   ~f:(sprintf ~loc "f%s")
-   *               in
-   *               app ~loc
-   *                 (ident ~loc @@ Naming.gcata_name_for_typ tdecl.ptype_name.txt)
-   *                 (app_list ~loc
-   *                    (field ~loc (sprintf ~loc "%s0" typ_name) (lident t0field))
-   *                  @@
-   *                  (\* List.map othernames ~f:(sprintf ~loc "%s_%s" self#plugin_name) @ *\)
-   *                  [ record ~loc @@ List.map othernames ~f:(fun s ->
-   *                        (lident @@ Naming.trf_function self#plugin_name s,
-   *                         sprintf ~loc "%s_%s" self#plugin_name s
-   *                        )
-   *                      )
-   *                  ] @
-   *                  fas @
-   *                  [ app_list ~loc
-   *                      (field ~loc (ident ~loc trf_r_ident) (lident trf_field))
-   *                      fas
-   *                  ]
-   *                 )
-   *              )
-   *              einh
-   *              esubj
-   *          in
-   *
-   *          [ Pat.sprintf ~loc "%s" trf_r_ident,
-   *            Exp.record1 ~loc
-   *              (lident @@ Naming.trf_field ~plugin:self#plugin_name tdecl.ptype_name.txt) @@
-   *            eplugin
-   *          ]
-   *        ))
-   *     (Exp.record ~loc @@
-   *      List.map tdecls ~f:(fun tdecl ->
-   *          (lident @@ Naming.trf_function self#plugin_name tdecl.ptype_name.txt,
-   *           Exp.ident ~loc @@ Naming.trf_function self#plugin_name tdecl.ptype_name.txt
-   *          )
-   *        )
-   *     )
-   *
-   * method apply_mutal_fix ~loc tdecls =
-   *   [ Str.single_value ~loc
-   *       (Pat.alias ~loc
-   *         (Pat.record ~loc @@ List.map tdecls ~f:(fun tdecl ->
-   *          (lident @@ Naming.trf_function self#plugin_name tdecl.ptype_name.txt,
-   *           Pat.sprintf ~loc "%s" @@ Naming.fix_result tdecl
-   *          )
-   *            ))
-   *         Naming.all_trfs_together
-   *       )
-   *       (Exp.app ~loc (Exp.ident ~loc @@
-   *                      Naming.make_fix_name ~plugin:self#plugin_name tdecls) @@
-   *        Exp.unit ~loc
-   *       )
-   *   ] @ List.map tdecls ~f:(fun tdecl ->
-   *       Str.single_value ~loc
-   *         (Pat.sprintf ~loc "%s" @@ Naming.trf_function self#plugin_name tdecl.ptype_name.txt) @@
-   *       Exp.fun_ ~loc (Pat.sprintf ~loc "eta_expand") @@
-   *       Exp.app ~loc
-   *         (Exp.field ~loc (Exp.sprintf ~loc "%s" @@ Naming.fix_result tdecl)
-   *               (lident @@ Naming.trf_field
-   *                  ~plugin:self#plugin_name tdecl.ptype_name.txt)) @@
-   *         (Exp.sprintf ~loc "eta_expand")
-   *     )
-   *
-   * method virtual app_extra_unit: loc:loc -> Exp.t -> Exp.t
-   *
-   * method make_trf_field_tdecl ~loc tdecl =
-   *   let name = tdecl.ptype_name.txt in
-   *   Str.tdecl_record ~loc ~params:[]
-   *     ~name:(Naming.typ1_for_class_arg ~plugin:self#plugin_name name)
-   *     [lab_decl ~loc (Naming.trf_field name ~plugin:self#plugin_name)
-   *        false
-   *        (let t = self#long_trans_function_typ ~loc tdecl in
-   *         match typ_vars_of_typ t with
-   *         | [] -> t
-   *         | xs -> Typ.poly ~loc xs t
-   *        )
-   *     ]
-   * method make_universal_types ~loc  =
-   *   let mut_names = List.map self#tdecls ~f:(fun td -> td.ptype_name.txt) in
-   *   let (_:string list) = mut_names in
-   *   let prereq_typ tl =
-   *     Typ.arrow ~loc
-   *       (Typ.ident ~loc @@
-   *        Naming.prereq_name self#plugin_name (List.hd_exn tdecls).ptype_name.txt)
-   *       tl
-   *   in
-   *   List.concat_map tdecls ~f:(fun tdecl ->
-   *       let name = tdecl.ptype_name.txt in
-   *       [ Str.tdecl_record ~loc ~params:[]
-   *           ~name:(Naming.typ3_for_class_arg ~plugin_name:self#plugin_name name)
-   *           [lab_decl ~loc (Naming.mut_oclass_field ~plugin:self#plugin_name name)
-   *              false
-   *              begin
-   *                let part1 =
-   *                  self#simple_trf_funcs ~loc tdecl @@
-   *                  Typ.arrow ~loc (self#make_typ_of_self_trf ~loc tdecl) @@
-   *                  Typ.(constr ~loc
-   *                           (lident @@ self#make_class_name ~is_mutal:true tdecl)
-   *                           (self#plugin_class_params tdecl
-   *                            |> List.map ~f:(Typ.of_type_arg ~loc))
-   *                        )
-   *                in
-   *                let t = prereq_typ part1 in
-   *                match typ_vars_of_typ t with
-   *                | [] -> t
-   *                | xs -> Typ.poly ~loc xs t
-   *              end
-   *           ]
-   *       ]
-   *     ) *)
 
   (* method specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
    *   let (_:type_declaration) = tdecl in
@@ -926,9 +753,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
               (Typ.unit ~loc)
               (Cty.constr ~loc (Lident stub_name) @@
                List.map ~f:(Typ.of_type_arg ~loc) params)
-              (* (mut_funcs ::
-               *  [Exp.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt] @
-               *  (self#apply_fas_in_new_object ~loc tdecl)) *)
           ]
       )
 
@@ -937,9 +761,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method make_shortend_class ~loc tdecls =
     List.map tdecls ~f:(fun tdecl ->
         let typname = tdecl.ptype_name.txt in
-        (* let mutal_decls = List.filter tdecls
-         *     ~f:(fun td -> not (String.equal td.ptype_name.txt typname))
-         * in *)
         let class_name =
           Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
         in
@@ -1374,14 +1195,14 @@ class virtual with_inherit_arg args _tdecls = object(self: 'self)
    *   fot a type ('a,'b,....'z) being generated
    **)
 
-  (* method make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
-   *   (Typ.t -> 'a -> 'a) ->
-   *   string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
-   *   fun ~loc tdecl chain name k ->
-   *     let inh_t = self#inh_of_param tdecl name in
-   *     let subj_t = Typ.var ~loc name in
-   *     let syn_t = self#syn_of_param ~loc name in
-   *     k @@ (fun arg -> chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t) arg) *)
+  method make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let inh_t = self#inh_of_param tdecl name in
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      k @@ (fun arg -> chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t) arg)
 
   method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in

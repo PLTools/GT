@@ -17,7 +17,7 @@ package "ppx" (
   requires(ppx_driver)        = "ppxlib"
 
   archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
-  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx htmlTy.cmx show_typed.cmx"
+  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
   plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
   plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
   exists_if = "ppx_deriving_gt.cma"
@@ -91,10 +91,16 @@ package "syntax" (
     archive(syntax,preprocessor) = "gmap.cmo"
     archive(syntax,toploop) = "gmap.cmo"
   )
+  package "hash" (
+    description = "Plugin 'hash' for hash consing"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "hash.cmo"
+    archive(syntax,toploop) = "hash.cmo"
+  )
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo show_typed.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo show_typed.cmx"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo hash.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo hash.cmx"
   )
 )

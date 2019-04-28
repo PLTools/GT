@@ -9,8 +9,8 @@
 *)
 
 (*
- * OCanren: syntax extension.
- * Copyright (C) 2016-2017
+ * Generic transformers (GT): `hash` plugin.
+ * Copyright (C) 2017-2019
  *   Dmitrii Kosarev a.k.a. Kakadu
  * St.Petersburg University, JetBrains Research
  *)
