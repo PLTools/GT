@@ -55,7 +55,7 @@ and calls appropriate methods of the object. For the example in question the tra
 Note, the traversal function is non-recursive; the recursion (if any) is indirectly handled in object's methods.
 
 Within this infrastructure is turned out to be possible to implement such features as \cd{show}, \cd{fmap}, \cd{fold},
-as well as \cd{eq} and \cd{compare}, which usually are expressed in an \emph{ad-hoc} manner in other frameworks. All these features are
+as well as \cd{eq} and \cd{compare}, which usually are expressed in an \emph{ad-hoc} manner in other frameworks\marginnote{cite visitors?}. All these features are
 implemented as plugins, which instantiate the generic components. Plugins also generate the top-level functions, tying the recursive knot,
 and combine this functions into a data structure with the same name as the type of interest. All plugins supply a (universal) access function,
 which takes this data structure as its first parameter. Under these conventions, \cd{show(int)} designates a \cd{show} function for \cd{int}s,
