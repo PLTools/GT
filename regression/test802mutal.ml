@@ -3,58 +3,14 @@ open Printf
 module PV: sig
   type a = [`A of b | `C of GT.int   ]
   and  b = [`B of a | `D of GT.string]
-  (* [@@deriving gt ~options:{show;gmap}] *)
+  [@@deriving gt ~options:{show;gmap}]
 
-    class virtual ['inh,'extra,'syn] a_t :
-      object
-        method  virtual c_A : 'inh -> a -> b -> 'syn
-        method  virtual c_C : 'inh -> a -> GT.int -> 'syn
-      end
-    val gcata_a : ('inh,_,'syn)#a_t -> 'inh -> a -> 'syn
-    class virtual ['inh,'extra,'syn] b_t :
-      object
-        method  virtual c_B : 'inh -> b -> a -> 'syn
-        method  virtual c_D : 'inh -> b -> GT.string -> 'syn
-      end
-    val gcata_b : ('inh,_,'syn)#b_t -> 'inh -> b -> 'syn
-
-    val fix_a :
-      ((('i3 -> ([< a] as 'self_a) -> 's4) *
-         ('i5 -> ([< b] as 'self_b) -> 's6)) ->
-         ('inh1 -> 'self_a -> 'syn2) -> ('inh1, 'self_a, 'syn2) #a_t)
-        ->
-        ((('i9 -> ([< a] as 'self_a) -> 's10) *
-           ('i11 -> ([< b] as 'self_b) -> 's12)) ->
-           ('inh7 -> 'self_b -> 'syn8) -> ('inh7, 'self_b, 'syn8) #b_t)
-          -> (('inh1 -> 'self_a -> 'syn2) * ('inh7 -> 'self_b -> 'syn8))
 
 end = struct
   type a = [`A of b | `C of GT.int   ]
   and  b = [`B of a | `D of GT.string]
-  (* [@@deriving gt ~options:{show;gmap}] *)
+  [@@deriving gt ~options:{show;gmap}]
 
-    class virtual ['inh,'extra,'syn] a_t =
-      object
-        method virtual  c_A : 'inh -> a -> b -> 'syn
-        method virtual  c_C : 'inh -> a -> GT.int -> 'syn
-      end
-    class virtual ['inh,'extra,'syn] b_t =
-      object
-        method virtual  c_B : 'inh -> b -> a -> 'syn
-        method virtual  c_D : 'inh -> b -> GT.string -> 'syn
-      end
-    let gcata_a tr inh (subj: a) =
-      match subj with
-      | `A ___001_ -> tr#c_A inh subj ___001_
-      | `C ___002_ -> tr#c_C inh subj ___002_
-    let gcata_b tr inh (subj: b) =
-      match subj with
-      | `B ___003_ -> tr#c_B inh subj ___003_
-      | `D ___004_ -> tr#c_D inh subj ___004_
-    let fix_a a0 b0 =
-      let rec traita inh (subj:  a) = gcata_a (a0 (traita, traitb) traita) inh subj
-      and traitb inh (subj:  b) = gcata_b (b0 (traita, traitb) traitb) inh subj in
-      (traita, traitb)
 end
 
 module Show2 = struct

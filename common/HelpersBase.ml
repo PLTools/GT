@@ -270,5 +270,3 @@ let notify fmt  =
 
 let string_after_a n =
   Base.Char.(to_int 'a' |> ((+)n) |> of_int_exn |> to_string)
-
-

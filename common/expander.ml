@@ -447,6 +447,7 @@ let make_gcata_typ ~loc tdecl =
                 (Lident (class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat params @
                  Typ.[var ~loc "inh"; any ~loc; var ~loc "syn" ])
+                (* TODO: open polyvariant instead of _ *)
             | Ptyp_tuple ts ->
               helper @@ constr_of_tuple ~loc:t.ptyp_loc ts
             | _ -> assert false
@@ -471,14 +472,35 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
     ~onmanifest:(fun _ -> wrap ())
     ~onabstract:(fun () -> [])
 
+let wildcard_tdecl td =
+  let loc = loc_from_caml td.ptype_loc in
+  Typ.constr ~loc
+    (Lident td.ptype_name.txt) @@
+  List.map td.ptype_params ~f:(fun _ -> Typ.any ~loc)
+
+
 let make_gcata_str ~loc tdecl =
   let gcata_pat =
      Pat.var ~loc (sprintf "gcata_%s" tdecl.ptype_name.txt)
   in
   let ans k =
+    let tr =
+      let tr = Pat.var ~loc "tr" in
+      if not (is_polyvariant_tdecl tdecl)
+      then tr
+      else
+        Pat.constraint_ ~loc tr @@
+        Typ.constr ~loc
+          (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
+          (List.concat_map tdecl.ptype_params ~f:(fun _ ->
+               Typ.[any ~loc; any ~loc; any ~loc ]
+             )
+           @ [Typ.any ~loc; openize_poly @@ wildcard_tdecl tdecl; Typ.any ~loc]
+          )
+    in
     Str.single_value ~loc
       gcata_pat
-      (Exp.fun_list ~loc Pat.[var ~loc "tr"; var ~loc "inh"; var ~loc "subj"]
+      (Exp.fun_list ~loc Pat.[tr; var ~loc "inh"; var ~loc "subj"]
          k)
   in
   visit_typedecl ~loc tdecl
