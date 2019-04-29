@@ -241,6 +241,8 @@ val use_new_type: loc:loc -> string -> Exp.t -> Exp.t
 (* if argument is polymorphic variant type then make it open *)
 val openize_poly: Typ.t -> Typ.t
 
+val closize_poly: Typ.t -> Typ.t
+
 val prepare_param_triples : loc:loc ->
   extra:Typ.t ->
   ?inh:(loc:loc -> string -> Typ.t) ->

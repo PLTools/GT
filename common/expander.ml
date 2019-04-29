@@ -385,6 +385,14 @@ let make_interface_class ~loc tdecl =
           helper typ
     )
 
+let wildcard_tdecl td =
+  let loc = loc_from_caml td.ptype_loc in
+  Typ.constr ~loc
+    (Lident td.ptype_name.txt) @@
+  List.map td.ptype_params ~f:(fun _ -> Typ.any ~loc)
+
+
+
 let make_gcata_typ ~loc tdecl =
   let on_alias_or_abstract () =
     let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
@@ -399,9 +407,7 @@ let make_gcata_typ ~loc tdecl =
   in
   let tr_t =
     visit_typedecl ~loc tdecl
-      ~onabstract:(fun () ->  on_alias_or_abstract ()
-      (* failwith "can't generate gcata type for abstract type" *)
-                  )
+      ~onabstract:(fun () -> on_alias_or_abstract () )
       ~onrecord:(fun _ ->
           Typ.object_ ~loc Open @@
           [ sprintf "do_%s" tdecl.ptype_name.txt,
@@ -446,11 +452,12 @@ let make_gcata_typ ~loc tdecl =
               Typ.class_ ~loc
                 (Lident (class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat params @
-                 Typ.[var ~loc "inh"; any ~loc; var ~loc "syn" ])
-                (* TODO: open polyvariant instead of _ *)
+                 Typ.[ var ~loc "inh"
+                     ; openize_poly @@ wildcard_tdecl tdecl
+                     ; var ~loc "syn" ])
             | Ptyp_tuple ts ->
               helper @@ constr_of_tuple ~loc:t.ptyp_loc ts
-            | _ -> assert false
+            | _ -> failwith "Unsupported case during generate of the type of gcata"
           in
           helper t
         )
@@ -472,13 +479,6 @@ let make_gcata_sig ~loc ?(shortname=false) tdecl =
     ~onmanifest:(fun _ -> wrap ())
     ~onabstract:(fun () -> [])
 
-let wildcard_tdecl td =
-  let loc = loc_from_caml td.ptype_loc in
-  Typ.constr ~loc
-    (Lident td.ptype_name.txt) @@
-  List.map td.ptype_params ~f:(fun _ -> Typ.any ~loc)
-
-
 let make_gcata_str ~loc tdecl =
   let gcata_pat =
      Pat.var ~loc (sprintf "gcata_%s" tdecl.ptype_name.txt)
@@ -490,12 +490,12 @@ let make_gcata_str ~loc tdecl =
       then tr
       else
         Pat.constraint_ ~loc tr @@
-        Typ.constr ~loc
+        Typ.class_ ~loc
           (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
           (List.concat_map tdecl.ptype_params ~f:(fun _ ->
                Typ.[any ~loc; any ~loc; any ~loc ]
              )
-           @ [Typ.any ~loc; openize_poly @@ wildcard_tdecl tdecl; Typ.any ~loc]
+           @ [Typ.any ~loc; closize_poly @@ wildcard_tdecl tdecl; Typ.any ~loc]
           )
     in
     Str.single_value ~loc
@@ -732,7 +732,8 @@ let fix_sig ~loc tdecls =
 
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-       (let big_trf ?openize tdecl =
+      (let big_trf ?openize tdecl =
+         (* TODO: rename openize -> closize *)
             let inh_  = sprintf "i%d" (next ()) in
             let syn_  = sprintf "s%d" (next ()) in
             let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
@@ -744,7 +745,7 @@ let fix_sig ~loc tdecls =
               match openize with
               | None -> typ
               | Some name ->
-                Typ.alias ~loc (openize_poly typ) name
+                Typ.alias ~loc (closize_poly typ) name
             in
             arr3 (Typ.var ~loc inh_) typ (Typ.var ~loc syn_ )
         in
@@ -757,7 +758,7 @@ let fix_sig ~loc tdecls =
 
             let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
             let class_typ =
-              Typ.constr ~loc
+              Typ.class_ ~loc
                 (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat_map ps ~f:(fun (i,a,s) ->
                      [i;a;s]

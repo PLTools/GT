@@ -663,6 +663,19 @@ let openize_poly t =
     )
   | t -> t
 
+let closize_poly t =
+  match t with
+  | MLast.TyVrn (loc, name, flg) ->
+    (fun flg -> MLast.TyVrn (loc, name, flg) )
+      (
+      match flg with
+      | Some (Some xs) -> Some (Some xs)
+      | _ -> Some (Some (VaVal []))
+    )
+  | t -> t
+
+
+
 (* Need to be synchronized with Expander.params_of_interface_class *)
 let prepare_param_triples ~loc ~extra
     ?(inh=fun ~loc:loc s -> Typ.var ~loc @@ "i" ^ s)
