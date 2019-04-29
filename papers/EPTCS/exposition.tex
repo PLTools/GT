@@ -244,4 +244,5 @@ framework, in which all the components can be synthesized from type definitions.
 We also address some performance issues~--- as one could notice, in all preceding examples we created a whole bunch of \emph{identical} objects during a
 transformation (one per data structure node); as we will see, this can be avoided via memoization. Finally, our framework provides a plugin system which can be
 used to generate a number of useful transformations (like ``\lstinline{show}'', ``\lstinline{fold}'' or ``\lstinline{map}''). The plugin system is
-extensible as well~--- an end used can implement his own plugins with a very little amoung of extra effort since 
+extensible as well~--- an end used can implement his/her own plugins with a very little amount of extra effort since a large part of functionality (the traversal
+function and virtual transformation class) is already supplied by the framework. 

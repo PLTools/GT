@@ -53,13 +53,13 @@ freely transform their data structures in a familiar way without losing the abil
 from the fact that in our case, unlike mainstream object-oriented languages, polymorphic variants are used as a main tool for datatype extension.
 Supporting polymorphic variants as a mean for datatype extensibility requires a fresh solution.
 
-Finally, among existing generic programming frameworks for \textsc{OCaml} we can name two, which resemble ours: \textsc{ppx\_deriving}/\textsc{ppx\_traverse}
-(a part of \textsc{ppxlib}~\cite{PPXLib}) and \textsc{Visitors}~\cite{Visitors}.
+Finally, among existing generic programming frameworks for \textsc{OCaml} we can name two, which resemble ours: \cd{ppx\_deriving}/\cd{ppx\_traverse}
+(a part of \cd{ppxlib}~\cite{PPXLib}) and \textsc{Visitors}~\cite{Visitors}.
 
-\textsc{ppx\_deriving} is the simplest approach possible: type declarations are mapped one-to-one to recursive functions representing a specific kind of transformation. It is the most effective implementation (functions are called directly, no late biding involved) but it is not extensible. If the end user needs to modify slightly the generated function, he or she should copy and paste generated code to modify it manually. The amount of work to support new transformation will drastically increase if type definitions will change during development cycle.
+\cd{ppx\_deriving} is the simplest approach possible: type declarations are mapped one-to-one to recursive functions representing a specific kind of transformation. It is the most effective implementation (functions are called directly, no late biding involved) but it is not extensible. If the end user needs to modify slightly the generated function, he or she should copy and paste generated code to modify it manually. The amount of work to support new transformation will drastically increase if type definitions will change during development cycle.
 
-In \textsc{ppx\_traverse} extensible transformations are represented as objects; unlike our case, method-per-type approach is used. In addition 
-\textsc{ppx\_traverse} does not make use of inherited attributes, thus some transformations like equality or comparison are not representable.
+In \cd{ppx\_traverse} extensible transformations are represented as objects; unlike our case, method-per-type approach is used. In addition 
+\cd{ppx\_traverse} does not make use of inherited attributes, thus some transformations like equality or comparison are not representable.
 
 \textsc{Visitors}, on the other hand, explore a similar to ours object-oriented approach, in which many decisions, rejected by us, were taken (and vice versa). Here
 we summarize the main differences:

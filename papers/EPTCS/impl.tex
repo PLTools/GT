@@ -1,4 +1,83 @@
+\begin{figure}[t]
+  \center
+  \begin{tabular}{c|l}
+    \hline
+    \multicolumn{2}{c}{\cd{camlp5} version}\\
+    \hline
+    \lstinline|@type ... $[$ with  $p_1, p_2, \dots$ $]$| & a syntax construct to generate a support for a type \\
+                                                         & with plugins $p_1, p_2, \dots$; mutually recursive definitions \\
+                                                         & are supported \\
+    \lstinline|@$typ$| & the name for a virtual class for type $typ$ \\
+    \lstinline|@$plugin$[$typ$]| & the name for a plugin class for type $typ$\\
+    \hline
+        \multicolumn{2}{c}{\cd{ppxlib} version}\\
+    \hline
+  \end{tabular}
+  \caption{Extended Syntax Constructs}
+  \label{syntax}
+\end{figure}
+
 \section{Implementation}
+
+The main components of our solution are syntax extensions (both in terms of \cd{camlp5}~\cite{Camlp5} and \cd{ppxlib}~\cite{PPXLib}), a runtime library and
+a plugin system. The syntactic extensions process type definitions, attributed by an end user, and generate the following entities:
+
+\begin{itemize}
+\item a trasformation function (one per a type);
+\item a virtual class, which is used as a common ancestor for all concrete transformations;
+\item a number of concrete classes (one per requested plugin);
+\item a \emph{typeinfo} structure, which incorporates the transformation function and a bundle of plugin-generated concrete functions, represented as an immediate object.
+\end{itemize}
+
+For example, for a type ``\lstinline{t}'' and requested plugins ``\lstinline{show}'', ``\lstinline{gmap}'' and ``\lstinline{fold}'' the structure with the following skeleton is
+generated (``$\dots$'' stands for the parts we omit for now):
+
+\begin{lstlisting}
+   let $\inbr{transform_t}$ $\dots$ = $\dots$
+   
+   class virtual [$\dots$] $\inbr{t}$ $\dots$ =
+   object
+     $\dots$
+   end
+
+   class [$\dots$] $\inbr{show_t}$ $\dots$ =
+   object inherit [$\dots$] $\inbr{t}$ $\dots$
+     $\dots$
+   end
+
+   class [$\dots$] $\inbr{gmap_t}$ $\dots$ =
+   object inherit [$\dots$] $\inbr{t}$ $\dots$
+     $\dots$
+   end
+
+   class [$\dots$] $\inbr{fold_t}$ $\dots$ =
+   object inherit [$\dots$] $\inbr{t}$ $\dots$
+     $\dots$
+   end
+
+   let t = {
+     gcata   = $\inbr{transform_t}$;
+     plugins = object
+                 method show = $\dots$
+                 method gmap = $\dots$
+                 method fold = $\dots$
+               end
+   }
+\end{lstlisting}
+
+Using the typeinfo structure we may mimick the type-indexed nature of the transformations:
+
+\begin{lstlisting}
+   let transform x = x.gcata
+   let show      x = x.plugins#show
+   let gmap      x = x.plugins#gmap
+   let fold      x = x.plugins#fold
+\end{lstlisting}
+
+Thus, ``\lstinline{transform(t)}'' becomes the representation for ``$\inbr{transform_t}$'' in concrete syntax, etc. In the
+Figure~\ref{syntax} we describe the concrete constructs, implemented by the syntax extensions.
+
+\subsection{Types of Transformations}
 
 The design of the library is based on the idea to describe transformations (e.g. catamorphisms~\cite{Bananas}) in terms of attribute grammars~\cite{AGKnuth,AGSwierstra,ObjectAlgebrasAttribute}.
 In short, we consider only the transformations of the following type
@@ -10,8 +89,6 @@ In short, we consider only the transformations of the following type
 where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesized} values. We do not use attribute
 grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types of transformations. 
 
-Our framework provides syntax extensions both in terms of \cd{camlp5}~\cite{Camlp5} and \cd{ppxlib}~\cite{PPXLib}
-The main components of 
 When the type under consideration is parameterized, the transformation becomes parameterized as well:
 
 \begin{tabular}{cl}
@@ -22,44 +99,8 @@ When the type under consideration is parameterized, the transformation becomes p
 
 In general the argument-transforming functions operate on inherited values of different types and return synthesized values of different types.
 
-The second idea is to encode a transformation for an algebraic data type as an object with per-constructor transformation methods (the similar idea is
-used in~\cite{Visitors}). For example, for a type
+\subsection{Fixed Point Combinator and Memoization}
 
-\begin{lstlisting}
-  type $\alpha$ t = A of $\alpha$ | B of $\alpha$ t * $\alpha$ t 
-\end{lstlisting}
+\subsection{Polymorphic Variants}
 
-a transformation object would have the following structure
-
-\begin{lstlisting}
-  object
-    method c_A : $\iota$ -> $\alpha$ -> $\sigma$
-    method c_B : $\iota$ -> $\alpha$ t -> $\alpha$ t -> $\sigma$
-  end
-\end{lstlisting}
-
-To automatically mass-produce transformation objects, a number of classes is generated: first, the common base virtual class for all transformations for
-given type, and then one customized class per feature, requested by mean of plugins. All these classes are concrete, inherit from the
-base one and are additionally parameterized by type parameters-transforming functions, including the function for transforming the type itself (thus
-using open recursion pattern).
-
-Finally, a single traversal function is generated. It takes a transformation object, an inherited attribute, and a value to traverse, performs pattern-matching
-and calls appropriate methods of the object. For the example in question the traversal function may look like
-
-\begin{lstlisting}
-  let transform obj $\iota$ = function
-  | A x      -> obj # c_A $\iota$ x
-  | B (l, r) -> obj # c_B $\iota$ l r
-\end{lstlisting}
-
-Note, the traversal function is non-recursive; the recursion (if any) is indirectly handled in object's methods.
-
-Within this infrastructure is turned out to be possible to implement such features as \cd{show}, \cd{fmap}, \cd{fold},
-as well as \cd{eq} and \cd{compare}, which usually are expressed in an \emph{ad-hoc} manner in other frameworks\marginnote{cite visitors?}. All these features are
-implemented as plugins, which instantiate the generic components. Plugins also generate the top-level functions, tying the recursive knot,
-and combine this functions into a data structure with the same name as the type of interest. All plugins supply a (universal) access function,
-which takes this data structure as its first parameter. Under these conventions, \cd{show(int)} designates a \cd{show} function for \cd{int}s,
-while \cd{fmap(list)}~--- \cd{fmap} for lists.
-
-Beyond this simplified scheme some other things have to be done; for example, a special care has to be taken to support polymorphic variants, which
-we consider an important feature of our library.
+\subsection{Mutual Recursion}
