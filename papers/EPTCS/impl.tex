@@ -1,38 +1,17 @@
 \section{Implementation}
 
-From an end user perspective, our library is comprised of four layers:
-
-\begin{enumerate}
-\item On the top level it provides a syntax extension (in terms of both \cd{camlp5} and \cd{ppxlib}) with a number of plugins
-(\cd{map}, \cd{fold}, \cd{show}, etc.) The interface of generated features is combinatorial, so their utilization is rather straightforward.
-  
-\item On the middle level it turns out, that all these features are implemented via object-encoded transformations with some reasonable
-default behavior. This behavior can be modified/overridden using inheritance. Thus, customized transformations can be acquired using
-the default ones.
-
-\item On the low level it turns out, that all features are in fact instantiations of some very general transformation scheme; thus, transformations,
-which do not fit in any pre-supplied plugin can still be implemented manually.
-  
-\item In the basement, the users can implement their own plugins; note, since all plugins are just instantiations of some generic scheme, the implementation
-requires only a limited amount of work. In particular, all plugins use the same single traversal function, which need not to be generated.
-\end{enumerate}
-
-In fact, there is also an underground layer~--- all generic features are combined into an object, which can be passed as a parameter or modified. While
-currently the library does not contain any conventional interface to deal with the object, it can be provided in the future (which opens a potentially
-interesting opportunities for integration with existing proposals for \emph{ad-hoc} polymorphism~\cite{ModularImplicits}).
-
-
-
-The design of the library is based on the idea to describe transformations (e.g. catamorphisms~\cite{Bananas}) in terms of transformations, described by
-attribute grammars~\cite{AGKnuth,AGSwierstra}. In short, we consider only the transformations of the following type
+The design of the library is based on the idea to describe transformations (e.g. catamorphisms~\cite{Bananas}) in terms of attribute grammars~\cite{AGKnuth,AGSwierstra,ObjectAlgebrasAttribute}.
+In short, we consider only the transformations of the following type
 
 \[
 \iota \to t \to \sigma
 \]
 
-where $t$ is the type of value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesized} values. We do not use attribute
-grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types of transformations.
+where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesized} values. We do not use attribute
+grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types of transformations. 
 
+Our framework provides syntax extensions both in terms of \cd{camlp5}~\cite{Camlp5} and \cd{ppxlib}~\cite{PPXLib}
+The main components of 
 When the type under consideration is parameterized, the transformation becomes parameterized as well:
 
 \begin{tabular}{cl}
