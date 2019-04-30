@@ -1,3 +1,30 @@
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
+(** {i Stateful} plugin: functors + inherited value
+    to make decisions about how to map values.
+
+    Essentially, is a {!Gmap} trait with polymorphic inherited attributes.
+
+    Is a simplified version of {!Stateful} trait: doesn't allow to pass modified
+    environment through transformation.
+
+    Inherited attributes' type (both default and for type parameters) is ['env].
+
+    Synthetized attributes' type (both default and for type parameters) is [ _ t].
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create transformation
+    function with type
+
+    [('env -> 'a ->  'a2) ->
+     ('env -> 'b ->  'b2) -> ... ->
+     'env -> ('a,'b,...) typ -> ('a2, 'b2, ...) typ ]
+  *)
+
 open Base
 open Ppxlib
 open Printf
@@ -9,8 +36,8 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 module G = Gmap.Make(AstHelpers)
 module P = Plugin.Make(AstHelpers)
 
-(* Should be renamed to gmap later *)
 let trait_name = trait_name
+
 open AstHelpers
 
 class g initial_args tdecls = object(self: 'self)
@@ -19,7 +46,7 @@ class g initial_args tdecls = object(self: 'self)
 
   method trait_name = trait_name
 
-  method! default_inh ~loc _tdecl = Typ.var ~loc "env"
+  method! main_inh ~loc _tdecl = Typ.var ~loc "env"
   method inh_of_param tdecl _name =
     Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
@@ -29,7 +56,7 @@ class g initial_args tdecls = object(self: 'self)
     fun ~loc tdecl chain name k ->
       let subj_t = Typ.var ~loc name in
       let syn_t = self#syn_of_param ~loc name in
-      let inh_t = self#default_inh ~loc tdecl in
+      let inh_t = self#main_inh ~loc tdecl in
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
   method! app_transformation_expr ~loc trf inh subj =
@@ -83,7 +110,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

@@ -1,12 +1,11 @@
-(** Expander: base module for Generic Tranformers that utilize plugins.
-  *)
-
 (*
  * Generic Transformers PPX syntax extension.
  * Copyright (C) 2016-2019
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
+
+(** Expander: base module for Generic Tranformers that utilize plugins. *)
 
 open Ppxlib
 

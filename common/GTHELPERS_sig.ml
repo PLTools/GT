@@ -1,4 +1,12 @@
+(*
+ * Generic Transformers PPX syntax extension.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
 (** Signature of AST building functions that are required to support a new backend *)
+
 
 module type S = sig
 
@@ -9,17 +17,7 @@ type class_declaration
 type lab_decl
 type module_declaration
 type module_type_declaration
-(* type type_declaration *)
 type type_arg
-
-(* type nonrec type_kind =
- *   | Ptype_abstract
- *   | Ptype_record of lab_decl list
- *
- * val type_declaration: loc:loc ->
- *   name:string ->
- *   params:type_arg list ->
- *   manifest:type_arg option -> kind:type_kind -> type_declaration *)
 
 val loc_from_caml: Ppxlib.location -> loc
 val noloc: loc

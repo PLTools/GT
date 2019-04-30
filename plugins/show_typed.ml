@@ -5,11 +5,15 @@
  * St.Petersburg State University, JetBrains Research
  *)
 
+(** Not in this release :)
+  *)
+
 open Base
 open HelpersBase
 open Ppxlib
 open Printf
 
+(*
 let trait_name = "show_typed"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
@@ -218,3 +222,5 @@ let register () =
   Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
 
 let () = register ()
+
+   *)

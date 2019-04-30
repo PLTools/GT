@@ -44,12 +44,12 @@ let ht_typ ~loc =
    constructor and not to generation method
 *)
 class g initial_args tdecls = object(self: 'self)
-  inherit P.with_inherit_arg initial_args tdecls as super2
+  inherit P.with_inherit_arg initial_args tdecls
 
   method trait_name = trait_name
 
   (* Default inherited attribute is a predefined in GT type of hash table *)
-  method default_inh ~loc _tdecl = ht_typ ~loc
+  method main_inh ~loc _tdecl = ht_typ ~loc
   (* Inherited attribute for parameter is the same as default one*)
   method inh_of_param tdecl _name = ht_typ ~loc:(loc_from_caml tdecl.ptype_loc)
 
@@ -61,7 +61,7 @@ class g initial_args tdecls = object(self: 'self)
       ; Typ.var ~loc s
       ]
   (* The same for default synthsized attribute *)
-  method default_syn ~loc ?in_class tdecl =
+  method main_syn ~loc ?in_class tdecl =
     Typ.tuple ~loc
       [ ht_typ ~loc
       ; Typ.use_tdecl tdecl
@@ -151,7 +151,7 @@ class g initial_args tdecls = object(self: 'self)
     failwith "not implemented"
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

@@ -1,3 +1,24 @@
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
+(** {i Foldr} plugin: fold all values in a type.
+
+    Essentially is a stub that chains inherited attribute thorough all values
+    in the value
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [('s -> 'a -> 's) ->
+     ('s -> 'b -> 's) ->
+     ... ->
+     's -> ('a,'b,...) typ -> 's ]
+*)
+
 open Base
 open HelpersBase
 open Ppxlib
@@ -27,7 +48,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

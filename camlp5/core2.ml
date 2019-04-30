@@ -1,3 +1,10 @@
+(*
+ * Generic Transformers: Camlp5 syntax extension.
+ * Copyright (C) 2016-2019
+ *   Dmitry Boulytchev, Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
 #load "q_MLast.cmo";;
 
 open Printf

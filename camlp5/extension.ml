@@ -1,7 +1,7 @@
 (**************************************************************************
  *  Copyright (C) 2012-2014
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
- *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
+ *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -29,13 +29,11 @@ open Printf
 open Pcaml
 open MLast
 open Ploc
-(* open Plugin *)
-(* open HelpersBase *)
 open Core2
-
 
 let hdtl loc xs = (List.hd xs, List.tl xs)
 let trait_proto_t typ trait = Printf.sprintf "%s_proto_%s" trait typ
+
 (* let class_t name = name ^ "_t"
  * let trait_t typ trait = class_t (if trait <> "" then sprintf "%s_%s" trait typ else typ) *)
 
@@ -138,10 +136,9 @@ let trait_proto_t typ trait = Printf.sprintf "%s_proto_%s" trait typ
  *   in
  *   (args, name, convert t.tdDef) *)
 
-(* let _ : int = Core.generate *)
 
 EXTEND
-  GLOBAL: sig_item str_item class_expr class_sig_item expr ctyp type_decl; 
+  GLOBAL: sig_item str_item class_expr class_sig_item expr ctyp type_decl;
 
   class_sig_item: [[
      "inherit"; cs = class_signature -> <:class_sig_item< inherit $cs$ >>
@@ -156,11 +153,11 @@ EXTEND
     | [ ct1 = SELF; "."; ct2 = SELF -> <:class_type< $ct1$ . $ct2$ >>
       | ct1 = SELF; "("; ct2 = SELF; ")" -> <:class_type< $ct1$ $ct2$ >> ]
     | [ i = V LIDENT -> <:class_type< $_id: i$ >>
-      | i = V UIDENT -> <:class_type< $_id: i$ >> ] 
-    | [ ci = class_type_longident -> 
+      | i = V UIDENT -> <:class_type< $_id: i$ >> ]
+    | [ ci = class_type_longident ->
           match ci with
           | [x]   -> <:class_type< $id:x$ >>
-          | x::xs -> fold_left (fun ct y -> 
+          | x::xs -> fold_left (fun ct y ->
                               let t = <:class_type< $id:y$ >> in
                               <:class_type< $ct$ . $t$ >>
                      ) <:class_type< $id:x$ >> xs
@@ -168,7 +165,7 @@ EXTEND
   ;
 
   class_type_longident: [[
-    "@"; ci=qname; t=OPT trait -> 
+    "@"; ci=qname; t=OPT trait ->
       let n, q = hdtl loc (rev ci) in
       let classname =
         match t with
@@ -177,7 +174,7 @@ EXTEND
       in
       rev (classname::q)
 
-  | "+"; ci=qname; t=trait -> 
+  | "+"; ci=qname; t=trait ->
       let n, q = hdtl loc (rev ci) in
       rev ((trait_proto_t t n) :: q)
   ]]
@@ -189,10 +186,10 @@ EXTEND
 
   class_expr: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
-      <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >> 
+      <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >>
   | "["; ct = ctyp; "]"; ci = class_longident ->
       <:class_expr< [ $ct$ ] $list:ci$ >>
-  | ci = class_longident -> <:class_expr< $list:ci$ >> 
+  | ci = class_longident -> <:class_expr< $list:ci$ >>
   ]];
 
   expr: BEFORE "simple" [
@@ -200,11 +197,11 @@ EXTEND
   ];
 
   ctyp: BEFORE "simple" [[
-    "#"; id = V class_longident "list" -> <:ctyp< # $_list:id$ >> 
+    "#"; id = V class_longident "list" -> <:ctyp< # $_list:id$ >>
   ]];
 
   class_longident: [[
-    "@"; ci=qname; t=OPT trait -> 
+    "@"; ci=qname; t=OPT trait ->
       let n, q = hdtl loc (rev ci) in
       let classname =
         match t with
@@ -213,11 +210,11 @@ EXTEND
       in
       rev (classname::q)
 
-  | "+"; ci=qname; t=trait -> 
+  | "+"; ci=qname; t=trait ->
       let n, q = hdtl loc (rev ci) in
       rev ((trait_proto_t n t) :: q)
 
-  | ci=qname -> ci 
+  | ci=qname -> ci
   ]];
 
   qname: [[

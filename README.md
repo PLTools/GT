@@ -335,6 +335,16 @@ The interesting part of this implementation is an explicit utilization of a supe
 
 The complete example can be found in file `sample/expr.ml`.
 
+
+## Limitations
+
+  * non-regular recursive types
+  * GADTs
+ 
+## TODO
+
+* Documentation for src/GT.ml is not generated (possible because of a macro)
+
 ## References
 
   * Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers]( http://oops.math.spbu.ru/db/generics-tfp-2014.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
@@ -342,18 +352,4 @@ The complete example can be found in file `sample/expr.ml`.
   * Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
 
 
-== Implementation ==
 
-=== Syntax extension ===
-
-=== Runtime ===
-
-=== Plugin system ===
-
-=== Limitations ===
-
-Limitations:
-  # irregular types
-  # GADTs
-  # type constructor application to a non-variable 
- 

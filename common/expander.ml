@@ -871,7 +871,7 @@ let wrap_plugin name = function
       | Some m ->
         let module F = (val m : Plugin_intf.PluginRes) in
         let module P = F(AstHelpers) in
-        List.cons @@ P.g args
+        List.cons @@ P.create args
       | None -> failwithf "Plugin '%s' is not registered" name ()
 
 

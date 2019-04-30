@@ -1,3 +1,14 @@
+(*
+ * Generic Transformers: Camlp5 syntax extension.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
+(**
+   Implementation of the [GTHELPERS_sig.S] interface which
+   allows construction of Camlp5 parse tree
+ *)
 #load "q_MLast.cmo";;
 
 (* Camlp5 AST

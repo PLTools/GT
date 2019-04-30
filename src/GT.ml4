@@ -21,6 +21,8 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
+(** Implementation of transformation for standart types *)
+
 open Printf
 
 module Format = struct
@@ -97,6 +99,8 @@ let fix0 f t =
   let recurse t = f !knot t in
   knot := recurse;
   recurse t
+
+(** {1 List } *)
 
 (* ************************************************************************* *)
 (** Standart types go there *)
@@ -237,6 +241,8 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
   }
 
 
+(** {1 Lazy values } *)
+
 module Lazy =
   struct
 
@@ -335,6 +341,7 @@ module Lazy =
       }
   end
 
+(** {1 Option } *)
 (* ************************************************************************* *)
 type 'a poption = 'a option
 type 'a option = 'a poption
@@ -456,6 +463,7 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
              end
   }
 
+(** So called antiphantom type *)
 (* ************************************************************************* *)
 (* Antiphantom type *)
 type 'a free = 'a
@@ -556,6 +564,7 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
   end
   }
 
+(** Pair *)
 
 (* Pairs and other stuff without explicit structure *)
 type ('a, 'b) pair = 'a * 'b
@@ -721,7 +730,8 @@ class ['a, 'b, 'syn, 'self] foldr_tuple2_t fa fb fself = object
 end
 
 (*******************************************************************************)
-(* Tuples of size 3 *)
+(** {1 Tuples of size 3} *)
+
 type ('a,'b,'c) triple = 'a * 'b * 'c
 class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'inh, 'e, 'syn] triple_t = object
   method virtual c_Triple : 'inh -> 'a -> 'b -> 'c -> 'syn
@@ -935,7 +945,8 @@ class ['a, 'b, 'c, 'syn, 'self] foldr_tuple3_t fa fb fc fself = object
 end
 
 (*******************************************************************************)
-(* Tuples of size 3 *)
+(** {1 Tuples of size 4} *)
+
 type ('a, 'b, 'c, 'd) tuple4 = 'a * 'b * 'c * 'd
 class virtual ['ia,'a,'sa, 'ib,'b,'sb, 'ic,'c,'sc, 'id,'d,'sd, 'inh, 'e, 'syn] tuple4_t =
 object
@@ -1001,6 +1012,7 @@ let tuple4 :
 }
 
 (****************************************************************************)
+(* {1 Mutable references} *)
 type 'a ref2 = 'a ref
 type 'a ref = 'a ref2
 class virtual ['ia,'a,'sa, 'inh, 'e, 'syn] ref_t =
@@ -1053,6 +1065,7 @@ let ref:
 }
 (*** arrays *****************************************************************)
 (* TODO: array are not really implemented *)
+(* {1 Arrays (N.B. WIP) } *)
 type 'a parray      = 'a array
 type 'a array       = 'a parray
 
@@ -1176,6 +1189,7 @@ let array =
   }
 
 (*** bytes *****************************************************************)
+(* {1 Bytes (mutable string) } *)
 type bytes = Bytes.t
 
 class virtual ['inh, 'self, 'syn] bytes_t = object

@@ -1,3 +1,24 @@
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
+(** {i Foldl} plugin: fold all values in a type.
+
+    Essentially is a stub that chains inherited attribute thorough all values
+    in the value
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [('s -> 'a -> 's) ->
+     ('s -> 'b -> 's) ->
+     ... ->
+     's -> ('a,'b,...) typ -> 's ]
+*)
+
 open Base
 open HelpersBase
 open Ppxlib
@@ -19,8 +40,8 @@ class g initial_args tdecls = object(self: 'self)
   method trait_name = trait_name
 
   method syn_of_param ~loc s = Typ.var ~loc "syn"
-  method default_inh  ~loc tdecl = self#default_syn ~loc tdecl
-  method default_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+  method main_inh  ~loc tdecl = self#main_syn ~loc tdecl
+  method main_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method inh_of_param tdecl _ =
     self#syn_of_param ~loc:(loc_from_caml tdecl.ptype_loc) "dummy"
@@ -35,7 +56,7 @@ class g initial_args tdecls = object(self: 'self)
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
-    [ self#default_syn ~loc tdecl
+    [ self#main_syn ~loc tdecl
     ]
 
   method trf_scheme ~loc =
@@ -71,19 +92,6 @@ class g initial_args tdecls = object(self: 'self)
    *   Typ.arrow ~loc (self#default_inh ~loc tdecl)
    *     (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl) *)
 
-(*
-  (* the same for foldl and eq, compare plugins. Should be moved out *)
-  method wrap_tr_function_str ~loc _tdelcl  make_gcata_of_class =
-    let body = make_gcata_of_class (Exp.ident ~loc "self") in
-    Exp.fun_list ~loc [ Pat.sprintf ~loc "the_init"; Pat.sprintf ~loc "subj"] @@
-    Exp.app_list ~loc
-      (Exp.of_longident ~loc (Ldot (Lident "GT", "fix0")))
-      [ Exp.fun_ ~loc (Pat.sprintf ~loc "self") body
-      ; Exp.sprintf ~loc "the_init"
-      ; Exp.sprintf ~loc "subj"
-      ]
-*)
-
   method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
     List.fold_left ~f:(fun acc (name,typ) ->
         Exp.app_list ~loc
@@ -116,7 +124,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

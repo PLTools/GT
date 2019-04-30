@@ -1,4 +1,4 @@
-(** {i Compare} plugin.
+(** {i Compare} plugin: receive another value as inherited attribute and compare.
 
     For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
     function with type
@@ -39,7 +39,7 @@ class g initial_args tdecls = object(self: 'self)
 
   method trait_name = trait_name
 
-  method default_inh ~loc tdecl =
+  method main_inh ~loc tdecl =
     let ans = Typ.use_tdecl tdecl in
     if is_polyvariant_tdecl tdecl
     then Typ.alias ~loc (Typ.variant_of_t ~loc ans) @@
@@ -47,7 +47,7 @@ class g initial_args tdecls = object(self: 'self)
     else ans
 
   method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))
-  method default_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+  method main_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method inh_of_param tdecl name =
     let loc = loc_from_caml tdecl.ptype_loc in
@@ -180,7 +180,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

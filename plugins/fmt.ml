@@ -1,3 +1,10 @@
+(*
+ * Generic Transformers: `format` plugin.
+ * Copyright (C) 2016-2017
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
 (** {i Format} module: pretty-prints a value to {!Format.formatter} using {!Format} module.
 
     For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
@@ -9,13 +16,6 @@
     Inherited attributes' type (both default and for type parameters) is [Format.formatter].
     Synthesized attributes' type (both default and for type parameters) is [unit].
 *)
-
-(*
- * Generic Transformers: `format` plugin.
- * Copyright (C) 2016-2017
- *   Dmitrii Kosarev aka Kakadu
- * St.Petersburg State University, JetBrains Research
- *)
 
 open Base
 open Ppxlib
@@ -42,12 +42,12 @@ class g args tdecls = object(self)
   inherit P.with_inherit_arg args tdecls
 
   method trait_name = trait_name
-  method default_inh ~loc _tdecl =
+  method main_inh ~loc _tdecl =
     Typ.of_longident ~loc (Ldot (Lident"Format", "formatter"))
-  method default_syn ~loc ?in_class _tdecl = Typ.ident ~loc "unit"
+  method main_syn ~loc ?in_class _tdecl = Typ.ident ~loc "unit"
 
   method syn_of_param ~loc _     = Typ.ident ~loc "unit"
-  method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
+  method inh_of_param tdecl _name = self#main_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =
     (* TODO: reuse prepare_inherit_typ_params_for_alias here *)
@@ -60,16 +60,13 @@ class g args tdecls = object(self)
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml (* @
-     * [ Typ.var ~loc @@
-     *   Naming.make_extra_param tdecl.ptype_name.txt
-     * ] *)
+    List.map rhs_args ~f:Typ.from_caml
 
-  method trf_scheme ~loc =
-    Typ.(arrow ~loc (of_longident ~loc (Ldot (Lident "Format", "formatter"))) @@
-         arrow ~loc (var ~loc "a") (unit ~loc) )
-  method trf_scheme_params = ["a"]
-  inherit P.index_result
+  (* method trf_scheme ~loc =
+   *   Typ.(arrow ~loc (of_longident ~loc (Ldot (Lident "Format", "formatter"))) @@
+   *        arrow ~loc (var ~loc "a") (unit ~loc) )
+   * method trf_scheme_params = ["a"]
+   * inherit P.index_result *)
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
@@ -151,7 +148,7 @@ class g args tdecls = object(self)
 
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

@@ -1,3 +1,10 @@
+(*
+ * Generic Transformers PPX syntax extension.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
 let id x = x
 let raise_errorf ?loc fmt = Printf.ksprintf failwith fmt
 let not_implemented ?loc fmt =

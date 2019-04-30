@@ -1,8 +1,32 @@
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
+
+(** {i Stateful} plugin: functors + inherited value
+    to make decisions about how to map values.
+
+    Behave the same as {!Eval} trait but can may return modified state.
+
+    Inherited attributes' type (both default and for type parameters) is ['env].
+
+    Synthetized attributes' type (both default and for type parameters) is ['env * _ t].
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create transformation
+    function with type
+
+    [('env -> 'a -> 'env * 'a2) ->
+     ('env -> 'b -> 'env * 'b2) -> ... ->
+     'env -> ('a,'b,...) typ -> 'env * ('a2, 'b2, ...) typ ]
+
+  *)
+
 open Base
 open Ppxlib
 open Printf
 
-(* Should be renamed to gmap later *)
 let trait_name = "stateful"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
@@ -20,27 +44,17 @@ class g initial_args tdecls = object(self: 'self)
 
   method trait_name = trait_name
 
-  method! default_inh ~loc _tdecl = Typ.var ~loc "env"
+  method! main_inh ~loc _tdecl = Typ.var ~loc "env"
   method! syn_of_param ~loc s =
     Typ.tuple ~loc [Typ.var ~loc "env"; Typ.var ~loc @@ Gmap.param_name_mangler s]
   method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
 
-  method! default_syn ~loc ?in_class tdecl =
+  method! main_syn ~loc ?in_class tdecl =
     let in_class = match in_class with
       | None -> false
       | Some b -> b
     in
-    Typ.tuple ~loc [self#default_inh ~loc tdecl; super#default_syn ~loc ~in_class tdecl]
-
-  (* the same as in eval *)
-  method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
-    (Typ.t -> 'a -> 'a) ->
-    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
-    fun ~loc tdecl chain name k ->
-      let subj_t = Typ.var ~loc name in
-      let syn_t = self#syn_of_param ~loc name in
-      let inh_t = self#default_inh ~loc tdecl in
-      k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
+    Typ.tuple ~loc [self#main_inh ~loc tdecl; super#main_syn ~loc ~in_class tdecl]
 
   method trf_scheme_params = ["env"; "a"; "b"]
   method! trf_scheme ~loc =
@@ -112,7 +126,7 @@ class g initial_args tdecls = object(self: 'self)
     failwith "not implemented"
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))

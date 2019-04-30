@@ -1,6 +1,11 @@
-(** Html module: converts a value to its html represenation (based on module TODO).
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
 
-    Work in progress.
+(** {i Html} module: converts a value to its html represenation (work in progress).
 *)
 
 (*
@@ -14,13 +19,6 @@
 
     Synthesized attributes' type (both default and for type parameters) is [HTML.er].
 *)
-
-(*
- * OCanren: syntax extension.
- * Copyright (C) 2016-2017
- *   Dmitrii Kosarev aka Kakadu
- * St.Petersburg State University, JetBrains Research
- *)
 
 open Base
 open Ppxlib
@@ -75,13 +73,13 @@ class g args tdecls = object(self)
   inherit P.no_inherit_arg args tdecls
 
   method trait_name = trait_name
-  method default_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method default_syn ~loc ?in_class _tdecl = self#syn_of_param ~loc "dummy"
+  method main_inh ~loc _tdecl = Typ.ident ~loc "unit"
+  method main_syn ~loc ?in_class _tdecl = self#syn_of_param ~loc "dummy"
 
   method syn_of_param ~loc _     =
     Typ.constr ~loc (Ldot (Lident "HTML", "er")) []
 
-  method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
+  method inh_of_param tdecl _name = self#main_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =
     (* TODO: reuse prepare_inherit_typ_params_for_alias here *)
@@ -184,7 +182,7 @@ class g args tdecls = object(self)
 
 end
 
-let g =
+let create =
   (new g :>
      (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
