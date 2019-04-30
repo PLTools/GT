@@ -7,8 +7,9 @@
     \lstinline|@type ... $[$ with  $p_1, p_2, \dots$ $]$| & a syntax construct to generate a support for a type \\
                                                          & with plugins $p_1, p_2, \dots$; mutually recursive definitions \\
                                                          & are supported \\
-    \lstinline|@$typ$| & the name for a virtual class for type $typ$ \\
-    \lstinline|@$plugin$[$typ$]| & the name for a plugin class for type $typ$\\
+    \lstinline|@$typ$| & the name for the virtual class for type $typ$ \\
+    \lstinline|@$plugin$[$typ$]| & the name for a plugin class for type $typ$ and \\
+                                 & plugin $plugin$\\
     \hline
         \multicolumn{2}{c}{\cd{ppxlib} version}\\
     \hline
@@ -20,17 +21,25 @@
 \section{Implementation}
 
 The main components of our solution are syntax extensions (both in terms of \cd{camlp5}~\cite{Camlp5} and \cd{ppxlib}~\cite{PPXLib}), a runtime library and
-a plugin system. The syntactic extensions process type definitions, attributed by an end user, and generate the following entities:
+a plugin system. The syntax extensions process type definitions, attributed by an end user, and generate the following entities:
 
 \begin{itemize}
-\item a trasformation function (one per a type);
+\item a transformation function (one per a type);
 \item a virtual class, which is used as a common ancestor for all concrete transformations;
 \item a number of concrete classes (one per requested plugin);
 \item a \emph{typeinfo} structure, which incorporates the transformation function and a bundle of plugin-generated concrete functions, represented as an immediate object.
 \end{itemize}
 
-For example, for a type ``\lstinline{t}'' and requested plugins ``\lstinline{show}'', ``\lstinline{gmap}'' and ``\lstinline{fold}'' the structure with the following skeleton is
-generated (``$\dots$'' stands for the parts we omit for now):
+We support the majority of variants in the right-hand side of type definitions with the following limitations:
+
+\begin{itemize}
+\item only regular algebraic data types are supported; GADTs are treated as simple algebraic datatypes;
+\item constraints are not taken into account;
+\item ``\lstinline{nonrec}'' definitions, object and module types are not supported;
+\item extensible datatypes (``\lstinline{...}''/``\lstinline{+=}'') are not supported.
+\end{itemize}
+
+For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{show}'' the structure with the following skeleton is generated (``$\dots$'' stands for the parts we omit for now):
 
 \begin{lstlisting}
    let $\inbr{transform_t}$ $\dots$ = $\dots$
@@ -45,37 +54,26 @@ generated (``$\dots$'' stands for the parts we omit for now):
      $\dots$
    end
 
-   class [$\dots$] $\inbr{gmap_t}$ $\dots$ =
-   object inherit [$\dots$] $\inbr{t}$ $\dots$
-     $\dots$
-   end
-
-   class [$\dots$] $\inbr{fold_t}$ $\dots$ =
-   object inherit [$\dots$] $\inbr{t}$ $\dots$
-     $\dots$
-   end
-
    let t = {
      gcata   = $\inbr{transform_t}$;
      plugins = object
                  method show = $\dots$
-                 method gmap = $\dots$
-                 method fold = $\dots$
                end
    }
 \end{lstlisting}
 
-Using the typeinfo structure we may mimick the type-indexed nature of the transformations:
+Using the typeinfo structure we may mimick the type-indexed nature of concrete transformations:
 
 \begin{lstlisting}
    let transform x = x.gcata
    let show      x = x.plugins#show
-   let gmap      x = x.plugins#gmap
-   let fold      x = x.plugins#fold
 \end{lstlisting}
 
-Thus, ``\lstinline{transform(t)}'' becomes the representation for ``$\inbr{transform_t}$'' in concrete syntax, etc. In the
-Figure~\ref{syntax} we describe the concrete constructs, implemented by the syntax extensions.
+Thus, ``\lstinline{transform(t)}'' becomes the representation for ``$\inbr{transform_t}$'' in the concrete syntax, etc. On the
+Figure~\ref{syntax} we describe the concrete constructs, implemented by the syntax extensions. Note, the concrete way of encoding names
+for classes and transformation function (represented above as $\inbr{...}$) is not important as long as \cd{camlp5} is
+used since it provides corresponding syntax extensions.
+
 
 \subsection{Types of Transformations}
 
@@ -86,18 +84,19 @@ In short, we consider only the transformations of the following type
 \iota \to t \to \sigma
 \]
 
-where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesized} values. We do not use attribute
-grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types of transformations. 
+where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesized} attributes. We do not use attribute
+grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types. 
 
-When the type under consideration is parameterized, the transformation becomes parameterized as well:
+When the type under consideration is parameterized, the transformation becomes parameterized as well. From now on we will use a convention to
+denote $\left\{...\right\}$ multiple ocurrences of a an entity inside brackets. Under this convention we may stipulate the generic form of
+any transformation, representable with the aid of our library, as
 
-\begin{tabular}{cl}
-  $(\iota_1 \to \alpha_1 \to \sigma_1) \to$ & \\
-  $\dots$                                  & \\
-  $(\iota_k \to \alpha_k \to \sigma_k) \to$ & $\iota \to (\alpha_1,\dots,\alpha_k)\;t \to \sigma$
-\end{tabular}
+\[
+  \left\{\iota_i \to \alpha_i \to \sigma_i\right\}\to\iota \to\left\{\alpha_i\right\}\;t \to \sigma
+\]
 
-In general the argument-transforming functions operate on inherited values of different types and return synthesized values of different types.
+Here $\iota_i\to\alpha_i\to\sigma_i$ is an argument-transforming function for the type parameter $\alpha_i$. In general the argument-transforming functions operate on
+inherited values of different types and return synthesized values of different types.
 
 \subsection{Fixed Point Combinator and Memoization}
 
