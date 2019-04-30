@@ -1,6 +1,6 @@
 \begin{figure}[t]
   \center
-  \begin{tabular}{c|l}
+  \begin{tabular}{l|l}
     \hline
     \multicolumn{2}{c}{\cd{camlp5} version}\\
     \hline
@@ -12,6 +12,9 @@
     \hline
         \multicolumn{2}{c}{\cd{ppxlib} version}\\
     \hline
+    \lstinline|type ... = ...|  & a syntax construct to generate a support for a type \\
+    \lstinline|and  ... = ...|  & with plugins $p_1, p_2, \dots$ \\
+    \lstinline|[@@deriving gt ~options:{ $p_1, p_2, \dots$}]|
   \end{tabular}
   \caption{Extended Syntax Constructs}
   \label{syntax}
