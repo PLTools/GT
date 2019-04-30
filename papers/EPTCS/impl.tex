@@ -1,6 +1,6 @@
 \begin{figure}[t]
   \center
-  \begin{tabular}{c|l}
+  \begin{tabular}{l|l}
     \hline
     \multicolumn{2}{c}{\cd{camlp5} version}\\
     \hline
@@ -13,6 +13,9 @@
     \hline
         \multicolumn{2}{c}{\cd{ppxlib} version}\\
     \hline
+    \lstinline|type ... = ...|  & a syntax construct to generate a support for a type \\
+    \lstinline|and  ... = ...|  & with plugins $p_1, p_2, \dots$ \\
+    \lstinline|[@@deriving gt ~options:{ $p_1, p_2, \dots$}]|
   \end{tabular}
   \caption{Extended Syntax Constructs}
   \label{syntax}
@@ -62,7 +65,7 @@ For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{sho
    }
 \end{lstlisting}
 
-Using the typeinfo structure we may mimick the type-indexed nature of concrete transformations:
+Using the typeinfo structure ``\lstinline{t}'' we can mimick the type-indexed nature of concrete transformations:
 
 \begin{lstlisting}
    let transform x = x.gcata
@@ -96,10 +99,53 @@ any transformation, representable with the aid of our library, as
 \]
 
 Here $\iota_i\to\alpha_i\to\sigma_i$ is an argument-transforming function for the type parameter $\alpha_i$. In general the argument-transforming functions operate on
-inherited values of different types and return synthesized values of different types.
+inherited values of different types and return synthesized values of different types. The common ancestor class in turn is massively polymorphic: for an $n$-parametric
+type it receives $3(n+1)$ type parameters:
+
+\begin{itemize}
+\item a triplet $\alpha_i$, $\iota_i$, $\sigma_i$ for each type parameter $\alpha_i$, where $\iota_i$ and $\sigma_i$ are type variables for inherited and
+  synthesized attributes for the transformation of $\alpha_i$;
+\item a pair of type variables $\iota$ and $\sigma$ for inherited and synthesized attributes for the type itself;
+\item an extra type variable $\epsilon$, which is needed solely for the support of polymorphic variants (see Section~\ref{pv}) and left free and unused
+  otherwise.
+\end{itemize}
+
+Apart from being polymorphic, the common ancestor class receives a number of functional arguments:
+
+\begin{itemize}
+\item a function to implement open recursion: \lstinline|fself : $\iota$ -> $\left\{\alpha_i\right\}$ t ->  $\sigma$|;
+\item $n$ argument-transforming functions: \lstinline|f$_{\alpha_i}$ : $\iota_i$ -> $\alpha_i$ -> $\sigma_i$|.
+\end{itemize}
+
+For example, if we have a two-parametric type \lstinline{($\alpha$, $\beta$) t} the head of common ancestor class definition will look like
+
+\begin{lstlisting}
+  class virtual [$\iota_\alpha$, $\alpha$, $\sigma_\alpha$, $\iota_\beta$, $\beta$, $\sigma_\beta$, $\iota$, $\epsilon$, $\sigma$] $\inbr{t}$
+    (fself : $\iota$ -> ($\alpha$, $\beta$) t -> $\sigma$)
+    (f$_\alpha$ : $\iota_\alpha$ -> $\alpha$ -> $\sigma_\alpha$)
+    (f$_\beta$ : $\iota_\beta$ -> $\beta$ -> $\sigma_\beta$)
+\end{lstlisting}
+
+This scheme of typing and parameterization looks quite verbose and cumbersome: there are a lot of type parameters which are quite easy to get a mess with. However, an end
+user would need to deal with this stuff directly only when he or she desires to implement a transformation \emph{manually} from scratch by immediately inheriting from the common ancestor class.
+In the majority of use cases the transformation is implemented either by customizing a certain plugin or using the plugin system. In the first case many
+type parameters are already instantiated (for example, for ``\lstinline{show}'' the majority of type parameters are instantiated to ground types), in the
+second the plugin system takes care of instantiating the parameters correctly (see Section~\ref{plugins}).
+
+Finally, we need to describe the types for the methods of common ancestor classes. For a type \lstinline|$\left\{\alpha_i\right\}$ t| the method for a
+ constructor ``\lstinline|C of a$_1$ * a$_2$ * ... * a$_k$|'' has the following definition:
+
+\begin{lstlisting}
+   method virtual $\inbr{C}$ : $\iota$ -> $\left\{\alpha_i\right\}$ t -> a$_1$ -> a$_2$ -> ... -> a$_k$ -> $\sigma$
+\end{lstlisting}
+
+Note, the method takes not only inherited attribute and the arguments of corresponding constructor, but the value under transformation itself.
 
 \subsection{Fixed Point Combinator and Memoization}
 
 \subsection{Polymorphic Variants}
+\label{pv}
 
 \subsection{Mutual Recursion}
+\subsection{Plugin System}
+\label{plugins}

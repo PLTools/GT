@@ -27,7 +27,7 @@ Recursive function ``$\inbr{show_{expr}}$'' (the first evident candidate for gen
 
 The respresentation, which ``$\inbr{show_{expr}}$'' provides, preserves the names of constructors; this can be convenient for debugging or
 serialization purposes. However, as a rule, an alternative~--- \emph{pretty-printed}~--- representation is desirable as well. In this
-representation an expression is represented in its ``natural syntax'' with infix operators and no constructor names, where brackets are
+representation an expression is shown in its ``natural syntax'' with infix operators and no constructor names, where brackets are
 inserted only when they are really needed. Of course, implementing pretty-printer is easy:
 
 \begin{lstlisting}
@@ -46,7 +46,7 @@ inserted only when they are really needed. Of course, implementing pretty-printe
 Here we make use of functions ``\lstinline{prio}'', ``\lstinline{br}'' and ``\lstinline{id}'', defined elsewhere. ``\lstinline{prio}''
 returns the priority of a binary operator, ``\lstinline{br}'' puts its parameter in brackets and ``\lstinline{id}''
 is identity. The auxilliary function ``\lstinline{pretty_prio}'' takes additional integer parameter, which describes the priority of an enclosing
-binary operator (if any). If the priority of current operator less of equal than that, the expression is taken into brackets (for simplicity we assume all
+binary operator (if any). If the priority of current operator is less of equal than that, the expression is taken into brackets (for simplicity we assume all
 operators non-associative; the same code skeleton with minor modifications can be used for the associative case as well). On the top level we supply the
 smallest representable integer as the priority to make sure no brackets will appear around the toplevel expression.
 
@@ -155,7 +155,7 @@ glance. However, if we modify this default behavior a little, we can obtain some
 This function calculates the list of all free variables in an expression (as there can be no binders this is simply the list of all variables). Immediate object we
 construct here inherits from the ``useless'' ``$\inbr{fold_{expr}}$'' and redefines only one method~--- for variables. All other code makes exactly what we need~---
 ``$\inbr{transform_{expr}}$'' traverses the expression, and all other methods of transformation object accurately pass the list of variables through. So, we indeed
-managed to implement interesting transformation with a very small modufication of existing code (provided that ``$\inbr{fold_{expr}}$'' class was already supplied).
+managed to implement some interesting transformation with a very small modufication of existing code (provided that ``$\inbr{fold_{expr}}$'' class was already supplied).
 To avoid the impression that we carefully prepared everything to implement this particular example we can show another one:
 
 \begin{lstlisting}
@@ -194,7 +194,7 @@ can provide more transformations:
    end
 \end{lstlisting}
 
-This class performs constant folding: if both arguments of a binary operator are reduced (by the same transformation) to constants, then in
+This class performs a constant folding: if both arguments of a binary operator are reduced (by the same transformation) to constants, then in
 performs the operation. The function ``\lstinline{op}'' is defined elsewhere; it returns an integer function for evaluating given binary operator. One more:
 
 
