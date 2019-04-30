@@ -1,6 +1,6 @@
 (*
  * Generic Transformers PPX syntax extension.
- * Copyright (C) 2016-2017
+ * Copyright (C) 2016-2019
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -140,11 +140,10 @@ let make_interface_class_sig ~loc tdecl =
               ; use_tdecl tdecl
               ; var ~loc "syn" ]
             ]
-
-
       )
     ~onabstract:(fun () ->
-        (* For purely abstract type we can only generate interface class without methods *)
+        (* For purely abstract type we can only generate interface
+           (we don't know methods)  *)
         []
       )
     ~onvariant:(fun cds ->
@@ -156,16 +155,11 @@ let make_interface_class_sig ~loc tdecl =
           | Pcstr_tuple ts -> ts
         in
         Ctf.method_ ~loc methname ~virt:true @@
-        Typ.chain_arrow ~loc @@
-        [ Typ.var ~loc "inh"
-        ; Typ.use_tdecl tdecl ] @
-        (List.map typs ~f:Typ.from_caml) @
-        [ Typ.var ~loc "syn" ]
-          (* (List.fold_right typs ~init:(Typ.var ~loc "syn")
-           *    ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-           *  |> (Typ.arrow ~loc (Typ.use_tdecl tdecl))
-           *  |> (Typ.arrow ~loc (Typ.var ~loc "inh"))
-           * ) *)
+        Typ.chain_arrow ~loc
+          ([ Typ.var ~loc "inh"
+           ; Typ.use_tdecl tdecl ] @
+           (List.map typs ~f:Typ.from_caml) @
+           [ Typ.var ~loc "syn" ])
       )
     )
     ~onmanifest:(fun typ ->
@@ -718,82 +712,52 @@ let do_typ ~loc sis plugins is_rec tdecl =
     ]
 
 let fix_sig ~loc tdecls =
-  (* TODO: *)
   let idx = ref (0) in
   let next () = Int.incr idx; !idx in
 
-  let make_triple () =
-    let a = Typ.var ~loc @@ sprintf "a%d" (next ()) in
-    let b = Typ.var ~loc @@ sprintf "a%d" (next ()) in
-    let c = Typ.var ~loc @@ sprintf "a%d" (next ()) in
-    (a,b,c)
-  in
   let arr3 a b c = Typ.arrow ~loc  a (Typ.arrow ~loc b c) in
 
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-      (let big_trf ?openize tdecl =
-         (* TODO: rename openize -> closize *)
-            let inh_  = sprintf "i%d" (next ()) in
-            let syn_  = sprintf "s%d" (next ()) in
-            let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
-            let typ =
-              Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-              List.map ps ~f:(fun (_,x,_) -> x)
-            in
-            let typ =
-              match openize with
-              | None -> typ
-              | Some name ->
-                Typ.alias ~loc (closize_poly typ) name
-            in
-            arr3 (Typ.var ~loc inh_) typ (Typ.var ~loc syn_ )
-        in
-        let self_exp tname = sprintf "self_%s" tname in
-        let xs = List.map tdecls ~f:(fun tdecl ->
-            let inh  = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
-            let self_name = self_exp  tdecl.ptype_name.txt in
-            let self = Typ.var ~loc self_name in
-            let syn  = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
+    (let ys = List.map tdecls ~f:(fun tdecl ->
+         let ps = List.map tdecl.ptype_params ~f:(fun _  -> sprintf "a%d" (next ())) in
+         let subj_t =
+           Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+           (List.map ps ~f:(Typ.var ~loc))
+         in
+         let inhs = List.map ps ~f:(fun name -> sprintf "%s_i" name) in
+         let syns = List.map ps ~f:(fun name -> sprintf "%s_s" name) in
 
-            let ps = List.map tdecl.ptype_params ~f:(fun _ -> make_triple ()) in
-            let class_typ =
-              Typ.class_ ~loc
-                (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
-                (List.concat_map ps ~f:(fun (i,a,s) ->
-                     [i;a;s]
-                   )
-                 @ [inh; self; syn]
-                )
-            in
-            let fself = arr3 inh self syn in
-            let fas =
-              List.map ps ~f:(fun (i,a,s) -> arr3 i a s) in
-            let muts =
-              Typ.tuple ~loc @@
-              List.map tdecls ~f:(fun tdecl ->
-                  if is_polyvariant_tdecl tdecl
-                  then big_trf ~openize:(self_exp tdecl.ptype_name.txt) tdecl
-                  else big_trf tdecl
-                )
-            in
+         let main_inh = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
+         let main_syn = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
 
-            let l =
-              List.fold_right ~init:class_typ
-                (muts :: fas @ [fself])
-                ~f:(fun x acc -> Typ.arrow ~loc x acc)
-            in
-            let r =
-              List.fold_right ~init:fself fas
-                ~f:(Typ.arrow ~loc)
-            in
-            (l,r)
-          )
-        in
+         let cls =
+           let args =
+             List.map3_exn inhs ps syns ~f:(fun i p s -> [i;p;s])
+             |> List.concat
+             |> List.map ~f:(Typ.var ~loc)
+             |> (fun xs -> xs @ [ main_inh; subj_t; main_syn])
+           in
+           Typ.class_ ~loc (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
+             args
+         in
+         let trf = arr3 main_inh subj_t main_syn in
+         (trf, cls)
+       )
+     in
 
-        List.fold_right (List.map xs ~f:fst)
-          ~init:(Typ.tuple ~loc @@ List.map xs ~f:snd)
-          ~f:(Typ.arrow ~loc)
+     let mutuals =
+       Typ.tuple ~loc @@
+       List.map ys ~f:fst
+     in
+     List.fold_right
+       ~init:(Typ.tuple ~loc @@ List.map ys ~f:fst)
+       ys
+       ~f:(fun (trf, cls) acc ->
+           Typ.arrow ~loc
+             (arr3 mutuals trf cls)
+             acc
+         )
     )
 
 let fix_str ~loc tdecls =
@@ -967,77 +931,6 @@ let str_type_decl_many_plugins ~loc si plugins_info declaration =
 
 let str_type_ext_many_plugins ~loc si plugins_info extension =
   []
-  (* let name = extension.ptyext_path.txt |> Longident.last_exn in
-   * let ifaceclass =
-   *   let meths =
-   *     List.map extension.ptyext_constructors
-   *       ~f:(fun {pext_name; pext_kind} ->
-   *           let methname = sprintf "c_%s" pext_name.txt in
-   *           match pext_kind with
-   *           | Pext_decl (Pcstr_tuple ts, _opt) ->
-   *             Cf.method_virtual ~loc methname @@
-   *             (List.fold_right ts ~init:Typ.(var ~loc "syn")
-   *                ~f:(fun t -> Typ.arrow ~loc (Typ.from_caml t))
-   *              |> Typ.(arrow ~loc (var ~loc "inh") )
-   *             )
-   *           | _ -> assert false
-   *         )
-   *   in
-   *   Str.class_single ~loc ~virt:true
-   *     ~name:(class_name_for_typ name)
-   *     ~params:(params_of_interface_class ~loc extension.ptyext_params) @@
-   *     (inherit_iface_class ~loc extension.ptyext_path.txt
-   *        (List.map ~f:fst extension.ptyext_params)
-   *     ) :: meths
-   * in
-   *
-   * let gcata =
-   *   let cds = List.map extension.ptyext_constructors
-   *       ~f:(fun ec ->
-   *           match ec.pext_kind with
-   *           | Pext_rebind _ -> failwith "not implemented"
-   *           | Pext_decl (args, Some _) -> failwith "gadt here not supported"
-   *           | Pext_decl (args, None) ->
-   *             constructor_declaration ~loc:extension.ptyext_path.loc ~res:None
-   *               ~name:(ec.pext_name) ~args
-   *         )
-   *   in
-   *   let ans k =
-   *     Str.single_value ~loc
-   *       (Pat.sprintf "gcata_%s" ~loc (Longident.last_exn extension.ptyext_path.txt))
-   *       (Exp.fun_list ~loc Pat.[var ~loc "tr"; var ~loc "inh"; var ~loc "subj"]
-   *          k)
-   *   in
-   *   ans @@
-   *   prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
-   *     ~else_case:(fun patname ->
-   *         let open Exp in
-   *         app_list ~loc
-   *           (of_longident ~loc
-   *              (map_longident extension.ptyext_path.txt
-   *                 ~f:(Printf.sprintf "gcata_%s")))
-   *           [ ident ~loc "tr"; ident ~loc "inh"
-   *           ; ident ~loc patname ]
-   *       )
-   *     (fun cd names ->
-   *        List.fold_left ("inh"::names)
-   *          ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-   *                   ("c_" ^ cd.pcd_name.txt))
-   *          ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)
-   *             ))
-   *
-   * in
-   * let plugins =
-   *   List.fold_left plugins_info ~init:[]
-   *     ~f:(fun acc (name,args) ->
-   *         wrap_plugin name args acc
-   *       )
-   *   |> List.rev
-   * in
-   *
-   * [ ifaceclass
-   * ; gcata ]
-   * @ (List.concat_map plugins ~f:(fun g -> g#do_typext_str ~loc extension)) *)
 end
 
 

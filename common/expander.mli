@@ -3,7 +3,7 @@
 
 (*
  * Generic Transformers PPX syntax extension.
- * Copyright (C) 2016-2017
+ * Copyright (C) 2016-2019
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -28,13 +28,13 @@ val sig_type_decl_many_plugins: loc:loc ->
   (Base.string * config_plugin) list ->
   Ppxlib.rec_flag * Ppxlib.type_declaration list ->
   Sig.t HelpersBase.List.t
-
+(*
 val str_type_ext_many_plugins: loc:loc ->
   Str.t list ->
   (Base.string * config_plugin) list ->
   Ppxlib.type_extension ->
   Str.t HelpersBase.List.t
-
+*)
 
 end
 
@@ -42,4 +42,3 @@ end
 val register_plugin: string -> (module Plugin_intf.PluginRes) -> unit
 
 val get_registered_plugins: unit -> string list
-

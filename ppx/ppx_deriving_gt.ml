@@ -49,6 +49,7 @@ let str_type_decl : (_, _) Deriving.Generator.t =
        generator_f [] info
     )
 
+(*
 let str_type_ext : (_, _) Deriving.Generator.t =
   Deriving.Generator.make Deriving.Args.(empty +> arg "options" r)
     (fun ~loc ~path info options ->
@@ -75,7 +76,7 @@ let str_type_ext : (_, _) Deriving.Generator.t =
        in
        generator_f [] info
     )
-
+*)
 
 let sig_type_decl : (_, _) Deriving.Generator.t =
   Deriving.Generator.make Deriving.Args.(empty +> arg "options" r)
@@ -103,7 +104,7 @@ let () =
   Deriving.add
     ~str_type_decl
     ~sig_type_decl
-    ~str_type_ext
+    (* ~str_type_ext *)
     (* ~sig_type_ext *)
     "gt"
   |> Deriving.ignore

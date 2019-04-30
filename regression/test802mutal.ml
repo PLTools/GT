@@ -4,13 +4,10 @@ module PV: sig
   type a = [`A of b | `C of GT.int   ]
   and  b = [`B of a | `D of GT.string]
   [@@deriving gt ~options:{show;gmap}]
-
-
 end = struct
   type a = [`A of b | `C of GT.int   ]
   and  b = [`B of a | `D of GT.string]
   [@@deriving gt ~options:{show;gmap}]
-
 end
 
 module Show2 = struct
@@ -39,7 +36,7 @@ type c = [ PV.b | `E of GT.int ]
 module ShowC = struct
   open PV
 
-  class ['self] show_c_stub2 make_clas (fself: _ -> _ -> _) =
+  class ['self] show_c_stub2 make_clas (fself: _ -> c -> _) =
     let show_a2,show_b2 =
       Show2.(fix_a
                showa0
@@ -47,7 +44,7 @@ module ShowC = struct
     in
     object
       inherit [unit, _, string] c_t
-      inherit [ 'self] show_b_t_stub (show_a2,show_b2) fself
+      inherit [ 'self] show_b_t_stub (show_a2,show_b2) (fself :> unit -> b -> _)
       method! c_B () _ a  = sprintf "new `B (%s)" (show_a2 () a)
       method! c_D () _ s  = sprintf "new `D %s" s
       method  c_E () _ s  = sprintf "new `E %d" s
@@ -55,12 +52,10 @@ module ShowC = struct
 
   let rec showc0 fself () = Printf.printf "new c0!\n"; new show_c_stub2 showc0 fself
 
-  (* let (_: (unit -> b -> string) -> c -> string) = fun self -> gcata_c (showc0 self ()) () *)
-  let show_c () s =
+  let show_c () (s: c) =
     let rec trait () s = gcata_c (showc0 trait ()) () (s :> c)
     in
     trait () s
-
 
   let _ =
     Printf.printf "%s\n" (show_c () (`B (`A (`D "4"))));
