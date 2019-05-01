@@ -1,4 +1,5 @@
 \section{Exposition}
+\label{expo}
 
 In this section we gradually unfold the approach we propose using a number of examples; while this exposition lacks many concrete details and can not be used as a
 precise reference, it presents the main ``ingredients'' of the solution and motivation which has drove us to identify them. From now on we use the following
@@ -55,7 +56,7 @@ are essentially different. The only identical thing is pattern matching itself. 
 function with a set of per-constructor transformations:
 
 \begin{lstlisting}
-   let $\inbr{transform_{expr}}$ $\omega$ $\iota$ = function
+   let $\inbr{gcata_{expr}}$ $\omega$ $\iota$ = function
    | Const n         -> $\omega$#$\inbr{Const}$ $\iota$ n
    | Var   x         -> $\omega$#$\inbr{Var}$   $\iota$ x
    | Binop (o, l, r) -> $\omega$#$\inbr{Binop}$ $\iota$ o l r
@@ -68,7 +69,7 @@ ignored by functions like ``$\inbr{show_{expr}}$'').
 The initial ``$\inbr{show_{expr}}$'' now can be expressed as follows\footnote{For the sake of brevity we omitted some type annotations, needed for this snippet to typecheck.}:
 
 \begin{lstlisting}
-   let rec $\inbr{show_{expr}}$ e = transform
+   let rec $\inbr{show_{expr}}$ e = $\inbr{gcata_{expr}}$
      object
        method $\inbr{Const}$ _ n   = "Const " ^ string_of_int n
        method $\inbr{Var}$  $\enspace$   _ x   = "Var " ^ x
@@ -111,7 +112,7 @@ The pretty-printing function itself can now be easily expressed using this class
 
 \begin{lstlisting}
    let $\inbr{pretty_{expr}}$ e =
-     let rec pretty_prio p e = $\inbr{transform_{expr}}$ (new $\inbr{pretty_{expr}}$ pretty_prio) p e in
+     let rec pretty_prio p e = $\inbr{gcata_{expr}}$ (new $\inbr{pretty_{expr}}$ pretty_prio) p e in
      pretty_prio min_int e
 \end{lstlisting}
 
@@ -119,12 +120,12 @@ Finally, we can avoid using the nested function definition by tying the recursiv
 
 \begin{lstlisting}
    let $\inbr{pretty_{expr}}$ e =
-     fix (fun fself p e -> transform (new $\inbr{pretty_{expr}}$ fself) p e) min_int e
+     fix (fun fself p e -> $\inbr{gcata_{expr}}$ (new $\inbr{pretty_{expr}}$ fself) p e) min_int e
 \end{lstlisting}
 
-During this demonstration we managed to extract two common features for two essentially different transformations: a generic traversal (``$\inbr{transform_{expr}}$'')
+During this demonstration we managed to extract two common features for two essentially different transformations: a generic traversal (``$\inbr{gcata_{expr}}$'')
 and a virtual class (``$\inbr{expr}$'') to represent all transformations as its instances. But, did it worth trying? In fact in this concrete example we achieved a
-very little code reuse at the price of introducing a number of extra abstractions; actually, the size of code we came up with is \emph{larger} then the initial one.
+very little code reuse at the price of introducing a number of extra abstractions; actually, the size of code we came up with is \emph{larger} than the initial one.
 
 We argue that in this particular case the transformations were not general enough. In order to justify our approach we consider another, more optimistic scenario. It is
 well-known, that many transformations can be represented (and for a good reason) using \emph{catamorphisms}, or ``folds''~\cite{Fold,Bananas,CalculatingFP}. Technically, to
@@ -146,24 +147,24 @@ glance. However, if we modify this default behavior a little, we can obtain some
 \begin{lstlisting}
    let fv e =
      fix (fun fself i e ->
-            $\inbr{transform_{expr}}$ (object inherit [string list] $\inbr{fold_{expr}}$ fself
-                             method $\inbr{Var}$ i x = x :: i
-                           end) i e
+            $\inbr{gcata_{expr}}$ (object inherit [string list] $\inbr{fold_{expr}}$ fself
+                         method $\inbr{Var}$ i x = x :: i
+                       end) i e
          ) [] e
 \end{lstlisting}
 
 This function calculates the list of all free variables in an expression (as there can be no binders this is simply the list of all variables). Immediate object we
 construct here inherits from the ``useless'' ``$\inbr{fold_{expr}}$'' and redefines only one method~--- for variables. All other code makes exactly what we need~---
-``$\inbr{transform_{expr}}$'' traverses the expression, and all other methods of transformation object accurately pass the list of variables through. So, we indeed
+``$\inbr{gcata_{expr}}$'' traverses the expression, and all other methods of transformation object accurately pass the list of variables through. So, we indeed
 managed to implement some interesting transformation with a very small modufication of existing code (provided that ``$\inbr{fold_{expr}}$'' class was already supplied).
 To avoid the impression that we carefully prepared everything to implement this particular example we can show another one:
 
 \begin{lstlisting}
    let height e =
      fix (fun fself i e ->
-            $\inbr{transform_{expr}}$ (object inherit [int] $\inbr{fold_{expr}}$ fself
-                             method $\inbr{Binop}$ i _ l r = 1 + max (fself i l) (fself i r) 
-                           end) i e
+            $\inbr{gcata_{expr}}$ (object inherit [int] $\inbr{fold_{expr}}$ fself
+                         method $\inbr{Binop}$ i _ l r = 1 + max (fself i l) (fself i r) 
+                       end) i e
          ) 0 e
 \end{lstlisting}
 
@@ -216,7 +217,7 @@ classes can be seamlessly combined to construct an evaluator:
    end
 
    let eval state e =
-     fix (fun fself i e -> $\inbr{transform_{expr}}$ (new eval fself state) i e) () e  
+     fix (fun fself i e -> $\inbr{gcata_{expr}}$ (new eval fself state) i e) () e  
 \end{lstlisting}
 
 In all these examples we, starting from some very common generic feature, implemented all needed transformations with a very little efforts (modulo

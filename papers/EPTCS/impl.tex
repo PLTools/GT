@@ -45,7 +45,7 @@ We support the majority of variants in the right-hand side of type definitions w
 For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{show}'' the structure with the following skeleton is generated (``$\dots$'' stands for the parts we omit for now):
 
 \begin{lstlisting}
-   let $\inbr{transform_t}$ $\dots$ = $\dots$
+   let $\inbr{gcata_t}$ $\dots$ = $\dots$
    
    class virtual [$\dots$] $\inbr{t}$ $\dots$ =
    object
@@ -58,7 +58,7 @@ For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{sho
    end
 
    let t = {
-     gcata   = $\inbr{transform_t}$;
+     gcata   = $\inbr{gcata_t}$;
      plugins = object
                  method show = $\dots$
                end
@@ -68,15 +68,14 @@ For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{sho
 Using the typeinfo structure ``\lstinline{t}'' we can mimick the type-indexed nature of concrete transformations:
 
 \begin{lstlisting}
-   let transform x = x.gcata
-   let show      x = x.plugins#show
+   let transform typeinfo = typeinfo.gcata
+   let show      typeinfo = typeinfo.plugins#show
 \end{lstlisting}
 
-Thus, ``\lstinline{transform(t)}'' becomes the representation for ``$\inbr{transform_t}$'' in the concrete syntax, etc. On the
+The function ``\lstinline{transform(t)}'' is a top-level transformation function, which can be instantiated for any supported type ``\lstinline{t}''. On the
 Figure~\ref{syntax} we describe the concrete constructs, implemented by the syntax extensions. Note, the concrete way of encoding names
 for classes and transformation function (represented above as $\inbr{...}$) is not important as long as \cd{camlp5} is
 used since it provides corresponding syntax extensions.
-
 
 \subsection{Types of Transformations}
 
@@ -91,7 +90,7 @@ where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types fo
 grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types. 
 
 When the type under consideration is parameterized, the transformation becomes parameterized as well. From now on we will use a convention to
-denote $\left\{...\right\}$ multiple ocurrences of a an entity inside brackets. Under this convention we may stipulate the generic form of
+denote $\left\{...\right\}$ multiple ocurrences of a an entity inside the brackets. Under this convention we may stipulate the generic form of
 any transformation, representable with the aid of our library, as
 
 \[
@@ -126,6 +125,10 @@ For example, if we have a two-parametric type \lstinline{($\alpha$, $\beta$) t} 
     (f$_\beta$ : $\iota_\beta$ -> $\beta$ -> $\sigma_\beta$)
 \end{lstlisting}
 
+Note, we maintain these conventions for all types although for some of them some of components are superfluous: for example, ``\lstinline{fself}''
+is needed only for recursive types. The explanation for this decision is simple: when we \emph{use} a type we generally do not know its
+definition. Thus, in order to support separate compilation the interfaces of all entities we generate must have identical structure.
+
 This scheme of typing and parameterization looks quite verbose and cumbersome: there are a lot of type parameters which are quite easy to get a mess with. However, an end
 user would need to deal with this stuff directly only when he or she desires to implement a transformation \emph{manually} from scratch by immediately inheriting from the common ancestor class.
 In the majority of use cases the transformation is implemented either by customizing a certain plugin or using the plugin system. In the first case many
@@ -143,9 +146,51 @@ Note, the method takes not only inherited attribute and the arguments of corresp
 
 \subsection{Fixed Point Combinator and Memoization}
 
+In our approach we use open recursion: a class for a concrete transformation takes a function for the same transformation as a parameter. In order
+to instantiate this function we have to use a fixpoint combinator. In this section we consider only a simple fixpoint combinator for an isolated
+type definition; in mutually-recursive case a more elaborated combinator is needed (see Section~\ref{murec}).
+
+We repeat here an example from Section~\ref{expo}:
+
+\begin{lstlisting}
+   let $\inbr{pretty_{expr}}$ e =
+     fix (fun fself p e -> $\inbr{gcata_{expr}}$ (new $\inbr{pretty_{expr}}$ fself) p e) min_int e
+\end{lstlisting}
+
+As the lambda argument of ``\lstinline{fix}'' is called each time when ``\lstinline{fself}'' is called (virtually, for each node of
+an expression), a new transformation object is created for each node. As all these objects are identical, this calls for an optimization. 
+
+We memoize the creation of transformation objects using lazy evaluation. For this we abstract object creation into a
+function which takes ``\lstinline{fself}'' as an argument. Then the implementation of the fixpoint combinator is as follows:
+
+\begin{lstlisting}
+   let fix gcata make_obj $\iota$ x =
+     let rec obj = lazy (make_obj fself)
+     and fself $\iota$ x = gcata (Lazy.force obj) $\iota$ x in
+     fself $\iota$ x
+\end{lstlisting}
+
+This combinator can be used for all types and is not generated. Now we can fix a little bit the definition of ``\lstinline{transform}'':
+
+\begin{lstlisting}
+   let transform typeinfo = fix typeinfo.gcata
+\end{lstlisting}
+
+With this definition an end used does not need to deal with the fixpoint combinator explicitly anymore:
+
+\begin{lstlisting}
+   let $\inbr{show_{expr}}$ e =
+     transform(expr) (fun fself -> new $\inbr{show_{expr}}$ fself) () e
+\end{lstlisting}
+
 \subsection{Polymorphic Variants}
 \label{pv}
 
+%Open recursion is vital for polymorphic variants support, since concrete transformations can be used for any type which contains a given one as a constituent.
+
 \subsection{Mutual Recursion}
+\label{murec}
+
 \subsection{Plugin System}
+
 \label{plugins}
