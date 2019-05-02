@@ -116,7 +116,8 @@ The pretty-printing function itself can now be easily expressed using this class
      pretty_prio min_int e
 \end{lstlisting}
 
-Finally, we can avoid using the nested function definition by tying the recursive knot with the fixpoint combinator ``\lstinline{fix}'':
+Finally, we can avoid using the nested function definition by tying the recursive knot with the fixpoint combinator ``\lstinline{fix}'':\footnote{I think, that memnoization will not work
+when argument fself is not the last in the list of arguments.}\footnote{ Also trf function name is the same as class name. This can provoke reader to ask questions}\marginnote{I think that arguments `p` and `e` should be removed (looks like and error)}
 
 \begin{lstlisting}
    let $\inbr{pretty_{expr}}$ e =
@@ -228,9 +229,9 @@ framework, in which all the components can be synthesized from type definitions.
 
 \begin{itemize}
 \item Polymorphism.
-\item Type constructor applications. This can be more trikier than one would expect: for example, if
+\item Type constructor applications. This can be more trickier than one would expect: for example, if
   we have a type constructor ``\lstinline{$\alpha$ t}'' then its application ``\lstinline{($\alpha$ * $\beta$) t}'' has
-  \emph{more} type parameters, then the original type.
+  \emph{more}\footnote{Kosarev. I think that guys that didn't seen your initial impelementation with \lstinline=(_,_,_,_) GT.a= won't why it is so a big problem} type parameters, then the original type.
 \item Mutual recursion. While there is no problem with implementation of hard-coded generic transformations, the implementation of \emph{extensible} ones
   requires extra efforts.
 \item Polymorphic variant types. It includes the seamless integration via class inheritance of all features
