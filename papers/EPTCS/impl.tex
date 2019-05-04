@@ -271,9 +271,10 @@ omit the nonrelevant parts):
    end
 \end{lstlisting}
 
-Note, in both ``\lstinline{fix}'' subexpressions we instantiated \emph{concrete} classes (``$\inbr{show_{def}}$'' and ``$\inbr{show_{expr}}$''). This will
-work as expected for the first glance. But, what happens when we decide to redefine the behaviour of this default ``$\inbr{show_{expr}}$''? According to
-our general approach, we would need to inherit from ``$\inbr{show_{expr}}$'', override certain methods and construct a function using fixpoint:
+Note, in both ``\lstinline{fix}'' subexpressions we instantiated \emph{concrete} classes (``$\inbr{show_{def}}$'' and ``$\inbr{show_{expr}}$''). This should
+work as expected at the first glance. Strictly speaking, this \emph{concrete} transformation works. But, what happens when we decide to redefine the behaviour of
+this default ``$\inbr{show_{expr}}$''? According to our general approach, we would need to inherit from ``$\inbr{show_{expr}}$'', override certain methods and
+construct a function using fixpoint:
 
 \begin{lstlisting}
    class custom_show fself =
@@ -337,10 +338,11 @@ transformation classes:
    object inherit $\inbr{show\_stub_{def}}$ $\inbr{show_{expr}}$ fself end
 \end{lstlisting}
 
-Thus, we again made mutually recursive types indistinguishable from the simple ones (in terms of class interfaces), which makes it possible to
-uniformly generate all transformations with separate compilation support. On the other hand, in order to extend an existing transformation
-one needs to inherit from \emph{auxilliary} classes and to use the custom fixpoint operator. For our previously unsucessful case the
-implementation is almost as simple as for the single type definition:
+Thus, we again made mutually recursive types indistinguishable from the simple ones (in terms of class interfaces), making it possible to
+uniformly generate all transformations with separate compilation support.
+
+On the other hand, in order to extend an existing transformation one needs to inherit from \emph{auxilliary} classes and use the custom fixpoint operator.
+For our previously unsucessful case the implementation is almost as simple as for the single type definition:
 
 \begin{lstlisting}
    let custom_show, _ =
@@ -351,6 +353,28 @@ implementation is almost as simple as for the single type definition:
                     new $\inbr{show\_stub_{def}}$) 
 \end{lstlisting}
 
+There is one subtlety with our support for mutual recursion: we rely on the property, that adding one function per type is enough to implement open recursion.
+However, generally speaking, this is not true: take, for example, the following definition:
+
+\begin{lstlisting}
+   type ($\alpha$, $\beta$) a = A of $\alpha$ b * $\beta$ b
+   and  $\alpha$ b = X of ($\alpha$, $\alpha$) a
+\end{lstlisting}
+
+In the parameters of constructor ``\lstinline{A}'' we have here \emph{different} parameterizations of type ``\lstinline{b}'' and, thus, we would need
+\emph{two} functions~--- for ``\lstinline{$\alpha$ b}'' and for ``\lstinline{$\beta$ b}''. However, the type ``\lstinline{a}'' is not regular~--- starting with 
+the parameterization ``\lstinline{($\alpha$, $\beta$) a}'' we can end up with ``\lstinline{($\alpha$, $\alpha$) a}'' and ``\lstinline{($\beta$, $\beta$) a}''.
+Thus, we have already ruled such definitions out. In this reasoning we assume that mutually recursive definitions are \emph{essential} in the sense that they
+can not be split into separate type declarations (i.e. that every pair of types are mutually ``reachable''). If we replace the second definition in the
+example above with, say,
+
+\begin{lstlisting}
+   ...
+   and $\alpha$ b = int
+\end{lstlisting}
+
+then we would end up with a case which is not supported by our framework. However, as types ``\lstinline{a}'' and ``\lstinline{b}'' are actually \emph{not}
+mutually recursive, the whole definition can be rewritten, which restores the support.
 
 \subsection{Polymorphic Variants}
 \label{pv}
