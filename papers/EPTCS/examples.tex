@@ -1,0 +1,348 @@
+\section{Examples}
+
+In this section we present some examples, written with the aid of our library. In this examples we will use \cd{camlp5} syntax extension,
+although \cd{ppxlib} plugin can be used equally.
+
+
+\subsection{Polymorphic Variants}
+
+For another example we take the support for polymorphic variants~\cite{PolyVar,PolyVarReuse}, which we consider as an important feature of our framework
+since it complements the ability of defining composable data structures with the ability of creating composable transformations. The problem of
+constructing transformations from separately compiled, strongly typed components is known as ``The Expression Problem''~\cite{ExpressionProblem}, which
+is often used as a ``litmus test'' for generic programming frameworks~\cite{ObjectAlgebras,ALaCarte}.
+
+For the concrete problem we take the transformation from named to a nameless representations for lambda terms.
+
+First, we define the generic part of the terms:
+
+\begin{lstlisting}
+   @type ('name, 'lam) lam = [
+   | `App of 'lam * 'lam
+   | `Var of 'name
+   ] with eval
+\end{lstlisting}
+
+Here we make use of the ``\lstinline{eval}'' plugin, which we mentioned in Section~\ref{plugins}. It generates a transformation ``\lstinline{eval(lam)}'' which is analogous
+to \lstinline{gmap}, but additionally uses some environment, which by default is propagated unchanged. We here follow~\cite{PolyVarReuse} and use an open non-recursive definition
+of the type.
+
+Then, we define a binding construct~--- abstraction:
+
+\begin{lstlisting}
+   @type ('name, 'term) abs = [
+   | `Abs of 'name * 'term
+   ] with eval
+\end{lstlisting}
+
+\begin{lstlisting}
+  class ['term, 'term2] de_bruijn ft =
+  object
+    inherit [string, unit, 'term, 'term2,
+             string list, 'term2] @abs[eval]
+      (fun _ -> assert false)
+      (fun _ _ -> ())
+      ft
+    method c_Abs env name term =
+      `Abs ((), ft (name :: env) term)
+  end
+\end{lstlisting}
+
+This time we have to define a conversion transformation since for the abstraction the default behavior of \lstinline{eval} is not
+enough. We introduce the subclass for \lstinline{@abs[eval]}, in which we specify the type of the environment (\lstinline{string list}),
+the representations for names in the input and output values (\lstinline{string} and \lstinline{unit} respectively), and
+representations for subterms in the input and output values (abstract for now). The last, sixth type parameter for \lstinline{@abs[eval]}
+is needed for open recursion. The semantics of the single method of this class reflects the normal behavior of the
+abstraction during the conversion into the nameless representation: it adds the variable to the environment and uses this
+environment to convert the subterm. The parameter \lstinline{ft} corresponds to the subterm conversion transformation. Since
+we do not know it yet, we have to abstract over it.
+
+Now we can combine two types into the single type for lambda terms:
+
+\begin{lstlisting}
+  @type ('n, 'b) term = [
+  | ('n, ('n, 'b) term) lam
+  | ('b, ('n, 'b) term) abs
+  ] with eval
+
+  @type named    = (string, string) term
+  @type nameless = (int, unit) term
+\end{lstlisting}
+
+Here we distinguish names in binder positions (\lstinline{'b}) and bound positions (\lstinline{'n}) since their behavior during the
+transformation essentially different: names in binder positions are erased, while in bound positions are substituted with corresponding
+de Bruijn index. We also define shortcuts for the terms in named and nameless representations.
+
+Similarly to the types, the transformations can be combined as well:
+
+\begin{lstlisting}
+  class de_bruijn fself =
+  object
+    inherit [string, int, string, unit,
+             string list, nameless] @term[eval]
+       fself
+       ith
+       (fun _ _ -> ())
+    inherit [named, nameless] Abs.de_bruijn fself
+  end
+\end{lstlisting}
+
+For the generic part of the terms we reused the \lstinline{eval} transformation, while for abstractions we took the customized one (\lstinline{de_bruijn}); in
+any case the final transformation is build via inheritance with no other glue; here \lstinline{ith} is a function, which finds names in an
+environment and returns their indices.
+
+It is interesting, that with polymorphic variants is becomes possible to define a transformation with an output type, different from the input
+beyond parameterization:
+
+\begin{lstlisting}
+   class ['term, 'term2] de_bruijn' ft =
+   object
+     inherit [string, string list, unit,
+              'term, string list, 'term2,
+              string list, 'term2, 'term] @abs
+     method c_Abs env name term =
+       `Abs (ft (name :: env) term) 
+   end
+     
+   @type named = [
+   | (string, named) lam
+   | (string, named) abs
+   ] with eval
+                     
+   @type nameless = [
+   | (int, nameless) lam
+   | `Abs of nameless
+   ] with eval
+
+   class de_bruijn fself =
+   object
+     inherit [string, int,
+              named, nameless,
+              string list,
+              nameless] @lam[eval] fself ith fself
+      inherit [named, nameless] Abs .de_bruijn' fself 
+   end
+\end{lstlisting}
+
+Please note the implementation of method \lstinline{c_Abs}~--- now it returns a constructor \lstinline{`Add} with \emph{one}
+argument. In short, we defined a transformation into a nameless representation, which completely removes the names in binder
+positions.
+
+\subsection{A Custom Plugin}
+\label{pluginExample}
+
+Finally we demonstrate the utilization of the plugin system using the example of a fresh custom plugin implementation. For this purpose we
+take a well-known \emph{hash-consing} transformation~\cite{HC}. This transformation converts a data structure to its maximally shared
+representation, when structurally equal substructures are represented by the same physical object. For example, an expression tree
+
+\begin{lstlisting}
+   let t =
+     Binop ("+",
+       Binop ("-",
+         Var "b",
+         Binop ("*", Var "b", Var "a")),
+       Binop ("*", Var "b", Var "a"))
+\end{lstlisting}
+
+can be rewritten into
+
+\begin{lstlisting}
+   let t =
+     let b  = Var "b" in
+     let ba = Binop ("*", b, Var "a") in
+     Binop ("+", Binop ("-", b, ba), ba)  
+\end{lstlisting}
+
+where equal subexpressions are represented by shared subtrees.
+
+Our plugin for a type ``\lstinline|$\left\{\alpha_i\right\}$ t|'' will provide a hash-consing function ``\lstinline{hc(t)}'' of the type
+
+\begin{lstlisting}
+    $\{$ H.t -> $\alpha_i$ -> H.t * $\alpha_i$ $\}$ -> H.t -> $\left\{\alpha_i\right\}$ t -> H.t * $\left\{\alpha_i\right\}$ t
+\end{lstlisting}
+
+where ``\lstinline{H.t}''~--- a heterogenious hash table for values of arbitrary types. The interface for the hash table is
+as follows:
+
+\begin{lstlisting}
+   module H :
+   sig
+     type t
+     val hc : t -> 'a -> t * 'a
+   end
+\end{lstlisting}
+
+The function ``\lstinline{H.hc}'' takes a hash table and some value and returns a possibly updated table and a structurally equivalent value
+of the same type. For now we postpone the description of this module implementation and consider an example of constructor transformation
+method:
+
+\begin{lstlisting}   
+   method $\inbr{Binop}$ h _ op l r =
+     let h, op = hc(string) h op in
+     let h, l  = fself h l in
+     let h, r  = fself h r in
+     H.hc h (Binop (op, l, r))
+\end{lstlisting}
+
+The method takes an inherited attribute~---this time a hash table ``\lstinline{h}'',~--- the whole expressions node (which we do not
+need in this case, hence underscore), and three arguments of the constructor: ``\lstinline{op}'' of type \lstinline{string}, and
+``\lstinline{l}'' and ``\lstinline{r}'' of type \lstinline{expr}. We first hash-cons all three arguments (which gives us a possibly updated
+hash table and three hash-consed values of the same types), then we apply the constructor and hash-cons the value again. To hash-cons
+the arguments of the constructor we can use the functions provided by the framework~--- for the type \lstinline{string} it is
+``\lstinline{hc(string)}''\footnote{Generally speaking, we would need to implement a hash-consing function for each primitive type; in
+our case, however, we could equally use ``\lstinline{H.hc}''.}, and for both subexpressions it is ``\lstinline{fself}''. Now we need
+to generate this logic using a plugin.
+
+The infrastructure code for the plugin is shown below:
+
+\begin{lstlisting}
+   let trait_name = "hc"
+  
+   module Make (AstHelpers : GTHELPERS_sig.S) =
+     struct
+
+       module P = Plugin.Make (AstHelpers)
+
+       open AstHelpers
+
+       class g initial_args tdecls =
+       object (self : 'self) inherit P.with_inherit_arg initial_args tdecls as super
+         $\ldots$
+       end
+
+       let create =
+         (new g :>
+           (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
+           (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+
+     end
+
+   let _ =
+     Expander.register_plugin trait_name (module Make : Plugin_intf.PluginRes)
+\end{lstlisting}
+
+To implement a plugin, one needs to implement a functor parameterized by a helper module, which
+repeats the interface of \textbf{WHAT}? to create \textsc{OCaml} syntax trees. Inside the
+functor two main entities have to be implemented:
+
+\begin{itemize}
+\item a class which inherits from a generic plugin class (in the snippet above~--- ``\lstinline{P}'');
+\item an entry function ``\lstinline{create}'' (зачем?)
+\end{itemize}
+
+The final component for the implementation is module ``\lstinline{H}'' itself. We
+
+The complete implementation for this plugin can be seen in the main project repository; it occupies 164 LOC, including
+comments and blank lines.
+
+\begin{comment}
+  method trait_name = trait_name
+
+  (* Default inherited attribute is a predefined in GT type of hash table *)
+  method main_inh ~loc _tdecl = ht_typ ~loc
+
+  (* The same for default synthsized attribute *)
+  method main_syn ~loc ?in_class tdecl =
+    Typ.tuple ~loc
+      [ ht_typ ~loc
+      ; Typ.use_tdecl tdecl
+      ]
+
+  (* Inherited attribute for parameter is the same as default one *)
+  method inh_of_param tdecl _name = ht_typ ~loc:(loc_from_caml tdecl.ptype_loc)
+
+  (* The synthesized attribute of hashconsing is a tuple of new value and
+     a new hash table
+  *)
+  method syn_of_param ~loc s =
+    Typ.tuple ~loc
+      [ ht_typ ~loc
+      ; Typ.var ~loc s
+      ]
+      
+  (* Type parameters of the class are type parameters of type being processed
+     plus extra parameter to support polymorphic variants *)
+  method plugin_class_params tdecl =
+    let ps =
+      List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
+    in
+    ps @
+    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+      Naming.make_extra_param tdecl.ptype_name.txt
+    ]
+
+  (* when we will inherrit trait class we will use these type parameters.
+     An extra argument for polymorphic variants will be added on call site.
+  *)
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+    List.map rhs_args ~f:Typ.from_caml
+
+  (* method [on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl cinfo ts]
+     receive expression fo rinherited attribute in [inhe],
+     the name of constructor (algebrain or polyvariant) in [cinfo]
+     and parameters' type in [ts]
+  *)
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
+    Exp.fun_list ~loc
+      (* we receive constructors' arguments in curried manner *)
+      (List.map ts ~f:(fun (pname,_) -> Pat.sprintf ~loc "%s" pname))
+      (let c = match constr_info with
+            | `Normal s -> Exp.construct ~loc (lident s)
+            | `Poly s   -> Exp.variant ~loc s
+       in
+       match ts with
+       | [] ->
+         (* without argument we simply return a hash and unchanged value *)
+         Exp.tuple ~loc [ inhe; c [] ]
+       | ts ->
+         (* Constructor with arguments gives oppotunite to save some memory *)
+         let res_var_name = sprintf "%s_rez" in
+         let argcount = List.length ts in
+         (* a shortcut for hashconsing function *)
+         let hfhc =
+           Exp.field ~loc
+             (Exp.of_longident ~loc (Ldot (Lident "GT", "hf")))
+             (Lident "hc")
+         in
+         (* We fold argument and construct a new has and a new argument
+            on every step
+         *)
+         List.fold_right
+           (List.mapi ~f:(fun n x -> (n,x)) ts)
+           ~init:(
+             (* After folding we hashcons constructor of hashconsed arguments *)
+             Exp.app_list ~loc hfhc
+               [ Exp.sprintf ~loc "ht%d" argcount
+               ; c @@
+                 List.map ts
+                   ~f:(fun (name,_) -> Exp.ident ~loc @@ res_var_name name)
+               ]
+           )
+           ~f:(fun (i,(name,typ)) acc ->
+               (* for every argument we constuctr a pair of new hash and
+                  new hashconsed argument *)
+               Exp.let_one ~loc
+                 (Pat.tuple ~loc [ Pat.sprintf ~loc "ht%d" (i+1)
+                                 ; Pat.sprintf ~loc "%s" @@ res_var_name name])
+                 (* to call transformation for argument we use a method from
+                    base class
+                 *)
+                 (self#app_transformation_expr ~loc
+                    (* transformation is being generated from the type of argument *)
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                    (* inherited argument to use *)
+                    (if i=0 then inhe else Exp.sprintf ~loc "ht%d" i)
+                    (* the subject of transformation *)
+                    (Exp.ident ~loc name)
+                 )
+                 acc
+             )
+      )
+
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+    (* TODO: *)
+    failwith "not implemented"
+end
+
+(* видимая снаружи точка входа, надо бы переименовать *)
+  
+\end{comment}
