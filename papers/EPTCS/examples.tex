@@ -6,14 +6,12 @@ although \cd{ppxlib} plugin can be used equally.
 
 \subsection{Polymorphic Variants}
 
-% For another example we take the support for polymorphic variants~\cite{PolyVar,PolyVarReuse}, which we consider as an important feature of our framework
-% since it complements the ability of defining composable data structures with the ability of creating composable transformations.
-
-The problem of
+Polymorphic variant types make it possible to define composable statically typed and separately compiled data structures~\cite{PolyVarReuse}.
+Dealing with them with composable statically typed and separately compiled transformations looks like a natureal idea. The problem of
 constructing transformations from separately compiled, strongly typed components is known as ``The Expression Problem''~\cite{ExpressionProblem}, which
-is often used as a ``litmus test'' for generic programming frameworks~\cite{ObjectAlgebras,ALaCarte}.
-
-For the concrete problem we take the transformation from named to a nameless representations for lambda terms.
+is often used as a ``litmus test'' for generic programming frameworks~\cite{ObjectAlgebras,ALaCarte}. In this section we show the solution of
+the expression problem with the aid of our framework. For the concrete problem we take the transformation from named to a nameless representations
+for lambda terms.
 
 First, we define the generic part of the terms:
 
@@ -24,9 +22,9 @@ First, we define the generic part of the terms:
    ] with eval
 \end{lstlisting}
 
-Here we make use of the ``\lstinline{eval}'' plugin, which we mentioned in Section~\ref{plugins}. It generates a transformation ``\lstinline{eval(lam)}'' which is analogous
-to \lstinline{gmap}, but additionally uses some environment, which by default is propagated unchanged. We here follow~\cite{PolyVarReuse} and use an open non-recursive definition
-of the type.
+Here we make use of the ``\lstinline{eval}'' plugin, which we mentioned in Section~\ref{plugins}. It generates a transformation ``\lstinline{eval(lam)}''
+which is analogous to \lstinline{gmap}, but additionally uses some environment, which by default is propagated unchanged. We here follow~\cite{PolyVarReuse}
+and use an open non-recursive definition of the type.
 
 Then, we define a binding construct~--- abstraction:
 
@@ -35,18 +33,18 @@ Then, we define a binding construct~--- abstraction:
    | `Abs of 'name * 'term
    ] with eval
 \end{lstlisting}
-
+ 
 \begin{lstlisting}
-  class ['term, 'term2] de_bruijn ft =
-  object
-    inherit [string, unit, 'term, 'term2,
-             string list, 'term2] @abs[eval]
-      (fun _ -> assert false)
-      (fun _ _ -> ())
-      ft
-    method c_Abs env name term =
-      `Abs ((), ft (name :: env) term)
-  end
+   class ['term, 'term2] de_bruijn ft =
+   object
+     inherit [string, unit, 'term, 'term2,
+              string list, 'term2] @abs[eval]
+       (fun _ -> assert false)
+       (fun _ _ -> ())
+       ft
+     method c_Abs env name term =
+       `Abs ((), ft (name :: env) term)
+   end
 \end{lstlisting}
 
 This time we have to define a conversion transformation since for the abstraction the default behavior of \lstinline{eval} is not

@@ -16,7 +16,7 @@ We start from a simple example. Let us have the following type definition for ar
    | Binop of string * expr * expr
 \end{lstlisting}
 
-Recursive function ``$\inbr{show_{expr}}$'' (the first evident candidate for generic implementation) converts an expresion into its string representation: \marginnote{Printf format has \%S modifier which inserts quotes around string. Let's use that!}
+Recursive function ``$\inbr{show_{expr}}$'' (the first evident candidate for generic implementation) converts an expresion into its string representation: 
 
 \begin{lstlisting}
    let rec $\inbr{show_{expr}}$ = function
@@ -82,11 +82,10 @@ The initial ``$\inbr{show_{expr}}$'' now can be expressed as follows\footnote{Fo
 
 and, of course, the same is true for $\inbr{pretty_{expr}}$.
 
-We can notice, that both objects, needed to implement these functions, can be instantiated from a common virtual class. As we have to make recursive calls to the transformation
-itself we parameterize the class by the self-transforming function ``\lstinline{fself}'' (\emph{open recursion}):
+We can notice, that both objects, needed to implement these functions, can be instantiated from a common virtual class:
 
 \begin{lstlisting}
-   class virtual [$\iota$, $\sigma$] $\inbr{expr}$ (fself : $\iota$ -> expr -> $\sigma$) =
+   class virtual [$\iota$, $\sigma$] $\inbr{expr}$ =
    object
      method virtual $\inbr{Const}$ : $\iota$ -> int -> $\sigma$
      method virtual $\inbr{Var}\enspace\;\;$ : $\iota$ -> string -> $\sigma$
@@ -94,11 +93,13 @@ itself we parameterize the class by the self-transforming function ``\lstinline{
    end
 \end{lstlisting}
 
-And now we can implement, say, pretty-printing class in isolation (not within the pretty-printing function, note the usage of ``\lstinline{fself}''):
+A concrete transformation class inherits from this common ancestor; as we have to make recursive calls to the transformation 
+itself we parameterize the class by the self-transforming function ``\lstinline{fself}'' (\emph{open recursion}). And now we can implement, say,
+pretty-printing in isolation (not within the pretty-printing function, note the usage of ``\lstinline{fself}''):
 
 \begin{lstlisting}
-   class $\inbr{pretty_{expr}}$ fself =
-   object inherit [int, string] $\inbr{expr}$ fself
+   class $\inbr{pretty_{expr}}$ (fself : $\iota$ -> expr -> $\sigma$) =
+   object inherit [int, string] $\inbr{expr}$ 
      method $\inbr{Const}$ p n = string_of_int n
      method $\inbr{Var}$ p x = x
      method $\inbr{Binop}$ p o l r =
@@ -135,7 +136,7 @@ lightweight version:
 
 \begin{lstlisting}
    class [$\iota$] $\inbr{fold_{expr}}$ (fself : $\iota$ -> expr -> $\iota$) =
-   object inherit [$\iota$, $\iota$] $\inbr{expr}$ fself
+   object inherit [$\iota$, $\iota$] $\inbr{expr}$ 
      method $\inbr{Const}$ i n = i
      method $\inbr{Var}$ i x = i
      method $\inbr{Binop}$ i o l r = fself (fself i l) r
@@ -176,7 +177,7 @@ Another commonly recognized generic feature is ``map'':
 
 \begin{lstlisting}
    class $\inbr{map_{expr}}$ fself =
-   object inherit [unit, expr] $\inbr{expr}$ fself
+   object inherit [unit, expr] $\inbr{expr}$
      method $\inbr{Var}$ _ x = Var x
      method $\inbr{Const}$ _ n = Const n
      method $\inbr{Binop}$ _ o l r = Binop (o, fself () l, fself () r)

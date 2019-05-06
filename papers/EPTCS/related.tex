@@ -56,7 +56,10 @@ Supporting polymorphic variants as a mean for datatype extensibility requires a 
 Finally, among existing generic programming frameworks for \textsc{OCaml} we can name two, which resemble ours: \cd{ppx\_deriving}/\cd{ppx\_traverse}
 (a part of \cd{ppxlib}~\cite{PPXLib}) and \textsc{Visitors}~\cite{Visitors}.
 
-\cd{ppx\_deriving} is the simplest approach possible: type declarations are mapped one-to-one to recursive functions representing a specific kind of transformation. It is the most effective implementation (functions are called directly, no late biding involved) but it is not extensible. If the end user needs to modify slightly the generated function, he or she should copy and paste generated code to modify it manually. The amount of work to support new transformation will drastically increase if type definitions will change during development cycle.
+\cd{ppx\_deriving} is the simplest approach possible: type declarations are mapped one-to-one to recursive functions representing a specific kind of
+transformation. It is the most efficient implementation (functions are called directly, no late biding involved) but it is not extensible. If end users
+need to modify slightly the generated function, they should copy and paste generated code to modify it manually. The amount of work to support a new
+transformation will drastically increase if type definitions change during the development cycle.
 
 In \cd{ppx\_traverse} extensible transformations are represented as objects; unlike our case, method-per-type approach is used. In addition 
 \cd{ppx\_traverse} does not make use of inherited attributes, thus some transformations like equality or comparison are not representable.
@@ -74,10 +77,9 @@ we summarize the main differences:
      
    \item Following SYB, \textsc{Visitors} take a type-discriminating route: for each type of interest (including the built-in ones) there is a dedicated
      transformation method in each object, representing a transformation. While this solution indeed adds some flexibility, we firmly oppose it, since it
-     breaks the abstraction: inspecting the methods of a transformation (which cannot be hidden in a module signature) one can retrieve some
+     breaks the encapsulation: inspecting the methods of a transformation (which cannot be hidden in a module signature) one can retrieve some
      information about the implementation of encapsulated types. Even worse, the data structures of abstract types can be manipulated in an unprescribed
      manner using the public type-transforming interface.
-     \footnote{This paragraph is not fully obvious even for me. Kosarev}
 
    \item In our case the type parameters for transformation classes have to be specified by an end user. With \textsc{Visitors} this burden is offloaded to the
      compiler with the aid of some neat trick. However, this trick makes it impossible to use \textsc{Visitors} syntax extension in module signatures. There is no
@@ -85,25 +87,36 @@ we summarize the main differences:
 
    \item \textsc{Visitors} in their current state\footnote{The latest available version is 20180513} do not support polymorphic variants.
    
-   \item GT supports arbitrary recursive types but \textsc{Visitors} in their current state doesn't (both in monomorphic and polymorphic mode). For instance, the following example doesn't compile 
+   \item \textsc{GT} supports arbitrary type constructor applications but \textsc{Visitors} in their current state doesn't (both in monomorphic and polymorphic mode).
+     For instance, the following example doesn't compile:
+     
    \begin{lstlisting}
-    type ('a,'b) alist = Nil | Cons of 'a * 'b
-    [@@deriving visitors { variety = "map"; polymorphic = true }]
+      type ('a,'b) alist = Nil | Cons of 'a * 'b
+      [@@deriving visitors { variety = "map"; polymorphic = true }]
 
-    type 'a list = ('a, 'a list) alist
-    [@@deriving visitors { variety = "map"; polymorphic = false }]
-    \end{lstlisting}
-    Moreover, adding a ``fake'' construct doesn't solve a problem too.
+      type 'a list = ('a, 'a list) alist
+      [@@deriving visitors { variety = "map"; polymorphic = false }]
+   \end{lstlisting}
+   
+   Moreover, adding an extra construct doesn't solve the problem:
+   
     \begin{lstlisting}
-    type 'a list = L of ('a, 'a list) alist [@@unboxed]
-    [@@deriving visitors { variety = "map"; polymorphic = false }]
+       type 'a list = L of ('a, 'a list) alist [@@unboxed]
+       [@@deriving visitors { variety = "map"; polymorphic = false }]
     \end{lstlisting}
-    There are also issue with type aliases in polymorphic mode (monomorphic part of \textsc{Visitors} compiles successfully).
+    
+    There is also an issue with type aliases in polymorphic mode (monomorphic part of \textsc{Visitors} compiles successfully):
+    
     \begin{lstlisting}
-    type ('a,'b) t = Foo of 'a * 'b (* OK *)
-    [@@deriving visitors { variety = "map"; polymorphic = true }]
-    type 'a t2 = ('a, int) t
-    [@@deriving visitors { variety = "map"; name="yyy"; polymorphic = true }]
+       type ('a,'b) t = Foo of 'a * 'b (* OK *)
+       [@@deriving visitors { variety = "map"; polymorphic = true }]
+       
+       type 'a t2 = ('a, int) t
+       [@@deriving visitors { variety = "map"; name="yyy"; polymorphic = true }]
     \end{lstlisting}
-    The generated code can be fixed manually by removing explicit polymorphic type annotations from objects' methods which leads to the code very similar to the one being generated by GT. From these we can deduce that GT is reimplementation of polymorphic part of visitors where more type declarations compile successfully.
+    
+    The generated code can be fixed manually by removing explicit polymorphic type annotations from objects' methods, which leads to the code
+    very similar to the one generated by \textsc{GT}. From these we can conclude that \textsc{GT} can be seen an a reimplementation of polymorphic
+    mode of \textsc{Visitors} where more type declarations compile successfully.
+    
 \end{itemize}

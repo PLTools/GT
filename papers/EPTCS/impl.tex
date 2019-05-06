@@ -28,7 +28,7 @@ a plugin system. The syntax extensions process type definitions, attributed by a
 
 \begin{itemize}
 \item a transformation function (one per a type);
-\item a virtual class, which is used as a common ancestor for all concrete transformations;
+\item a virtual class which is used as a common ancestor for all concrete transformations (one per a type);
 \item a number of concrete classes (one per requested plugin);
 \item a \emph{typeinfo} structure, which incorporates the transformation function and a bundle of plugin-generated concrete functions, represented as an immediate object.
 \end{itemize}
@@ -47,7 +47,7 @@ For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{sho
 \begin{lstlisting}
    let $\inbr{gcata_t}$ $\dots$ = $\dots$
    
-   class virtual [$\dots$] $\inbr{t}$ $\dots$ =
+   class virtual [$\dots$] $\inbr{t}$ =
    object
      $\dots$
    end
@@ -105,44 +105,68 @@ type it receives $3(n+1)$ type parameters:
 \item a triplet $\alpha_i$, $\iota_i$, $\sigma_i$ for each type parameter $\alpha_i$, where $\iota_i$ and $\sigma_i$ are type variables for inherited and
   synthesized attributes for the transformation of $\alpha_i$;
 \item a pair of type variables $\iota$ and $\sigma$ for inherited and synthesized attributes for the type itself;
-\item an extra type variable $\epsilon$, which is needed solely for the support of polymorphic variants (see Section~\ref{pv}) and left free and unused
-  otherwise.
+\item an extra type variable $\epsilon$, which is needed for the support of polymorphic variants (see Section~\ref{pv}).
 \end{itemize}
 
-Apart from being polymorphic, the common ancestor class receives a number of functional arguments:
-
-\begin{itemize}
-\item a function to implement open recursion: \lstinline|fself : $\iota$ -> $\left\{\alpha_i\right\}$ t ->  $\sigma$|;
-\item $n$ argument-transforming functions: \lstinline|f$_{\alpha_i}$ : $\iota_i$ -> $\alpha_i$ -> $\sigma_i$|.
-\end{itemize}
-
-For example, if we have a two-parametric type \lstinline{($\alpha$, $\beta$) t} the head of common ancestor class definition will look like\footnote{Arguments order(see comment above) . Kosarev}
+For example, if we have a two-parametric type \lstinline{($\alpha$, $\beta$) t} the head of common ancestor class definition will look like
 
 \begin{lstlisting}
   class virtual [$\iota_\alpha$, $\alpha$, $\sigma_\alpha$, $\iota_\beta$, $\beta$, $\sigma_\beta$, $\iota$, $\epsilon$, $\sigma$] $\inbr{t}$
-    (fself : $\iota$ -> ($\alpha$, $\beta$) t -> $\sigma$)
-    (f$_\alpha$ : $\iota_\alpha$ -> $\alpha$ -> $\sigma_\alpha$)
-    (f$_\beta$ : $\iota_\beta$ -> $\beta$ -> $\sigma_\beta$)
+\end{lstlisting}
+
+The concrete transformations inherit from the common ancestor class and, possibly, instantiate some of its type parameters to a more
+specific types. Additionally, concrete classes receive a number of functional arguments:
+
+\begin{itemize}
+\item $n$ argument-transforming functions: \lstinline|f$_{\alpha_i}$ : $\iota_i$ -> $\alpha_i$ -> $\sigma_i$|;
+\item a function to implement open recursion: \lstinline|fself : $\iota$ -> $\left\{\alpha_i\right\}$ t ->  $\sigma$|.
+\end{itemize}
+
+For example, for the same type as above and a transformation ``\lstinline{show}'' the header of concrete class looks like
+
+\begin{lstlisting}
+  class [$\alpha$, $\beta$, $\epsilon$] $\inbr{show_t}$ 
+    (f$_\alpha$ : unit -> $\alpha$ -> string)
+    (f$_\beta$ : unit -> $\beta$ -> string)
+    (fself : unit -> ($\alpha$, $\beta$) t -> string) =
+  object inherit [unit, $\alpha$, string, unit, $\beta$, string, unit, $\epsilon$, string] $\inbr{t}$
+    $\dots$
+  end 
 \end{lstlisting}
 
 Note, we maintain these conventions for all types although for some of them some of components are superfluous: for example, ``\lstinline{fself}''
 is needed only for recursive types. The explanation for this decision is simple: when we \emph{use} a type we generally do not know its
 definition. Thus, in order to support separate compilation the interfaces of all entities we generate must have identical structure.
 
-This scheme of typing and parameterization looks quite verbose and cumbersome: there are a lot of type parameters which are quite easy to get a mess with. However, an end
-user would need to deal with this stuff directly only when he or she desires to implement a transformation \emph{manually} from scratch by immediately inheriting from the common ancestor class.
+This scheme of typing and parameterization looks quite verbose and cumbersome: there are a lot of type parameters which are quite easy to get a mess with. However, end
+users would need to deal with this stuff directly only when they desire to implement a transformation \emph{manually} from scratch by immediately inheriting from the common ancestor class.
 In the majority of use cases the transformation is implemented either by customizing a certain plugin or using the plugin system. In the first case many
 type parameters are already instantiated (for example, for ``\lstinline{show}'' the majority of type parameters are instantiated to ground types), in the
 second the plugin system takes care of instantiating the parameters correctly (see Section~\ref{plugins}).
 
-Finally, we need to describe the types for the methods of common ancestor classes. For a type \lstinline|$\left\{\alpha_i\right\}$ t| the method for a
- constructor ``\lstinline|C of a$_1$ * a$_2$ * ... * a$_k$|'' has the following definition:
+We also need to describe the types for the methods of common ancestor classes. For a type \lstinline|$\left\{\alpha_i\right\}$ t| the method for a
+constructor ``\lstinline|C of a$_1$ * a$_2$ * ... * a$_k$|'' has the following definition:
 
 \begin{lstlisting}
    method virtual $\inbr{C}$ : $\iota$ -> $\left\{\alpha_i\right\}$ t -> a$_1$ -> a$_2$ -> ... -> a$_k$ -> $\sigma$
 \end{lstlisting}
 
 Note, the method takes not only inherited attribute and the arguments of corresponding constructor, but the value under transformation itself.
+
+Finally, we describe the type of transformation function. This type is slightly different for polymorphic variant types.
+
+For a non-polymorphic variant type ``\lstinline|$\{\alpha_i\}$ t|'' the transformation function has the following type:
+
+\begin{lstlisting}
+   val $\inbr{gcata_t}$ : [$\{\iota_{\alpha_i}$, $\alpha_i$, $\sigma_{\alpha_i}\}$, $\iota$, $\{\alpha_i\}$ t, $\sigma$]#$\inbr{t}$ -> $\iota$ -> $\{\alpha_i\}$ t -> $\sigma$
+\end{lstlisting}
+
+Thus, it takes a transformation object (which has a type of properly parameterized \emph{subclass} of the common ancestor class), an inherited
+attribute, a value to transform, and returns synthesized attribute. The extra type parameter ``$\epsilon$'' is instantiated to the
+type itself. For a polymorphic variant type the extra type parameter is instantiated to the \emph{open} version of the
+type (``\lstinline{[> $\{\alpha_i\}$ t]}''). This enables the possibility to apply a transformation function for a type to a transformation object for
+another type with more constructors.
+
 
 \subsection{Fixed Point Combinator and Memoization}
 
