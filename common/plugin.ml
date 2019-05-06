@@ -160,11 +160,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ~wrap:(fun body ->
           (* constructor arguments are *)
           let names =
-            (* (Pat.alias ~loc
-             *    (Pat.record1 ~loc (Ldot(Lident self#fix_module_name,
-             *                            Naming.mut_arg_composite)))
-             *    Naming.mutuals_pack
-             * ) :: *)
             (self#prepare_fa_args ~loc tdecl) @
             [ Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt ]
             |> (fun ps ->
@@ -276,7 +271,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
               Typ.chain_arrow ~loc @@
               let open Typ in
               [ self#main_inh ~loc tdecl
-              ; use_tdecl tdecl ] @
+              ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
               [ self#main_syn ~loc tdecl ]
             ]
         )
@@ -289,7 +284,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
               let new_ts =
                 let open Typ in
                 [ self#main_inh ~loc tdecl
-                ; use_tdecl tdecl ] @
+                ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
                 (List.map typs ~f:Typ.from_caml) @
                 [ self#main_syn ~loc ~in_class:true tdecl ]
                 (* There changing default_syn to 'extra can introduce problems *)
@@ -346,22 +341,24 @@ class virtual generator initial_args tdecls = object(self: 'self)
               | Rtag (lab,_,_, typs) -> begin
                   Ctf.method_ ~loc (sprintf "c_%s" lab.txt) ~virt:false @@
                   match typs with
-                  | [] -> Typ.(chain_arrow ~loc
-                                [ self#main_inh ~loc tdecl
-                                ; use_tdecl tdecl
-                                ; self#main_syn ~loc ~in_class:true tdecl]
-                              )
+                  | [] ->
+                    Typ.(chain_arrow ~loc
+                           [ self#main_inh ~loc tdecl
+                           ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
+                           ; self#main_syn ~loc ~in_class:true tdecl
+                           ]
+                        )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
                              [ self#main_inh ~loc tdecl
-                             ; use_tdecl tdecl ] @
+                             ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
                              [self#main_syn ~loc ~in_class:true tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
                              [ self#main_inh ~loc tdecl
-                             ; use_tdecl tdecl ] @
+                             ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
                              (List.map ~f:Typ.from_caml typs) @
                              [self#main_syn ~loc ~in_class:true tdecl]
                           )
@@ -694,7 +691,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method final_typ_params_for_alias ~loc tdecl rhs =
     self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
-    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+    (* [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ] *)
+    []
 
   method do_mutuals_sigs ~loc ~is_rec =
     List.concat

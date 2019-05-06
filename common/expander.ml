@@ -123,7 +123,6 @@ let make_interface_class_sig ~loc tdecl =
   let name = tdecl.ptype_name in
 
   let k fields =
-
     [ Sig.class_ ~loc ~virt:true
         ~name:(class_name_for_typ name.txt)
         ~params:(params_of_interface_class ~loc tdecl.ptype_params)
@@ -157,7 +156,7 @@ let make_interface_class_sig ~loc tdecl =
         Ctf.method_ ~loc methname ~virt:true @@
         Typ.chain_arrow ~loc
           ([ Typ.var ~loc "inh"
-           ; Typ.use_tdecl tdecl ] @
+           ; Typ.var ~loc "extra" ] @
            (List.map typs ~f:Typ.from_caml) @
            [ Typ.var ~loc "syn" ])
       )
@@ -225,7 +224,7 @@ let make_interface_class_sig ~loc tdecl =
                     let ts =
                       let open Typ in
                       [ var ~loc "inh"
-                      ; use_tdecl tdecl ] @
+                      ; var ~loc "extra" ] @
                       (List.map ~f:from_caml args) @
                       [ var ~loc "syn" ]
                       |> chain_arrow ~loc
@@ -258,7 +257,7 @@ let inherit_iface_class ~loc name params =
   let inh_params =
     inh_params @
     [ Typ.var ~loc "inh"
-    ; Typ.var ~loc Plugin.extra_param_name
+    ; Typ.var ~loc "extra"
     ; Typ.var ~loc "syn"
     ]
   in
@@ -298,8 +297,8 @@ let make_interface_class ~loc tdecl =
         Cf.method_virtual ~loc methname @@
           Typ.(List.fold_right typs ~init:(var ~loc "syn")
              ~f:(fun t -> arrow ~loc (from_caml t))
-           |> (arrow ~loc (use_tdecl tdecl))
-           |> (arrow ~loc (var ~loc "inh"))
+          |> (arrow ~loc (var ~loc "extra"))
+          |> (arrow ~loc (var ~loc "inh"))
           )
       )
     )
@@ -343,7 +342,7 @@ let make_interface_class ~loc tdecl =
                     [ Cf.method_virtual ~loc methname @@
                       Typ.( var ~loc "syn"
                             |> (arrow ~loc @@
-                                use_tdecl tdecl)
+                                var ~loc "extra")
                             |> arrow ~loc (var ~loc "inh")
                           )
                     ]
@@ -358,9 +357,8 @@ let make_interface_class ~loc tdecl =
                           let open Typ in
                           (List.fold_right args ~init:(var ~loc "syn")
                              ~f:(fun t -> arrow ~loc (from_caml t))
-                            (* |> (Typ.arrow ~loc (Typ.use_tdecl tdecl)) *)
                            |> (arrow ~loc @@
-                               use_tdecl tdecl)
+                               var ~loc "extra")
                             |> (arrow ~loc (var ~loc "inh"))
                           )
                       ]
@@ -846,7 +844,7 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; intf_class
-    ; gcata
+    (* ; gcata *)
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; collect_plugins_sig ~loc tdecl plugins
     ]

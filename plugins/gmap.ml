@@ -60,7 +60,7 @@ class g args tdecls = object(self: 'self)
 
   method main_syn ~loc ?(in_class=false) tdecl =
     if in_class && is_polyvariant_tdecl tdecl then
-      Typ.var ~loc @@ sprintf "extra_%s" tdecl.ptype_name.txt
+      Typ.var ~loc @@ sprintf "syn_%s" tdecl.ptype_name.txt
     else
     let param_names,rez_names,find_param,blownup_params =
       hack_params tdecl.ptype_params
@@ -77,6 +77,8 @@ class g args tdecls = object(self: 'self)
     blownup_params @
     [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
       Naming.make_extra_param tdecl.ptype_name.txt
+    ; named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+      sprintf "syn_%s" tdecl.ptype_name.txt
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
@@ -97,15 +99,59 @@ class g args tdecls = object(self: 'self)
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a"; "b"]
 
+
+  method hack ~loc (mangler: string -> string) param tdecl: Typ.t =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    visit_typedecl ~loc tdecl
+      ~onopen:(fun () -> assert false)
+      ~onrecord:(fun _ -> assert false)
+      ~onvariant:(fun _ -> assert false)
+      ~onabstract:(fun () -> assert false)
+      ~onmanifest:(fun typ ->
+          if not (is_polyvariant typ) then assert false;
+          match typ.ptyp_desc with
+          | Ptyp_variant (rf,_,_) ->
+            (* Typ.openize ~loc @@ *)
+            Typ.variant ~loc ~is_open:true @@
+            List.map rf ~f:(function
+                | (Rtag (name,attrs,has_empty, ts)) as t ->
+                  let open Ast_builder.Default in
+                  let rec on_t t = map_core_type
+                      ~onvar:(fun s ->
+                          Some (ptyp_var ~loc:tdecl.ptype_loc @@ mangler s)
+                        )
+                      ~onconstr:(fun name ts ->
+                          match name with
+                          | Lident s when String.equal s tdecl.ptype_name.txt ->
+                            Option.some @@ ptyp_var ~loc:tdecl.ptype_loc param
+                          | _  -> None
+                        )
+                      t
+                  in
+                  Rtag (name,attrs,has_empty, List.map ts ~f:on_t)
+                | x -> x
+              )
+          | _ -> failwith "should not happen"
+        )
+
+
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
     if not (is_polyvariant_tdecl tdecl) then [] else
-      [ Ctf.constraint_ ~loc
+      [  Ctf.constraint_ ~loc
           (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
           (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
            map_type_param_names tdecl.ptype_params
-             ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
+             ~f:(fun s -> Typ.var ~loc s)
           )
+      ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+        Ctf.constraint_ ~loc
+          (Typ.var ~loc @@ syn)
+          (self#hack ~loc param_name_mangler syn tdecl)
+          (* (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+           *  map_type_param_names tdecl.ptype_params
+           *    ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
+           * ) *)
       ]
 
   method! extra_class_str_members tdecl =
@@ -115,10 +161,17 @@ class g args tdecls = object(self: 'self)
           (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
           (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
            map_type_param_names tdecl.ptype_params
-             ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
+             ~f:(fun s -> Typ.var ~loc s)
           )
+      ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+        Cf.constraint_ ~loc
+          (Typ.var ~loc @@ syn)
+          (self#hack ~loc param_name_mangler syn tdecl)
+          (* (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+           *  map_type_param_names tdecl.ptype_params
+           *    ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
+           * ) *)
       ]
-
 
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =

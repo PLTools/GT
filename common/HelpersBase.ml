@@ -85,14 +85,17 @@ let rec lident_tail = function
   | Ldot (_, s) -> Lident s
   | Lapply (_,_) as l -> l
 
-let map_core_type ~onvar t =
+let map_core_type ?(onconstr=(fun _ _ -> None)) ~onvar t =
   let rec helper t =
     (* Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t; *)
     match t.ptyp_desc with
     | Ptyp_any -> t
     | Ptyp_var name -> Base.Option.value (onvar name) ~default:t
-    | Ptyp_constr (name, args) ->
-      {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
+    | Ptyp_constr (name, args) -> begin
+        match onconstr name.txt args with
+        | None -> {t with ptyp_desc= Ptyp_constr (name, List.map ~f:helper args) }
+        | Some t -> t
+      end
     | Ptyp_tuple args ->
       {t with ptyp_desc= Ptyp_tuple (List.map ~f:helper args) }
     | Ptyp_arrow (lab, from, to_) ->
