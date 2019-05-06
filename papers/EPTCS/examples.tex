@@ -209,30 +209,35 @@ The infrastructure code for the plugin is shown below:
          $\ldots$
        end
 
-       let create =
-         (new g :>
-           (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-           (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
-
      end
 
    let _ =
      Expander.register_plugin trait_name (module Make : Plugin_intf.PluginRes)
 \end{lstlisting}
 
-To implement a plugin, one needs to implement a functor parameterized by a helper module, which
-repeats the interface of \textbf{WHAT}? to create \textsc{OCaml} syntax trees. Inside the
-functor two main entities have to be implemented:
+To implement a plugin, one needs to implement a functor parameterized by a helper module, which repeats the interface of \textbf{WHAT}? to create
+\textsc{OCaml} syntax trees. Inside the functor two main entities have to be implemented:
 
 \begin{itemize}
-\item a class which inherits from a generic plugin class (in the snippet above~--- ``\lstinline{P}'');
+\item a class which inherits from a generic plugin class (in the snippet above~--- ``\lstinline{P.with_inherit_arg}'');
 \item an entry function ``\lstinline{create}'' (зачем?)
 \end{itemize}
 
-The final component for the implementation is module ``\lstinline{H}'' itself. We
+The final component for the implementation is module ``\lstinline{H}'' itself. The standard functor ``\lstinline{Hashtbl.Make}'' instantiates a
+hash table making use of some hash function and equality predicate, supplied by an end user. In a whole, we follow a conventional pattern:
+for the hash function we use polymorphic ``\lstinline{Hashtbl.hash}'' and for the equality we use physical equality ``\lstinline{==}''. There are, however, two
+subtleties:
 
-The complete implementation for this plugin can be seen in the main project repository; it occupies 164 LOC, including
-comments and blank lines.
+\begin{itemize}
+\item Since our hash table is heterogenious, we have to utilize unsafe coercion ``\lstinline{Obj.magic}''.
+\item Our implementation for equality has to be a little more complex than simple ``\lstinline{==}'': we need to compare the top-level constructors and
+  the number of their arguments \emph{structurally}, and only then compare the corresponding arguments by physical equality. Technically this
+  may result in hash-consing structurally equal values of \emph{different} types.
+\end{itemize}
+
+We rely here on the follow observation: as hash-consing is only consistent with referentially-transparent data structures, we can assume
+that structurally equal data structures can be interchangeable regardless their type. The complete implementation for this plugin can be seen in the main project
+repository; it occupies 164 LOC, including comments and blank lines.
 
 \begin{comment}
   method trait_name = trait_name
