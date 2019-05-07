@@ -3,8 +3,101 @@
 In this section we present some examples, written with the aid of our library. In this examples we will use \cd{camlp5} syntax extension,
 although \cd{ppxlib} plugin can be used equally.
 
+\subsection{Typed Logic Values}
 
-\subsection{Polymorphic Variants}
+The first example arose in the context of our work on strongly typed logical DSL for \textsc{OCaml}~\cite{OCanren}. One of the
+most important construct there was a unification of terms with free logical variables, and dealing with such data strutures
+involves a lot of tedious and error-prone work. The typical scenario of interaction between a logical and non-logical worlds
+is constructing a \emph{gold} containing a data structure with free logical variables and solving it. The solution
+provides bindings for these variables, which, in optimistic scenario, do not contain free variables anymore. To construct
+a goal one would need a systematic way to introduce logic variables in some typed data structure, and to recover answers~---
+a systematic way to return to a plan, non-logical representation.
+
+The (simplified) type for logic values can be defined as follows:
+
+\begin{lstlisting}
+   @type 'a logic =
+   | V     of int
+   | Value of 'a
+   with show, gmap
+\end{lstlisting}
+
+A logic value can either be a free logic variable (``\lstinline{V}'') or a some other value (``\lstinline{Value}'') which is not
+a free variable (but which can possibly contain free variables inside). To convert to- and from- the logic domain we can use the following
+functions:
+
+\begin{lstlisting}
+   let lift x = Value x
+  
+   let reify  = function
+   | V     _ -> invalid_arg "Free variable"
+   | Value x -> x
+\end{lstlisting}
+
+The function ``\lstinline{reify}'' raises and exception on a free variable; indeed, if an occurrence of a free variable
+is encountered the logic value can no longer be considered as a regular (non-logical) data structure and has to be interpreted
+in some other way.
+
+When we dealing with logic data structures we need to have an opportunity to put a free variable in an arbitrary
+position. This means that we have to switch to another type, ``lifted'' into the logic domain. For example,
+for arithmetic expressions, which we use as an example through the paper, we would need to construct a value like
+
+\begin{lstlisting}
+   Value (
+     Binop (
+       V 1, 
+       Value (Const (V 2)),
+       V 3
+    )
+   )
+\end{lstlisting}
+
+which has a type ``\lstinline{lexpr}'', defined as
+
+\begin{lstlisting}
+   type expr' = Var of string logic | Const of int logic | Binop of lexpr * lexpr
+   and  lexpr = expr' logic
+\end{lstlisting}
+
+We also need to implement two conversion functions. All these definitions present a typical example of boilerplate code.
+
+With our framework the solution is almost purely declarative\footnote{But we need to switch the compiler into \cd{-rectypes} mode}.
+First, we abstract the type of interest, replacing all positions, in which we may desire to place a type variable, with
+fresh type parameters:
+
+\begin{lstlisting}
+   @type ('string, 'int, 'expr) a_expr =
+   | Var   of 'string
+   | Const of 'int
+   | Binop of 'string * 'expr * 'expr with show, gmap
+\end{lstlisting}
+
+Here we abstract the type of everything, but we could equally abstract it only of itself. Note, we make use of two
+generic features~--- ``\lstinline{show}'' and ``\lstinline{gmap}''. The first one is needed for debugging purposes, while
+the second is essential for our soultion.
+
+Now we can define the logical and non-logical counterparts as customized versions of the abstracted type:
+
+\begin{lstlisting}
+   @type expr  = (string, int, expr) a_expr with show, gmap
+   @type lexpr = (string logic, int logic, lexpr) a_expr logic with show, gmap
+\end{lstlisting}
+
+Note, the ``new'' type ``\lstinline{expr}'' is equivalent to the ``old'' one, thus, this transformation makes no
+harm to the existing code.
+
+Finally, the definitions of conversion functions make use of the generic ``\lstinline{gmap}'' feature the
+framework provides:
+
+\begin{lstlisting}
+   let rec to_logic   expr = gmap(a_expr) lift  lift  to_logic  expr
+   let rec from_logic expr = gmap(a_expr) reify reify from_logic @@ reify expr
+\end{lstlisting}
+
+As we can see, the support for type constructor application is vital for the success of this scenario. In our prior
+implementation~\cite{TransformationObjects} type constructor application was not supported and could not be easily added.
+
+\subsection{Conversion to a Nameless Representation}
 
 Polymorphic variant types make it possible to define composable statically typed and separately compiled data structures~\cite{PolyVarReuse}.
 Dealing with them with composable statically typed and separately compiled transformations looks like a natureal idea. The problem of
@@ -233,7 +326,7 @@ The infrastructure code for the plugin implementation is shown below:
 \end{lstlisting}
 
 To implement a plugin, one needs to implement a functor parameterized by a helper module, which resembles ``\cd{Ast_builder}'' from
-``\cd{ppxlib}'' to create \textsc{OCaml} syntax trees. We need to use a functor since we have to provide two implementations for
+\cd{ppxlib} to create \textsc{OCaml} syntax trees. We need to use a functor since we have to provide two implementations for
 a plugin~--- for \cd{camlp5} syntax extension as well as for \cd{ppxlib} itself. The main entity in the body of the functor is
 a class ``\lstinline{g}'' declaration (``generator''), which for simplicity can be inherited from one of generic classes 
 from the framework. In this case we, first, instantiate the generic plugin ``\lstinline{P}'' for ``\lstinline{AstHelpers}'' and
@@ -291,7 +384,7 @@ The next group of methods specifies the behavior of plugin class type parameters
 
 The first method specifies the type parameters for the plugin class itself: this time they are exactly the type parameters of the type declaration plus
 the extra parameter ``$\epsilon$''. The second one describes the method of recalculation of type parameters for application of type constructor: when
-a type declarations looks like
+the type declaration looks like
 
 \begin{lstlisting}
    type $\{\alpha_i\}$ t = $\{a_i\}$ tc
@@ -300,9 +393,9 @@ a type declarations looks like
 we need to acquire the implementation of the plugin for ``\lstinline{t}'' from the implementation of the same plugin for ``\lstinline{tc}'', inheriting
 from properly instantiated corresponding class. As for our plugin the class is parameterized by the same types as the type, we just keep the parameters.
 
-The last group of methods generate the bodies of constructor transformation. As we support regular constructors with both tuple and stuctural
-argument specifications, tuples and structures, there are four methods, which as a rule share many details of implementation. We show the
-skeleton of one of them:
+The last group of methods generate the bodies of constructor transformation. As we support regular constructors with both tuple and record
+argument specifications as well as top-level tuples and records, there are four methods, which as a rule share many details of implementation. We show the
+skeleton for one of them:
 
 \begin{lstlisting}
 method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
@@ -333,7 +426,7 @@ method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info t
 \end{lstlisting}
 
 This implementation makes use of the generic method ``\lstinline{self#app_transformation_expr}'' from the framework, which generates an application of
-the transformation in question to a given type.
+the transformation in question for a given type.
 
 The final component for the implementation is module ``\lstinline{H}'' itself. The standard functor ``\lstinline{Hashtbl.Make}'' instantiates a
 hash table making use of some hash function and equality predicate, supplied by an end user. In a whole, we follow a conventional pattern:
@@ -348,22 +441,5 @@ subtleties:
 \end{itemize}
 
 We rely here on the follow observation: as hash-consing is only consistent with referentially-transparent data structures, we can assume
-that structurally equal data structures can be interchangeable regardless their type. The complete implementation for this plugin can be seen in the main project
+that structurally equal data structures can be interchangeable regardless their types. The complete implementation for this plugin can be seen in the main project
 repository; it occupies 164 LOC, including comments and blank lines.
-
-\begin{comment}
-  (* method [on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl cinfo ts]
-     receive expression fo rinherited attribute in [inhe],
-     the name of constructor (algebrain or polyvariant) in [cinfo]
-     and parameters' type in [ts]
-  *)
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
-
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
-    (* TODO: *)
-    failwith "not implemented"
-end
-
-(* видимая снаружи точка входа, надо бы переименовать *)
-  
-\end{comment}
