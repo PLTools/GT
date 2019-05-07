@@ -8,6 +8,7 @@
 
 open Ppxlib
 
+open Plugin
 open Expander
 module E = Expander.Make(PpxHelpers)
 

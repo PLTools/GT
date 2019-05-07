@@ -20,8 +20,8 @@ let make_plugins_args ~is_byte =
   (* N.B. Order matters *)
   let names =
     [ "show"; "gmap"
-    ; "eval";  "compare" 
-    ; "eq"   
+    ; "eval";  "compare"
+    ; "eq"
     ;  "stateful"; "foldl"; "foldr"
 (*    ; "show_typed" *)
     ; "fmt"
@@ -82,10 +82,15 @@ let () = dispatch (fun hook ->
 
     flag ["make_pp_gt"; "link"; "byte"] @@
     S ([ A"ppx/ppx_deriving_gt.cma"; A"-package"; A"ppxlib" ] @
-       make_plugins_args ~is_byte:true );
+       make_plugins_args ~is_byte:true @ [ A"common/plugin.cmo"]  );
     flag ["make_pp_gt"; "link"; "native"] @@
-    S ([ A"ppx/ppx_deriving_gt.cmxa"; A"-package"; A"ppxlib" ] @
-       make_plugins_args ~is_byte:false);
+    S ([ A"-package"; A"ppxlib"
+       ; A"-I"; A"common"
+       ; A"ppx/ppx_deriving_gt.cmxa"
+       ] @
+       make_plugins_args ~is_byte:false @
+       [  A"-I"; A"WTF"
+       ]  );
 
     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
     dep ["compile"; "link_pp5gt"]        ["camlp5/core2.ml"];

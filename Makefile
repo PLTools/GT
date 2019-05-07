@@ -25,7 +25,7 @@ TESTS_ENVIRONMENT=./test.sh
 OBTARGETS=
 OBPARAMS=
 all: common
-	$(MAKE) add_plugins add_camlp5 compile
+	$(MAKE) add_plugins add_camlp5 add_ppx compile
 	$(MAKE) add_lib compile
 	@$(MAKE) bundle
 
