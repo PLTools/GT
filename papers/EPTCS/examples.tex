@@ -189,39 +189,151 @@ need in this case, hence underscore), and three arguments of the constructor: ``
 hash table and three hash-consed values of the same types), then we apply the constructor and hash-cons the value again. To hash-cons
 the arguments of the constructor we can use the functions provided by the framework~--- for the type \lstinline{string} it is
 ``\lstinline{hc(string)}''\footnote{Generally speaking, we would need to implement a hash-consing function for each primitive type; in
-our case, however, we could equally use ``\lstinline{H.hc}''.}, and for both subexpressions it is ``\lstinline{fself}''. Now we need
-to generate this logic using a plugin.
+  our case, however, we could equally use ``\lstinline{H.hc}''.}, and for both subexpressions it is ``\lstinline{fself}''.
 
-The infrastructure code for the plugin is shown below:
+As a final component we need to decide on the type parameters for a plugin class for a type ``\lstinline|$\{\alpha_i\}$ t|''. Clearly,
+all inherited attribute types has to be ``\lstinline{H.t}'', and synthesized attribute types has to be ``\lstinline{H.t * $a$}'' for the
+type of interest ``$a$''. This gives us the following plugin class definition:
+
+\begin{lstlisting}
+   class [$\{\alpha_i\}$, $\epsilon$] $\inbr{hc_t}$ $\dots$ =
+   object
+     inherit [$\{$ H.t, $\alpha_i$, H.t * $\alpha_i$ $\}$, H.t, $\epsilon$, H.t * $\epsilon$] $\inbr{t}$
+     $\dots$
+   end
+\end{lstlisting}
+
+For simplicity we omitted the specification of functional parameters for the class since their types can be trivially
+recovered.
+
+Now we need to generate this logic using a plugin.
+
+The infrastructure code for the plugin implementation is shown below:
 
 \begin{lstlisting}
    let trait_name = "hc"
   
    module Make (AstHelpers : GTHELPERS_sig.S) =
      struct
+     
+       open AstHelpers
 
        module P = Plugin.Make (AstHelpers)
 
-       open AstHelpers
-
-       class g initial_args tdecls =
-       object (self : 'self) inherit P.with_inherit_arg initial_args tdecls as super
+       class g tdecls =
+       object (self : 'self)
+         inherit P.with_inherited_attr tdecls as super
          $\ldots$
        end
 
      end
 
    let _ =
-     Expander.register_plugin trait_name (module Make : Plugin_intf.PluginRes)
+     Expander.register_plugin trait_name (module Make : Plugin_intf.Plugin)
 \end{lstlisting}
 
-To implement a plugin, one needs to implement a functor parameterized by a helper module, which repeats the interface of \textbf{WHAT}? to create
-\textsc{OCaml} syntax trees. Inside the functor two main entities have to be implemented:
+To implement a plugin, one needs to implement a functor parameterized by a helper module, which resembles ``\cd{Ast_builder}'' from
+``\cd{ppxlib}'' to create \textsc{OCaml} syntax trees. We need to use a functor since we have to provide two implementations for
+a plugin~--- for \cd{camlp5} syntax extension as well as for \cd{ppxlib} itself. The main entity in the body of the functor is
+a class ``\lstinline{g}'' declaration (``generator''), which for simplicity can be inherited from one of generic classes 
+from the framework. In this case we, first, instantiate the generic plugin ``\lstinline{P}'' for ``\lstinline{AstHelpers}'' and
+then inherit from the class ``\lstinline{P.with_inherited_attr}'', which means that we are going to implement a plugin
+making use of inherited attribute. The class takes a type declaration as a parameter. Finally, we register the functor as a
+first-class module in the framework to make it accessible.
 
-\begin{itemize}
-\item a class which inherits from a generic plugin class (in the snippet above~--- ``\lstinline{P.with_inherit_arg}'');
-\item an entry function ``\lstinline{create}'' (зачем?)
-\end{itemize}
+Now we show what the methods of the generator class look like. First, we need to specify what are the types of inherited and
+synthesized attributes for the plugin:
+
+\begin{lstlisting}
+   method main_inh ~loc _tdecl = ht_typ ~loc
+
+   method main_syn ~loc ?in_class tdecl =
+     Typ.tuple ~loc
+       [ ht_typ ~loc
+       ; Typ.use_tdecl tdecl
+       ]
+
+   method inh_of_param tdecl _name =
+       ht_typ ~loc:(loc_from_caml tdecl.ptype_loc)
+
+   method syn_of_param ~loc s =
+     Typ.tuple ~loc
+       [ ht_typ ~loc
+       ; Typ.var ~loc s
+       ]
+\end{lstlisting}
+
+where we assume ``\lstinline{ht_typ}'' is defined as
+
+\begin{lstlisting}
+   let ht_typ ~loc =
+     Typ.of_longident ~loc (Ldot (Lident "H", "t"))
+\end{lstlisting}
+
+In other words, we say here that the type of inherited attribute is always ``\lstinline{H.t}'' and the type of a synthesized attribute for
+a type of interest ``\lstinline{t}'' is ``\lstinline{H.t * t}''.
+
+The next group of methods specifies the behavior of plugin class type parameters:
+
+\begin{lstlisting}
+   method plugin_class_params tdecl =
+     let ps =
+       List.map tdecl.ptype_params ~f:(fun (t, _) -> typ_arg_of_core_type t)
+     in
+     ps @
+     [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
+       Naming.make_extra_param tdecl.ptype_name.txt
+     ]
+
+   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+     List.map rhs_args ~f:Typ.from_caml
+\end{lstlisting}
+
+The first method specifies the type parameters for the plugin class itself: this time they are exactly the type parameters of the type declaration plus
+the extra parameter ``$\epsilon$''. The second one describes the method of recalculation of type parameters for application of type constructor: when
+a type declarations looks like
+
+\begin{lstlisting}
+   type $\{\alpha_i\}$ t = $\{a_i\}$ tc
+\end{lstlisting}
+
+we need to acquire the implementation of the plugin for ``\lstinline{t}'' from the implementation of the same plugin for ``\lstinline{tc}'', inheriting
+from properly instantiated corresponding class. As for our plugin the class is parameterized by the same types as the type, we just keep the parameters.
+
+The last group of methods generate the bodies of constructor transformation. As we support regular constructors with both tuple and stuctural
+argument specifications, tuples and structures, there are four methods, which as a rule share many details of implementation. We show the
+skeleton of one of them:
+
+\begin{lstlisting}
+method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
+  $\dots$ 
+  match ts with
+  | [] -> Exp.tuple ~loc [ inhe; c [] ]
+  | ts ->
+     let res_var_name = sprintf "%s_rez" in
+     let argcount = List.length ts in
+     let hfhc =
+       Exp.of_longident ~loc (Ldot (Lident "H", "hc"))
+     in
+     List.fold_right
+       (List.mapi ~f:(fun n x -> (n, x)) ts)
+       ~init:$\dots$
+       ~f:(fun (i, (name, typ)) acc ->
+            Exp.let_one ~loc
+              (Pat.tuple ~loc [ Pat.sprintf ~loc "ht%d" (i+1)
+                              ; Pat.sprintf ~loc "%s" @@ res_var_name name])
+              (self#app_transformation_expr ~loc
+                 (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                 (if i = 0 then inhe else Exp.sprintf ~loc "ht%d" i)
+                 (Exp.ident ~loc name)
+              )
+              acc
+          )
+  $\dots$
+\end{lstlisting}
+
+This implementation makes use of the generic method ``\lstinline{self#app_transformation_expr}'' from the framework, which generates an application of
+the transformation in question to a given type.
 
 The final component for the implementation is module ``\lstinline{H}'' itself. The standard functor ``\lstinline{Hashtbl.Make}'' instantiates a
 hash table making use of some hash function and equality predicate, supplied by an end user. In a whole, we follow a conventional pattern:
@@ -240,108 +352,12 @@ that structurally equal data structures can be interchangeable regardless their 
 repository; it occupies 164 LOC, including comments and blank lines.
 
 \begin{comment}
-  method trait_name = trait_name
-
-  (* Default inherited attribute is a predefined in GT type of hash table *)
-  method main_inh ~loc _tdecl = ht_typ ~loc
-
-  (* The same for default synthsized attribute *)
-  method main_syn ~loc ?in_class tdecl =
-    Typ.tuple ~loc
-      [ ht_typ ~loc
-      ; Typ.use_tdecl tdecl
-      ]
-
-  (* Inherited attribute for parameter is the same as default one *)
-  method inh_of_param tdecl _name = ht_typ ~loc:(loc_from_caml tdecl.ptype_loc)
-
-  (* The synthesized attribute of hashconsing is a tuple of new value and
-     a new hash table
-  *)
-  method syn_of_param ~loc s =
-    Typ.tuple ~loc
-      [ ht_typ ~loc
-      ; Typ.var ~loc s
-      ]
-      
-  (* Type parameters of the class are type parameters of type being processed
-     plus extra parameter to support polymorphic variants *)
-  method plugin_class_params tdecl =
-    let ps =
-      List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
-    in
-    ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
-
-  (* when we will inherrit trait class we will use these type parameters.
-     An extra argument for polymorphic variants will be added on call site.
-  *)
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml
-
   (* method [on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl cinfo ts]
      receive expression fo rinherited attribute in [inhe],
      the name of constructor (algebrain or polyvariant) in [cinfo]
      and parameters' type in [ts]
   *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
-    Exp.fun_list ~loc
-      (* we receive constructors' arguments in curried manner *)
-      (List.map ts ~f:(fun (pname,_) -> Pat.sprintf ~loc "%s" pname))
-      (let c = match constr_info with
-            | `Normal s -> Exp.construct ~loc (lident s)
-            | `Poly s   -> Exp.variant ~loc s
-       in
-       match ts with
-       | [] ->
-         (* without argument we simply return a hash and unchanged value *)
-         Exp.tuple ~loc [ inhe; c [] ]
-       | ts ->
-         (* Constructor with arguments gives oppotunite to save some memory *)
-         let res_var_name = sprintf "%s_rez" in
-         let argcount = List.length ts in
-         (* a shortcut for hashconsing function *)
-         let hfhc =
-           Exp.field ~loc
-             (Exp.of_longident ~loc (Ldot (Lident "GT", "hf")))
-             (Lident "hc")
-         in
-         (* We fold argument and construct a new has and a new argument
-            on every step
-         *)
-         List.fold_right
-           (List.mapi ~f:(fun n x -> (n,x)) ts)
-           ~init:(
-             (* After folding we hashcons constructor of hashconsed arguments *)
-             Exp.app_list ~loc hfhc
-               [ Exp.sprintf ~loc "ht%d" argcount
-               ; c @@
-                 List.map ts
-                   ~f:(fun (name,_) -> Exp.ident ~loc @@ res_var_name name)
-               ]
-           )
-           ~f:(fun (i,(name,typ)) acc ->
-               (* for every argument we constuctr a pair of new hash and
-                  new hashconsed argument *)
-               Exp.let_one ~loc
-                 (Pat.tuple ~loc [ Pat.sprintf ~loc "ht%d" (i+1)
-                                 ; Pat.sprintf ~loc "%s" @@ res_var_name name])
-                 (* to call transformation for argument we use a method from
-                    base class
-                 *)
-                 (self#app_transformation_expr ~loc
-                    (* transformation is being generated from the type of argument *)
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
-                    (* inherited argument to use *)
-                    (if i=0 then inhe else Exp.sprintf ~loc "ht%d" i)
-                    (* the subject of transformation *)
-                    (Exp.ident ~loc name)
-                 )
-                 acc
-             )
-      )
 
   method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     (* TODO: *)
