@@ -160,16 +160,20 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ~wrap:(fun body ->
           (* constructor arguments are *)
           let names =
-            (self#prepare_fa_args ~loc tdecl) @
-            [ Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt ]
+            (self#prepare_fa_args ~loc tdecl)
             |> (fun ps ->
+                let fself = Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt in
                 match mutual_decls with
-                | [] -> assert false
-                | [_] -> ps
+                | [] -> failwith "Should not happen"
+                | [_] -> fself :: ps
                 | tdecls ->
+                  (* we don't need self transformation for *)
                   (Pat.tuple ~loc @@
-                   List.map self#tdecls ~f:(fun {ptype_name} ->
-                       Pat.sprintf ~loc "%s" @@ Naming.for_ ptype_name.txt
+                   List.map self#tdecls ~f:(fun {ptype_name={txt=name}} ->
+                       Pat.var ~loc @@
+                       if String.equal name tdecl.ptype_name.txt
+                       then sprintf "fself_%s" name
+                       else Naming.for_ name
                      )) :: ps
               )
           in
@@ -781,7 +785,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
         let params = self#plugin_class_params tdecl in
         Str.class_single ~loc ~name:class_name
           ~wrap:(fun cl ->
-              Cl.fun_ ~loc (Pat.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt) @@
+              Cl.fun_ ~loc
+                (* (Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt) @@ *)
+                (Pat.any ~loc) @@
               Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl
             )
           ~params
@@ -789,7 +795,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
               (Cl.constr ~loc (Lident stub_name) @@
                List.map ~f:(Typ.of_type_arg ~loc) params)
               (mut_funcs ::
-               [Exp.sprintf ~loc "%s" @@ self#self_arg_name tdecl.ptype_name.txt] @
                (self#apply_fas_in_new_object ~loc tdecl))
           ]
       )

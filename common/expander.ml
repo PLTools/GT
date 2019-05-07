@@ -751,9 +751,9 @@ let fix_sig ~loc tdecls =
      List.fold_right
        ~init:(Typ.tuple ~loc @@ List.map ys ~f:fst)
        ys
-       ~f:(fun (trf, cls) acc ->
+       ~f:(fun (_trf, cls) acc ->
            Typ.arrow ~loc
-             (arr3 mutuals trf cls)
+             (Typ.arrow ~loc mutuals cls)
              acc
          )
     )
@@ -790,12 +790,12 @@ let fix_str ~loc tdecls =
                         ::
                         (map_type_param_names tdecl.ptype_params
                            ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
-                        @
-                        [Exp.app_list ~loc
-                           (Exp.sprintf ~loc "trait%s" tdecl.ptype_name.txt)
-                           (map_type_param_names tdecl.ptype_params
-                              ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
-                        ]
+                        (* @
+                         * [Exp.app_list ~loc
+                         *    (Exp.sprintf ~loc "trait%s" tdecl.ptype_name.txt)
+                         *    (map_type_param_names tdecl.ptype_params
+                         *       ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
+                         * ] *)
                        )
                    ; Exp.ident ~loc "inh"
                    ; Exp.ident ~loc "subj"
