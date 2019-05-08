@@ -1,8 +1,8 @@
 @type a = [`A of b | `C of GT.int GT.list] with show
 and   b = [`B of a | `D of GT.string] with show
 
-class show_a_t_stub2 (fora,forb) fself = object
-  inherit [_] show_a_t_stub (fora,forb) fself as super
+class ['extra] show_a_t_stub2 (fora,forb)  = object
+  inherit ['extra] show_a_t_stub (fora,forb) as super
   method c_C () a xs = "new " ^ (super#c_C () a xs)
 end
 

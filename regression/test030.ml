@@ -4,7 +4,7 @@ open GT
 
 class ['a,'b] print fa fb _fself =
   object
-    inherit [unit, 'a, string, unit, 'b, string, unit, _, unit] @t
+    inherit [unit, 'a, string, unit, 'b, string, unit, ('a,'b) t, unit] @t
     method c_A _ _ (a, b) = Printf.printf "A (%s, %s)\n" (fa () a) (fb () b)
   end
 

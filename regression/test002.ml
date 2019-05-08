@@ -9,7 +9,7 @@ module Expr = struct
 
     class ['a] toString (fself: unit -> 'a -> string) =
       object
-        inherit [unit, 'a, string, unit, _, string] t_t
+        inherit [unit, 'a, string, unit, 'a t, string] t_t
         method c_Var   _ _   s     = s
         method c_Const _ _   n     = string_of_int n
         method c_Binop _ _ _ s x y = "(" ^ (fself () x) ^ s ^ (fself () y) ^ ")"
@@ -17,7 +17,7 @@ module Expr = struct
 
     class ['a] eval do_var (fself: _ -> 'a t -> _) =
       object
-        inherit [ unit, 'a, int, unit, _, int] t_t
+        inherit [ unit, 'a, int, unit, 'a t, int] t_t
         method c_Var   _ _ x       = do_var x
         method c_Const _ _ n       = n
         method c_Binop _ _ f _ x y = f (fself () x) (fself () y)

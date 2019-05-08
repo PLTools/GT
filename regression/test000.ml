@@ -9,9 +9,9 @@ class ['a, 'b] tree_gmap_t f fself =
     method c_Node x _ n l = Node (f () n, List.map (fself ()) l)
   end
 
-class ['a, 'b] tree_fold_t f fself =
+class ['a, 'b, 'extra] tree_fold_t f fself =
   object
-    inherit ['a, _, 'b] @tree
+    inherit ['a, 'extra, 'b] @tree
     method c_Node acc _ n l = List.fold_left fself (f acc n) l
   end
 

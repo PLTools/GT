@@ -9,3 +9,9 @@ end = struct
   and  b = B of a | D of GT.string | F of b
   [@@deriving gt ~options:{show;gmap}]
 end
+
+(*
+TODO:
+type 'a t = [> `Abs of GT.string * 'a ] as 'a
+  [@@deriving gt ~options:{show;gmap}]
+   *)

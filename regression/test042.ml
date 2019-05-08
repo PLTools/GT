@@ -1,7 +1,7 @@
-module L(*  : sig
- *   (\* @type 'a list = [ `Nil  | `Cons of ('a * 'a list) ] with gmap *\)
- *
- * end *) = struct
+module L : sig
+  @type 'a list = [ `Nil  | `Cons of ('a * 'a list) ] with gmap,show
+
+end = struct
   @type 'a list = [ `Nil  | `Cons of ('a * 'a list) ] with gmap,show
 
   let () =

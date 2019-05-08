@@ -12,7 +12,7 @@ module T : sig
   @type 'a u1 = 'a GT.option with show,gmap,html,foldl,eq,compare,eval,stateful;;
   @type 'a u2 = 'a GT.Lazy.t with show,gmap,foldl,eq,compare,eval,stateful;;
 
-  @type 'a u3 = {aa: GT.int; bb:GT.string} with show,gmap,foldl,eq,compare,eval;;
+  (* @type 'a u3 = {aa: GT.int; bb:GT.string} with show,gmap,foldl,eq,compare,eval;; *)
 end = struct
   @type t2 = GT.int * GT.string with show,gmap,html,foldl,eq,compare,eval,stateful;;
 
@@ -37,6 +37,7 @@ end = struct
 
   let () = ();;
   (* TODO: implement stateful for records *)
-  @type 'a u3 = {aa: GT.int; bb:GT.string} with show,gmap,foldl,eq,compare,eval;;
+  let () = ();;
+  @type 'a u3 = {aa: GT.int; bb:GT.string} with (* show,gmap,foldl,eq,compare, *)eval;;
   let () = ()
 end

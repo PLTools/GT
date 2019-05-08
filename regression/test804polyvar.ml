@@ -1,14 +1,14 @@
 open GT
 
-module L : sig 
-              type 'a list = [`Nil | `Cons of 'a * 'a list ]
+module L : sig
+        type 'a list = [`Nil | `Cons of 'a * 'a list ]
         [@@deriving gt ~options:{gmap }]
 
-end  = struct 
+end  = struct
         type 'a list = [`Nil | `Cons of 'a * 'a list ]
         [@@deriving gt ~options:{gmap }]
 end
-(*
+
 type 'a maybe = Just of 'a | Nothing
 [@@deriving gt ~options:{show; fmt }]
 
@@ -32,4 +32,3 @@ end : sig
 let () =
   let sh x = GT.show wtf GT.id x in
   Printf.printf "%s\t%s\n%!" (sh @@ Just(`A "a")) (sh @@ Just (`C "ccc"))
-*)

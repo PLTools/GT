@@ -21,20 +21,24 @@ let ith m n =
 
 module Abs = struct
   @type ('name, 'term) t = [`Abs of 'name * 'term ] with show,eval,stateful
-  class ['term, 'term2, 'extra] de_bruijn ft =
+  class ['term, 'term2, 'extra, 'syn] de_bruijn ft =
     object
-      inherit [string, unit, 'term, 'term2, 'env, 'extra] @t[eval]
+      inherit [string, unit, 'term, 'term2, 'extra, 'syn, 'env] @t[eval]
           (fun _ _ -> ())
           ft
           unused
       constraint 'env = string list
-      constraint 'extra = [> (unit, 'term2) t]
+      constraint 'syn = [> (unit, 'term2) t]
+      constraint 'extra = [> (string, 'term) t]
       method c_Abs env _ name term = `Abs ((), ft (name :: env) term)
     end
 
-  class ['me, 'me', 'extra] import ft =
+  class ['me, 'me2, 'extra, 'syn] import ft =
     object
-      inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful]
+      constraint 'syn = [> (int, 'me2) t]
+      constraint 'extra = [> (string, 'me) t]
+      constraint 'env = enumerator
+      inherit [string, int, 'me, 'me2, 'extra, 'syn, 'env] @t[stateful]
                 lookup ft unused
       method c_Abs env _ name term =
         let env', i = env#add name in
@@ -49,19 +53,23 @@ module Lam = struct
 end
 module Let = struct
   @type ('name, 'term) t = [`Let of 'name * 'term * 'term] with show,eval,stateful
-  class ['me, 'term2, 'extra] de_bruijn ft = object
-    inherit [string, unit, 'me, 'term2, 'env, 'extra] @t[eval]
+  class ['me, 'term2, 'extra, 'syn] de_bruijn ft = object
+    inherit [string, unit, 'me, 'term2, 'extra, 'syn, 'env] @t[eval]
         (fun _ _ -> ())
         ft
         unused
     constraint 'env = string list
-    constraint 'extra = [> (unit, 'term2) t]
+    constraint 'syn = [> (unit, 'term2) t ]
+    constraint 'extra = [> (string, 'term) t ]
     method c_Let env _ name bnd term = `Let ((), ft env bnd,  ft (name :: env) term)
   end
-  class ['me, 'me', 'extra] import ft =
+
+  class ['me, 'me', 'extra, 'syn] import ft =
     object
-      inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful]
+      inherit [string, int, 'me, 'me', 'extra, 'syn, enumerator] @t[stateful]
                 lookup ft unused
+      constraint 'extra = [> (string, 'me) t ]
+      constraint 'syn = [> (int, 'me2) t ]
       method c_Let env0 _ name bnd term =
         let env1, i = env0#add name in
         let env2, l = ft env1 bnd in
@@ -73,20 +81,22 @@ end
 module LetRec = struct
   @type ('name, 'term) t = [`LetRec of 'name * 'term * 'term] with show,eval,stateful
 
-  class ['me, 'me2, 'extra] de_bruijn ft = object
-    inherit [string, unit, 'me, 'me2, string list, 'extra] @t[eval]
+  class ['me, 'me2, 'extra, 'syn] de_bruijn ft = object
+    inherit [string, unit, 'me, 'me2, 'extra, 'syn, 'env] @t[eval]
         (fun _ _ -> ())
         ft
         unused
-    constraint 'extra = [> (unit, 'term2) t]
+    constraint 'env = string list
+    constraint 'extra = [> (string, 'me) t]
+    constraint 'syn = [> (unit, 'me2) t]
     method c_LetRec env _ name bnd term =
       let env' = name :: env in
       `LetRec ((), ft env' bnd,  ft env' term)
   end
 
-  class ['me, 'me', 'extra] import ft =
+  class ['me, 'me', 'extra, 'syn] import ft =
     object
-      inherit [string, int, 'me, 'me', enumerator, 'extra] @t[stateful]
+      inherit [string, int, 'me, 'me', 'extra, 'syn, enumerator] @t[stateful]
                 lookup ft unused
       method c_LetRec env _ name bnd term =
         let (env0, i) = env#add name in
@@ -108,25 +118,26 @@ end
 @type nameless = (GT.int, GT.unit) t with show;;
 @type nominal  = (GT.int, GT.int ) t with show;;
 
-class ['extra] de_bruijn fself = object
-  inherit [string, int, string, unit, 'env, 'extra] eval_t_t
+class ['extra, 'syn] de_bruijn fself = object
+  inherit [string, int, string, unit, 'extra, 'syn, _] eval_t_t
       ith (fun _ _ -> ()) fself
 
-  inherit [named, nameless, 'extra]    Abs.de_bruijn fself
-  inherit [named, nameless, 'extra]    Let.de_bruijn fself
-  inherit [named, nameless, 'extra] LetRec.de_bruijn fself
+  inherit [named, nameless, 'extra, 'syn ]    Abs.de_bruijn fself
+  inherit [named, nameless, 'extra, 'syn ]    Let.de_bruijn fself
+  inherit [named, nameless, 'extra, 'syn ] LetRec.de_bruijn fself
 end
 
 let convert term = GT.transform(t) (new de_bruijn) [] term
 
 
-class ['extra] import fself =
+class ['extra, 'syn] import fself =
 object
-  inherit [string, int, string, int, enumerator, 'extra] @t[stateful]
+  inherit [string, int, string, int, 'extra, 'syn, _] @t[stateful]
             lookup lookup fself
-  inherit [named, nominal, 'extra]    Abs.import fself
-  inherit [named, nominal, 'extra]    Let.import fself
-  inherit [named, nominal, 'extra] LetRec.import fself
+
+  inherit [named, nominal, 'extra, 'syn]    Abs.import fself
+  inherit [named, nominal, 'extra, 'syn]    Let.import fself
+  inherit [named, nominal, 'extra, 'syn] LetRec.import fself
 end
 
 let import term =

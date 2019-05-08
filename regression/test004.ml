@@ -8,9 +8,9 @@ let () =
   Printf.printf "%s\n" (GT.show(a) x);
   Printf.printf "%s\n" (GT.show(b) y)
 
-class show_a' (for_a,for_b) fself =
-  object(this)
-    inherit [_] show_a_t_stub (for_a,for_b) fself as super
+class ['e] show_a' (for_a,for_b) =
+  object
+    inherit ['e] show_a_t_stub (for_a,for_b) as super
     method c_C i x y = "new " ^ super#c_C i x y
     method c_A _ _ x = Printf.sprintf "new A %a" for_b x
   end

@@ -14,7 +14,7 @@ open GT
 
 class toString fa _fself =
   object
-    inherit [unit, int, string, unit, _, string] @t
+    inherit [unit, int, string, unit, int t, string] @t
     method c_R  () _     = "R"
     method c_W  () _     = "W"
     method c_L  () _ x   = "L " ^ x
@@ -29,7 +29,7 @@ class toString fa _fself =
 
 class resolve fa _ =
   object
-    inherit [unit, string, int, unit, _, int t] @t
+    inherit [unit, string, int, unit, string t, int t] @t
     method c_R  _ _     = R
     method c_W  _ _     = W
     method c_L  _ _ x   = L x

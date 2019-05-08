@@ -15,7 +15,7 @@ end
 
 @type 'a expr = [ ident | 'a arith ]
 
-class ['a] expr_eval fa fself = object
+class ['a, 'self] expr_eval fa fself = object
   inherit [string->int, 'a, int, string->int, 'self, int] @expr
   inherit [int, 'self] ident_eval
   inherit [string -> int, 'a, 'self] arith_eval fa
