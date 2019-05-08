@@ -64,18 +64,18 @@ transformation will drastically increase if type definitions change during the d
 In \cd{ppx\_traverse} extensible transformations are represented as objects; unlike our case, method-per-type approach is used. In addition 
 \cd{ppx\_traverse} does not make use of inherited attributes, thus some transformations like equality or comparison are not representable.
 
-\textsc{Visitors}, on the other hand, explore a similar to ours object-oriented approach, in which many decisions, rejected by us, were taken (and vice versa). Here
+\textsc{Visitors}, on the other hand, explores a similar to ours object-oriented approach, in which many decisions, rejected by us, were taken (and vice versa). Here
 we summarize the main differences:
 
 \begin{itemize}
-   \item \textsc{Visitors} are excessively object-oriented~--- in order to use them one needs to instantiate some object and call proper method. In our case as long as
+   \item \textsc{Visitors} is excessively object-oriented~--- in order to use it one needs to instantiate some object and call proper method. In our case as long as
      only predefined features are required one can use a more native combinatorial interface.
      
-   \item \textsc{Visitors} implement a number of useful transformations in an \emph{ad-hoc} manner; in our case all transformations are instances of the
+   \item \textsc{Visitors} implements a number of useful transformations in an \emph{ad-hoc} manner; in our case all transformations are instances of the
      same generic scheme. It is possible to combine different transformations via inheritance as long as the types of underlying scheme unify. We also argue, that
      in our framework the implementation of user-defined plugins is much easier.
      
-   \item Following SYB, \textsc{Visitors} take a type-discriminating route: for each type of interest (including the built-in ones) there is a dedicated
+   \item Following SYB, \textsc{Visitors} takes a type-discriminating route: for each type of interest (including the built-in ones) there is a dedicated
      transformation method in each object, representing a transformation. While this solution indeed adds some flexibility, we firmly oppose it, since it
      breaks the encapsulation: inspecting the methods of a transformation (which cannot be hidden in a module signature) one can retrieve some
      information about the implementation of encapsulated types. Even worse, the data structures of abstract types can be manipulated in an unprescribed
@@ -85,9 +85,9 @@ we summarize the main differences:
      compiler with the aid of some neat trick. However, this trick makes it impossible to use \textsc{Visitors} syntax extension in module signatures. There is no
      such problem in our case~--- our framework can be equally used in both implementation and interface files.
 
-   \item \textsc{Visitors} in their current state\footnote{The latest available version is 20180513} do not support polymorphic variants.
+   \item \textsc{Visitors} in its current state\footnote{The latest available version is 20180513} does not support polymorphic variants.
    
-   \item \textsc{GT} supports arbitrary type constructor applications but \textsc{Visitors} in their current state doesn't (both in monomorphic and polymorphic mode).
+   \item \textsc{GT} supports arbitrary type constructor applications but \textsc{Visitors} in its current state doesn't (both in monomorphic and polymorphic mode).
      For instance, the following example doesn't compile:
      
    \begin{lstlisting}

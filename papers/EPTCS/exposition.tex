@@ -94,8 +94,9 @@ We can notice, that both objects, needed to implement these functions, can be in
 \end{lstlisting}
 
 A concrete transformation class inherits from this common ancestor; as we have to make recursive calls to the transformation 
-itself we parameterize the class by the self-transforming function ``\lstinline{fself}'' (\emph{open recursion}). And now we can implement, say,
-pretty-printing in isolation (not within the pretty-printing function, note the usage of ``\lstinline{fself}''):
+itself we parameterize the class by the self-transforming function ``\lstinline{fself}'' (\emph{open recursion}). The decision to
+use open recursion is vital for the support of polymorphic variant types and mutual recursion. Now we can implement, say, pretty-printing
+in isolation (not within the pretty-printing function, note the usage of ``\lstinline{fself}''):
 
 \begin{lstlisting}
    class $\inbr{pretty_{expr}}$ (fself : $\iota$ -> expr -> $\sigma$) =
@@ -109,7 +110,8 @@ pretty-printing in isolation (not within the pretty-printing function, note the 
    end
 \end{lstlisting}
 
-The pretty-printing function itself can now be easily expressed using this class and the generic transformation:
+The pretty-printing function itself can now be easily expressed using this class and the generic transformation\footnote{As function and class names reside in
+  different namespaces in \textsc{OCaml}, we use the same name for both concrete transformation class and transformation function.}:
 
 \begin{lstlisting}
    let $\inbr{pretty_{expr}}$ e =
@@ -117,8 +119,7 @@ The pretty-printing function itself can now be easily expressed using this class
      pretty_prio min_int e
 \end{lstlisting}
 
-Finally, we can avoid using the nested function definition by tying the recursive knot with the fixpoint combinator ``\lstinline{fix}'':\footnote{I think, that memnoization will not work
-when argument fself is not the last in the list of arguments.}\footnote{ Also trf function name is the same as class name. This can provoke reader to ask questions}\marginnote{I think that arguments `p` and `e` should be removed (looks like and error)}
+Finally, we can avoid using the nested function definition by tying the recursive knot with the fixpoint combinator ``\lstinline{fix}'':
 
 \begin{lstlisting}
    let $\inbr{pretty_{expr}}$ e =
@@ -230,9 +231,7 @@ framework, in which all the components can be synthesized from type definitions.
 
 \begin{itemize}
 \item Polymorphism.
-\item Type constructor applications. This can be more trickier than one would expect: for example, if
-  we have a type constructor ``\lstinline{$\alpha$ t}'' then its application ``\lstinline{($\alpha$ * $\beta$) t}'' has
-  \emph{more}\footnote{Kosarev. I think that guys that didn't seen your initial impelementation with \lstinline=(_,_,_,_) GT.a= won't why it is so a big problem} type parameters, then the original type.
+\item Type constructor application.
 \item Mutual recursion. While there is no problem with implementation of hard-coded generic transformations, the implementation of \emph{extensible} ones
   requires extra efforts.
 \item Polymorphic variant types. It includes the seamless integration via class inheritance of all features
@@ -245,7 +244,7 @@ framework, in which all the components can be synthesized from type definitions.
 \end{itemize}
 
 We also address some performance issues~--- as one could notice, in all preceding examples we created a whole bunch of \emph{identical} objects during a
-transformation (one per data structure node); as we will see, this can be avoided via memoization. Finally, our framework provides a plugin system which can be
+transformation (one per each node of a data structure); as we will see, this can be avoided via memoization. Finally, our framework provides a plugin system which can be
 used to generate a number of useful transformations (like ``\lstinline{show}'', ``\lstinline{fold}'' or ``\lstinline{map}''). The plugin system is
-extensible as well~--- an end used can implement his/her own plugins with a very little amount of extra effort since a large part of functionality (the traversal
+extensible as well~--- end users can implement their own plugins with a very little amount of extra effort since a large part of their functionality (the traversal
 function and virtual transformation class) is already supplied by the framework. 

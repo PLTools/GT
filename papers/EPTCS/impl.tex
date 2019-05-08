@@ -1,3 +1,27 @@
+\section{Implementation}
+
+The main components of our solution are syntax extensions (both in terms of \cd{camlp5}~\cite{Camlp5} and \cd{ppxlib}~\cite{PPXLib}), a runtime library and
+a plugin system. The syntax extensions process type definitions, attributed by an end user, and generate the following entities:
+
+\begin{itemize}
+\item a transformation function (one per a type);
+\item a virtual class which is used as a common ancestor for all concrete transformations (one per a type);
+\item a number of concrete classes (one per requested plugin);
+\item a \emph{typeinfo} structure, which incorporates a type-specific information like the transformation function and a bundle of
+  plugin-generated concrete functions, represented as an immediate object.
+\end{itemize}
+
+We support the majority of variants in the right-hand side of type definitions with the following limitations:
+
+\begin{itemize}
+\item only regular algebraic data types are supported; GADTs are treated as simple algebraic datatypes;
+\item constraints are not taken into account;
+\item ``\lstinline{nonrec}'' definitions, object and module types are not supported;
+\item extensible datatypes (``\lstinline{...}''/``\lstinline{+=}'') are not supported.
+\end{itemize}
+
+For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{show}'' the structure with the following skeleton is generated (``$\dots$'' stands for the parts we omit for now):
+
 \begin{figure}[t]
   \center
   \begin{tabular}{l|l}
@@ -21,29 +45,6 @@
   \label{syntax}
 \end{figure}
 
-\section{Implementation}
-
-The main components of our solution are syntax extensions (both in terms of \cd{camlp5}~\cite{Camlp5} and \cd{ppxlib}~\cite{PPXLib}), a runtime library and
-a plugin system. The syntax extensions process type definitions, attributed by an end user, and generate the following entities:
-
-\begin{itemize}
-\item a transformation function (one per a type);
-\item a virtual class which is used as a common ancestor for all concrete transformations (one per a type);
-\item a number of concrete classes (one per requested plugin);
-\item a \emph{typeinfo} structure, which incorporates the transformation function and a bundle of plugin-generated concrete functions, represented as an immediate object.
-\end{itemize}
-
-We support the majority of variants in the right-hand side of type definitions with the following limitations:
-
-\begin{itemize}
-\item only regular algebraic data types are supported; GADTs are treated as simple algebraic datatypes;
-\item constraints are not taken into account;
-\item ``\lstinline{nonrec}'' definitions, object and module types are not supported;
-\item extensible datatypes (``\lstinline{...}''/``\lstinline{+=}'') are not supported.
-\end{itemize}
-
-For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{show}'' the structure with the following skeleton is generated (``$\dots$'' stands for the parts we omit for now):
-
 \begin{lstlisting}
    let $\inbr{gcata_t}$ $\dots$ = $\dots$
    
@@ -59,6 +60,7 @@ For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{sho
 
    let t = {
      gcata   = $\inbr{gcata_t}$;
+     $\dots$
      plugins = object
                  method show = $\dots$
                end
@@ -169,6 +171,7 @@ another type with more constructors.
 
 
 \subsection{Fixed Point Combinator and Memoization}
+\label{memofix}
 
 In our approach we use open recursion: a class for a concrete transformation takes a function for the same transformation as a parameter. In order
 to instantiate this function we have to use a fixpoint combinator. In this section we consider only a simple fixpoint combinator for an isolated
@@ -223,9 +226,9 @@ With this definition an end used does not need to deal with the fixpoint combina
     \lstinline|eq| & \lstinline|$\{$ $\alpha_i$ -> $\alpha_i$ -> bool $\}$ -> $\{\alpha_i\}$ t -> $\{\alpha_i\}$ t -> bool| & equality test \\[2mm]
     \lstinline|foldl| & \lstinline |$\{$ $\alpha$ -> $\alpha_i$ -> $\alpha$ $\}$ -> $\alpha$ -> $\{\alpha_i\}$ t -> $\alpha$| & threading an inherited attribute through all the nodes using a top-down traversal \\[2mm]
     \lstinline|foldr| & \lstinline |$\{$ $\alpha$ -> $\alpha_i$ -> $\alpha$ $\}$ -> $\alpha$ -> $\{\alpha_i\}$ t -> $\alpha$| & threading an inherited attribute through all the nodes using a bottom-up traversal \\[2mm]
-    \lstinline|gmap| & \lstinline|$\{$ unit -> $\alpha_i$ -> $\beta_i$ $\}$ -> unit -> $\{\alpha_i\}$ t -> $\{\beta_i\}$ t| & a functor\\[2mm]
-    \lstinline|eval| & \lstinline|$\{$ $\epsilon$ -> $\alpha_i$ -> $\beta_i$ $\}$ -> $\epsilon$ -> $\{\alpha_i\}$ t -> $\{\beta_i\}$ t| & a variant of functor with an environment ``$\epsilon$'' passed through a transformation\\[2mm]
-    \lstinline|stateful| & \lstinline|$\{$ $\epsilon$ -> $\alpha_i$ -> $\epsilon$ * $\beta_i$ $\}$ -> $\epsilon$ -> $\{\alpha_i\}$ t -> $\epsilon$ * $\{\beta_i\}$ t| & similar to ``\lstinline|eval|'' but allows to update the environment on the way        
+    \lstinline|gmap| & \lstinline|$\{$ unit -> $\alpha_i$ -> $\beta_i$ $\}$ -> unit -> $\{\alpha_i\}$ t -> $\{\beta_i\}$ t| & a functor%\\[2mm]
+%    \lstinline|eval| & \lstinline|$\{$ $\epsilon$ -> $\alpha_i$ -> $\beta_i$ $\}$ -> $\epsilon$ -> $\{\alpha_i\}$ t -> $\{\beta_i\}$ t| & a variant of functor with an environment ``$\epsilon$'' passed through a transformation\\[2mm]
+%    \lstinline|stateful| & \lstinline|$\{$ $\epsilon$ -> $\alpha_i$ -> $\epsilon$ * $\beta_i$ $\}$ -> $\epsilon$ -> $\{\alpha_i\}$ t -> $\epsilon$ * $\{\beta_i\}$ t| & similar to ``\lstinline|eval|'' but allows to update the environment on the way        
   \end{tabular}
   \caption{The list of predefined plugins}
   \label{listofplugins}
@@ -377,6 +380,11 @@ For our previously unsucessful case the implementation is almost as simple as fo
                      end),
                     new $\inbr{show\_stub_{def}}$) 
 \end{lstlisting}
+
+In the actual implementation we generate a memoizing fixpoint combinator, which follows the same pattern we've described in Section~\ref{memofix}. In addition,
+we put the fixpoint combinator into the typeinfo structure, so, for a type ``\lstinline{t}'' the fixpoint combinator can be addressed as
+``\lstinline{fix(t)}''. End users, however, still need to know the structure of mutually-recursive type definitions in order to use the fixpoint
+combinator properly.
 
 There is one subtlety with our support for mutual recursion: we rely on the property, that adding one function per type is enough to implement open recursion.
 However, generally speaking, this is not true: take, for example, the following definition:

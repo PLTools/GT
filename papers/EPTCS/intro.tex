@@ -6,7 +6,7 @@ Frederic Brooks in his seminal book on software engineering ``The Mythical Man-M
 creation are so flexible, so easy to polish and rework, so readily capable of realizing grand conceptual structures. (As we shall see later, this very tractability has its own problems.)''}
 
 Indeed, the virtuality of programs and flexibility of their representation call for structuring; the lack of proper structure easily leads to disastrous consequences
-(as it happened to some real-world industrial projects in the past and constantly happens to some student projects in present time). One of commonly used ways to bring a
+(as it happened to some real-world industrial projects in the past). One of commonly used ways to bring a
 structure in software are \emph{datatypes}. Datatypes allow to describe the properties of data, what can and cannot be done, and to some extent they prescribe
 the semantics to data structures. Being kept in runtime, datatypes make it possible to implement meta-transformations by analyzing types (\emph{introspection})
 or even creating new types on the fly (\emph{reflection}).
@@ -17,7 +17,7 @@ is eliminated. The other side of the coin, however, is that now some transformat
 can not be typed and have to be re-implemented for each type of interest. One way to overcome this defficiency is to develop a more powerful type system in
 which more functions can be typed; as an example we may mention the support for \emph{ad-hoc} polymorphism in \textsc{Haskell} in the forms of type
 classes~\cite{TypeClasses} and type families~\cite{TypeFamilies}. However, due to the totality of typechecking and fundamental undecidability results there
-will always be some ``good'' functions which cannot be typed. Another approach, \emph{datatype-generic programming}~\cite{DGP}, is aimed at developing techniques for
+will always be some ``good'' programs which cannot be typed. Another approach, \emph{datatype-generic programming}~\cite{DGP}, is aimed at developing techniques for
 implementation of practically important families of type-indexed functions using existing language features. For example, types can be encoded in a substrate
 language~\cite{Hinze,InstantGenerics,GenericOCaml}, or a part of type information can be saved for runtime~\cite{SYB,SYBOCaml}, or generic functions for a given
 type can be generated at compile-time automatically~\cite{Yallop,PPXLib}. The two approaches we mentioned are in fact complementary~--- the more powerful
@@ -48,7 +48,11 @@ latter~--- for extensibility via late binding utilization. This idea in the form
 in a library and a syntax extension~\cite{TransformationObjects}. Our follow-up experience with the library~\cite{OCanren} has (once again) shown some flaws in the
 implementation. The version we present here is almost a complete re-implementation with these flaws fixed.
 
-The rest of the paper is organized as follows. ...
+The rest of the paper is organized as follows. In the next section we give an informal, example-driven exposition of
+the approach we use. Then we describe the implementaion in more details, highlighting some aspects which we find important or
+interesting. In the following section we consider some examples, implemented with the aid of the library. Related works
+section observes the relevant approaches and frameworks and compares them to ours. The final section discusses the directions for
+future development.
 
-Acknowledgements ...
+%Acknowledgements ...
 

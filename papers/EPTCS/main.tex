@@ -61,7 +61,7 @@ language=ocaml
 %\pagestyle{plain}
 \sloppy
 
-\title{Generic Programming with Combinators and Objects}
+\title{Generic Programming with Combinators and Objects\thanks{This work was partially supported by the grant 18-01-00380 from the Russian Foundation for Basic Research.}}
 
 \author{Dmitry Kosarev
   \institute{St. Petersburg State University\\
@@ -84,7 +84,9 @@ Dmitry Boulytchev
 \begin{abstract}
   We present a generic programming framework for \textsc{OCaml} which makes it possible to implement extensible
   transformations for a large scale of type definitions. Our framework makes use of object-oriented features
-  of \textsc{OCaml}, utilizing late binding to override the default behaviour of generated transformations.  
+  of \textsc{OCaml}, utilizing late binding to override the default behaviour of generated transformations. The
+  support for polymorphic variant types complements the ability to describe composable datatypes with the
+  ability to implement composable transformations.
 \end{abstract}
 
 \input{intro.tex}
@@ -92,11 +94,7 @@ Dmitry Boulytchev
 \input{impl.tex}
 \input{examples.tex}
 \input{related.tex}
-
-\section{Conclusion}
-In this paper we presented an improved version of Generic Transformers, extended by support of PPX rewriters and type abbreviations. Although it 
-uses the similar idea as in some related works, we claim that it allows to solve some problems in a more convenient manner.
-
+\input{conclusion.tex}
 
 \nocite{*}
 \bibliographystyle{eptcs}
