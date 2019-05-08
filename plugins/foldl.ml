@@ -57,13 +57,14 @@ class g initial_args tdecls = object(self: 'self)
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
     [ self#main_syn ~loc tdecl
-    ]
+    ; Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
   method trf_scheme ~loc =
     Typ.(arrow ~loc (var ~loc "b") @@
          arrow ~loc (var ~loc "a") (var ~loc "b"))
   method trf_scheme_params = ["a";"b"]
 
+  (*
   (* For foldl/r we specify this two methods manually *)
   method index_functor tdecls =
     assert (List.length tdecls > 0);
@@ -73,7 +74,7 @@ class g initial_args tdecls = object(self: 'self)
     assert (List.length tdecls > 0);
     let name = (List.hd_exn tdecls).ptype_name.txt in
     sprintf "IndexResult_fold_%s" name
-
+*)
 
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->

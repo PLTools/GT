@@ -28,8 +28,12 @@
 open Base
 open Ppxlib
 open Printf
+open HelpersBase
 
 let trait_name = "eval"
+
+let param_name_mangler = sprintf "%s_2"
+
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
@@ -63,28 +67,50 @@ class g initial_args tdecls = object(self: 'self)
     Exp.app_list ~loc trf [ inh; subj ]
 
   method! plugin_class_params tdecl =
-    let param_names,_,find_param,blownup_params = G.hack_params tdecl.ptype_params in
-    let loc = loc_from_caml tdecl.ptype_loc in
-    blownup_params @
-    [ named_type_arg ~loc "env" ] @
-    [ named_type_arg ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt
-    ]
+    super#plugin_class_params tdecl @
+    [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) "env"]
 
   method! prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    let _param_names,_rez_names,find_param,_blownup_params =
-      G.hack_params tdecl.ptype_params
-    in
-    let ps =
-      List.concat_map rhs_args ~f:(fun t ->
-          let open Ppxlib.Ast_builder.Default in
-          [ t
-          ; HelpersBase.map_core_type t
-              ~onvar:(fun s -> Some (ptyp_var ~loc:t.ptyp_loc (find_param s)))
-          ]
-        )
-    in
-    (List.map ~f:Typ.from_caml ps) @
+    super#prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args @
     [ Typ.var ~loc "env"]
+
+  method! extra_class_sig_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    let wrap =
+      if is_polyvariant_tdecl tdecl
+      then Typ.openize ~loc
+      else (fun ?as_ x -> x)
+    in
+    [ Ctf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+         map_type_param_names tdecl.ptype_params
+           ~f:(fun s -> Typ.var ~loc s)
+        )
+    ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+      Ctf.constraint_ ~loc
+        (Typ.var ~loc @@ syn)
+        (self#hack ~loc param_name_mangler syn tdecl)
+    ]
+
+  method! extra_class_str_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    let wrap =
+      if is_polyvariant_tdecl tdecl
+      then Typ.openize ~loc
+      else (fun ?as_ x -> x)
+    in
+    [ Cf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+         map_type_param_names tdecl.ptype_params
+           ~f:(fun s -> Typ.var ~loc s)
+        )
+    ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+      Cf.constraint_ ~loc
+        (Typ.var ~loc @@ syn)
+        (self#hack ~loc param_name_mangler syn tdecl)
+    ]
 
   (* very similar as gmap but uses sgninfficant inherited attribute*)
   (* TODO: refactor somehow ??? *)

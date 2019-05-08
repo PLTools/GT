@@ -60,7 +60,9 @@ class g initial_args tdecls = object(self: 'self)
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml
+    List.map rhs_args ~f:Typ.from_caml @
+    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+
 
   method trf_scheme ~loc =
     Typ.(arrow ~loc (var ~loc "a") @@

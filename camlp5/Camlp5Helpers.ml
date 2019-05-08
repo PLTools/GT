@@ -662,17 +662,24 @@ let typ_arg_of_core_type t =
   | Ptyp_var s -> named_type_arg ~loc:(loc_from_caml t.ptyp_loc) s
   | _ -> assert false
 
-let openize_poly t =
+let openize_poly ~loc t =
+  let lpv = [ PvInh (loc, t) ] in
+  <:ctyp< [ > $list:lpv$ ] >>
+  (*
   match t with
-  | MLast.TyVrn (loc, name, flg) ->
-    (fun flg -> MLast.TyVrn (loc, name, flg) )
-      (
-      match flg with
+  | MLast.TyVrn (loc, name, flg) -> begin
+      (*
+      let flg = match flg with
       | None -> Some None
       | Some None -> Some None
-      | Some (Some xs) -> Some (Some xs)
-    )
+      | Some (Some xs) -> Some None (* It could be a bug here *)
+      in
+      *)
+      let flg = Some None in
+      MLast.TyVrn (loc, name, flg)
+    end
   | t -> t
+*)
 
 let closize_poly t =
   match t with

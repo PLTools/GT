@@ -335,7 +335,7 @@ let make_interface_class ~loc tdecl =
               ) |> helper
           | Ptyp_variant (rows,_,labels) ->
               (* rows go to virtual methods. label goes to inherit fields *)
-              ans ~is_poly:true @@
+            ans ~is_poly:true @@
               List.concat_map rows ~f:(function
                 | Rtag (lab,_,_,[]) ->
                     let methname = sprintf "c_%s" lab.txt in
@@ -383,8 +383,6 @@ let wildcard_tdecl td =
     (Lident td.ptype_name.txt) @@
   List.map td.ptype_params ~f:(fun _ -> Typ.any ~loc)
 
-
-
 let make_gcata_typ ~loc tdecl =
   let on_alias_or_abstract () =
     let args = map_type_param_names tdecl.ptype_params ~f:(fun name ->
@@ -393,7 +391,7 @@ let make_gcata_typ ~loc tdecl =
         ; Typ.var ~loc @@ "s"^name ]
       ) |> List.concat
     in
-    let args = args @ [Typ.var ~loc "inh"; Typ.any ~loc; Typ.var ~loc "syn" ]
+    let args = args @ [Typ.var ~loc "inh"; Typ.use_tdecl tdecl; Typ.var ~loc "syn" ]
     in
     Typ.class_ ~loc (Lident(class_name_for_typ tdecl.ptype_name.txt)) args
   in
@@ -445,7 +443,9 @@ let make_gcata_typ ~loc tdecl =
                 (Lident (class_name_for_typ tdecl.ptype_name.txt))
                 (List.concat params @
                  Typ.[ var ~loc "inh"
-                     ; openize_poly @@ wildcard_tdecl tdecl
+                     ; openize_poly ~loc @@
+                       Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+                       map_type_param_names tdecl.ptype_params ~f:(Typ.var ~loc)
                      ; var ~loc "syn" ])
             | Ptyp_tuple ts ->
               helper @@ constr_of_tuple ~loc:t.ptyp_loc ts
@@ -477,17 +477,22 @@ let make_gcata_str ~loc tdecl =
   in
   let ans k =
     let tr =
-      let tr = Pat.var ~loc "tr" in
-      if not (is_polyvariant_tdecl tdecl)
-      then tr
-      else
-        Pat.constraint_ ~loc tr @@
+      let wrap  t =
+        if is_polyvariant_tdecl tdecl
+        then openize_poly ~loc t
+        else t
+      in
+      (* let tr = Pat.var ~loc "tr" in
+       * if not (is_polyvariant_tdecl tdecl)
+       * then tr
+       * else *)
+        Pat.constraint_ ~loc (Pat.var ~loc "tr") @@
         Typ.class_ ~loc
           (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
           (List.concat_map tdecl.ptype_params ~f:(fun _ ->
                Typ.[any ~loc; any ~loc; any ~loc ]
              )
-           @ [Typ.any ~loc; closize_poly @@ wildcard_tdecl tdecl; Typ.any ~loc]
+           @ [Typ.any ~loc; wrap @@ wildcard_tdecl tdecl; Typ.any ~loc]
           )
     in
     Str.single_value ~loc
@@ -495,8 +500,18 @@ let make_gcata_str ~loc tdecl =
       (Exp.fun_list ~loc Pat.[tr; var ~loc "inh"; var ~loc "subj"]
          k)
   in
+
+
+  let match_and_openize ~loc ident type_lident =
+    let new_name = "foo" in
+    Exp.match_ ~loc ident
+      [ case ~lhs:(Pat.alias ~loc (Pat.type_ ~loc type_lident) new_name)
+          ~rhs:(Exp.ident ~loc new_name)
+      ]
+  in
   visit_typedecl ~loc tdecl
-    ~onopen:(fun () -> ans @@ Exp.failwith_ ~loc "Initial gcata for extensible type not yet defined")
+    ~onopen:(fun () ->
+        ans @@ Exp.failwith_ ~loc "Extensible types not yet supported")
     ~onrecord:(fun _labels ->
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         ans @@ Exp.(app_list ~loc
@@ -523,24 +538,29 @@ let make_gcata_str ~loc tdecl =
           let loc = typ.ptyp_loc in
           do_typ @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
 
-      | Ptyp_constr ({txt},_) ->
+        | Ptyp_constr ({txt},_) ->
           Str.single_value ~loc
-               gcata_pat
-               (Exp.of_longident ~loc @@
-                map_longident txt ~f:(fun s -> "gcata_"^s) )
-      | Ptyp_tuple ts ->
-        (* let's say we have predefined aliases for now *)
-        do_typ @@ constr_of_tuple ~loc:t.ptyp_loc ts
-
-      | Ptyp_variant (rows,_,maybe_labels) ->
-        let subj_s = "subj" in
-        ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc subj_s)
-          rows maybe_labels
-          ~onrow:(fun cname names ->
-              List.fold_left ("inh"::subj_s::(List.map ~f:fst names))
-                ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname.txt))
-                ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg) )
-            )
+            gcata_pat
+            (Exp.of_longident ~loc @@
+             map_longident txt ~f:Naming.gcata_name_for_typ)
+        | Ptyp_tuple ts ->
+          (* let's say we have predefined aliases for now *)
+          do_typ @@ constr_of_tuple ~loc:t.ptyp_loc ts
+        | Ptyp_variant (rows,_,maybe_labels) ->
+          let subj_s = "subj" in
+          ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc subj_s)
+            rows maybe_labels
+            ~onrow:(fun cname names ->
+                List.fold_left
+                  ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname.txt))
+                  ~f:(Exp.app ~loc)
+                  ((Exp.ident ~loc "inh") ::
+                   (match_and_openize ~loc (Exp.ident ~loc subj_s)
+                      (Lident tdecl.ptype_name.txt ))
+                                            ::
+                   (List.map ~f:(fun (s,_) -> Exp.ident ~loc s) names)
+                  )
+              )
             ~onlabel:(fun label patname -> failwith "not implemented")
             ~oninherit:(fun params cident patname ->
                 Exp.app_list ~loc
@@ -548,9 +568,9 @@ let make_gcata_str ~loc tdecl =
                    map_longident cident ~f:(gcata_name_for_typ))
                   (List.map ["tr";"inh";patname] ~f:(Exp.sprintf ~loc "%s"))
               )
-      | _ -> failwith "not implemented"
-      in
-      do_typ typ
+        | _ -> failwith "not implemented"
+        in
+        do_typ typ
       )
 
 (* create opened renaming for polymorphic variant *)
@@ -734,7 +754,11 @@ let fix_sig ~loc tdecls =
              List.map3_exn inhs ps syns ~f:(fun i p s -> [i;p;s])
              |> List.concat
              |> List.map ~f:(Typ.var ~loc)
-             |> (fun xs -> xs @ [ main_inh; subj_t; main_syn])
+             |> (fun xs -> xs @ [ main_inh
+                                ; (if is_polyvariant_tdecl tdecl
+                                   then openize_poly ~loc else id)
+                                    subj_t
+                                ; main_syn])
            in
            Typ.class_ ~loc (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
              args
@@ -844,7 +868,7 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
   List.concat
     [ sis
     ; intf_class
-    (* ; gcata *)
+    ; gcata
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
     ; collect_plugins_sig ~loc tdecl plugins
     ]
@@ -859,7 +883,14 @@ let do_mutual_types_sig ~loc sis plugins tdecls =
         ]
     ) @
   [ fix_sig ~loc tdecls ] @
-  List.concat_map plugins ~f:(fun p -> (p tdecls)#do_mutuals_sigs ~loc ~is_rec:true)
+  List.concat_map plugins ~f:(fun p -> (p tdecls)#do_mutuals_sigs ~loc ~is_rec:true) @
+  (* (List.concat_map tdecls ~f:(fun tdecl ->
+   *      List.concat_map plugins ~f:(fun p ->
+   *          collect_plugins_sig ~loc tdecl (p tdecls))
+   *    )
+   * ) @ *)
+  []
+  (* TODO: collect plugins for mutual types *)
   (* List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls *)
 
 let wrap_plugin name = function

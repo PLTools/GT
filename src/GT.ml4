@@ -145,19 +145,20 @@ class ['a, 'self] fmt_list_t fa fself =
       Format.fprintf fmt "%a;@,@ %a" fa x fself xs
   end
 
-class ['a, 'sa, 'self] gmap_list_t fa fself =
+class ['a, 'sa, 'self, 'syn ] gmap_list_t fa fself =
   object
-    inherit [unit, 'a, 'sa, unit, 'self, 'sa list] @list
+    constraint 'syn = 'sa list
+    inherit [unit, 'a, 'sa, unit, 'self, 'syn] @list
     method c_Nil  _ = []
     method c_Cons _ x xs = (fa () x) :: (fself () xs)
   end
-class ['a, 'sa, 'env, 'self] eval_list_t fa fself =
+class ['a, 'sa, 'self, 'syn, 'env ] eval_list_t fa fself =
   object
     inherit ['env, 'a, 'sa, 'env, 'self, 'sa list] @list
     method c_Nil  _ = []
     method c_Cons env x xs = (fa env x) :: (fself env xs)
   end
-class ['a, 'sa, 'env, 'self] stateful_list_t fa fself =
+class ['a, 'sa, 'self, 'syn, 'env ] stateful_list_t fa fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa list] @list
     method c_Nil  env = (env, [])
@@ -268,21 +269,24 @@ module Lazy =
         method t_t inh subj = fa () @@ Lazy.force subj
       end
 
-    class ['a, 'sa, 'self ] gmap_t_t fa _fself =
+    class ['a, 'sa, 'self, 'syn ] gmap_t_t fa _fself =
       object
-        inherit [unit, 'a, 'sa, unit, 'self, 'sa t ] @t
+        constraint 'syn = 'sa t
+        inherit [unit, 'a, 'sa, unit, 'self, 'syn ] @t
         method t_t inh subj = lazy (fa () @@ Lazy.force subj)
       end
 
-    class ['a, 'sa, 'env, 'self ] eval_t_t fa _fself =
+    class ['a, 'sa, 'self, 'syn, 'env ] eval_t_t fa _fself =
       object
-        inherit ['env, 'a, 'sa, 'env, 'self, 'sa t ] @t
+        constraint 'syn = 'sa t
+        inherit ['env, 'a, 'sa, 'env, 'self, 'syn ] @t
         method t_t env subj = lazy (fa env @@ Lazy.force subj)
       end
 
-    class ['a, 'sa, 'env, 'self ] stateful_t_t fa _fself =
+    class ['a, 'sa, 'self, 'syn, 'env ] stateful_t_t fa _fself =
       object
-        inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa t ] @t
+        constraint 'syn = 'sa t
+        inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'syn ] @t
         method t_t env subj =
           let (env1, r) = fa env @@ Lazy.force subj
           in env1, Lazy.from_fun (fun () -> r)
@@ -369,12 +373,6 @@ class ['a, 'self] html_option_t fa _fself =
     method c_None () _   = HTML.string "None"
     method c_Some () _ x = View.concat (HTML.string "Some") (HTML.ul (fa () x))
   end
-class ['a, 'sa, 'self] gmap_option_t fa _fself =
-  object
-    inherit [unit, 'a, 'sa, unit, 'self, 'sa option] @option
-    method c_None () _ = None
-    method c_Some () _ x = Some (fa () x)
-  end
 
 class ['a, 'self] fmt_option_t fa _fself =
   object
@@ -383,16 +381,25 @@ class ['a, 'self] fmt_option_t fa _fself =
     method c_Some fmt _ x = Format.fprintf fmt "Some (%a)" fa x
   end
 
-class ['a, 'sa, 'env, 'self] eval_option_t fa _fself =
+class ['a, 'sa, 'self, 'syn ] gmap_option_t fa _fself =
+  object
+    constraint 'syn = 'sa option
+    inherit [unit, 'a, 'sa, unit, 'self, 'syn ] @option
+    method c_None () _ = None
+    method c_Some () _ x = Some (fa () x)
+  end
+
+class ['a, 'sa, 'self, 'syn, 'env ] eval_option_t fa _fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'sa option] @option
     method c_None _   _   = None
     method c_Some env _ x = Some (fa env x)
   end
 
-class ['a, 'sa, 'env, 'self] stateful_option_t fa _fself =
+class ['a, 'sa, 'self, 'syn, 'env ] stateful_option_t fa _fself =
   object
-    inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'sa option] @option
+    constraint 'syn = 'sa option
+    inherit ['env, 'a, 'sa, 'env, 'self, 'env * 'syn ] @option
     method c_None env _   = (env,None)
     method c_Some env _ x =
       let env1,r = fa env x in
@@ -483,11 +490,6 @@ class ['a, 'self] html_free_t fa _ =
     constraint 'syn = HTML.viewer
     method c_Free () _ x = fa () x
   end
-class ['a, 'sa, 'self] gmap_free_t fa _ =
-  object
-    inherit [unit, 'a, 'sa, unit, 'self, 'sa free] free_t
-    method c_Free () _ x = fa () x
-  end
 
 class ['a, 'self] fmt_free_t fa _ =
   object
@@ -495,15 +497,25 @@ class ['a, 'self] fmt_free_t fa _ =
     constraint 'inh = Format.formatter
     method c_Free fmt _ x = Format.fprintf fmt "(%a)" fa x
   end
-class ['a, 'sa, 'env, 'self] eval_free_t fa _ =
+
+class ['a, 'sa, 'self, 'syn] gmap_free_t fa _ =
   object
-    inherit ['emv, 'a, 'sa, 'env, 'self, 'sa free] free_t
+    constraint 'syn = 'sa free
+    inherit [unit, 'a, 'sa, unit, 'self, 'syn] free_t
+    method c_Free () _ x = fa () x
+  end
+
+class ['a, 'sa, 'self, 'syn, 'env] eval_free_t fa _ =
+  object
+    constraint 'syn = 'sa free
+    inherit ['emv, 'a, 'sa, 'env, 'self, 'syn] free_t
     method c_Free env _ x = fa env x
   end
 
-class ['a, 'sa, 'env, 'self] stateful_free_t fa _ =
+class ['a, 'sa, 'self, 'syn, 'env] stateful_free_t fa _ =
   object
-    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa free] free_t
+    constraint 'syn = 'env * 'sa free
+    inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'syn] free_t
     method c_Free env _ x = fa env x
   end
 
@@ -601,20 +613,23 @@ class ['a, 'b, 'self] html_pair_t fa fb _ =
          ]
   end
 
-class ['a, 'sa, 'b, 'sb, 'self] gmap_pair_t (fa: unit -> 'a -> 'sa) fb _ =
+class ['a, 'sa, 'b, 'sb, 'self, 'syn] gmap_pair_t (fa: unit -> 'a -> 'sa) fb _ =
   object
-    inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, ('sa, 'sb) pair] pair_t
+    constraint 'syn = ('sa, 'sb) pair
+    inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, 'syn] pair_t
     method c_Pair () _ x y = (fa () x, fb () y)
   end
 
-class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_pair_t fa fb _ =
+class ['a, 'sa, 'b, 'sb, 'self, 'syn, 'env] eval_pair_t fa fb _ =
   object
-    inherit ['env, 'a, 'sa, 'env, 'b, 'sb, 'env, 'self, ('sa, 'sb) pair] pair_t
+    constraint 'syn = ('sa, 'sb) pair
+    inherit ['env, 'a, 'sa, 'env, 'b, 'sb, 'env, 'self, 'syn] pair_t
     method c_Pair env _ x y = (fa env x, fb env y)
   end
-class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_pair_t fa fb _ =
+class ['a, 'sa, 'b, 'sb, 'self, 'syn, 'env] stateful_pair_t fa fb _ =
   object
-    inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * ('sa, 'sb) pair] pair_t
+    constraint 'syn = ('sa, 'sb) pair
+    inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * 'syn ] pair_t
     method c_Pair env _ x y =
       let env1,l = fa env x in
       let env2,r = fb env y in
@@ -707,15 +722,6 @@ end
 class ['a, 'b, 'self] html_tuple2_t fa fb fself = object
   inherit [ 'a, 'b, 'self] html_pair_t fa fb fself
 end
-class ['a, 'a2, 'b, 'b2, 'self] gmap_tuple2_t fa fb fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'self] gmap_pair_t fa fb fself
-end
-class ['a, 'a2, 'b, 'b2, 'env, 'self] eval_tuple2_t fa fb fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] eval_pair_t fa fb fself
-end
-class ['a, 'a2, 'b, 'b2, 'env, 'self] stateful_tuple2_t fa fb fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'env, 'self] stateful_pair_t fa fb fself
-end
 class ['a, 'b, 'self] compare_tuple2_t fa fb fself = object
   inherit [ 'a, 'b, 'self] compare_pair_t fa fb fself
 end
@@ -727,6 +733,16 @@ class ['a, 'b, 'syn, 'self] foldl_tuple2_t fa fb fself = object
 end
 class ['a, 'b, 'syn, 'self] foldr_tuple2_t fa fb fself = object
   inherit [ 'a, 'b, 'syn, 'self] foldr_pair_t fa fb fself
+end
+
+class ['a, 'a2, 'b, 'b2, 'self, 'syn] gmap_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'self, 'syn] gmap_pair_t fa fb fself
+end
+class ['a, 'a2, 'b, 'b2, 'self, 'syn, 'env] eval_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'self, 'syn, 'env] eval_pair_t fa fb fself
+end
+class ['a, 'a2, 'b, 'b2, 'self, 'syn, 'env] stateful_tuple2_t fa fb fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'self, 'syn, 'env] stateful_pair_t fa fb fself
 end
 
 (*******************************************************************************)
@@ -751,6 +767,7 @@ class ['a, 'b, 'c, 'self] show_triple_t fa fb fc _ =
     method c_Triple () x y z = Printf.sprintf "(%a, %a, %a)"
       fa x fb y fc z
 end
+
 class ['a, 'b, 'c, 'self] fmt_triple_t fa fb fc _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'c, unit, 'inh, 'self, unit] triple_t
@@ -758,14 +775,6 @@ class ['a, 'b, 'c, 'self] fmt_triple_t fa fb fc _ =
     method c_Triple fmt x y z = Format.fprintf fmt "(%a,%a,%a)" fa x fb y fc z
   end
 
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'self] gmap_triple_t fa fb fc _ =
-  object
-    inherit [ unit, 'a, 'a2
-            , unit, 'b, 'b2
-            , unit, 'c, 'c2
-            , unit, 'self, ('a2,'b2,'c2) triple ] @triple
-    method c_Triple () x y z = ( fa () x, fb () y, fc () z)
-end
 class ['a, 'b, 'c, 'self] html_triple_t fa fb fc _ =
   object
     inherit [ unit, 'a, 'syn, unit, 'b, 'syn, unit, 'c, 'syn
@@ -782,20 +791,33 @@ class ['a, 'b, 'c, 'self] html_triple_t fa fb fc _ =
          ; HTML.string ")"]
   end
 
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] eval_triple_t fa fb fc _ =
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn] gmap_triple_t fa fb fc _ =
   object
+    constraint 'syn = ('a2,'b2,'c2) triple
+    inherit [ unit, 'a, 'a2
+            , unit, 'b, 'b2
+            , unit, 'c, 'c2
+            , unit, 'self, 'syn ] @triple
+    method c_Triple () x y z = ( fa () x, fb () y, fc () z)
+end
+
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn, 'env] eval_triple_t fa fb fc _ =
+  object
+    constraint 'syn = ('a2,'b2,'c2) triple
     inherit [ 'env, 'a, 'a2
             , 'env, 'b, 'b2
             , 'env, 'c, 'c2
-            , 'env, 'self, ('a2,'b2,'c2) triple ] @triple
+            , 'env, 'self, 'syn ] @triple
     method c_Triple e x y z = ( (fa e x), (fb e y), (fc e z) )
 end
-class ['a, 'a2, 'b, 'b2,  'c, 'c2, 'env, 'self] stateful_triple_t fa fb fc _ =
+
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn, 'env ] stateful_triple_t fa fb fc _ =
   object
+    constraint 'syn = ('a2,'b2,'c2) triple
     inherit [ 'env, 'a, 'env * 'a2
             , 'env, 'b, 'env * 'b2
             , 'env, 'c, 'env * 'c2
-            , 'env, 'self, 'env * ('a2,'b2,'c2) triple ] @triple
+            , 'env, 'self, 'env * 'syn ] @triple
     method c_Triple env0 x y z =
       let env1,a = fa env0 x in
       let env2,b = fb env1 y in
@@ -922,14 +944,14 @@ end
 class ['a, 'b, 'c, 'self] html_tuple3_t fa fb fc fself = object
   inherit [ 'a, 'b, 'c, 'self] @triple[html] fa fb fc fself
 end
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self] gmap_tuple3_t fa fb fc fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self] @triple[gmap] fa fb fc fself
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn] gmap_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn] @triple[gmap] fa fb fc fself
 end
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] eval_tuple3_t fa fb fc fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[eval] fa fb fc fself
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn, 'env] eval_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn, 'env] @triple[eval] fa fb fc fself
 end
-class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] stateful_tuple3_t fa fb fc fself = object
-  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'env, 'self] @triple[stateful] fa fb fc fself
+class ['a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn, 'env] stateful_tuple3_t fa fb fc fself = object
+  inherit [ 'a, 'a2, 'b, 'b2, 'c, 'c2, 'self, 'syn, 'env] @triple[stateful] fa fb fc fself
 end
 class ['a, 'b, 'c, 'self] compare_tuple3_t fa fb fc fself = object
   inherit [ 'a, 'b, 'c, 'self] compare_triple_t fa fb fc fself

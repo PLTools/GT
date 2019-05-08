@@ -92,13 +92,38 @@ class g args tdecls = object(self)
     ]
 
   method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml
+    List.map rhs_args ~f:Typ.from_caml @
+    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
-  method trf_scheme ~loc =
-    Typ.(arrow ~loc (unit ~loc) @@
-         arrow ~loc (var ~loc "a") (constr ~loc (Ldot (Lident "HTML","er")) []))
-  method trf_scheme_params = ["a"]
-  inherit P.index_result
+  method! extra_class_sig_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    let wrap =
+      if is_polyvariant_tdecl tdecl
+      then Typ.openize ~loc
+      else (fun ?as_ x -> x)
+    in
+    [ Ctf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+         map_type_param_names tdecl.ptype_params
+           ~f:(fun s -> Typ.var ~loc s)
+        )
+    ]
+  (* make it implementation in super class ? *)
+  method! extra_class_str_members tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    let wrap =
+      if is_polyvariant_tdecl tdecl
+      then Typ.openize ~loc
+      else (fun ?as_ x -> x)
+    in
+    [ Cf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+         map_type_param_names tdecl.ptype_params
+           ~f:(fun s -> Typ.var ~loc s)
+        )
+    ]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with

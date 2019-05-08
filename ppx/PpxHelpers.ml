@@ -530,12 +530,12 @@ let type_declaration ~loc ~name ~params ~manifest ~kind =
 
 open Parsetree
 
-let openize_helper ~is_open typ =
+let openize_helper ~is_open ~loc typ =
   let loc = typ.ptyp_loc in
   Typ.variant ~loc ~is_open [Rinherit typ]
 
-let openize_poly = openize_helper ~is_open:true
-let closize_poly = openize_helper ~is_open:false
+let openize_poly ~loc = openize_helper ~is_open:true ~loc
+let closize_poly ~loc = openize_helper ~is_open:false ~loc
 
 let map_type_param_names ~f ps =
   List.map ps ~f:(fun (t,_) ->

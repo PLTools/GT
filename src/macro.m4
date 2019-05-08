@@ -24,11 +24,6 @@ class ['extra] fmt_$1_t _fself =
     inherit [Format.formatter, 'extra, unit] @$1
     method t_$1 fmt x = Format.pp_print_$1 fmt x
   end
-class ['extra] gmap_$1_t _fself =
-  object
-    inherit [unit, 'extra, $1] @$1
-    method t_$1 _ x = x
-  end
 class ['syn, 'extra] foldl_$1_t _fself =
   object
     inherit ['syn, 'extra, 'syn] @$1
@@ -49,13 +44,22 @@ class ['extra] compare_$1_t _fself =
     inherit [$1, 'extra, 'comparison] @$1
     method t_$1 inh x = compare_primitive inh x
   end
-class ['env, 'extra] eval_$1_t _fself =
+
+class ['extra, 'syn] gmap_$1_t _fself =
   object
+    constraint 'syn = $1
+    inherit [unit, 'extra, 'syn'] @$1
+    method t_$1 _ x = x
+  end
+class [ 'extra, 'syn, 'env] eval_$1_t _fself =
+  object
+    constraint 'syn = $1
     inherit ['env, 'extra, '$1] @$1
     method t_$1 inh x = x
   end
-class ['env, 'extra] stateful_$1_t _fself =
+class [ 'extra, 'syn, 'env] stateful_$1_t _fself =
   object
+    constraint 'syn = $1
     inherit ['env, 'extra, 'env * $1] @$1
     method t_$1 inh x = (inh,x)
   end

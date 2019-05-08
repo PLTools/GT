@@ -89,10 +89,14 @@ class g args tdecls = object(self: 'self)
       List.concat_map rhs_args ~f:(fun t ->
           let open Ppxlib.Ast_builder.Default in
           [ t
-          ; map_core_type t ~onvar:(fun s -> Some (ptyp_var ~loc:t.ptyp_loc (find_param s)))]
+          ; map_core_type t ~onvar:(fun s -> Some (ptyp_var ~loc:t.ptyp_loc (find_param s)))
+          ]
         )
     in
-    List.map ~f:Typ.from_caml ps
+    List.map ~f:Typ.from_caml ps @
+    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt
+    ; Typ.var ~loc @@ Printf.sprintf "syn_%s" tdecl.ptype_name.txt
+    ]
 
   method trf_scheme ~loc =
     Typ.(arrow ~loc (unit ~loc) @@
@@ -102,76 +106,82 @@ class g args tdecls = object(self: 'self)
 
   method hack ~loc (mangler: string -> string) param tdecl: Typ.t =
     let loc = loc_from_caml tdecl.ptype_loc in
+    let on_abstract () =
+      Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+      map_type_param_names tdecl.ptype_params ~f:(fun s -> Typ.var ~loc @@ mangler s)
+    in
     visit_typedecl ~loc tdecl
-      ~onopen:(fun () -> assert false)
-      ~onrecord:(fun _ -> assert false)
-      ~onvariant:(fun _ -> assert false)
-      ~onabstract:(fun () -> assert false)
+      ~onopen:(fun () -> failwith "open types are not supported")
+      ~onrecord:(fun _ -> on_abstract ())
+      ~onvariant:(fun _ -> on_abstract ())
+      ~onabstract:(fun () -> on_abstract ())
       ~onmanifest:(fun typ ->
-          if not (is_polyvariant typ) then assert false;
-          match typ.ptyp_desc with
-          | Ptyp_variant (rf,_,_) ->
-            (* Typ.openize ~loc @@ *)
-            Typ.variant ~loc ~is_open:true @@
-            List.map rf ~f:(function
-                | (Rtag (name,attrs,has_empty, ts)) as t ->
-                  let open Ast_builder.Default in
-                  let rec on_t t = map_core_type
-                      ~onvar:(fun s ->
-                          Some (ptyp_var ~loc:tdecl.ptype_loc @@ mangler s)
-                        )
-                      ~onconstr:(fun name ts ->
-                          match name with
-                          | Lident s when String.equal s tdecl.ptype_name.txt ->
-                            Option.some @@ ptyp_var ~loc:tdecl.ptype_loc param
-                          | _  -> None
-                        )
-                      t
-                  in
-                  Rtag (name,attrs,has_empty, List.map ts ~f:on_t)
-                | x -> x
-              )
-          | _ -> failwith "should not happen"
-        )
+          if not (is_polyvariant typ) then on_abstract ()
+          else match typ.ptyp_desc with
+            | Ptyp_variant (rf,_,_) ->
+              let onvar s =
+                let open Ast_builder.Default in
+                Some (ptyp_var ~loc:tdecl.ptype_loc @@ mangler s)
+              in
 
+              Typ.variant ~loc ~is_open:true @@
+              List.map rf ~f:(function
+                  | (Rtag (name,attrs,has_empty, ts)) ->
+                    let open Ast_builder.Default in
+                    let rec on_t t = map_core_type
+                        ~onvar
+                        ~onconstr:(fun name ts ->
+                            match name with
+                            | Lident s when String.equal s tdecl.ptype_name.txt ->
+                              Option.some @@ ptyp_var ~loc:tdecl.ptype_loc param
+                            | _  -> None
+                          )
+                        t
+                    in
+                    Rtag (name,attrs,has_empty, List.map ts ~f:on_t)
+                  | Rinherit typ ->
+                    Rinherit (map_core_type typ ~onvar)
+                )
+            | _ -> failwith "should not happen"
+        )
 
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    if not (is_polyvariant_tdecl tdecl) then [] else
-      [  Ctf.constraint_ ~loc
-          (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-          (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-           map_type_param_names tdecl.ptype_params
-             ~f:(fun s -> Typ.var ~loc s)
-          )
-      ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
-        Ctf.constraint_ ~loc
-          (Typ.var ~loc @@ syn)
-          (self#hack ~loc param_name_mangler syn tdecl)
-          (* (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-           *  map_type_param_names tdecl.ptype_params
-           *    ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
-           * ) *)
-      ]
+    let wrap =
+      if is_polyvariant_tdecl tdecl
+      then Typ.openize ~loc
+      else (fun ?as_ x -> x)
+    in
+    [ Ctf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+         map_type_param_names tdecl.ptype_params
+           ~f:(fun s -> Typ.var ~loc s)
+        )
+    ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+      Ctf.constraint_ ~loc
+        (Typ.var ~loc @@ syn)
+        (self#hack ~loc param_name_mangler syn tdecl)
+    ]
 
   method! extra_class_str_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    if not (is_polyvariant_tdecl tdecl) then [] else
-      [ Cf.constraint_ ~loc
-          (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-          (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-           map_type_param_names tdecl.ptype_params
-             ~f:(fun s -> Typ.var ~loc s)
-          )
-      ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
-        Cf.constraint_ ~loc
-          (Typ.var ~loc @@ syn)
-          (self#hack ~loc param_name_mangler syn tdecl)
-          (* (Typ.openize ~loc @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-           *  map_type_param_names tdecl.ptype_params
-           *    ~f:(fun s -> Typ.var ~loc @@ param_name_mangler s)
-           * ) *)
-      ]
+    let wrap =
+      if is_polyvariant_tdecl tdecl
+      then Typ.openize ~loc
+      else (fun ?as_ x -> x)
+    in
+    [ Cf.constraint_ ~loc
+        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
+        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+         map_type_param_names tdecl.ptype_params
+           ~f:(fun s -> Typ.var ~loc s)
+        )
+    ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+      Cf.constraint_ ~loc
+        (Typ.var ~loc @@ syn)
+        (self#hack ~loc param_name_mangler syn tdecl)
+    ]
 
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =

@@ -89,7 +89,7 @@ let () = dispatch (fun hook ->
        ; A"ppx/ppx_deriving_gt.cmxa"
        ] @
        make_plugins_args ~is_byte:false @
-       [  A"-I"; A"WTF"
+       [
        ]  );
 
     dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];

@@ -38,12 +38,11 @@ module rec Pat :
     val constr : loc:loc -> string -> t list -> t
     val constr_record : loc:loc -> string -> (string*t) list -> t
     val constraint_ : loc:loc -> t -> Typ.t -> t
-
-    (* val variant: loc:loc -> string -> t option -> t *)
     val variant: loc:loc -> string -> t list -> t
     val tuple:   loc:loc -> t list -> t
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
     val record1: loc:loc -> Ppxlib.longident -> t
+    (** #lident *)
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
 and Exp :
@@ -237,9 +236,9 @@ val module_type_declaration: loc:loc -> name:string -> Mt.t option -> module_typ
 val use_new_type: loc:loc -> string -> Exp.t -> Exp.t
 
 (* if argument is polymorphic variant type then make it open *)
-val openize_poly: Typ.t -> Typ.t
+val openize_poly: loc:loc ->  Typ.t -> Typ.t
 
-val closize_poly: Typ.t -> Typ.t
+(* val closize_poly: Typ.t -> Typ.t *)
 
 val prepare_param_triples : loc:loc ->
   extra:Typ.t ->

@@ -114,8 +114,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                   sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
           (map_type_param_names tdecl.ptype_params ~f:id)
       in
-      self#wrap_class_definition ~loc mutual_decls tdecl ~inh_params
-        ((self#extra_class_str_members tdecl) @ fields)
+      self#wrap_class_definition ~loc mutual_decls tdecl ~inh_params fields
     in
 
     let is_self_rec t =
@@ -153,19 +152,21 @@ class virtual generator initial_args tdecls = object(self: 'self)
     (* inherit class_t and prepare to put other members *)
 
     let mutual_decls = self#tdecls in
+    let is_mutal = (List.length mutual_decls > 1) in
     Str.class_single ~loc
       ~params:(self#plugin_class_params tdecl)
-      ~name:(self#make_class_name ~is_mutal:(List.length mutual_decls > 1) tdecl)
+      ~name:(self#make_class_name ~is_mutal tdecl)
       ~virt:false
       ~wrap:(fun body ->
           (* constructor arguments are *)
           let names =
-            (self#prepare_fa_args ~loc tdecl)
+            (if is_mutal then []
+             else [Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt ])
+            |> (fun tl -> self#prepare_fa_args ~loc tdecl @ tl )
             |> (fun ps ->
-                let fself = Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt in
                 match mutual_decls with
                 | [] -> failwith "Should not happen"
-                | [_] -> fself :: ps
+                | [_] -> ps
                 | tdecls ->
                   (* we don't need self transformation for *)
                   (Pat.tuple ~loc @@
@@ -240,7 +241,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
           ~name:(self#make_class_name ~is_mutal:a_stub tdecl)
           ~virt:false
           ~wrap:(fun sign ->
-              let for_self = self#make_typ_of_self_trf ~loc ~in_class:true tdecl in
               let funcs_for_args =
                 let names = map_type_param_names tdecl.ptype_params ~f:id in
                 List.fold_left names
@@ -249,10 +249,12 @@ class virtual generator initial_args tdecls = object(self: 'self)
                       self#make_typ_of_class_argument ~loc tdecl (Cty.arrow ~loc) name
                         (fun f arg -> acc @@ f arg)
                     )
-                  (Cty.arrow ~loc for_self sign)
+                  (if a_stub then sign
+                   else
+                     let for_self = self#make_typ_of_self_trf ~loc ~in_class:true tdecl in
+                     Cty.arrow ~loc for_self sign)
               in
 
-              (* Cty.arrow ~loc (Typ.access2 ~loc self#fix_module_name "fn") *)
               funcs_for_args
               |> (fun tl ->
                   if not a_stub then tl
@@ -395,8 +397,11 @@ class virtual generator initial_args tdecls = object(self: 'self)
     (* It seems that we can't filter mutal decls because we need to preserve an order *)
     let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
     let ans args : Cf.t list =
-      [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams
-        in
+      [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams in
+        (* let () =
+         *   if String.equal self#trait_name "gmap"
+         *   then assert (List.length typ_params = (2 + 2 * (List.length cparams)))
+         * in *)
         let args =
           (match cid.txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal ->
@@ -433,12 +438,13 @@ class virtual generator initial_args tdecls = object(self: 'self)
         with_constr_typ typ
             ~fail:(fun () -> failwith "type is not a constructor")
             ~ok:(fun cid params ->
-                (* Hypothesis: it's almost an type alias *)
+                (* Hypothesis: it's almost a type alias *)
                 self#got_constr ~loc ~is_self_rec tdecl mutal_decls do_typ cid params k
                   ~fix_self_app:(fun eself ->
                       self#abstract_trf ~loc (fun einh esubj ->
                           match typ.ptyp_desc with
                           | Ptyp_constr ({txt},_) ->
+                            (* TODO: refactoring. we inented special function for this *)
                             Exp.match_ ~loc esubj
                               [case
                                  ~lhs:(Pat.alias ~loc (Pat.type_ ~loc txt) "subj")
@@ -695,7 +701,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method final_typ_params_for_alias ~loc tdecl rhs =
     self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
-    (* [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ] *)
     []
 
   method do_mutuals_sigs ~loc ~is_rec =
