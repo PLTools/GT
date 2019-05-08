@@ -101,10 +101,10 @@ implementation~\cite{TransformationObjects} type constructor application was not
 \subsection{Conversion to a Nameless Representation}
 
 Polymorphic variant types make it possible to define composable statically typed and separately compiled data structures~\cite{PolyVarReuse}.
-Dealing with them with composable statically typed and separately compiled transformations looks like a natureal idea. The problem of
+Dealing with them to implement composable statically typed and separately compiled transformations looks like a natural idea. The problem of
 constructing transformations from separately compiled, strongly typed components is known as ``The Expression Problem''~\cite{ExpressionProblem}, which
-is often used as a ``litmus test'' for generic programming frameworks~\cite{ObjectAlgebras,ALaCarte}. In this section we show the solution of
-the expression problem with the aid of our framework. For the concrete problem we take the transformation from named to a nameless representations
+is often used as a ``litmus test'' for generic programming frameworks~\cite{ObjectAlgebras,ALaCarte}. In this section we show the solution for
+the expression problem with the aid of our framework. For a concrete problem we take the transformation from named to a nameless representations
 for lambda terms.
 
 First, we define the non-binding part of the terms:
@@ -129,18 +129,20 @@ below:
    class ['lam, 'nameless] lam_to_nameless
      (flam : string list -> 'lam -> 'nameless) =
    object
-     inherit [string list, string, int, string list, 'lam, 'nameless] $\inbr{lam}$
+     inherit [string list, string, int,
+              string list, 'lam, 'nameless,
+              string list, 'lam, 'nameless] $\inbr{lam}$
      method $\inbr{App}$ env _ l r = `App (flam env l, flam env r)
      method $\inbr{Var}$ env _ x   = `Var (index env x)
    end
 \end{lstlisting}
 
 First, we use a list of strings as an environment, and we pass it as an inherited attribute. Then, we use a function ``\lstinline{index}'' to find a
-position of a string in the environment (thus, it translates names to the deBruijn indices). The interesting part is the typing of the common ancestor
-class ``$\inbr{lam}$''. The first thiple of its parameters describes the transformation for the first type parameter of the type. As we see, we
-translate strings into integers. Next, the type variable ``\lstinline{'lam}'', as we know, will be set to the open version of the ``\lstinline{lam}''.
+position of a string in the environment (thus, it translates names to the de Bruijn indices). The interesting part is the typing of the common ancestor
+class ``$\inbr{lam}$''. The first thiple of its parameters describes the transformation for the first type parameter of the type. As we can see, we
+transform strings into integers, using an environment. Next, the type variable ``\lstinline{'lam}'', as we know, will be set to the open version of the ``\lstinline{lam}''.
 Finally, the result of the transformation is typed as ``\lstinline{'nameless}''. This is because the result will be, indeed, a different type, as we
-will see soon.
+will see soon. As the type parameter ``\lstinline{'lam}'' designates the type itself, the last three parameters repeat the next to last three.
 
 Now we define a binding construct~--- abstraction:
 
@@ -155,7 +157,9 @@ implemented in a similar manner:
   class ['lam, 'nameless] abs_to_nameless
     (flam : string list -> 'lam -> 'nameless) =
   object
-    inherit [string list, string, int, string list, 'lam, 'nameless] $\inbr{abs}$
+    inherit [string list, string, int,
+             string list, 'lam, 'nameless,
+             string list, 'lam, 'nameless] $\inbr{abs}$
     method $\inbr{Abs}$ env name term = `Abs (flam (name :: env) term)
   end
 \end{lstlisting}
@@ -169,7 +173,7 @@ We can now combine two type definitions to build a type for terms with binders:
    @type ('name, 'lam) term = [ ('name, 'lam) lam | ('name, 'lam) abs) ] with show
 \end{lstlisting}
 
-We can also provide to new types for named and nameless representation\footnote{We need to enable \cd{-rectypes} mode for these definitions to compile.}:
+We can also provide two new types for named and nameless representation\footnote{We need to enable \cd{-rectypes} mode for these definitions to compile.}:
 
 \begin{lstlisting}
    @type named    = (string, named) term with show
@@ -182,7 +186,7 @@ Finally, we build a transformation for converting a named to a nameless represen
    class to_nameless
      (fself : string list -> named -> nameless) =
    object
-     inherit $\inbr{named}$
+     inherit [string list, named, nameless] $\inbr{named}$
      inherit [named, nameless] lam_to_nameless fself
      inherit [named, nameless] abs_to_nameless fself
    end
@@ -192,11 +196,11 @@ This transformation is constructed by inheriting all relevant counterparts: a co
 two concrete transformations for its counterparts. The transformation function can be build in a standard way:
 
 \begin{lstlisting}
-   let to_nameless named =
-     transform(named) (fun fself -> new to_nameless fself) [] named
+   let to_nameless term =
+     transform(named) (fun fself -> new to_nameless fself) [] term
 \end{lstlisting}
 
-Thus, we constructed a sulution for the types from the solutions for its counterparts. This partial solutions can be separately compiled, and the whole
+Thus, we constructed a solution for a type from the solutions for its counterparts. This partial solutions can be separately compiled, and the whole
 system remains strongly statically typed.
 
 \subsection{A Custom Plugin}
