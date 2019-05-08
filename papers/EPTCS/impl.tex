@@ -104,10 +104,11 @@ inherited values of different types and return synthesized values of different t
 type it receives $3(n+1)$ type parameters:
 
 \begin{itemize}
-\item a triplet $\alpha_i$, $\iota_i$, $\sigma_i$ for each type parameter $\alpha_i$, where $\iota_i$ and $\sigma_i$ are type variables for inherited and
+\item a triplet $\iota_i$, $\alpha_i$, $\sigma_i$ for each type parameter $\alpha_i$, where $\iota_i$ and $\sigma_i$ are type variables for inherited and
   synthesized attributes for the transformation of $\alpha_i$;
 \item a pair of type variables $\iota$ and $\sigma$ for inherited and synthesized attributes for the type itself;
-\item an extra type variable $\epsilon$, which is needed for the support of polymorphic variants (see Section~\ref{pv}).
+\item an extra type variable $\epsilon$, which is inferred to ``\lstinline|$\{\alpha_i\}$ t|'' for non-polymorphic variant types and to
+  an \emph{open} version ``\lstinline|[> $\{\alpha_I\}$ t]|'' for polymorphic variants (see Section~\ref{pv}).
 \end{itemize}
 
 For example, if we have a two-parametric type \lstinline{($\alpha$, $\beta$) t} the head of common ancestor class definition will look like
@@ -121,7 +122,7 @@ specific types. Additionally, concrete classes receive a number of functional ar
 
 \begin{itemize}
 \item $n$ argument-transforming functions: \lstinline|f$_{\alpha_i}$ : $\iota_i$ -> $\alpha_i$ -> $\sigma_i$|;
-\item a function to implement open recursion: \lstinline|fself : $\iota$ -> $\left\{\alpha_i\right\}$ t ->  $\sigma$|.
+\item a function to implement open recursion: \lstinline|fself : $\iota$ -> $\epsilon$ ->  $\sigma$|.
 \end{itemize}
 
 For example, for the same type as above and a transformation ``\lstinline{show}'' the header of concrete class looks like
@@ -130,7 +131,7 @@ For example, for the same type as above and a transformation ``\lstinline{show}'
   class [$\alpha$, $\beta$, $\epsilon$] $\inbr{show_t}$ 
     (f$_\alpha$ : unit -> $\alpha$ -> string)
     (f$_\beta$ : unit -> $\beta$ -> string)
-    (fself : unit -> ($\alpha$, $\beta$) t -> string) =
+    (fself : unit -> $\epsilon$ -> string) =
   object inherit [unit, $\alpha$, string, unit, $\beta$, string, unit, $\epsilon$, string] $\inbr{t}$
     $\dots$
   end 
@@ -146,11 +147,11 @@ In the majority of use cases the transformation is implemented either by customi
 type parameters are already instantiated (for example, for ``\lstinline{show}'' the majority of type parameters are instantiated to ground types), in the
 second the plugin system takes care of instantiating the parameters correctly (see Section~\ref{plugins}).
 
-We also need to describe the types for the methods of common ancestor classes. For a type \lstinline|$\left\{\alpha_i\right\}$ t| the method for a
+We also need to describe the types for the methods of common ancestor classes. The method for a
 constructor ``\lstinline|C of a$_1$ * a$_2$ * ... * a$_k$|'' has the following definition:
 
 \begin{lstlisting}
-   method virtual $\inbr{C}$ : $\iota$ -> $\left\{\alpha_i\right\}$ t -> a$_1$ -> a$_2$ -> ... -> a$_k$ -> $\sigma$
+   method virtual $\inbr{C}$ : $\iota$ -> $\epsilon$ -> a$_1$ -> a$_2$ -> ... -> a$_k$ -> $\sigma$
 \end{lstlisting}
 
 Note, the method takes not only inherited attribute and the arguments of corresponding constructor, but the value under transformation itself.
@@ -419,24 +420,20 @@ data types is that it is possible to \emph{extend} previously declared polymorph
 Our goal is to provide a \emph{seamless} integration of generic features: when a few types are being combined we would want to acquire all generic
 features for the result type by inheriting the same features from the constituent types.
 
-
-Let's recall the type of method for constructor ``\lstinline|`C of a$_1$ * a$_2$ * ... * a$_k$|'':
-\begin{lstlisting}
-   method virtual $\inbr{C}$ : $\iota$ -> $\left\{\alpha_i\right\}$ t -> a$_1$ -> a$_2$ -> ... -> a$_k$ -> $\sigma$
-\end{lstlisting}
-
-The second argument is the subject value being transformed that was passed  by generic catamorphism. For polymorphic values we pass here 
-an \emph{open} version of the type, i.e. it consists of the constructors from type ``\lstinline|$\left\{\alpha_i\right\}$ t|'', and maybe some others. So all methods has in the second argument the same value of the same type.
+As we said previously, an extra type parameter ``$\epsilon$'' is inferred to an open version of the polymorphic variant type. Thus, the same generic transformation
+function can be used to tranform a value using a transformation object for a \emph{wider} type\footnote{We refrain from calling this type a ``subtype'' since there is
+no subtyping in \textsc{OCaml}.}. This is achieved by a specific form of generic transformation function, which performs an ``opening'':
 
 \begin{lstlisting}
-   method virtual $\inbr{C}$ : $\iota$ -> ([> $\left\{\alpha_i\right\}$ t ] as $\epsilon$) -> a$_1$ -> a$_2$ -> ... -> a$_k$ -> $\sigma$
+   let $\inbr{gcata_t}$ $\omega$ $\iota$ subj =
+     match subj with
+     $\dots$
+     | C $\dots$ -> $\omega$#$\inbr{C}$ $\iota$ (match subj with #t as subj -> subj) $\dots$
+     $\dots$
 \end{lstlisting}
 
-The class becomes polymorphic over this open type using type variable $\epsilon$ mentioned above.
+This results in applying the methods of transformation object to an opened version of the type, while the transformation function itself still operates only
+of the closed version.
 
-The approach described may look too complicated for the first sight because we could generate coercions in the body of generic catamorphism. Indeed, it is for some transformations, for example, for ``\lstinline|show|'' trait. But it helps significantly while implementing of plugins that resemble a functor: ``\lstinline|gmap|'', ``\lstinline|stateful|'' and ``\lstinline|eval|'' (the former is implemented as super class of other ones). 
-
-Also, for these plugins the main synthesized value was decorated with openness. This allows, for example, to use ``\lstinline|show|'' transformation (generated from type ``\lstinline|term|'') directly on values generated by ``\lstinline|gmap|'' transformation (generated from type ``\lstinline|lam|') without manual coercion. We don't know how to support this relying only on type inferred by compiler. In other words, we believe that, the libraries which heavily  relies on type inference from compiler (like \textsc{Visitors}), wouldn't 
-implement as convenient type signatures as we do.
-
-
+When a few polymoprhic variant types are combined, the transformation function simply matches a value against type patterns and despatches the
+transformation to the transformation functions of a corresponding constituent type.
