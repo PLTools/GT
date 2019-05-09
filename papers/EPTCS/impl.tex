@@ -14,7 +14,7 @@ a plugin system. The syntax extensions process type definitions, attributed by a
 We support the majority of variants in the right-hand side of type definitions with the following limitations:
 
 \begin{itemize}
-\item only regular algebraic data types are supported; GADTs are treated as simple algebraic datatypes;
+\item only regular algebraic data types are supported; GADTs are treated as simple algebraic data types;
 \item constraints are not taken into account;
 \item ``\lstinline{nonrec}'' definitions, object and module types are not supported;
 \item extensible datatypes (``\lstinline{...}''/``\lstinline{+=}'') are not supported.
@@ -67,7 +67,7 @@ For example, for a type ``\lstinline{t}'' with requested plugin ``\lstinline{sho
    }
 \end{lstlisting}
 
-Using the typeinfo structure ``\lstinline{t}'' we can mimick the type-indexed nature of concrete transformations:
+Using the typeinfo structure ``\lstinline{t}'' we can mimic the type-indexed nature of concrete transformations:
 
 \begin{lstlisting}
    let transform typeinfo = typeinfo.gcata
@@ -88,11 +88,11 @@ In short, we consider only the transformations of the following type
 \iota \to t \to \sigma
 \]
 
-where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesized} attributes. We do not use attribute
-grammars as a mean to describe the algorithmic part of transformations; we only utilize their terminology to describe the types. 
+where $t$ is the type of a value to transform, $\iota$ and $\sigma$~--- types for \emph{inherited} and \emph{synthesised} attributes. We do not use attribute
+grammars as a mean to describe the algorithmic part of transformations; we only utilise their terminology to describe the types. 
 
-When the type under consideration is parameterized, the transformation becomes parameterized as well. From now on we will use a convention to
-denote $\left\{...\right\}$ multiple ocurrences of a an entity inside the brackets. Under this convention we may stipulate the generic form of
+When the type under consideration is parameterised, the transformation becomes parameterised as well. From now on we will use a convention to
+denote $\left\{...\right\}$ multiple occurrences of a an entity inside the brackets. Under this convention we may stipulate the generic form of
 any transformation, representable with the aid of our library, as
 
 \[
@@ -100,13 +100,13 @@ any transformation, representable with the aid of our library, as
 \]
 
 Here $\iota_i\to\alpha_i\to\sigma_i$ is an argument-transforming function for the type parameter $\alpha_i$. In general the argument-transforming functions operate on
-inherited values of different types and return synthesized values of different types. The common ancestor class in turn is massively polymorphic: for an $n$-parametric
+inherited values of different types and return synthesised values of different types. The common ancestor class in turn is massively polymorphic: for an $n$-parametric
 type it receives $3(n+1)$ type parameters:
 
 \begin{itemize}
 \item a triplet $\iota_i$, $\alpha_i$, $\sigma_i$ for each type parameter $\alpha_i$, where $\iota_i$ and $\sigma_i$ are type variables for inherited and
-  synthesized attributes for the transformation of $\alpha_i$;
-\item a pair of type variables $\iota$ and $\sigma$ for inherited and synthesized attributes for the type itself;
+  synthesised attributes for the transformation of $\alpha_i$;
+\item a pair of type variables $\iota$ and $\sigma$ for inherited and synthesised attributes for the type itself;
 \item an extra type variable $\epsilon$, which is inferred to ``\lstinline|$\{\alpha_i\}$ t|'' for non-polymorphic variant types and to
   an \emph{open} version ``\lstinline|[> $\{\alpha_I\}$ t]|'' for polymorphic variants (see Section~\ref{pv}).
 \end{itemize}
@@ -141,9 +141,9 @@ Note, we maintain these conventions for all types although for some of them some
 is needed only for recursive types. The explanation for this decision is simple: when we \emph{use} a type we generally do not know its
 definition. Thus, in order to support separate compilation the interfaces of all entities we generate must have identical structure.
 
-This scheme of typing and parameterization looks quite verbose and cumbersome: there are a lot of type parameters which are quite easy to get a mess with. However, end
+This scheme of typing and pasteurisation looks quite verbose and cumbersome: there are a lot of type parameters which are quite easy to get a mess with. However, end
 users would need to deal with this stuff directly only when they desire to implement a transformation \emph{manually} from scratch by immediately inheriting from the common ancestor class.
-In the majority of use cases the transformation is implemented either by customizing a certain plugin or using the plugin system. In the first case many
+In the majority of use cases the transformation is implemented either by customising a certain plugin or using the plugin system. In the first case many
 type parameters are already instantiated (for example, for ``\lstinline{show}'' the majority of type parameters are instantiated to ground types), in the
 second the plugin system takes care of instantiating the parameters correctly (see Section~\ref{plugins}).
 
@@ -164,8 +164,8 @@ For a non-polymorphic variant type ``\lstinline|$\{\alpha_i\}$ t|'' the transfor
    val $\inbr{gcata_t}$ : [$\{\iota_{\alpha_i}$, $\alpha_i$, $\sigma_{\alpha_i}\}$, $\iota$, $\{\alpha_i\}$ t, $\sigma$]#$\inbr{t}$ -> $\iota$ -> $\{\alpha_i\}$ t -> $\sigma$
 \end{lstlisting}
 
-Thus, it takes a transformation object (which has a type of properly parameterized \emph{subclass} of the common ancestor class), an inherited
-attribute, a value to transform, and returns synthesized attribute. The extra type parameter ``$\epsilon$'' is instantiated to the
+Thus, it takes a transformation object (which has a type of properly parameterised \emph{subclass} of the common ancestor class), an inherited
+attribute, a value to transform, and returns synthesised attribute. The extra type parameter ``$\epsilon$'' is instantiated to the
 type itself. For a polymorphic variant type the extra type parameter is instantiated to the \emph{open} version of the
 type (``\lstinline{[> $\{\alpha_i\}$ t]}''). This enables the possibility to apply a transformation function for a type to a transformation object for
 another type with more constructors.
@@ -175,21 +175,21 @@ another type with more constructors.
 \label{memofix}
 
 In our approach we use open recursion: a class for a concrete transformation takes a function for the same transformation as a parameter. In order
-to instantiate this function we have to use a fixpoint combinator. In this section we consider only a simple fixpoint combinator for an isolated
+to instantiate this function we have to use a fix point combinator. In this section we consider only a simple fix point combinator for an isolated
 type definition; in mutually-recursive case a more elaborated combinator is needed (see Section~\ref{murec}).
 
 We repeat here an example from Section~\ref{expo}:
 
 \begin{lstlisting}
-   let $\inbr{pretty_{expr}}$ e =
+   let $\inbr{pretty_{ex pr}}$ e =
      fix (fun fself p e -> $\inbr{gcata_{expr}}$ (new $\inbr{pretty_{expr}}$ fself) p e) min_int e
 \end{lstlisting}
 
 As the lambda argument of ``\lstinline{fix}'' is called each time when ``\lstinline{fself}'' is called (virtually, for each node of
-an expression), a new transformation object is created for each node. As all these objects are identical, this can be optimized. 
+an expression), a new transformation object is created for each node. As all these objects are identical, this can be optimised. 
 
-We memoize the creation of transformation objects using lazy evaluation. For this we abstract the object creation subexpression into a
-function which takes ``\lstinline{fself}'' as an argument. Then the implementation of the fixpoint combinator is as follows:
+We memoize the creation of transformation objects using lazy evaluation. For this we abstract the object creation sub expression into a
+function which takes ``\lstinline{fself}'' as an argument. Then the implementation of the fix point combinator is as follows:
 
 \begin{lstlisting}
    let fix gcata make_obj $\iota$ x =
@@ -204,7 +204,7 @@ This combinator can be used for all types and is not generated. Now we can fix a
    let transform typeinfo = fix typeinfo.gcata
 \end{lstlisting}
 
-With this definition an end used does not need to deal with the fixpoint combinator explicitly anymore:
+With this definition an end used does not need to deal with the fix point combinator explicitly anymore:
 
 \begin{lstlisting}
    let $\inbr{show_{expr}}$ e =
@@ -235,9 +235,9 @@ With this definition an end used does not need to deal with the fixpoint combina
   \label{listofplugins}
 \end{figure}
 
-The default behavior of our framework is to generate the transformation function, the common ancestor class and the typeinfo structure only. It does not
+The default behaviour of our framework is to generate the transformation function, the common ancestor class and the typeinfo structure only. It does not
 generate any concrete built-in transformations. All concrete transformations are generated by \emph{plugins}, and the plugin system allows end users to
-implement their own. There is a number of predefined plugins (see Figure~\ref{listofplugins}), but none of them recieves a special treatment from the
+implement their own. There is a number of predefined plugins (see Figure~\ref{listofplugins}), but none of them receives a special treatment from the
 rest of the framework.
 
 Each plugin is implemented as a dynamically-loaded object, and to create a plugin an end user has to properly instantiate a compilation unit using an interface
@@ -247,14 +247,14 @@ a plugin only instantiates a class, and only a limited assistance from an end-us
 provided:
 
 \begin{itemize}
-\item what are the types of inherited and synthesized attributes for a given type parameter?
-\item what are the types of inherited and synthesized attributes for the type itself?
-\item what is the body of the method which transforms given constructor (the arguments of the method and their types are specified by the framework)?
-\item what the toplevel method of the typeinfo structure for the plugin is look like?
+\item What are the types of inherited and synthesised attributes for a given type parameter?
+\item What are the types of inherited and synthesised attributes for the type itself?
+\item What is the body of the method which transforms given constructor (the arguments of the method and their types are specified by the framework)?
+\item What the toplevel method of the typeinfo structure for the plugin is look like?
 \end{itemize}
 
 So, there are only a limited number of places where a plugin actually needs to generate a code, and as a rule the generated code is very simple. The
-codegeneration interface the plugin system provides resembles that of \cd{ppxlib} (more precise, \cd{Ast_builder}), which has to be familiar to anyone,
+code generation interface the plugin system provides resembles that of \cd{ppxlib} (more precise, \cd{Ast_builder}), which has to be familiar to anyone,
 who has ever implemented syntax extensions. In the Section~\ref{pluginExample} we present a complete example of fresh plugin implementation.
 
 \subsection{Mutual Recursion}
@@ -284,7 +284,7 @@ methods and do not depend on recursion in type definitions:
 
 The same is true for the common ancestor classes. However, when we start implementing concrete transformations, we would need to use a transformation
 for ``\lstinline{expr}'' inside the class for ``\lstinline{def}'', and vice versa. This can be done with mutually recursive class definitions (we, again,
-omit the nonrelevant parts):
+omit the non relevant parts):
 
 \begin{lstlisting}
    class $\inbr{show_{expr}}$ fself =
@@ -300,10 +300,10 @@ omit the nonrelevant parts):
    end
 \end{lstlisting}
 
-Note, in both ``\lstinline{fix}'' subexpressions we instantiated \emph{concrete} classes (``$\inbr{show_{def}}$'' and ``$\inbr{show_{expr}}$''). This should
+Note, in both ``\lstinline{fix}'' sub expressions we instantiated \emph{concrete} classes (``$\inbr{show_{def}}$'' and ``$\inbr{show_{expr}}$''). This should
 work as expected at the first glance. Strictly speaking, this \emph{concrete} transformation works. But, what happens when we decide to redefine the behaviour of
 this default ``$\inbr{show_{expr}}$''? According to our general approach, we would need to inherit from ``$\inbr{show_{expr}}$'', override certain methods and
-construct a function using fixpoint:
+construct a function using fix point:
 
 \begin{lstlisting}
    class custom_show fself =
@@ -315,14 +315,14 @@ construct a function using fixpoint:
 \end{lstlisting}
 
 Alas, this won't work as we desire: we did not override the method ``$\inbr{LocalDef}$'', and it still uses the default version for the type ``\lstinline{def}'', which
-still uses the default version for the type ``\lstinline{expr}''. Thus, we only redefined the bahaviour of default ``$\inbr{show_{expr}}$'' for one component of
+still uses the default version for the type ``\lstinline{expr}''. Thus, we only redefined the behaviour of default ``$\inbr{show_{expr}}$'' for one component of
 mutually recursive type definition~--- the type ``\lstinline{expr}'' as such. All occurrences of ``\lstinline{expr}'' inside other types will still be handled by
-the default transformation. In order to make things work as we want we would need to repeat the \emph{whole} mutually-recusive class definition, which invalidates the
+the default transformation. In order to make things work as we want we would need to repeat the \emph{whole} mutually-recursive class definition, which invalidates the
 very idea of extensibility. 
 
-Our solution for the problem, again, utilizes the idea of open recursion. In short, we parameterize the concrete transformation classes with the same transformations
-for \emph{all} components of mutually recursive definition. Since this parameterization violates the conventions on class interfaces we first generate auxilliary classes.
-For our example this auxilliary classes look as follows:
+Our solution for the problem, again, utilises the idea of open recursion. In short, we parameterise the concrete transformation classes with the same transformations
+for \emph{all} components of mutually recursive definition. Since this parameterisation violates the conventions on class interfaces we first generate auxiliary classes.
+For our example this auxiliary classes look as follows:
 
 \begin{lstlisting}
    class $\inbr{show\_stub_{expr}}$ $f_{expr}$ $f_{def}$ =
@@ -337,7 +337,7 @@ For our example this auxilliary classes look as follows:
    end
 \end{lstlisting}
 
-Note the absence of mutually recursive class definitions. Then, we generate a fixpoint operator for each mutually recursive defnition:
+Note the absence of mutually recursive class definitions. Then, we generate a fix point operator for each mutually recursive definition:
 
 \begin{lstlisting}
    let $\inbr{fix_{expr, def}}$ ($c_{expr}$, $c_{def}$) =
@@ -347,16 +347,16 @@ Note the absence of mutually recursive class definitions. Then, we generate a fi
 \end{lstlisting}
 
 Here $c_{expr}$ and $c_{def}$ are object generators which take the transformation functions for all components of mutually recursive definition
-as parameters. Note, the same fixpoint generator can be used to construct any concrete transformation for given mutually recursive definition.
+as parameters. Note, the same fix point generator can be used to construct any concrete transformation for given mutually recursive definition.
 
-With auxilliary classes and the fixpoint operator we can construct the default implementations for any concrete transformation:
+With auxiliary classes and the fix point operator we can construct the default implementations for any concrete transformation:
 
 \begin{lstlisting}
    let $\inbr{show_{expr}}$, $\inbr{show_{def}}$ =
      $\inbr{fix_{expr,def}}$ (new $\inbr{show\_stub_{expr}}$, new $\inbr{show\_stub_{def}}$) 
 \end{lstlisting}
 
-These default imlementations, first, are distributed among the typeinfo structures for relevant types and, second, are used to define conventional
+These default implementations, first, are distributed among the typeinfo structures for relevant types and, second, are used to define conventional
 transformation classes:
 
 \begin{lstlisting}
@@ -370,8 +370,8 @@ transformation classes:
 Thus, we again made mutually recursive types indistinguishable from the simple ones (in terms of class interfaces), making it possible to
 uniformly generate all transformations with separate compilation support.
 
-On the other hand, in order to extend an existing transformation one needs to inherit from \emph{auxilliary} classes and use the custom fixpoint operator.
-For our previously unsucessful case the implementation is almost as simple as for the single type definition:
+On the other hand, in order to extend an existing transformation one needs to inherit from \emph{auxiliary} classes and use the custom fix point operator.
+For our previously unsuccessful case the implementation is almost as simple as for the single type definition:
 
 \begin{lstlisting}
    let custom_show, _ =
@@ -382,9 +382,9 @@ For our previously unsucessful case the implementation is almost as simple as fo
                     new $\inbr{show\_stub_{def}}$) 
 \end{lstlisting}
 
-In the actual implementation we generate a memoizing fixpoint combinator, which follows the same pattern we've described in Section~\ref{memofix}. In addition,
-we put the fixpoint combinator into the typeinfo structure, so, for a type ``\lstinline{t}'' the fixpoint combinator can be addressed as
-``\lstinline{fix(t)}''. End users, however, still need to know the structure of mutually-recursive type definitions in order to use the fixpoint
+In the actual implementation we generate a memoizing fix point combinator, which follows the same pattern we've described in Section~\ref{memofix}. In addition,
+we put the fix point combinator into the typeinfo structure, so, for a type ``\lstinline{t}'' the fix point combinator can be addressed as
+``\lstinline{fix(t)}''. End users, however, still need to know the structure of mutually-recursive type definitions in order to use the fix point
 combinator properly.
 
 There is one subtlety with our support for mutual recursion: we rely on the property, that adding one function per type is enough to implement open recursion.
@@ -395,9 +395,9 @@ However, generally speaking, this is not true: take, for example, the following 
    and  $\alpha$ b = X of ($\alpha$, $\alpha$) a
 \end{lstlisting}
 
-In the parameters of constructor ``\lstinline{A}'' we have here \emph{different} parameterizations of type ``\lstinline{b}'' and, thus, we would need
+In the parameters of constructor ``\lstinline{A}'' we have here \emph{different} parameterisations of type ``\lstinline{b}'' and, thus, we would need
 \emph{two} functions~--- for ``\lstinline{$\alpha$ b}'' and for ``\lstinline{$\beta$ b}''. However, the type ``\lstinline{a}'' is not regular~--- starting with 
-the parameterization ``\lstinline{($\alpha$, $\beta$) a}'' we can end up with ``\lstinline{($\alpha$, $\alpha$) a}'' and ``\lstinline{($\beta$, $\beta$) a}''.
+the parameterisation ``\lstinline{($\alpha$, $\beta$) a}'' we can end up with ``\lstinline{($\alpha$, $\alpha$) a}'' and ``\lstinline{($\beta$, $\beta$) a}''.
 Thus, we have already ruled such definitions out. In this reasoning we assume that mutually recursive definitions are \emph{essential} in the sense that they
 can not be split into separate type declarations (i.e. that every pair of types are mutually ``reachable''). If we replace the second definition in the
 example above with, say,
@@ -421,7 +421,7 @@ Our goal is to provide a \emph{seamless} integration of generic features: when a
 features for the result type by inheriting the same features from the constituent types.
 
 As we said previously, an extra type parameter ``$\epsilon$'' is inferred to an open version of the polymorphic variant type. Thus, the same generic transformation
-function can be used to tranform a value using a transformation object for a \emph{wider} type\footnote{We refrain from calling this type a ``subtype'' since there is
+function can be used to transform a value using a transformation object for a \emph{wider} type\footnote{We refrain from calling this type a ``subtype'' since there is
 no subtyping in \textsc{OCaml}.}. This is achieved by a specific form of generic transformation function, which performs an ``opening'':
 
 \begin{lstlisting}
@@ -435,5 +435,5 @@ no subtyping in \textsc{OCaml}.}. This is achieved by a specific form of generic
 This results in applying the methods of transformation object to an opened version of the type, while the transformation function itself still operates only
 of the closed version.
 
-When a few polymoprhic variant types are combined, the transformation function simply matches a value against type patterns and despatches the
+When a few polymorphic variant types are combined, the transformation function simply matches a value against type patterns and dispatches the
 transformation to the transformation functions of a corresponding constituent type.
