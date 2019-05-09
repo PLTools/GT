@@ -7,9 +7,9 @@ all examples from that paper can be implemented using the new version. Here we s
 \subsection{Typed Logic Values}
 
 The first example arose in the context of our work on strongly typed logical DSL for \textsc{OCaml}~\cite{OCanren}. One of the
-most important construct there was a unification of terms with free logical variables, and dealing with such data strutures
+most important construct there was a unification of terms with free logical variables, and dealing with such data structures
 involves a lot of tedious and error-prone work. The typical scenario of interaction between a logical and non-logical worlds
-is constructing a \emph{gold} containing a data structure with free logical variables and solving it. The solution
+is constructing a \emph{goal} containing a data structure with free logical variables and solving it. The solution
 provides bindings for these variables, which, in optimistic scenario, do not contain free variables anymore. To construct
 a goal one would need a systematic way to introduce logic variables in some typed data structure, and to recover answers~---
 a systematic way to return to a plan, non-logical representation.
@@ -75,9 +75,9 @@ fresh type parameters:
 
 Here we abstract the type of everything, but we could equally abstract it only of itself. Note, we make use of two
 generic features~--- ``\lstinline{show}'' and ``\lstinline{gmap}''. The first one is needed for debugging purposes, while
-the second is essential for our soultion.
+the second is essential for our solution.
 
-Now we can define the logical and non-logical counterparts as customized versions of the abstracted type:
+Now we can define the logical and non-logical counterparts as customised versions of the abstracted type:
 
 \begin{lstlisting}
    @type expr  = (string, int, expr) a_expr with show, gmap
@@ -117,7 +117,7 @@ First, we define the non-binding part of the terms:
 \end{lstlisting}
 
 Separating this type looks a natural idea since potentially there can be many binding constructs (lambdas, lets, etc.) and by combining them
-with the non-binding part (and with themselves) one can acquire a variety of languages with a coherent beavior.
+with the non-binding part (and with themselves) one can acquire a variety of languages with a coherent behaviour.
 
 The type ``\lstinline{lam}'' is polymorphic: the first parameters is used to represent names or de Bruijn indices, the second one is needed
 for open recursion (we here follow the known technique for describing extensible data structures with polymorphic variants~\cite{PolyVarReuse}).
@@ -139,7 +139,7 @@ below:
 
 First, we use a list of strings as an environment, and we pass it as an inherited attribute. Then, we use a function ``\lstinline{index}'' to find a
 position of a string in the environment (thus, it translates names to the de Bruijn indices). The interesting part is the typing of the common ancestor
-class ``$\inbr{lam}$''. The first thiple of its parameters describes the transformation for the first type parameter of the type. As we can see, we
+class ``$\inbr{lam}$''. The first triple of its parameters describes the transformation for the first type parameter of the type. As we can see, we
 transform strings into integers, using an environment. Next, the type variable ``\lstinline{'lam}'', as we know, will be set to the open version of the ``\lstinline{lam}''.
 Finally, the result of the transformation is typed as ``\lstinline{'nameless}''. This is because the result will be, indeed, a different type, as we
 will see soon. As the type parameter ``\lstinline{'lam}'' designates the type itself, the last three parameters repeat the next to last three.
@@ -206,7 +206,7 @@ system remains strongly statically typed.
 \subsection{A Custom Plugin}
 \label{pluginExample}
 
-Finally we demonstrate the utilization of the plugin system using the example of a fresh custom plugin implementation. For this purpose we
+Finally we demonstrate the utilisation of the plugin system using the example of a fresh custom plugin implementation. For this purpose we
 take a well-known \emph{hash-consing} transformation~\cite{HC}. This transformation converts a data structure to its maximally shared
 representation, when structurally equal substructures are represented by the same physical object. For example, an expression tree
 
@@ -228,7 +228,7 @@ can be rewritten into
      Binop ("+", Binop ("-", b, ba), ba)  
 \end{lstlisting}
 
-where equal subexpressions are represented by shared subtrees.
+where equal sub expressions are represented by shared sub trees.
 
 Our plugin for a type ``\lstinline|$\left\{\alpha_i\right\}$ t|'' will provide a hash-consing function ``\lstinline{hc(t)}'' of the type
 
@@ -236,7 +236,7 @@ Our plugin for a type ``\lstinline|$\left\{\alpha_i\right\}$ t|'' will provide a
     $\{$ H.t -> $\alpha_i$ -> H.t * $\alpha_i$ $\}$ -> H.t -> $\left\{\alpha_i\right\}$ t -> H.t * $\left\{\alpha_i\right\}$ t
 \end{lstlisting}
 
-where ``\lstinline{H.t}''~--- a heterogenious hash table for values of arbitrary types. The interface for the hash table is
+where ``\lstinline{H.t}''~--- a heterogeneous hash table for values of arbitrary types. The interface for the hash table is
 as follows:
 
 \begin{lstlisting}
@@ -265,10 +265,10 @@ need in this case, hence underscore), and three arguments of the constructor: ``
 hash table and three hash-consed values of the same types), then we apply the constructor and hash-cons the value again. To hash-cons
 the arguments of the constructor we can use the functions provided by the framework~--- for the type \lstinline{string} it is
 ``\lstinline{hc(string)}''\footnote{Generally speaking, we would need to implement a hash-consing function for each primitive type; in
-  our case, however, we could equally use ``\lstinline{H.hc}''.}, and for both subexpressions it is ``\lstinline{fself}''.
+  our case, however, we could equally use ``\lstinline{H.hc}''.}, and for both sub expressions it is ``\lstinline{fself}''.
 
 As a final component we need to decide on the type parameters for a plugin class for a type ``\lstinline|$\{\alpha_i\}$ t|''. Clearly,
-all inherited attribute types has to be ``\lstinline{H.t}'', and synthesized attribute types has to be ``\lstinline{H.t * $a$}'' for the
+all inherited attribute types has to be ``\lstinline{H.t}'', and synthesised attribute types has to be ``\lstinline{H.t * $a$}'' for the
 type of interest ``$a$''. This gives us the following plugin class definition:
 
 \begin{lstlisting}
@@ -308,7 +308,7 @@ The infrastructure code for the plugin implementation is shown below:
      Expander.register_plugin trait_name (module Make : Plugin_intf.Plugin)
 \end{lstlisting}
 
-To implement a plugin, one needs to implement a functor parameterized by a helper module, which resembles ``\cd{Ast_builder}'' from
+To implement a plugin, one needs to implement a functor parameterised by a helper module, which resembles ``\cd{Ast_builder}'' from
 \cd{ppxlib} to create \textsc{OCaml} syntax trees. We need to use a functor since we have to provide two implementations for
 a plugin~--- for \cd{camlp5} syntax extension as well as for \cd{ppxlib} itself. The main entity in the body of the functor is
 a class ``\lstinline{g}'' declaration (``generator''), which for simplicity can be inherited from one of generic classes 
@@ -318,7 +318,7 @@ making use of inherited attribute. The class takes a type declaration as a param
 first-class module in the framework to make it accessible.
 
 Now we show what the methods of the generator class look like. First, we need to specify what are the types of inherited and
-synthesized attributes for the plugin:
+synthesised attributes for the plugin:
 
 \begin{lstlisting}
    method main_inh ~loc _tdecl = ht_typ ~loc
@@ -346,10 +346,10 @@ where we assume ``\lstinline{ht_typ}'' is defined as
      Typ.of_longident ~loc (Ldot (Lident "H", "t"))
 \end{lstlisting}
 
-In other words, we say here that the type of inherited attribute is always ``\lstinline{H.t}'' and the type of a synthesized attribute for
+In other words, we say here that the type of inherited attribute is always ``\lstinline{H.t}'' and the type of a synthesised attribute for
 a type of interest ``\lstinline{t}'' is ``\lstinline{H.t * t}''.
 
-The next group of methods specifies the behavior of plugin class type parameters:
+The next group of methods specifies the behaviour of plugin class type parameters:
 
 \begin{lstlisting}
    method plugin_class_params tdecl =
@@ -374,7 +374,7 @@ the type declaration looks like
 \end{lstlisting}
 
 we need to acquire the implementation of the plugin for ``\lstinline{t}'' from the implementation of the same plugin for ``\lstinline{tc}'', inheriting
-from properly instantiated corresponding class. As for our plugin the class is parameterized by the same types as the type, we just keep the parameters.
+from properly instantiated corresponding class. As for our plugin the class is parameterised by the same types as the type, we just keep the parameters.
 
 The last group of methods generate the bodies of constructor transformation. As we support regular constructors with both tuple and record
 argument specifications as well as top-level tuples and records, there are four methods, which as a rule share many details of implementation. We show the
@@ -417,7 +417,7 @@ for the hash function we use polymorphic ``\lstinline{Hashtbl.hash}'' and for th
 subtleties:
 
 \begin{itemize}
-\item Since our hash table is heterogenious, we have to utilize unsafe coercion ``\lstinline{Obj.magic}''.
+\item Since our hash table is heterogeneous, we have to utilise unsafe coercion ``\lstinline{Obj.magic}''.
 \item Our implementation for equality has to be a little more complex than simple ``\lstinline{==}'': we need to compare the top-level constructors and
   the number of their arguments \emph{structurally}, and only then compare the corresponding arguments by physical equality. Technically this
   may result in hash-consing structurally equal values of \emph{different} types.
