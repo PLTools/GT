@@ -118,7 +118,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 end
 
 
-module type PluginRes =
+module type MAKE =
   functor (AstHelpers : GTHELPERS_sig.S) ->
   sig
     open AstHelpers

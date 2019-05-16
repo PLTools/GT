@@ -64,12 +64,6 @@ class g initial_args tdecls = object(self: 'self)
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
 
-  method trf_scheme ~loc =
-    Typ.(arrow ~loc (var ~loc "a") @@
-         arrow ~loc (var ~loc "a") (constr ~loc (Ldot (Lident "GT", "comparison")) []))
-  method trf_scheme_params = ["a"]
-  inherit P.index_result
-
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
@@ -190,6 +184,6 @@ let create =
 end
 
 let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()

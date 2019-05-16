@@ -16,7 +16,7 @@ let (@@) = Caml.(@@)
 type config_plugin = Skip | Use of Plugin_intf.plugin_args
 
 let registered_plugins
-  : (string * (module Plugin_intf.PluginRes))  list ref =
+  : (string * (module Plugin_intf.MAKE)) list ref =
   ref []
 
 let get_registered_plugins () = List.map ~f:fst !registered_plugins
@@ -898,7 +898,7 @@ let wrap_plugin name = function
   | Use args ->
     match List.Assoc.find !registered_plugins name ~equal:String.equal with
       | Some m ->
-        let module F = (val m : Plugin_intf.PluginRes) in
+        let module F = (val m : Plugin_intf.MAKE) in
         let module P = F(AstHelpers) in
         List.cons @@ P.create args
       | None -> failwithf "Plugin '%s' is not registered" name ()

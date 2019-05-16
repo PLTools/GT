@@ -576,9 +576,127 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
   end
   }
 
+(* Pairs and other stuff without explicit structure *)
+(*******************************************************************************)
+(** Arrow *)
+type ('a, 'b) arrow = 'a -> 'b
+
+let gcata_arrow tr inh arr = tr#c_Arrow inh arr
+
+class virtual ['ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, 'self, 'syn] arrow_t =
+  object
+    method virtual c_Arrow : 'inh -> ('a,'b) arrow -> 'syn
+  end
+
+class ['a, 'b, 'self] show_arrow_t fa fb _ =
+  object
+    inherit [unit, 'a, string, unit, 'b, string, unit, 'self, string] arrow_t
+    method c_Arrow () _ = Printf.sprintf "<function>"
+  end
+
+class ['a, 'b, 'self] fmt_arrow_t fa fb _ =
+  object
+    inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] arrow_t
+    constraint 'inh = Format.formatter
+    method c_Arrow fmt _ = Format.fprintf fmt "<function>"
+  end
+
+class ['a, 'b, 'self] html_arrow_t fa fb _ =
+  object
+    inherit [unit, 'a, 'syn, unit, 'b, 'syn, unit, 'self, 'syn] arrow_t
+    constraint 'syn = HTML.viewer
+    method c_Arrow () _ = HTML.string "<arrow>"
+  end
+
+class ['a, 'sa, 'b, 'sb, 'self] gmap_arrow_t (fa: unit -> 'a -> 'sa) fb _ =
+  object
+    inherit [unit, 'a, 'sa, unit, 'b, 'sb, unit, 'self, ('sa, 'sb) arrow] arrow_t
+    method c_Arrow () _ = failwith "gmap for arrows is not implemented"
+  end
+
+class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_arrow_t fa fb _ =
+  object
+    inherit ['env, 'a, 'sa, 'env, 'b, 'sb, 'env, 'self, ('sa, 'sb) arrow] arrow_t
+    method c_Arrow _ _ = failwith "eval for arrows is not implemented"
+  end
+
+class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_arrow_t fa fb _ =
+  object
+    inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * ('sa, 'sb) arrow] arrow_t
+    method c_Arrow _ _ = failwith "stateful for arrows is not implemented"
+  end
+
+class ['a, 'b, 'syn, 'self] foldl_arrow_t fa fb _ =
+  object
+    inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] arrow_t
+    method c_Arrow _ _ = failwith "foldl for arrows is not implemented"
+  end
+
+class ['a, 'b, 'syn, 'self] foldr_arrow_t fa fb _ =
+  object
+    inherit ['syn, 'a, 'syn, 'syn, 'b, 'syn, 'syn, 'self, 'syn] arrow_t
+    method c_Arrow _ _ = failwith "foldr for arrows is not implemented"
+  end
+
+class ['a, 'b, 'self] eq_arrow_t fa fb _ =
+  object
+    inherit ['a, 'a, bool, 'b, 'b, bool, ('a, 'b) arrow, 'self, bool] arrow_t
+    method c_Arrow _ _ = failwith "eq for arrows is not implemented"
+  end
+
+class ['a, 'b, 'self] compare_arrow_t fa fb _ =
+  object
+    inherit ['a, 'a, 'syn, 'b, 'b, 'syn, ('a, 'b) arrow, 'self, 'syn] arrow_t
+    constraint 'syn = comparison
+    method c_Arrow _ _ = failwith "compare for arrows is not implemented"
+  end
+
+let arrow:
+  ( ('ia, 'a, 'sa, 'ib, 'b, 'sb, 'inh, _, 'syn) #arrow_t -> 'inh -> ('a, 'b) arrow -> 'syn,
+              < show    : ('a -> string) -> ('b -> string) ->
+                          ('a, 'b) arrow -> string;
+                html    : ('a -> HTML.viewer) -> ('b -> HTML.viewer) ->
+                          ('a, 'b) arrow -> HTML.viewer;
+                gmap    : ('a -> 'c) -> ('b -> 'd) ->
+                          ('a, 'b) arrow -> ('c, 'd) arrow;
+
+                fmt     : (Format.formatter -> 'a -> unit) ->
+                          (Format.formatter -> 'b -> unit) ->
+                          Format.formatter -> ('a,'b) arrow -> unit;
+                stateful: ('env -> 'a -> 'env * 'c) ->
+                          ('env -> 'b -> 'env * 'd) ->
+                          'env -> ('a, 'b) arrow -> 'env * ('c, 'd) arrow;
+                eval    : ('env -> 'a -> 'c) -> ('env -> 'b -> 'd) ->
+                          'env -> ('a, 'b) arrow -> ('c, 'd) arrow;
+                foldl   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) arrow -> 'c;
+                foldr   : ('c -> 'a -> 'c) -> ('c -> 'b -> 'c) -> 'c -> ('a, 'b) arrow -> 'c;
+                eq      : ('a -> 'a -> bool) -> ('b -> 'b -> bool) ->
+                          ('a, 'b) arrow -> ('a, 'b) arrow -> bool;
+                compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) ->
+                          ('a, 'b) arrow -> ('a, 'b) arrow -> comparison;
+              >) t =
+  {gcata   = gcata_arrow;
+   plugins =
+     let tr  obj subj     = transform_gc gcata_arrow obj ()  subj in
+     let tr1 obj inh subj = transform_gc gcata_arrow obj inh subj in
+     object
+       method show     fa fb = tr  (new @arrow[show] (lift fa) (lift fb))
+       method html     fa fb = tr  (new @arrow[html] (lift fa) (lift fb))
+       method gmap     fa fb = tr  (new @arrow[gmap] (lift fa) (lift fb))
+
+       method fmt      fa fb = tr1 (new @arrow[fmt]  fa fb)
+       method eval     fa fb = tr1 (new @arrow[eval] fa fb)
+       method stateful fa fb = tr1 (new @arrow[stateful] fa fb)
+       method eq       fa fb = tr1 (new @arrow[eq]   fa fb)
+       method compare  fa fb = tr1 (new @arrow[compare] fa fb)
+       method foldl    fa fb = tr1 (new @arrow[foldl] fa fb)
+       method foldr    fa fb = tr1 (new @arrow[foldr] fa fb)
+  end
+ }
+
+(*******************************************************************************)
 (** Pair *)
 
-(* Pairs and other stuff without explicit structure *)
 type ('a, 'b) pair = 'a * 'b
 
 let gcata_pair tr inh p =

@@ -49,7 +49,7 @@ let hack_params ?(loc=noloc) ps =
   (param_names, rez_names, assoc, blownup_params)
 
 class g args tdecls = object(self: 'self)
-  inherit P.no_inherit_arg args tdecls
+  inherit P.no_inherit_arg args tdecls as super
 
   method trait_name = trait_name
 
@@ -98,12 +98,6 @@ class g args tdecls = object(self: 'self)
     ; Typ.var ~loc @@ Printf.sprintf "syn_%s" tdecl.ptype_name.txt
     ]
 
-  method trf_scheme ~loc =
-    Typ.(arrow ~loc (unit ~loc) @@
-         arrow ~loc (var ~loc "a") (var ~loc "b"))
-  method trf_scheme_params = ["a"; "b"]
-
-
   method hack ~loc (mangler: string -> string) param tdecl: Typ.t =
     let loc = loc_from_caml tdecl.ptype_loc in
     let on_abstract () =
@@ -147,18 +141,13 @@ class g args tdecls = object(self: 'self)
 
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    let wrap =
-      if is_polyvariant_tdecl tdecl
-      then Typ.openize ~loc
-      else (fun ?as_ x -> x)
-    in
-    [ Ctf.constraint_ ~loc
-        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-         map_type_param_names tdecl.ptype_params
-           ~f:(fun s -> Typ.var ~loc s)
-        )
-    ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+    (* let wrap =
+     *   if is_polyvariant_tdecl tdecl
+     *   then Typ.openize ~loc
+     *   else (fun ?as_ x -> x)
+     * in *)
+    (super#extra_class_sig_members tdecl) @
+    [ let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
       Ctf.constraint_ ~loc
         (Typ.var ~loc @@ syn)
         (self#hack ~loc param_name_mangler syn tdecl)
@@ -166,18 +155,8 @@ class g args tdecls = object(self: 'self)
 
   method! extra_class_str_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    let wrap =
-      if is_polyvariant_tdecl tdecl
-      then Typ.openize ~loc
-      else (fun ?as_ x -> x)
-    in
-    [ Cf.constraint_ ~loc
-        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-         map_type_param_names tdecl.ptype_params
-           ~f:(fun s -> Typ.var ~loc s)
-        )
-    ; let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
+    (super#extra_class_str_members tdecl) @
+    [ let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
       Cf.constraint_ ~loc
         (Typ.var ~loc @@ syn)
         (self#hack ~loc param_name_mangler syn tdecl)
@@ -235,6 +214,6 @@ let create =
 end
 
 let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()

@@ -56,6 +56,6 @@ let create =
 end
 
 let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()

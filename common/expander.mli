@@ -38,6 +38,6 @@ val str_type_ext_many_plugins: loc:loc ->
 end
 
 (** Registers a plugin. See {! Plugin_intf.PluginRes } for plugin interface. *)
-val register_plugin: string -> (module Plugin_intf.PluginRes) -> unit
+val register_plugin: string -> (module Plugin_intf.MAKE) -> unit
 
 val get_registered_plugins: unit -> string list

@@ -63,37 +63,6 @@ class g args tdecls = object(self)
     List.map rhs_args ~f:Typ.from_caml  @
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
-  method! extra_class_sig_members tdecl =
-    let loc = loc_from_caml tdecl.ptype_loc in
-    let wrap =
-      if is_polyvariant_tdecl tdecl
-      then Typ.openize ~loc
-      else (fun ?as_ x -> x)
-    in
-    [ Ctf.constraint_ ~loc
-        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-         map_type_param_names tdecl.ptype_params
-           ~f:(fun s -> Typ.var ~loc s)
-        )
-    ]
-
-  method! extra_class_str_members tdecl =
-    let loc = loc_from_caml tdecl.ptype_loc in
-    let wrap =
-      if is_polyvariant_tdecl tdecl
-      then Typ.openize ~loc
-      else (fun ?as_ x -> x)
-    in
-    [ Cf.constraint_ ~loc
-        (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
-        (wrap @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-         map_type_param_names tdecl.ptype_params
-           ~f:(fun s -> Typ.var ~loc s)
-        )
-    ]
-
-
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
@@ -182,6 +151,6 @@ let create =
 end
 
 let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()

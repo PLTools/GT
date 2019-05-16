@@ -33,16 +33,11 @@ class g initial_args tdecls = object(self: 'self)
   method! syn_of_param ~loc s = Typ.sprintf ~loc "bool"
   method! main_syn ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
-  (* method! trf_scheme ~loc =
-   *   Typ.(arrow ~loc (var ~loc "a") @@
-   *        arrow ~loc (var ~loc "a") (constr ~loc (Lident "bool") [])) *)
-
   method! on_different_constructors ~loc is_poly other_name cname arg_typs =
     Exp.false_ ~loc
   method! chain_exprs ~loc e1 e2 =
     Exp.app_list ~loc (Exp.ident ~loc "&&") [ e1; e2 ]
   method! chain_init ~loc = Exp.true_ ~loc
-
 
 end
 
@@ -53,6 +48,6 @@ let create =
 end
 
 let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()

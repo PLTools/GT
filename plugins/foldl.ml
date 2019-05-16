@@ -59,23 +59,6 @@ class g initial_args tdecls = object(self: 'self)
     [ self#main_syn ~loc tdecl
     ; Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
-  method trf_scheme ~loc =
-    Typ.(arrow ~loc (var ~loc "b") @@
-         arrow ~loc (var ~loc "a") (var ~loc "b"))
-  method trf_scheme_params = ["a";"b"]
-
-  (*
-  (* For foldl/r we specify this two methods manually *)
-  method index_functor tdecls =
-    assert (List.length tdecls > 0);
-    let name = (List.hd_exn tdecls).ptype_name.txt in
-    sprintf "Index_fold_%s" name
-  method index_modtyp_name tdecls =
-    assert (List.length tdecls > 0);
-    let name = (List.hd_exn tdecls).ptype_name.txt in
-    sprintf "IndexResult_fold_%s" name
-*)
-
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
@@ -85,13 +68,6 @@ class g initial_args tdecls = object(self: 'self)
       let syn_t = self#syn_of_param ~loc name in
       let inh_t = self#inh_of_param tdecl name in
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
-
-
-  (* method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
-   *   let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
-   *   let syn_t  = Option.value syn_t  ~default:(self#default_syn ~loc tdecl) in
-   *   Typ.arrow ~loc (self#default_inh ~loc tdecl)
-   *     (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl) *)
 
   method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
     List.fold_left ~f:(fun acc (name,typ) ->
@@ -133,6 +109,6 @@ let create =
 end
 
 let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.PluginRes)
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()
