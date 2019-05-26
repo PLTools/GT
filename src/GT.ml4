@@ -34,13 +34,14 @@ module Format = struct
   let pp_print_string fmt s = fprintf fmt "\"%s\"" s
 end
 
-type ('a, 'b) t = {gcata : 'a; plugins : 'b}
+type ('a, 'b, 'c) t = {gcata : 'a; plugins : 'b; fix: 'c }
+
 let transform_gc gcata make_obj inh subj =
   let rec obj = lazy (make_obj fself)
   and fself inh x = gcata (Lazy.force obj) inh x in
   fself inh subj
 
-let transform  bundle = transform_gc  bundle.gcata
+let transform  bundle = transform_gc bundle.gcata
 
 let lift f _ = f
 let id x  = x
@@ -109,20 +110,19 @@ type 'a list       = 'a plist
 
 class virtual ['ia, 'a, 'sa, 'inh, 'self, 'syn] list_t =
   object
-    method virtual c_Nil  : 'inh -> 'syn
-    method virtual c_Cons : 'inh -> 'a -> 'a list -> 'syn
+    method virtual c_Nil  : 'inh -> 'self -> 'syn
+    method virtual c_Cons : 'inh -> 'self -> 'a -> 'a list -> 'syn
   end
 
-let gcata_list tr inh = function
-| []    -> tr#c_Nil inh
-| x::xs -> tr#c_Cons inh x xs
+let gcata_list tr inh s = match s with
+| []    -> tr#c_Nil  inh s
+| x::xs -> tr#c_Cons inh s x xs
 
 class ['a, 'self] html_list_t fa fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @list
-    method c_Nil  _      = View.empty
-    method c_Cons _ x xs =
-
+    method c_Nil  _ _      = View.empty
+    method c_Cons _ _ x xs =
       HTML.ul @@ HTML.seq (
         [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa () x) (x::xs)
         )
@@ -132,16 +132,16 @@ class ['a, 'self] html_list_t fa fself =
 class ['a, 'self] show_list_t fa fself =
   object
     inherit [unit, 'a, string, unit, 'self, string] @list
-    method c_Nil  _      = ""
-    method c_Cons _ x xs = (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself () xs))
+    method c_Nil  _ _      = ""
+    method c_Cons _ _ x xs = (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself () xs))
   end
 
 class ['a, 'self] fmt_list_t fa fself =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] @list
     constraint 'inh = Format.formatter
-    method c_Nil  _      = ()
-    method c_Cons fmt x xs =
+    method c_Nil  _   _    = ()
+    method c_Cons fmt _ x xs =
       Format.fprintf fmt "%a;@,@ %a" fa x fself xs
   end
 
@@ -149,20 +149,20 @@ class ['a, 'sa, 'self, 'syn ] gmap_list_t fa fself =
   object
     constraint 'syn = 'sa list
     inherit [unit, 'a, 'sa, unit, 'self, 'syn] @list
-    method c_Nil  _ = []
-    method c_Cons _ x xs = (fa () x) :: (fself () xs)
+    method c_Nil  _ _      = []
+    method c_Cons _ _ x xs = (fa () x) :: (fself () xs)
   end
 class ['a, 'sa, 'self, 'syn, 'env ] eval_list_t fa fself =
   object
     inherit ['env, 'a, 'sa, 'env, 'self, 'sa list] @list
-    method c_Nil  _ = []
-    method c_Cons env x xs = (fa env x) :: (fself env xs)
+    method c_Nil  _   _      = []
+    method c_Cons env _ x xs = (fa env x) :: (fself env xs)
   end
 class ['a, 'sa, 'self, 'syn, 'env ] stateful_list_t fa fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa list] @list
-    method c_Nil  env = (env, [])
-    method c_Cons env0 x xs : 'env * 'sa list =
+    method c_Nil  env  _       = (env, [])
+    method c_Cons env0 _ x xs : 'env * 'sa list =
       let env1,h  = fa    env0 x  in
       let env2,tl = fself env1 xs in
       env2, (h::tl)
@@ -171,21 +171,21 @@ class ['a, 'sa, 'self, 'syn, 'env ] stateful_list_t fa fself =
 class ['a, 'syn, 'self] foldl_list_t fa fself =
   object
     inherit ['syn, 'a, 'syn, 'syn, 'self, 'syn] @list
-    method c_Nil  s = s
-    method c_Cons s x xs = fself  (fa s x) xs
+    method c_Nil  s _      = s
+    method c_Cons s _ x xs = fself  (fa s x) xs
   end
 
 class ['a, 'syn, 'self] foldr_list_t fa fself =
   object
     inherit ['a, 'syn, 'self] @list[foldl] fa fself
-    method c_Cons s x xs = fa (fself s xs) x
+    method! c_Cons s _ x xs = fa (fself s xs) x
   end
 
 class ['a, 'self] eq_list_t fa fself =
   object
     inherit ['a, 'a, bool, 'a list, 'self, bool] @list
-    method c_Nil inh  = (inh = [])
-    method c_Cons inh x xs =
+    method c_Nil inh  _      = (inh = [])
+    method c_Cons inh _ x xs =
       match inh with
       | y::ys -> fa y x && fself ys xs
       | _ -> false
@@ -194,11 +194,11 @@ class ['a, 'self] eq_list_t fa fself =
 class ['a, 'self] compare_list_t fa fself =
   object
     inherit ['a, 'a, comparison, 'a list, 'self, comparison] @list
-    method c_Nil inh =
+    method c_Nil inh _ =
       match inh with
       | [] -> EQ
       |  _ -> GT
-    method c_Cons inh x xs =
+    method c_Cons inh _ x xs =
       match inh with
       | [] -> LT
       | (y::ys) -> (match fa y x with
@@ -207,21 +207,29 @@ class ['a, 'self] compare_list_t fa fself =
                    )
   end
 
-let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
-            < show    : ('a -> string)      -> 'a list -> string;
-              html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
-              gmap    : ('a -> 'b)          -> 'a list -> 'b list;
 
-              fmt     : (Format.formatter -> 'a -> unit) ->
-                        Format.formatter -> 'a list -> unit;
-              eval    : ('env -> 'a -> 'b) -> 'env -> 'a list -> 'b list;
-              stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a list -> 'env * 'b list;
-              foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
-              foldr   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
-              eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool;
-              compare : ('a -> 'a -> comparison) -> 'a list -> 'a list -> comparison;
-            >) t =
+let list :
+  ( ('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn
+  , < show    : ('a -> string)      -> 'a list -> string;
+      html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
+      gmap    : ('a -> 'b)          -> 'a list -> 'b list;
+
+      fmt     : (Format.formatter -> 'a -> unit) ->
+                Format.formatter -> 'a list -> unit;
+      eval    : ('env -> 'a -> 'b) -> 'env -> 'a list -> 'b list;
+      stateful: ('env -> 'a -> 'env * 'b) -> 'env -> 'a list -> 'env * 'b list;
+      foldl   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
+      foldr   : ('c -> 'a -> 'c) -> 'c -> 'a list -> 'c;
+      eq      : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool;
+      compare : ('a -> 'a -> comparison) -> 'a list -> 'a list -> comparison;
+    >
+  , ( ('inh -> 'a list -> 'syn) ->
+          ('ia, 'a, 'sa, 'inh, 'a list, 'syn) list_t  ) ->
+       'inh -> 'a list -> 'syn
+  ) t =
+
   {gcata   = gcata_list;
+   fix = (fun c -> transform_gc gcata_list c);
    plugins = object
                method show fa l =
                  sprintf "[%a]" (transform_gc gcata_list (new @list[show] (lift fa))) l
@@ -247,7 +255,7 @@ let list : (('ia, 'a, 'sa, 'inh, _, 'syn) #list_t -> 'inh -> 'a list -> 'syn,
 module Lazy =
   struct
 
-    type ('a, 'b) t' = ('a, 'b) t
+    type ('a, 'b, 'c) t' = ('a, 'b, 'c) t
 
     include Lazy
 
@@ -327,9 +335,10 @@ module Lazy =
                foldr   : ('c -> 'a -> 'c) -> 'c -> 'a t -> 'c;
                eq      : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool;
                compare : ('a -> 'a -> comparison) -> 'a t -> 'a t -> comparison;
-             >) t' =
+             >, _) t' =
       let fself _ _ = assert false in
       {gcata   = gcata_lazy;
+       fix     = (fun c -> transform_gc gcata_lazy c);
        plugins = object
                    method show     fa  = gcata_lazy (new @t[show] fself (lift fa)) ()
                    method html     fa  = gcata_lazy (new @t[html] fself (lift fa)) ()
@@ -453,8 +462,9 @@ let option : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #option_t -> 'inh -> 'a option -> '
                 foldr   : ('c -> 'a -> 'c) -> 'c -> 'a option -> 'c;
                 eq      : ('a -> 'a -> bool) -> 'a option -> 'a option -> bool;
                 compare : ('a -> 'a -> comparison) -> 'a option -> 'a option -> comparison;
-              >) t =
+              >, _) t =
   {gcata   = gcata_option;
+   fix = (fun c -> transform_gc gcata_option c);
    plugins = object
                method show     fa = transform_gc gcata_option (new @option[show] (lift fa)) ()
                method html     fa = transform_gc gcata_option (new @option[html] (lift fa)) ()
@@ -559,8 +569,9 @@ let free : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #free_t -> 'inh -> 'a free -> 'syn,
                           'a free -> 'a free -> bool;
                 compare : ('a -> 'a -> comparison) ->
                           'a free -> 'a free -> comparison;
-              >) t =
+              >,_) t =
   {gcata   = gcata_free;
+   fix = (fun c -> transform_gc gcata_free c);
    plugins = object
        method show     fa = transform_gc gcata_free (new @free[show] (lift fa)) ()
        method gmap     fa = transform_gc gcata_free (new @free[gmap] (lift fa)) ()
@@ -674,8 +685,9 @@ let arrow:
                           ('a, 'b) arrow -> ('a, 'b) arrow -> bool;
                 compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) ->
                           ('a, 'b) arrow -> ('a, 'b) arrow -> comparison;
-              >) t =
+              >,_) t =
   {gcata   = gcata_arrow;
+   fix = (fun c -> transform_gc gcata_arrow c);
    plugins =
      let tr  obj subj     = transform_gc gcata_arrow obj ()  subj in
      let tr1 obj inh subj = transform_gc gcata_arrow obj inh subj in
@@ -804,8 +816,9 @@ let pair:
                           ('a, 'b) pair -> ('a, 'b) pair -> bool;
                 compare : ('a -> 'a -> comparison) -> ('b -> 'b -> comparison) ->
                           ('a, 'b) pair -> ('a, 'b) pair -> comparison;
-              >) t =
+              >,_) t =
   {gcata   = gcata_pair;
+   fix = (fun c -> transform_gc gcata_pair c);
    plugins =
      let tr  obj subj     = transform_gc gcata_pair obj ()  subj in
      let tr1 obj inh subj = transform_gc gcata_pair obj inh subj in
@@ -1031,8 +1044,9 @@ let triple :
                   'syn ->
                   ('a, 'b, 'c) triple ->
                   'syn;
-      >) t =
+      >,_) t =
   {gcata   = gcata_triple;
+   fix = (fun c -> transform_gc gcata_triple c);
    plugins =
      let tr  obj subj     = transform_gc gcata_triple obj  () subj in
      let tr1 obj inh subj = transform_gc gcata_triple obj inh subj in
@@ -1140,8 +1154,9 @@ let tuple4 :
                   ('c -> HTML.er) ->
                   ('d -> HTML.er) ->
                   ('a, 'b, 'c, 'd) tuple4 -> HTML.er;
-      >) t =
+      >,_) t =
   {gcata   = gcata_tuple4;
+   fix = (fun c -> transform_gc gcata_tuple4 c);
    plugins =
      let tr  obj subj     = transform_gc gcata_tuple4 obj  () subj in
      let tr1 obj inh subj = transform_gc gcata_tuple4 obj inh subj in
@@ -1194,8 +1209,9 @@ let ref:
 
         fmt     : (Format.formatter -> 'a -> unit) ->
                   Format.formatter -> 'a ref -> unit;
-      >) t =
+      >,_) t =
   {gcata   = gcata_ref;
+   fix = (fun c -> transform_gc gcata_ref c);
    plugins = object
      method show    fa = transform_gc gcata_ref (new @ref[show] (lift fa)) ()
      method html    fa = transform_gc gcata_ref (new @ref[html] (lift fa)) ()
@@ -1310,6 +1326,7 @@ class ['a, 'self] compare_array_t fa fself =
 
 let array =
   { gcata = gcata_array
+  ; fix = (fun c -> transform_gc gcata_array c)
   ; plugins =
       let tr  obj fa   s = transform_gc gcata_array (obj fa) () s in
       let tr1 obj fa i s = transform_gc gcata_array (obj fa)  i s in
@@ -1401,6 +1418,7 @@ class ['self] compare_bytes_t fself =
 
 let bytes =
   { gcata = gcata_bytes
+  ; fix = (fun c -> transform_gc gcata_bytes c)
   ; plugins =
       let tr  obj    s = gcata_bytes (obj (fun _ _ -> assert false) ) () s in
       let tr1 obj i  s = gcata_bytes (obj (fun _ _ -> assert false) ) i  s in

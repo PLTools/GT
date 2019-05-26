@@ -66,7 +66,7 @@ class [ 'extra, 'syn, 'env] stateful_$1_t _fself =
 
 let gcata_$1 tr inh x = tr#t_$1 inh x
 
-let $1 : (('inh, _, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
+let $1 : (('inh, $1, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
           < show    : $1 -> string;
             html    : $1 -> HTML.viewer;
             fmt     : Format.formatter -> $1 -> unit;
@@ -76,8 +76,10 @@ let $1 : (('inh, _, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
             eval    : 'env -> $1 -> $1;
             stateful: 'env -> $1 -> 'env * $1;
             foldl   : 'a -> $1 -> 'a;
-            foldr   : 'a -> $1 -> 'a >) t =
+            foldr   : 'a -> $1 -> 'a >,
+            (('inh -> $1 -> 'syn) -> ('inh, $1, 'syn) $1_t) -> 'inh -> $1 -> 'syn) t =
   {gcata = gcata_$1;
+   fix = (fun c -> transform_gc gcata_$1 c);
    plugins =
       object
         method show    = transform_gc gcata_$1 (new @$1[show]    ) ()

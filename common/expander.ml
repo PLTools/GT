@@ -598,9 +598,15 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
   let tname = tdecl.ptype_name.txt in
 
   (* The pack itself *)
+  let gcata_ident = Exp.sprintf ~loc "gcata_%s" tname in
   (Str.single_value ~loc (Pat.sprintf ~loc "%s" tname) @@
   Exp.record ~loc
-    [ Ldot (lident "GT", "gcata"), Exp.sprintf ~loc "gcata_%s" tname
+    [ Ldot (lident "GT", "gcata"), gcata_ident
+    ; Ldot (lident "GT", "fix"),
+      Exp.fun_ ~loc (Pat.var ~loc "eta") @@
+      Exp.app_list ~loc
+        (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")))
+        [ gcata_ident; Exp.sprintf ~loc "eta"]
     ; Ldot (lident "GT", "plugins"), Exp.object_ ~loc @@ class_structure
         ~self:(Pat.any ~loc) ~fields:plugin_fields
     ])
@@ -743,8 +749,8 @@ let fix_sig ~loc tdecls =
            Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
            (List.map ps ~f:(Typ.var ~loc))
          in
-         let inhs = List.map ps ~f:(fun name -> sprintf "%s_i" name) in
-         let syns = List.map ps ~f:(fun name -> sprintf "%s_s" name) in
+         let inhs = List.map ps ~f:(sprintf "%s_i") in
+         let syns = List.map ps ~f:(sprintf "%s_s") in
 
          let main_inh = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
          let main_syn = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
