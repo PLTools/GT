@@ -49,6 +49,7 @@ module GT = struct
 
   let int =
     { GT.gcata = int.GT.gcata
+    ; fix = (fun c -> transform_gc gcata_free c)
     ; plugins = object
         method hash h n = (h,n)
       end

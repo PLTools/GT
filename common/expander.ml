@@ -578,7 +578,7 @@ let make_gcata_str ~loc tdecl =
 let make_heading_gen ~loc wrap tdecl = []
 
 
-let collect_plugins_str ~loc tdecl plugins : Str.t list =
+let collect_plugins_str ~loc tdecl all_tdecls plugins : Str.t list =
   let wrap p tdecl =
     p#eta_and_exp
       ~center:(Exp.sprintf ~loc "%s_%s" p#trait_name tdecl.ptype_name.txt)
@@ -603,10 +603,13 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
   Exp.record ~loc
     [ Ldot (lident "GT", "gcata"), gcata_ident
     ; Ldot (lident "GT", "fix"),
-      Exp.fun_ ~loc (Pat.var ~loc "eta") @@
-      Exp.app_list ~loc
-        (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")))
-        [ gcata_ident; Exp.sprintf ~loc "eta"]
+      if List.length all_tdecls > 1
+      then Exp.sprintf ~loc "%s" @@ Naming.make_fix_name all_tdecls
+      else
+        Exp.fun_ ~loc (Pat.var ~loc "eta") @@
+        Exp.app_list ~loc
+          (Exp.of_longident ~loc (Ldot (Lident "GT", "transform_gc")))
+          [ gcata_ident; Exp.sprintf ~loc "eta"]
     ; Ldot (lident "GT", "plugins"), Exp.object_ ~loc @@ class_structure
         ~self:(Pat.any ~loc) ~fields:plugin_fields
     ])
@@ -622,22 +625,6 @@ let collect_plugins_str ~loc tdecl plugins : Str.t list =
           (Pat.sprintf ~loc "%s" fname)
           (wrap p tdecl)
     ))
-
-let collect_plugins_sig ~loc tdecl plugins =
-  let wrap () =
-  [Sig.value ~loc ~name:tdecl.ptype_name.txt @@
-   Typ.constr ~loc (Ldot (lident "GT", "t"))
-     [ make_gcata_typ ~loc tdecl
-     ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
-           (p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
-         )
-     ]]
-  in
-  visit_typedecl ~loc tdecl
-      ~onabstract:(fun _ -> [] )
-      ~onmanifest:(fun _ -> wrap ())
-      ~onvariant:(fun _ -> wrap ())
-      ~onrecord:(fun _ -> wrap ())
 
 let rename_params tdecl =
   let loc = tdecl.ptype_loc in
@@ -732,61 +719,67 @@ let do_typ ~loc sis plugins is_rec tdecl =
     ; [intf_class; gcata]
     (* ; indexes_str ~loc plugins [tdecl] *)
     ; List.concat_map plugins ~f:(fun g -> g#do_single ~loc ~is_rec tdecl)
-    ; collect_plugins_str ~loc tdecl plugins
+    ; collect_plugins_str ~loc tdecl [tdecl] plugins
     ]
 
-let fix_sig ~loc tdecls =
+let fix_typ ~loc tdecls =
   let idx = ref (0) in
   let next () = Int.incr idx; !idx in
 
   let arr3 a b c = Typ.arrow ~loc  a (Typ.arrow ~loc b c) in
+  let tup ~loc  xs =
+    match xs with
+    | [] -> failwith "bad arguemnt"
+    | [x] -> x
+    | xs -> Typ.tuple ~loc xs
+  in
 
+  let ys = List.map tdecls ~f:(fun tdecl ->
+      let ps = List.map tdecl.ptype_params ~f:(fun _  -> sprintf "a%d" (next ())) in
+      let subj_t =
+        Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+        (List.map ps ~f:(Typ.var ~loc))
+      in
+      let inhs = List.map ps ~f:(sprintf "%s_i") in
+      let syns = List.map ps ~f:(sprintf "%s_s") in
+
+      let main_inh = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
+      let main_syn = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
+
+      let cls =
+        let args =
+          List.map3_exn inhs ps syns ~f:(fun i p s -> [i;p;s])
+          |> List.concat
+          |> List.map ~f:(Typ.var ~loc)
+          |> (fun xs -> xs @ [ main_inh
+                             ; (if is_polyvariant_tdecl tdecl
+                                then openize_poly ~loc else id)
+                                 subj_t
+                             ; main_syn])
+        in
+        Typ.class_ ~loc (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
+          args
+      in
+      let trf = arr3 main_inh subj_t main_syn in
+      (trf, cls)
+    )
+  in
+
+  let mutuals = tup ~loc @@  List.map ys ~f:fst in
+  List.fold_right
+    ~init:(tup ~loc @@ List.map ys ~f:fst)
+    ys
+    ~f:(fun (_trf, cls) acc ->
+        Typ.arrow ~loc
+          (Typ.arrow ~loc mutuals cls)
+          acc
+      )
+
+
+let fix_sig ~loc tdecls =
   Sig.value ~loc
     ~name:(sprintf "%s" @@ Naming.make_fix_name tdecls)
-    (let ys = List.map tdecls ~f:(fun tdecl ->
-         let ps = List.map tdecl.ptype_params ~f:(fun _  -> sprintf "a%d" (next ())) in
-         let subj_t =
-           Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
-           (List.map ps ~f:(Typ.var ~loc))
-         in
-         let inhs = List.map ps ~f:(sprintf "%s_i") in
-         let syns = List.map ps ~f:(sprintf "%s_s") in
-
-         let main_inh = Typ.var ~loc @@ sprintf "inh%d" (next ()) in
-         let main_syn = Typ.var ~loc @@ sprintf "syn%d" (next ()) in
-
-         let cls =
-           let args =
-             List.map3_exn inhs ps syns ~f:(fun i p s -> [i;p;s])
-             |> List.concat
-             |> List.map ~f:(Typ.var ~loc)
-             |> (fun xs -> xs @ [ main_inh
-                                ; (if is_polyvariant_tdecl tdecl
-                                   then openize_poly ~loc else id)
-                                    subj_t
-                                ; main_syn])
-           in
-           Typ.class_ ~loc (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
-             args
-         in
-         let trf = arr3 main_inh subj_t main_syn in
-         (trf, cls)
-       )
-     in
-
-     let mutuals =
-       Typ.tuple ~loc @@
-       List.map ys ~f:fst
-     in
-     List.fold_right
-       ~init:(Typ.tuple ~loc @@ List.map ys ~f:fst)
-       ys
-       ~f:(fun (_trf, cls) acc ->
-           Typ.arrow ~loc
-             (Typ.arrow ~loc mutuals cls)
-             acc
-         )
-    )
+    (fix_typ ~loc tdecls)
 
 let fix_str ~loc tdecls =
   value_binding ~loc
@@ -842,6 +835,26 @@ let fix_str ~loc tdecls =
       )
   |> Str.of_vb ~loc ~rec_flag:Nonrecursive |> List.return
 
+let collect_plugins_sig ~loc tdecls plugins =
+  List.concat_map tdecls ~f:(fun tdecl ->
+      let wrap () =
+        [Sig.value ~loc ~name:tdecl.ptype_name.txt @@
+         Typ.constr ~loc (Ldot (lident "GT", "t"))
+           [ make_gcata_typ ~loc tdecl
+           ; Typ.object_ ~loc Closed @@ List.map plugins ~f:(fun p ->
+                 (p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
+               )
+           (* ; make_gcata_typ ~loc tdecl *)
+           ; fix_typ ~loc tdecls
+           ]]
+      in
+      visit_typedecl ~loc tdecl
+        ~onabstract:(fun _ -> [] )
+        ~onmanifest:(fun _ -> wrap ())
+        ~onvariant:(fun _ -> wrap ())
+        ~onrecord:(fun _ -> wrap ())
+    )
+
 let do_mutual_types ~loc sis plugins tdecls =
   let tdecls_new = topsort_tdecls tdecls in
   let classes, catas =
@@ -860,7 +873,7 @@ let do_mutual_types ~loc sis plugins tdecls =
     ; catas
     ; fix_str ~loc tdecls
     ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new)
-    ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl plugins)
+    ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl tdecls_new plugins)
     ]
 
 (* for signatures *)
@@ -876,7 +889,7 @@ let do_typ_sig ~loc sis plugins is_rec tdecl =
     ; intf_class
     ; gcata
     ; List.concat_map plugins ~f:(fun g -> g#do_single_sig ~loc ~is_rec tdecl)
-    ; collect_plugins_sig ~loc tdecl plugins
+    ; collect_plugins_sig ~loc [tdecl] plugins
     ]
 
 let do_mutual_types_sig ~loc sis plugins tdecls =
@@ -895,6 +908,7 @@ let do_mutual_types_sig ~loc sis plugins tdecls =
    *          collect_plugins_sig ~loc tdecl (p tdecls))
    *    )
    * ) @ *)
+  (collect_plugins_sig ~loc tdecls (List.map plugins ~f:(fun p -> p tdecls))) @
   []
   (* TODO: collect plugins for mutual types *)
   (* List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls *)

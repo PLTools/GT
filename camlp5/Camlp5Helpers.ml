@@ -166,7 +166,11 @@ module Exp = struct
     app_list ~loc (of_longident ~loc lident) args
   let variant ~loc s args =
     app_list ~loc <:expr< ` $s$ >> args
-  let tuple ~loc le = <:expr< ($list:le$) >>
+  let tuple ~loc le =
+    match le with
+    | [] -> failwith "Exp.tuple: bad argument"
+    | [x] -> x
+    | le  -> <:expr< ($list:le$) >>
 
   let new_ ~loc lident =
     <:expr< new $list: Longident.flatten lident$ >>
