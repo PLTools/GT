@@ -1,6 +1,6 @@
 # Datatype-generic object-oriented transformations for OCaml (a.k.a. GT)
 
-This library implements a framework for datatype-generic programming in Objective Caml language. 
+This library implements a framework for datatype-generic programming in Objective Caml language.
 
 The key feature of the approach in question is object-oriented representation of transformations performed over regular algebraic datatypes. Our implementation supports polymorphic variants; in particular, a transformation for a "joined" polymorphic variant type can be acquired via inheritance from the transformations for its counterparts.
 
@@ -11,21 +11,31 @@ The key feature of the approach in question is object-oriented representation of
 
 [Janestreet's PPX Traverse](https://github.com/janestreet-deprecated/ppx_traverse)
 
-## Usage 
+## Usage
 ### As PPX
-Use findlib package `GT.ppx` in combination with `ppxlib`. See [this part](https://github.com/ocaml-ppx/ppxlib/#drivers) of `ppxlib`'s README for details
+Use findlib package `GT.ppx` in combination with `ppxlib`. See  `ppxlib`'s manual for full guidance. In short do
 
-### As Camlp5 syntax extension 
+```
+~ ocaml
+        OCaml version 4.07.1
+
+# #require "GT.ppx";;
+../GT: added to search path
+../GT/./pp_gt.native --as-ppx: activated
+# type 'a list = Nil | Cons of 'a * 'a list [@@deriving gt ~options:{show}];;
+```
+
+### As Camlp5 syntax extension
 
 Use findlib package `GT.syntax.all` to enable extension and all built-in plugins. To compile and see the generated code use the following command:
 
     ocamlfind opt -syntax camlp5o -package GT.syntax.all regression/test081llist.ml -dsource
 
-To preprocess only the code in this library (for example, a test) use the command:
+To preprocess only the code in this library (for example, a test) use the following shell command:
 
-    camlp5o _build/camlp5/pp5gt.cma _build/plugins/show.cmo pr_o.cmo _build/plugins/gmap.cmo _build/plugins/foldl.cmo _build/plugins/compare.cmo _build/plugins/eq.cmo _build/plugins/eval.cmo _build/plugins/stateful.cmo filename.ml
+    (cd _build && ../camlp5o_pp.sh pr_o.cmo ../regression/test005.ml)
 
-## Directory structure 
+## Directory structure
 
  * The framework for generation is in `common/`. The generic plugin for adding new transformations is in `common/plugin.ml`.
  * All built-in plugins live in `plugins/` and depend on the stuff in `common/`.
@@ -33,11 +43,11 @@ To preprocess only the code in this library (for example, a test) use the comman
  * PPX-specific preprocessing plugin lives in `ppx/`. Depends on stuff in `common/`.
  * Built-in plugins that represent transformations live in `plugins/`. Depends on `common/`.
  * A library for built-in types and transformations for types from Pervasives live in `src/`. Depends on syntax extension from `camlp5/`.
- 
+
 # Dependencies
 
   * ppxlib
-  * The [fork](https://github.com/Kakadu/camlp5/tree/ast2pt.cmi) of camlp5 which installs extra required `cmi` is in the branch `ast2pt.cmi`. It was merged to master. (TODO: check that it was already released)
+  * camlp5
   * ocamlgraph for topological sorting
 
 # Compilation
@@ -49,25 +59,17 @@ In case some of the tests do not compile use following commands to see generated
 * with camlp5 use `(cd _build && ../camlp5o_pp.sh pr_o.cmo regression/testname.ml)`
 * with PPX use `./pp_gt.native -pretty regression/testname.ml`
 
-  
-# This branch adds PPX support for Generic Transformers.
-
-* Use `make ppx` to compile PPX syntax extension.
-* It creates and ocaml-migrate-parsetree plugin to run all required preprocessors together and a stand-alone rewriter (`./pp_gt.native`) that applies only our transformations and prints the generated code.
-* New tests and demos are in the directory `./regression_ppx`
-* To run PPX preprocessor and see the generated code, for example, the following command: `./pp_gt.native -type-conv-keep-w32 both regression_ppx/test801.ml`
-
 
 In the following section we describe our approach in a nutshell by a typical example.
 
-## Example: Processing Expressions 
+## Example: Processing Expressions
 
 Let us have the following type for simple arithmetic expressions:
 
 ```ocaml
- type expr = 
-   Add of expr * expr 
- | Mul of expr * expr 
+ type expr =
+   Add of expr * expr
+ | Mul of expr * expr
  | Int of int
  | Var of string
 ```
@@ -76,18 +78,18 @@ One of the first typical "boilerplate" tasks is printing; much like other availa
 decoration of the original declaration:
 
 ```ocaml
- type expr = 
- | Add of expr * expr 
- | Mul of expr * expr 
+ type expr =
+ | Add of expr * expr
+ | Mul of expr * expr
  | Int of GT.int
  | Var of GT.string [@@deriving gt ~options:{show}]
 ```
 
-We replaced here `int` and `string` with `GT.int` and `GT.string` respectively, and added `[@@deriving gt ~options:{show}]` to the end of type declaration to make the framework generate all "boilerplate" code for us. `GT.int` and 
+We replaced here `int` and `string` with `GT.int` and `GT.string` respectively, and added `[@@deriving gt ~options:{show}]` to the end of type declaration to make the framework generate all "boilerplate" code for us. `GT.int` and
 `GT.string` are two synonyms for regular standard types, equipped with some
 additional generic features; alternatively, we could just add `open GT` to the
 beginning of the code snippet and use short names. Further we will continue to
-explicitly mention features of the framework in a fully-qualified form. 
+explicitly mention features of the framework in a fully-qualified form.
 
 Having made this, we can instantly print expressions with the following
 (a bit cryptic) construct:
@@ -99,7 +101,7 @@ Having made this, we can instantly print expressions with the following
 Here
 
 * `GT.transform(expr)` - type-indexed function, applied to the type **expr**; in our framework all computations are performed by this single function;
-* `new show_expr_t` - an expression, which creates a _transformation object_, encapsulating the "show" functionality for type `expr`;  
+* `new show_expr_t` - an expression, which creates a _transformation object_, encapsulating the "show" functionality for type `expr`;
 * we provide unit value as additional parameter, which in fact is not used; think of it as an initial value for fold-like transformations;
 * the rest is the expression tree we're going to show.
 
@@ -121,7 +123,7 @@ GT.fix (fun fself init value ->
     GT.transform tree (new tr_class f_1 ... f_n fself) init value
   ) init value
 
-where 
+where
 
   * `t` is a polymorphic type with _n_ parameters;
   * `tr_obj` - transformation object for some transformation;
@@ -141,7 +143,7 @@ The key feature of the approach we advocate here is that object-oriented represe
 For example, if we are not satisfied by the "default" behavior of "show", we can adjust it only for the "cases of interest":
 
 ```ocaml
- class show' fself = object 
+ class show' fself = object
    inherit show_expr_t fself
    method c_Var _ _ s = s
  end
@@ -183,8 +185,8 @@ In the next step we're going to switch to infix representation of operators; thi
 ```ocaml
  class show''' =
    object inherit show''
-     method c_Add _ _ x y = x.GT.fx () ^ " + " ^ y.GT.fx ()    
-     method c_Mul _ _ x y = x.GT.fx () ^ " * " ^ y.GT.fx ()    
+     method c_Add _ _ x y = x.GT.fx () ^ " + " ^ y.GT.fx ()
+     method c_Mul _ _ x y = x.GT.fx () ^ " * " ^ y.GT.fx ()
    end
 
  GT.transform(expr) (new show''') () (Mul (Var "a", Add (Int 1, Var "b")))
@@ -211,11 +213,11 @@ Finally, we may want to provide a complete infix representation (including a min
 ```ocaml
  class show'''' =
    let enclose op p x y =
-     let prio = function 
-       | Add (_, _) -> 1 
-       | Mul (_, _) -> 2 
-       | _ -> 3 
-     in  
+     let prio = function
+       | Add (_, _) -> 1
+       | Mul (_, _) -> 2
+       | _ -> 3
+     in
      let bracket f x = if f then "(" ^ x ^ ")" else x in
      bracket (p >  prio x.GT.x) (x.GT.fx ()) ^ op ^
      bracket (p >= prio y.GT.x) (y.GT.fx ())
@@ -231,9 +233,9 @@ On the final note for this example we point out that all these flavors of "show"
 Our next example is variable-collecting function. For this purpose we add "`foldl`" the the list of user-defined plugins:
 
 ```ocaml
- @type expr = 
-   Add of expr * expr 
- | Mul of expr * expr 
+ @type expr =
+   Add of expr * expr
+ | Mul of expr * expr
  | Int of GT.int
  | Var of GT.string with show, foldl
 ```
@@ -241,12 +243,12 @@ Our next example is variable-collecting function. For this purpose we add "`fold
 With this plugin enabled we can easily express what we want:
 
 ```ocaml
- module S = Set.Make (String) 
- class vars = 
+ module S = Set.Make (String)
+ class vars =
    object inherit [S.t] @expr[foldl]
      method c_Var s _ x = S.add x s
    end
- 
+
  let vars e = S.elements (GT.transform(expr) (new vars) S.empty e
 ```
 
@@ -269,9 +271,9 @@ Since we develop a new transformation, we have to take care of types for inherit
 As a final example we consider expression simplification. This time we can make use of plugin "`map`", which in default implementation just copies the data structure (beware: multiplying shared substructures):
 
 ```ocaml
- @type expr = 
-   Add of expr * expr 
- | Mul of expr * expr 
+ @type expr =
+   Add of expr * expr
+ | Mul of expr * expr
  | Int of GT.int
  | Var of GT.string with show, foldl, map
 ```
@@ -283,7 +285,7 @@ In the first iteration we simplify additions by performing constant calculations
    let (+) a b =
      match a, b with
      | Int a, Int b -> Int (a+b)
-     | Int a, Add (Int b, c) 
+     | Int a, Add (Int b, c)
      | Add (Int a, c), Int b -> Add (Int (a+b), c)
      | Add (Int a, c), Add (Int b, d) -> Add (Int (a+b), Add (c, d))
      | _, Int _ -> Add (b, a)
@@ -303,7 +305,7 @@ Equally, we can handle the simplification of multiplication:
    let ( * ) a b =
      match a, b with
      | Int a, Int b -> Int (a*b)
-     | Int a, Mul (Int b, c) 
+     | Int a, Mul (Int b, c)
      | Mul (Int a, c), Int b -> Mul (Int (a*b), c)
      | Mul (Int a, c), Mul (Int b, d) -> Mul (Int (a*b), Add (c, d))
      | _, Int _ -> Mul (b, a)
@@ -319,13 +321,13 @@ The class "`simplify_mul`" implements a decent simplifier; however, it overlooks
 ```ocaml
  class simplify_all =
    object inherit simplify_mul as super
-     method c_Add i it x y = 
-       match super#c_Add i it x y with 
-       | Add (Int 0, a) -> a 
+     method c_Add i it x y =
+       match super#c_Add i it x y with
+       | Add (Int 0, a) -> a
        | x -> x
-     method c_Mul i it x y = 
-       match super#c_Mul i it x y with 
-       | Mul (Int 1, a) -> a 
+     method c_Mul i it x y =
+       match super#c_Mul i it x y with
+       | Mul (Int 1, a) -> a
        | Mul (Int 0, _) -> Int 0
        | x -> x
        end
@@ -340,7 +342,7 @@ The complete example can be found in file `sample/expr.ml`.
 
   * non-regular recursive types
   * GADTs
- 
+
 ## TODO
 
 * Documentation for src/GT.ml is not generated (possible because of a macro)
@@ -350,6 +352,3 @@ The complete example can be found in file `sample/expr.ml`.
   * Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers]( http://oops.math.spbu.ru/db/generics-tfp-2014.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
   * Dmitry Boulytchev. [Code Reuse with Transformation Objects](http://oops.math.spbu.ru/db/transformation-objects.pdf) // unpublished.
   * Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
-
-
-
