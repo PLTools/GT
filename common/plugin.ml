@@ -197,13 +197,16 @@ class virtual generator initial_args tdecls = object(self: 'self)
                 | [_] -> ps
                 | tdecls ->
                   (* we don't need self transformation for *)
-                  (Pat.tuple ~loc @@
-                   List.map self#tdecls ~f:(fun {ptype_name={txt=name}} ->
-                       Pat.var ~loc @@
-                       if String.equal name tdecl.ptype_name.txt
-                       then sprintf "fself_%s" name
-                       else Naming.for_ name
-                     )) :: ps
+                  (Pat.alias ~loc
+                     (Pat.tuple ~loc @@
+                      List.map self#tdecls ~f:(fun {ptype_name={txt=name}} ->
+                          Pat.var ~loc @@
+                          if String.equal name tdecl.ptype_name.txt
+                          then sprintf "fself_%s" name
+                          else Naming.for_ name
+                        ))
+                     Naming.mutuals_pack
+                  ) :: ps
               )
           in
           Cl.fun_list ~loc names body
@@ -426,10 +429,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
     let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
     let ans args : Cf.t list =
       [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams in
-        (* let () =
-         *   if String.equal self#trait_name "gmap"
-         *   then assert (List.length typ_params = (2 + 2 * (List.length cparams)))
-         * in *)
         let args =
           (match cid.txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal ->
@@ -442,14 +441,23 @@ class virtual generator initial_args tdecls = object(self: 'self)
              *  map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt] *)
           ) @ args
         in
-        Cf.inherit_ ~loc @@ Cl.apply ~loc
-          (Cl.constr ~loc
-             (map_longident cid.txt
-                ~f:(fun s ->
-                    Naming.trait_class_name_for_typ ~trait:self#plugin_name s
-                  ))
-             typ_params)
-          args
+        match cid.txt with
+        | Lident s when List.mem mutal_names s ~equal:String.equal ->
+          Cf.inherit_ ~loc @@ Cl.apply ~loc
+            (Cl.constr ~loc
+               (lident @@ Naming.make_stub_class_name ~plugin:self#plugin_name s)
+               typ_params
+            )
+            [Exp.ident ~loc Naming.mutuals_pack]
+        | _ ->
+          Cf.inherit_ ~loc @@ Cl.apply ~loc
+            (Cl.constr ~loc
+               (map_longident cid.txt
+                  ~f:(fun s ->
+                      Naming.trait_class_name_for_typ ~trait:self#plugin_name s
+                    ))
+               typ_params)
+            args
       ]
     in
 

@@ -1,24 +1,31 @@
-opam-version: "1.2"
+opam-version: "2.0"
 
 name: "GT"
-authors: [ "https://github.com/dboulytchev" "https://github.com/Kakadu" ]
-version: "0.0.1"
+synopsis: "Generic programming with extensible transformations"
+description: ""
+version: "0.0.2"
+
 maintainer: "kakadu.hafanana@gmail.com"
-homepage:    "https://github.com/dboulytchev/GT"
+authors: ["https://github.com/dboulytchev" "https://github.com/Kakadu"]
+homepage: "https://github.com/dboulytchev/GT"
 bug-reports: "https://github.com/dboulytchev/GT/issues"
-dev-repo:    "https://github.com/dboulytchev/GT.git"
-
-build: [make ]
-build-test: [make "test"]
-
-install: [make "PREFIX=%{prefix}%" "install"]
-remove:  [make "PREFIX=%{prefix}%" "uninstall"]
-
 depends: [
-  "ocamlfind"  {build}
+  "ocaml"
+  "ocamlfind" {build}
   "ocamlbuild" {build}
   "ocamlgraph" {build}
   "ppxlib"
   "camlp5"
-  "ppx_import" {test}
+  "ppx_import" {with-test}
 ]
+build: [
+  [make]
+  [make "test"] {with-test}
+]
+install: [make "PREFIX=%{prefix}%" "install"]
+remove: [make "PREFIX=%{prefix}%" "uninstall"]
+dev-repo: "git+https://github.com/dboulytchev/GT.git"
+url {
+#  src: "git+file:///media/oldhome/kakadu/prog/asp/gt-ppx#master"
+}
+
