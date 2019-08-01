@@ -729,7 +729,7 @@ class ['a, 'b, 'self] fmt_pair_t fa fb _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] pair_t
     constraint 'inh = Format.formatter
-    method c_Pair fmt _ x y = Format.fprintf fmt "(%a,%a)" fa x fb y
+    method c_Pair fmt _ x y = Format.fprintf fmt "@[(%a,@ %a)@]" fa x fb y
   end
 
 class ['a, 'b, 'self] html_pair_t fa fb _ =
