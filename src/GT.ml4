@@ -140,9 +140,17 @@ class ['a, 'self] fmt_list_t fa fself =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] @list
     constraint 'inh = Format.formatter
-    method c_Nil  _   _    = ()
-    method c_Cons fmt _ x xs =
-      Format.fprintf fmt "%a;@,@ %a" fa x fself xs
+    method c_Nil  fmt _       =
+      Format.fprintf fmt "[]"
+    method c_Cons fmt xs _ _  =
+      Format.fprintf fmt "@[@,["; (* Extra break here to prrvent clashing with m4 macro begin *)
+      let () = match xs with
+         | [] -> ()
+         | x::xs ->
+            Format.fprintf fmt "@[ %a@]" fa x;
+            List.iter (Format.fprintf fmt "@[; %a@]" fa) xs;
+      in
+      Format.fprintf fmt "]@]"
   end
 
 class ['a, 'sa, 'self, 'syn ] gmap_list_t fa fself =
@@ -237,8 +245,7 @@ let list :
                method gmap    fa   = transform_gc gcata_list (new @list[gmap] (lift fa)) ()
 
                method fmt fa inh l =
-                 Format.fprintf inh "[@[%a@]]@,"
-                   (transform_gc gcata_list (new @list[fmt] fa)) l
+                  (transform_gc gcata_list (new @list[fmt] fa)) inh l
 
                method stateful fa  = transform_gc gcata_list (new @list[stateful] fa)
                method eval     fa  = transform_gc gcata_list (new @list[eval] fa)
