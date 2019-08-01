@@ -856,24 +856,24 @@ let collect_plugins_sig ~loc tdecls plugins =
     )
 
 let do_mutual_types ~loc sis plugins tdecls =
-  let tdecls_new = topsort_tdecls tdecls in
+  let tdecls = topsort_tdecls tdecls in
   let classes, catas =
     let all =
-      List.map tdecls_new ~f:(fun tdecl ->
+      List.map tdecls ~f:(fun tdecl ->
         (make_interface_class ~loc tdecl, make_gcata_str ~loc tdecl)
       )
     in
     (List.map ~f:fst all, List.map ~f:snd all)
   in
 
-  let plugins = List.map plugins ~f:(fun p -> p tdecls_new) in
+  let plugins = List.map plugins ~f:(fun p -> p tdecls) in
   List.concat
     [ sis
     ; List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])
     ; catas
     ; fix_str ~loc tdecls
-    ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls_new)
-    ; List.concat_map tdecls_new ~f:(fun tdecl -> collect_plugins_str ~loc tdecl tdecls_new plugins)
+    ; List.concat_map plugins ~f:(fun g -> g#do_mutuals ~loc ~is_rec:true tdecls)
+    ; List.concat_map tdecls ~f:(fun tdecl -> collect_plugins_str ~loc tdecl tdecls plugins)
     ]
 
 (* for signatures *)
