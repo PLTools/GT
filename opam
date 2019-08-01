@@ -26,6 +26,6 @@ install: [make "PREFIX=%{prefix}%" "install"]
 remove: [make "PREFIX=%{prefix}%" "uninstall"]
 dev-repo: "git+https://github.com/dboulytchev/GT.git"
 url {
-#  src: "git+file:///media/oldhome/kakadu/prog/asp/gt-ppx#master"
+  src: "git+https://github.com/Kakadu/GT.git"
 }
 
