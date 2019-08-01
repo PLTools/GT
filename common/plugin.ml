@@ -741,8 +741,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method do_mutuals_sigs ~loc ~is_rec =
     List.concat
-      [
-        List.concat_map self#tdecls ~f:(fun tdecl ->
+      [ List.concat_map self#tdecls ~f:(fun tdecl ->
             List.concat
               [ self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
               ; self#make_class_sig ~loc ~is_rec tdecl
