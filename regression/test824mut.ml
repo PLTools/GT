@@ -34,4 +34,14 @@ and pf  = LogicBinOp of pf * pf
         | Term of term
 and heap = t [@@deriving gt ~options:{ fmt }]
 
+let api1 = 
+  [ ("gl", Lambda { lam_api=[]; lam_argname=None; lam_eff=HEmpty; lam_body=(CInt 5); lam_is_rec=true })
+  ; ("gl", Lambda { lam_api=[]; lam_argname=None; lam_eff=HEmpty; lam_body=(CInt 5); lam_is_rec=true })
+  ; ("gl", Lambda { lam_api=[]; lam_argname=None; lam_eff=HEmpty; lam_body=(CInt 5); lam_is_rec=true })
+  ; ("gl", Lambda { lam_api=[]; lam_argname=None; lam_eff=HEmpty; lam_body=(CInt 5); lam_is_rec=true })
+  ]
+
+let () = 
+  (GT.fmt api) Format.std_formatter api1
+
 

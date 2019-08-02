@@ -143,7 +143,7 @@ class ['a, 'self] fmt_list_t fa fself =
     method c_Nil  fmt _       =
       Format.fprintf fmt "[]"
     method c_Cons fmt xs _ _  =
-      Format.fprintf fmt "@[@,["; (* Extra break here to prrvent clashing with m4 macro begin *)
+      Format.fprintf fmt "@[@,["; (* Extra break here to prevent clashing with m4 macro begin *)
       let () = match xs with
          | [] -> ()
          | x::xs ->
