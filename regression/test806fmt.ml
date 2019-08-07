@@ -16,3 +16,7 @@ let () =
     (GT.list.GT.plugins#fmt GT.float.GT.plugins#fmt)
     [1.; 2.; 3.; 4.];
   ()
+
+type t3 = Foo of {xxx: GT.int; yyy: GT.int}
+        | Boo of GT.int * GT.int
+[@@deriving gt ~options:{fmt; compare}]
