@@ -24,7 +24,7 @@ let make_plugins_args ~is_byte =
     ; "eq"
     ;  "stateful"; "foldl"; "foldr"
 (*    ; "show_typed" *)
-    ; "fmt"
+    ; "gfmt"
     ; "html"
     ; "hash"
 (*    ; "htmlTy" *)

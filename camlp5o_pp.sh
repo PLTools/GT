@@ -8,7 +8,7 @@ camlp5o `ocamlfind query ocamlgraph`/graph.cma \
 	plugins/foldl.cmo plugins/foldr.cmo \
 	plugins/stateful.cmo plugins/eval.cmo \
 	plugins/html.cmo \
-	plugins/fmt.cmo \
+	plugins/gfmt.cmo \
     $@
 exit $?
 
