@@ -17,7 +17,7 @@ package "ppx" (
   requires(ppx_driver)        = "ocamlgraph ppxlib"
 
   archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
-  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
+  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx gfmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
   plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
   plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
   exists_if = "ppx_deriving_gt.cma"
@@ -53,6 +53,12 @@ package "syntax" (
     requires = "GT.syntax"
     archive(syntax,preprocessor) = "show.cmo"
     archive(syntax,toploop) = "show.cmo"
+  )
+  package "fmt" (
+    description = "Plugin 'fmt'"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "gfmt.cmo"
+    archive(syntax,toploop) = "gfmt.cmo"
   )
   package "htmlTy" (
     description = "Plugin 'html' for HTML generation based on TyXML library"
@@ -100,7 +106,7 @@ package "syntax" (
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo hash.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo hash.cmx"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo gfmt.cmo html.cmo stateful.cmo hash.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo gfmt.cmo html.cmo stateful.cmo hash.cmx"
   )
 )
