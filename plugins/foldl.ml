@@ -1,49 +1,114 @@
-#load "q_MLast.cmo";;
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
 
-open Pa_gt.Plugin
-open List
+(** {i Foldl} plugin: fold all values in a type.
+
+    Essentially is a stub that chains inherited attribute thorough all values
+    in the value
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [('s -> 'a -> 's) ->
+     ('s -> 'b -> 's) ->
+     ... ->
+     's -> ('a,'b,...) typ -> 's ]
+*)
+
+open Base
+open HelpersBase
+open Ppxlib
 open Printf
 
-let _ =
-  register "foldl" 
-    (fun loc d -> 
-       let module H = Helper (struct let loc = loc end) in       
-       H.(
-        let gen   = name_generator (d.name::d.type_args) in
-	let syn   = gen#generate "syn" in
-        {
-          inh_t       = T.var syn; 
-          syn_t       = T.var syn;
-          proper_args = d.type_args @ [syn];
-          fixed_inh   = None;
-          sname       = (fun _ -> T.var syn);
-          iname       = (fun _ -> T.var syn)
-        }, 
-	let rec body env args =
-	  fold_left
-            (fun inh (arg, typ) ->
-	      let arg = E.id arg in
-	      match typ with
-	      | Variable _ | Self _ -> <:expr< $arg$.GT.fx $inh$ >>
-	      | Tuple (_, elems) -> 
-		  let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in		
-		  <:expr<
-                     let $P.tuple (map P.id args)$ = $arg$ in
-                     $body env (combine args elems)$
-                  >>
-	      | _ ->
-		  match env.trait "foldl" typ with
-		  | None   -> inh
-		  | Some e -> <:expr< $e$ $inh$ $arg$ >> 
-	    )
-            (E.id env.inh)
-	    args
-	in
-        object
-	  inherit generator
-	  method record      env fields    = body env (map (fun (n, (_, _, t)) -> n, t) fields)
-	  method tuple       env elems     = body env elems
-	  method constructor env name args = body env args
-	end
-       )
-    )
+let trait_name = "foldl"
+
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+open AstHelpers
+module P = Plugin.Make(AstHelpers)
+
+let trait_name =  trait_name
+let make_dest_param_names ps =
+  map_type_param_names ps ~f:(sprintf "%s_2")
+
+class g initial_args tdecls = object(self: 'self)
+  inherit P.with_inherit_arg initial_args tdecls as super
+
+  method trait_name = trait_name
+
+  method syn_of_param ~loc s = Typ.var ~loc "syn"
+  method main_inh  ~loc tdecl = self#main_syn ~loc tdecl
+  method main_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+
+  method inh_of_param tdecl _ =
+    self#syn_of_param ~loc:(loc_from_caml tdecl.ptype_loc) "dummy"
+
+  method plugin_class_params tdecl =
+    let loc = loc_from_caml tdecl.ptype_loc in
+    List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t) @
+    [ named_type_arg ~loc "syn"
+    ; named_type_arg ~loc @@
+      Naming.make_extra_param tdecl.ptype_name.txt
+    ]
+
+  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+    List.map rhs_args ~f:Typ.from_caml @
+    [ self#main_syn ~loc tdecl
+    ; Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+
+  (* new type of trasfomation function is 'syn -> old_type *)
+  method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+    (Typ.t -> 'a -> 'a) ->
+    string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
+    fun ~loc tdecl chain name k ->
+      let subj_t = Typ.var ~loc name in
+      let syn_t = self#syn_of_param ~loc name in
+      let inh_t = self#inh_of_param tdecl name in
+      k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
+
+  method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
+    List.fold_left ~f:(fun acc (name,typ) ->
+        Exp.app_list ~loc
+          (do_typ typ)
+          [ acc; Exp.sprintf ~loc "%s" name]
+        )
+        ~init
+        xs
+
+  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info args =
+    let names = List.map args ~f:fst in
+    Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
+    self#join_args ~loc (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+        ~init:inhe
+        args
+
+  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+    let pat = Pat.record ~loc @@
+      List.map labs ~f:(fun l ->
+          (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+        )
+    in
+    let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+    [ Cf.method_concrete ~loc methname @@
+      Exp.fun_list ~loc
+        [ Pat.sprintf ~loc "inh"; pat]
+        (Exp.failwith_ ~loc "not implemented. TODO")
+
+    ]
+
+end
+
+let create =
+  (new g :>
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
+      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+
+end
+
+let register () =
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
+
+let () = register ()

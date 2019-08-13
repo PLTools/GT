@@ -16,27 +16,84 @@ let m4_rules ext =
 
 open Command;;
 
-let () = dispatch (function
- | Before_rules -> ()
+let make_plugins_args ~is_byte =
+  (* N.B. Order matters *)
+  let names =
+    [ "show"; "gmap"
+    ; "eval";  "compare"
+    ; "eq"
+    ;  "stateful"; "foldl"; "foldr"
+(*    ; "show_typed" *)
+    ; "fmt"
+    ; "html"
+    ; "hash"
+(*    ; "htmlTy" *)
+    ]
+  in
+  List.map (fun s -> A(Printf.sprintf "plugins/%s.cm%s" s (if is_byte then "o" else "x")) )
+    names
 
- | After_rules ->
-     ocaml_lib "src/GT";
+let () = dispatch (fun hook ->
+  match hook with
+  | Before_rules -> ()
+  | After_rules ->
+    ocaml_lib "common/GTCommon";
+    ocaml_lib "mymetaquot/mymetaquot";
+    ocaml_lib "src/GTlib";
+    (* flag ["compile"; "short_paths"] & S [A "-short-paths"]; *)
 
-     m4_rules ();
-     dep ["use_m4"] ["src/macro.m4"];
-     flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"camlp5o camlp5/pa_gt.cmo" ]);
+    flag ["compile"; "native"; "use_GT"]   (S [ A"-I";A"src" ]);
+    flag ["compile"; "byte";   "use_GT"]   (S [ A"-I";A"src" ]);
+    flag ["link";    "byte";   "use_GT"]   (S [ A"-I";A"src"; A"GTlib.cma" ]);
+    flag ["link";    "native"; "use_GT"]   (S [ A"-I";A"src"; A"GTlib.cmxa" ]);
 
-     flag ["ocaml"; "pp"; "use_plugins"] (S [ A"-I"; A"plugins"
-                                            ; A"show.cmo";  A"gmap.cmo"
-                                            ; A"foldl.cmo"; A"foldr.cmo"
-                                            ; A"compare.cmo"; A"eq.cmo"
-                                            ]);
+    flag ["compile"; "use_ppx_import"]
+      (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx.exe --as-ppx"
+         ; A"-ppx"; A"ppx/pp_gt.native --as-ppx"
+         ]);
+    flag ["ocamldep"; "use_ppx_import"]
+      (S [ A"-ppx"; A"`ocamlfind query ppx_import`/ppx.exe --as-ppx"
+         ; A"-ppx"; A"ppx/pp_gt.native --as-ppx"
+         ]);
 
-     flag ["ocamldep"; "link_pa_gt"]   (S [ A"-pp"; A"camlp5o camlp5/pa_gt.cmo" ]);
-     flag ["compile";  "link_pa_gt"]   (S [ A"-I";A"camlp5"; Sh"camlp5/pa_gt.cmo" ]);
+    flag ["link";    "native"; "use_mymetaquot"]   (S [A"-linkall"
+      (* BEWARE of the following line. It can make your PPX non-loadable *)
+      (* ; A"-package"; A"ppxlib.runner" *)
+      ]);
 
-     flag ["compile"; "short_paths"] & S [A "-short-paths"];
+    m4_rules ();
+    dep ["use_m4"] ["src/macro.m4"];
+    flag ["ocaml"; "pp"; "use_pa_gt"] (S [ Sh"../camlp5o_pp.sh" ]);
+    flag ["ocaml"; "link"; "link_pagtcmo"] (S [ A"camlp5/pa_gt.cma" ]);
+    flag ["ocaml"; "link"; "link_pp5gt"]
+      (S[ A"-package"; A"ppxlib"
+        ; A"common/GTCommon.cma"
+        ; A"camlp5/pa_gt.cma"
+        ]);
 
-   ()
+     (* flag ["ocamldep"; "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]);
+      * flag ["compile";  "link_pa_gt"]   (S [ Sh"../camlp5o_pp.sh" ]); *)
+
+    (* flag ["make_pp_mymetaquot"; "link"; "native"] @@
+     * S ([ A"mymetaquot/lifters.cmx"; A"mymetaquot/my_metaquot.cmx"
+     *
+     *    ]); *)
+    dep ["mymetaquot/pp_mymetaquot.native"]        ["mymetaquot/mymetaquot.cmxa"];
+
+    flag ["make_pp_gt"; "link"; "byte"] @@
+    S ([ A"ppx/ppx_deriving_gt.cma"; A"-package"; A"ppxlib" ] @
+       make_plugins_args ~is_byte:true @ [ A"common/plugin.cmo"]  );
+    flag ["make_pp_gt"; "link"; "native"] @@
+    S ([ A"-package"; A"ppxlib"
+       ; A"-I"; A"common"
+       ; A"ppx/ppx_deriving_gt.cmxa"
+       ] @
+       make_plugins_args ~is_byte:false @
+       [
+       ]  );
+
+    dep ["compile"; "use_ppx_extension"] ["ppx/ppx_deriving_gt.cma"; "rewriter/pp_gt.native"];
+    dep ["compile"; "link_pp5gt"]        ["camlp5/core2.ml"];
+    ()
  | _ -> ()
 )

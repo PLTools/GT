@@ -1,8 +1,10 @@
 open GT
 
-@type expr = Sub of (expr * expr) | Add of expr * expr | Ident of string | Const of int with show, html, gmap, foldl, foldr, eq, compare
+@type expr =
+  | Sub of (expr * expr) | Add of expr * expr | Ident of string | Const of int
+  with show, html, gmap, foldl, foldr, eq, compare
 
-let etoHTML e = 
+let etoHTML e =
   HTML.toHTML (
     HTML.html (
       HTML.ul (
@@ -13,7 +15,7 @@ let etoHTML e =
 
 @type str = {a : expr; b : expr} with html
 
-let stoHTML e = 
+let stoHTML e =
   HTML.toHTML (
     HTML.html (
       HTML.ul (
@@ -22,7 +24,6 @@ let stoHTML e =
     )
   )
 
-let _ = 
+let _ =
   Printf.printf "%s\n" (etoHTML (Add (Ident "b", Add (Sub (Ident "a", Ident "b"), Const 1))));
   Printf.printf "%s\n" (stoHTML {a=(Add (Ident "b", Add (Sub (Ident "a", Ident "b"), Const 1))); b = Ident "c"});
-

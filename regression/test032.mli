@@ -1,3 +1,3 @@
 open GT
 
-@type test = string with show, gmap, foldl, foldr, eq, compare
+@type test = string with stateful,eval,compare,eq,foldl, foldr,gmap,fmt, html,show

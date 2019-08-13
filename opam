@@ -8,14 +8,17 @@ homepage:    "https://github.com/dboulytchev/GT"
 bug-reports: "https://github.com/dboulytchev/GT/issues"
 dev-repo:    "https://github.com/dboulytchev/GT.git"
 
-build: [make "-f" "Makefile.ob"]
-build-test: [make "-f" "Makefile.ob" "test"]
+build: [make ]
+build-test: [make "test"]
 
-install: [make "-f" "Makefile.ob" "PREFIX=%{prefix}%" "install"]
-remove:  [make "-f" "Makefile.ob" "PREFIX=%{prefix}%" "uninstall"]
+install: [make "PREFIX=%{prefix}%" "install"]
+remove:  [make "PREFIX=%{prefix}%" "uninstall"]
 
 depends: [
-  "ocamlfind" {build}
+  "ocamlfind"  {build}
   "ocamlbuild" {build}
+  "ocamlgraph" {build}
+  "ppxlib"
   "camlp5"
+  "ppx_import" {test}
 ]

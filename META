@@ -1,14 +1,46 @@
-1version = "0.1"
+version = "0.1"
 description = "Generic transformers for algebraic types"
-archive(byte) = "GT.cma"
-archive(native) = "GT.cmxa"
+requires = "ppxlib"
+archive(byte) = "GTlib.cma"
+archive(native) = "GTlib.cmxa"
 
+package "common" (
+  description = ""
+  requires = "ocamlgraph"
+  archive(byte)    = "GTCommon.cma"
+  archive(native)  = "GTCommon.cmxa"
+
+)
+package "ppx" (
+  description = "PPX syntax extensionon top of ppx_core"
+
+  requires(ppx_driver)        = "ppxlib"
+
+  archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
+  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx fmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
+  plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
+  plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
+  exists_if = "ppx_deriving_gt.cma"
+
+  # This line makes things transparent for people mixing preprocessors
+  # and normal dependencies
+  requires(-ppx_driver) = ""
+  ppx(-ppx_driver,-custom_ppx) = "./pp_gt.native --as-ppx"
+)
+
+package "expander" (
+  description = "Contains code that actually generates the code"
+  archive(byte)   = "ppx_gt_expander.cma"
+  archive(native) = "ppx_gt_expander.cmxa"
+  requires = "ppx_core"
+)
+# TODO: maybe plugins aren't requiring GT.syntax since we support PPX too?
 package "syntax" (
   version = "0.1"
   description = "Syntax extension for generic transformers"
-  requires = "camlp5"
-  archive(syntax, preprocessor) = "pa_gt.cmo"
-  archive(syntax, toploop) = "pa_gt.cmo"
+  requires = "camlp5,ppxlib,ocamlgraph"
+  archive(syntax, preprocessor) = "GTCommon.cma pa_gt.cma"
+  archive(syntax, toploop) = "GTCommon.cma pa_gt.cma"
 
   package "compare" (
     description = "Plugin 'compare'"
@@ -22,8 +54,15 @@ package "syntax" (
     archive(syntax,preprocessor) = "show.cmo"
     archive(syntax,toploop) = "show.cmo"
   )
+  package "htmlTy" (
+    description = "Plugin 'html' for HTML generation based on TyXML library"
+    requires = "GT.syntax tyxml"
+    archive(syntax,preprocessor) = "htmlTy.cmo"
+    exists_if               = "htmlTy.cmo"
+    archive(syntax,toploop) = "htmlTy.cmo"
+  )
   package "html" (
-    description = "Plugin 'html'"
+    description = "Plugin 'html' with custom HTML library (legacy)"
     requires = "GT.syntax"
     archive(syntax,preprocessor) = "html.cmo"
     archive(syntax,toploop) = "html.cmo"
@@ -52,11 +91,16 @@ package "syntax" (
     archive(syntax,preprocessor) = "gmap.cmo"
     archive(syntax,toploop) = "gmap.cmo"
   )
+  package "hash" (
+    description = "Plugin 'hash' for hash consing"
+    requires = "GT.syntax"
+    archive(syntax,preprocessor) = "hash.cmo"
+    archive(syntax,toploop) = "hash.cmo"
+  )
   package "all" (
     description = "All supported syntaxes"
     requires = "GT.syntax"
-    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo"
-    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo html.cmo gmap.cmo show.cmo"
+    archive(syntax,preprocessor) = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo hash.cmo"
+    archive(syntax,toploop)      = "compare.cmo eq.cmo foldl.cmo foldr.cmo gmap.cmo eval.cmo show.cmo html.cmo stateful.cmo hash.cmx"
   )
 )
-

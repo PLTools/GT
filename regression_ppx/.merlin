@@ -1,0 +1,4 @@
+SRC .
+B ../_build/regression_ppx/
+B ../_build/src
+FLG -rectypes

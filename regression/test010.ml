@@ -10,56 +10,70 @@ let gensym = let n = ref 0 in fun () -> incr n; "_" ^ string_of_int !n;;
 
 @type var = [`Var of string]
 
-class ['v] var_eval = object
-  inherit [(string * 'v) list, 'v] @var
+class ['self, 'v] var_eval = object
+  inherit [(string * 'v) list, 'self, 'v] @var
+  constraint 'self = [> var]
   method c_Var s v name = try List.assoc name s with Not_found -> `Var name 
 end
 
 @type 'a lambda = [var | `Abs of string * 'a | `App of 'a * 'a] 
 
-class ['a, 'v] lambda_eval = object
-  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v] @lambda
-  inherit ['v] var_eval 
-  method c_Abs s v name l1 = 
+class ['self] lambda_eval fa fself = object
+  inherit [ (string * 'self) list,  'self, 'self
+          , (string * 'self) list,  'self, 'self
+          ] @lambda
+  inherit ['self, 'self] var_eval
+  constraint 'self = [> 'self lambda ]
+  method c_Abs env _ name l1 =
     let s' = gensym () in
-   `Abs (s', l1.GT.fx ((name, `Var s')::s))
-  method c_App s v l1 l2 = 
-    let l2' = l2.GT.fx s in
-    match l1.GT.fx s with
-     `Abs (s, body) -> v.GT.t#a [s, l2'] body  
-    | l1' -> `App (l1', l2')
+    `Abs (s', fa ((name, `Var s')::env) l1)
+
+  method c_App s _ l1 l2 =
+    let l2' = fa s l2 in
+    match fa s l1 with
+    | `Abs (s, body) -> fa [s, l2'] body (* Why we don't extend old env here *)
+    | l1'            -> `App (l1', l2')
  end
 
-let rec eval1 s e = GT.transform(lambda) eval1 (new lambda_eval) s e;;
+(* let (_: _ -> int) = new lambda_eval *)
+
+let rec eval1 s e = GT.transform(lambda) (new lambda_eval eval1) s e;;
 
 @type 'a var_expr = [var | `Num of int | `Add of 'a * 'a | `Mult of 'a * 'a] 
 
-class ['a, 'v] var_expr_eval = object
-  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v] @var_expr
-  inherit ['v] var_eval
-  method c_Num  s v i   = `Num i
-  method c_Add  s v x y = 
-    match x.GT.fx s, y.GT.fx s with
+class [ 'self ] var_expr_eval fa fself = object
+  inherit [ (string * 'self) list, 'self, 'self
+          , (string * 'self) list, 'self, 'self
+          ] @var_expr
+  inherit ['self, 'self] var_eval
+  constraint 'self = [> 'self var_expr ]
+
+  method c_Num  _ _ i   = `Num i
+  method c_Add  env _ x y =
+    match fa env x, fa env y with
     | `Num x, `Num y -> `Num (x+y)
-    | x, y -> `Add (x, y) 
-  method c_Mult s v x y =
-    match x.GT.fx s, y.GT.fx s with
+    | x, y           -> `Add (x, y)
+  method c_Mult env _ x y =
+    match fa env x, fa env y with
     | `Num x, `Num y -> `Num (x*y)
-    | x, y -> `Mult (x, y)
+    | x, y           -> `Mult (x, y)
  end
 
-let rec eval2 s e = GT.transform(var_expr) eval2 (new var_expr_eval) s e;;
+let rec eval2 s e = GT.transform(var_expr)  (new var_expr_eval eval2) s e;;
 
 @type 'a expr = ['a lambda | 'a var_expr]
 
-class ['a, 'v] expr_eval = object
-  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v] @expr
-  inherit ['a, 'v] lambda_eval
-  inherit ['a, 'v] var_expr_eval
+class ['a, 'self] expr_eval fself = object
+  inherit [ (string * 'self) list, 'a,    'self
+          , (string * 'self) list, 'self, 'self
+          ] @expr
+  inherit ['self]   lambda_eval fself fself
+  inherit ['self] var_expr_eval fself fself
+  constraint 'self = [> 'a var_expr | 'a lambda ]
 end 
 
-let rec eval3 s e = GT.transform(expr) eval3 (new expr_eval) s e
+let rec eval3 s e = GT.transform(expr) (new expr_eval) s e
 
 let _ =
-  Printf.printf "%s\n" (to_string (eval3 ["x", `Num 5; "y", `Num 6] (`Add (`Var "x", `Mult (`Num 2, `Var "y"))))) 
-
+  Printf.printf "%s\n" @@
+  to_string (eval3 ["x", `Num 5; "y", `Num 6] (`Add (`Var "x", `Mult (`Num 2, `Var "y"))))

@@ -1,49 +1,61 @@
-#load "q_MLast.cmo";;
+(*
+ * Generic transformers: plugins.
+ * Copyright (C) 2016-2019
+ *   Dmitrii Kosarev aka Kakadu
+ * St.Petersburg State University, JetBrains Research
+ *)
 
-open Pa_gt.Plugin
-open List
+(** {i Foldr} plugin: fold all values in a type.
+
+    Essentially is a stub that chains inherited attribute thorough all values
+    in the value
+
+    For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
+    function with type
+
+    [('s -> 'a -> 's) ->
+     ('s -> 'b -> 's) ->
+     ... ->
+     's -> ('a,'b,...) typ -> 's ]
+*)
+
+open Base
+open HelpersBase
+open Ppxlib
 open Printf
 
-let _ =
-  register "foldr" 
-    (fun loc d -> 
-       let module H = Helper (struct let loc = loc end) in       
-       H.(
-        let gen   = name_generator (d.name::d.type_args) in
-	let syn   = gen#generate "syn" in
-        {
-          inh_t       = T.var syn; 
-          syn_t       = T.var syn;
-          proper_args = d.type_args @ [syn];
-          fixed_inh   = None;
-          sname       = (fun _ -> T.var syn);
-          iname       = (fun _ -> T.var syn)
-        }, 
-	let rec body env args =
-	  fold_right
-            (fun (arg, typ) inh ->
-	      let arg = E.id arg in
-	      match typ with
-	      | Variable _ | Self _ -> <:expr< $arg$.GT.fx $inh$ >>
-	      | Tuple (_, elems) -> 
-		  let args = mapi (fun i _ -> env.new_name (sprintf "e%d" i)) elems in					
-                  <:expr<
-                      let $P.tuple (map P.id args)$ = $arg$ in
-                      $body env (combine args elems)$
-                  >>
-	      | _ ->
-		  match env.trait "foldr" typ with
-		  | None   -> inh
-		  | Some e -> <:expr< $e$ $inh$ $arg$ >>
-	    )
-	    args
-            (E.id env.inh)
-	in
-        object
-	  inherit generator
-	  method record      env fields    = body env (map (fun (n, (_, _, t)) -> n, t) fields)
-	  method tuple       env elems     = body env elems
-	  method constructor env name args = body env args
-	end
-       )
-    )
+let trait_name = "foldr"
+
+module Make(AstHelpers : GTHELPERS_sig.S) = struct
+open AstHelpers
+module P = Foldl.Make(AstHelpers)
+
+let trait_name =  trait_name
+
+class g initial_args tdecls = object(self: 'self)
+  inherit P.g initial_args tdecls as super
+
+  method trait_name = trait_name
+
+  method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
+    List.fold_left ~f:(fun acc (name,typ) ->
+        Exp.app_list ~loc
+          (do_typ typ)
+          [ acc; Exp.sprintf ~loc "%s" name]
+        )
+        ~init
+        (List.rev xs)
+
+end
+
+let create =
+  (new g :>
+     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
+      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+
+end
+
+let register () =
+  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
+
+let () = register ()
