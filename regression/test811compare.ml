@@ -1,33 +1,33 @@
-(* module T1 = struct
- * type ('a,'b) t = A of 'a | B of 'b * GT.int
- * [@@deriving gt ~options:{ compare }]
- *
- * let () =
- *   let cmp1 x y = compare_t (GT.compare GT.int) (GT.compare GT.string) x y in
- *   assert (GT.EQ =  cmp1 (A 5) (A 5) );
- *   assert (GT.EQ =  cmp1 (B ("",5)) (B ("",5))  );
- *   assert (GT.EQ <> cmp1 (A 5) (B ("",5)) );
- *   assert (GT.LT =  cmp1 (A 5) (B ("",5)) );
- *   assert (GT.GT =  cmp1 (B ("",5))  (A 5));
- *   ()
- * end
- *
- * (\* testing polymorphic variants *\)
- * module T2 = struct
- * type 'b t2 = [ `A | `B of 'b * GT.int ]
- * [@@deriving gt ~options:{ compare}]
- *
- * let () =
- *   let cmp1 x y = compare_t2 (GT.compare GT.string) x y in
- *   assert (GT.EQ =  cmp1 `A           `A );
- *   assert (GT.EQ =  cmp1 (`B ("",5)) (`B ("",5)) );
- *   assert (GT.EQ <> cmp1 `A          (`B ("",5)) );
- *   (\* I'm not sure why the answer is not LT here *\)
- *   assert (GT.EQ <>  cmp1 `A          (`B ("",5)) );
- *   assert (GT.EQ <>  cmp1 (`B ("",5))  `A );
- *   ()
- * end *)
+module T1 = struct
+  type ('a,'b) t = A of 'a | B of 'b * GT.int
+  [@@deriving gt ~options:{ compare }]
 
+  let () =
+    let cmp1 x y = compare_t (GT.compare GT.int) (GT.compare GT.string) x y in
+    assert (GT.EQ =  cmp1 (A 5) (A 5) );
+    assert (GT.EQ =  cmp1 (B ("",5)) (B ("",5))  );
+    assert (GT.EQ <> cmp1 (A 5) (B ("",5)) );
+    assert (GT.LT =  cmp1 (A 5) (B ("",5)) );
+    assert (GT.GT =  cmp1 (B ("",5))  (A 5));
+    ()
+end
+(*
+(* testing polymorphic variants *)
+module T2 = struct
+  type 'b t2 = [ `A | `B of 'b * GT.int ]
+  [@@deriving gt ~options:{ compare}]
+
+  let () =
+    let cmp1 x y = compare_t2 (GT.compare GT.string) x y in
+    assert (GT.EQ =  cmp1 `A           `A );
+    assert (GT.EQ =  cmp1 (`B ("",5)) (`B ("",5)) );
+    assert (GT.EQ <> cmp1 `A          (`B ("",5)) );
+    (* I'm not sure why the answer is not LT here *)
+    assert (GT.EQ <>  cmp1 `A          (`B ("",5)) );
+    assert (GT.EQ <>  cmp1 (`B ("",5))  `A );
+    ()
+end
+*)
 module T3 = struct
   type 'a t = { q: GT.int; w: GT.string; e: 'a GT.list }
   [@@deriving gt ~options:{ compare; eq}]
@@ -64,3 +64,18 @@ end
  *     assert (not(eq1 b c));
  *     ()
  * end *)
+
+module T5 = struct
+  type t = Foo of { aaa: GT.int; bbb: GT.int }
+  [@@deriving gt ~options:{ compare; eq}]
+
+  let () =
+    let a = Foo { aaa= 5; bbb= 11} in
+    let b = Foo { aaa= 5; bbb= 11} in
+    let cmp1 = GT.compare t in
+    let eq1 = GT.eq t in
+    assert (GT.EQ = cmp1 a a);
+    assert (GT.EQ = cmp1 a b);
+    assert (eq1 a a);
+    assert (eq1 a b);
+end

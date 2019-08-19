@@ -119,8 +119,8 @@ class g args tdecls = object(self: 'self)
               in
 
               Typ.variant ~loc ~is_open:true @@
-              List.map rf ~f:(function
-                  | (Rtag (name,attrs,has_empty, ts)) ->
+              List.map rf ~f:(fun rf -> match rf.prf_desc with
+                  | (Rtag (name,has_empty, ts)) ->
                     let open Ast_builder.Default in
                     let rec on_t t = map_core_type
                         ~onvar
@@ -132,9 +132,9 @@ class g args tdecls = object(self: 'self)
                           )
                         t
                     in
-                    Rtag (name,attrs,has_empty, List.map ts ~f:on_t)
+                    {rf with prf_desc = Rtag (name, has_empty, List.map ts ~f:on_t) }
                   | Rinherit typ ->
-                    Rinherit (map_core_type typ ~onvar)
+                    {rf with prf_desc = Rinherit (map_core_type typ ~onvar) }
                 )
             | _ -> failwith "should not happen"
         )

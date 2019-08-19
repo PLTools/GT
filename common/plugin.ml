@@ -28,7 +28,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
     List.map rows ~f:(function
-        | Rtag (lab, _, _, args) ->
+        | Rtag (lab, _, args) ->
           let args = match args with
             | [t] -> unfold_tuple t
             | [] -> []
@@ -197,13 +197,16 @@ class virtual generator initial_args tdecls = object(self: 'self)
                 | [_] -> ps
                 | tdecls ->
                   (* we don't need self transformation for *)
-                  (Pat.tuple ~loc @@
-                   List.map self#tdecls ~f:(fun {ptype_name={txt=name}} ->
-                       Pat.var ~loc @@
-                       if String.equal name tdecl.ptype_name.txt
-                       then sprintf "fself_%s" name
-                       else Naming.for_ name
-                     )) :: ps
+                  (Pat.alias ~loc
+                     (Pat.tuple ~loc @@
+                      List.map self#tdecls ~f:(fun {ptype_name={txt=name}} ->
+                          Pat.var ~loc @@
+                          if String.equal name tdecl.ptype_name.txt
+                          then sprintf "fself_%s" name
+                          else Naming.for_ name
+                        ))
+                     Naming.mutuals_pack
+                  ) :: ps
               )
           in
           Cl.fun_list ~loc names body
@@ -361,7 +364,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
             (* let's say we have predefined aliases for now *)
             helper @@ constr_of_tuple ~loc:typ.ptyp_loc ts
           | Ptyp_variant (rows,_,_) ->
-              let rr = List.map rows ~f:(function
+              let rr = List.map rows ~f:(fun rf -> match rf.prf_desc with
               | Rinherit typ ->
                   with_constr_typ typ
                     ~ok:(fun cid params ->
@@ -372,7 +375,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                           (self# final_typ_params_for_alias ~loc tdecl params)
                      )
                      ~fail:(fun () -> assert false)
-              | Rtag (lab,_,_, typs) -> begin
+              | Rtag (lab, _, typs) -> begin
                   Ctf.method_ ~loc (sprintf "c_%s" lab.txt) ~virt:false @@
                   match typs with
                   | [] ->
@@ -426,10 +429,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
     let mutal_names = List.map mutal_decls ~f:(fun t -> t.ptype_name.txt) in
     let ans args : Cf.t list =
       [ let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams in
-        (* let () =
-         *   if String.equal self#trait_name "gmap"
-         *   then assert (List.length typ_params = (2 + 2 * (List.length cparams)))
-         * in *)
         let args =
           (match cid.txt with
           | Lident s when List.mem mutal_names s ~equal:String.equal ->
@@ -442,14 +441,23 @@ class virtual generator initial_args tdecls = object(self: 'self)
              *  map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt] *)
           ) @ args
         in
-        Cf.inherit_ ~loc @@ Cl.apply ~loc
-          (Cl.constr ~loc
-             (map_longident cid.txt
-                ~f:(fun s ->
-                    Naming.trait_class_name_for_typ ~trait:self#plugin_name s
-                  ))
-             typ_params)
-          args
+        match cid.txt with
+        | Lident s when List.mem mutal_names s ~equal:String.equal ->
+          Cf.inherit_ ~loc @@ Cl.apply ~loc
+            (Cl.constr ~loc
+               (lident @@ Naming.make_stub_class_name ~plugin:self#plugin_name s)
+               typ_params
+            )
+            [Exp.ident ~loc Naming.mutuals_pack]
+        | _ ->
+          Cf.inherit_ ~loc @@ Cl.apply ~loc
+            (Cl.constr ~loc
+               (map_longident cid.txt
+                  ~f:(fun s ->
+                      Naming.trait_class_name_for_typ ~trait:self#plugin_name s
+                    ))
+               typ_params)
+            args
       ]
     in
 
@@ -485,7 +493,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
             )
     (* TODO: Do something with copy paste. *)
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
-    | Rtag (constr_name,_,_, []) ->
+    | Rtag (constr_name, _, []) ->
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
         Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
@@ -494,7 +502,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe:(Exp.ident ~loc inhname)
           tdecl (`Poly constr_name.txt) []
       ]
-    | Rtag (constr_name,_,_, [arg]) ->
+    | Rtag (constr_name, _, [arg]) ->
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
         let bindings = List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts) in
@@ -504,7 +512,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
         self#on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe:(Exp.ident ~loc inhname)
           tdecl (`Poly constr_name.txt) bindings
       ]
-    | Rtag (constr_name,_,_,args) ->
+    | Rtag (constr_name, _, args) ->
       (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
       failwith "conjunction types are not supported but"
     )
@@ -541,7 +549,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
             helper @@ constr_of_tuple ~loc:typ.ptyp_loc ts
           | Ptyp_variant (rows,_,_) ->
             self#got_polyvar ~loc tdecl (self#do_typ_gen ~mutal_decls:mutual_decls ~is_self_rec tdecl)
-              ~is_self_rec ~mutal_decls:mutual_decls  rows (fun x -> x)
+              ~is_self_rec ~mutal_decls:mutual_decls 
+              (List.map rows ~f:(fun {prf_desc} -> prf_desc))
+              (fun x -> x)
         | _ -> assert false
         in
         helper typ
@@ -733,8 +743,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method do_mutuals_sigs ~loc ~is_rec =
     List.concat
-      [
-        List.concat_map self#tdecls ~f:(fun tdecl ->
+      [ List.concat_map self#tdecls ~f:(fun tdecl ->
             List.concat
               [ self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
               ; self#make_class_sig ~loc ~is_rec tdecl
@@ -1119,7 +1128,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
               List.map bindings ~f:(fun (s,_) -> Exp.ident ~loc s)
             in
             self#abstract_trf ~loc (fun einh esubj ->
-              prepare_patt_match_poly ~loc esubj rows maybe_labels
+              prepare_patt_match_poly ~loc esubj 
+                (List.map rows ~f:(fun {prf_desc} -> prf_desc))
+                maybe_labels
                 ~onrow
                 ~onlabel:(fun _ _ -> Exp.assert_false ~loc)
                 ~oninherit:(oninherit ~loc einh esubj)

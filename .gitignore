@@ -1,4 +1,5 @@
 \ *undo-tree*
+/node_modules
 _build
 *.native
 *.byte

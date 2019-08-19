@@ -39,16 +39,17 @@ To preprocess only the code in this library (for example, a test) use the follow
 
  * The framework for generation is in `common/`. The generic plugin for adding new transformations is in `common/plugin.ml`.
  * All built-in plugins live in `plugins/` and depend on the stuff in `common/`.
- * Camlp5-specific preprocessing plugin lives in `camlp5/`. Depends on stuff in `common/`.
+ * Camlp5-specific preprocessing plugin lives in `camlp5/`. Depend on stuff in `common/`.
  * PPX-specific preprocessing plugin lives in `ppx/`. Depends on stuff in `common/`.
  * Built-in plugins that represent transformations live in `plugins/`. Depends on `common/`.
- * A library for built-in types and transformations for types from Pervasives live in `src/`. Depends on syntax extension from `camlp5/`.
+ * A library for built-in types and transformations for types from Pervasives live in `src/`. Depends on syntax extension from `camlp5/` and plugins from `plugins/`.
 
 # Dependencies
 
-  * ppxlib
-  * camlp5
-  * ocamlgraph for topological sorting
+  * `ppxlib`
+  * `camlp5
+  * `ocamlgraph` for topological sorting
+  * `ocamlbuild` as build system
 
 # Compilation
 
@@ -84,6 +85,13 @@ decoration of the original declaration:
  | Int of GT.int
  | Var of GT.string [@@deriving gt ~options:{show}]
 ```
+
+For mutually recursive type declarations add decoration only to the last type
+```
+type t = ....
+and heap = t [@@deriving gt ~options:{ show }]
+```
+
 
 We replaced here `int` and `string` with `GT.int` and `GT.string` respectively, and added `[@@deriving gt ~options:{show}]` to the end of type declaration to make the framework generate all "boilerplate" code for us. `GT.int` and
 `GT.string` are two synonyms for regular standard types, equipped with some
@@ -340,12 +348,14 @@ The complete example can be found in file `sample/expr.ml`.
 
 ## Limitations
 
+Known to be not supported or not taken to account:
+
   * non-regular recursive types
   * GADTs
 
 ## TODO
 
-* Documentation for src/GT.ml is not generated (possible because of a macro)
+* Documentation for `src/GT.ml` is not generated (possible because of a macro)
 
 ## References
 

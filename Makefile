@@ -49,7 +49,7 @@ add_ppx:
 	$(eval OBTARGETS += ppx/ppx_deriving_gt.cma ppx/ppx_deriving_gt.cmxs ppx/pp_gt.native)
 ppx: add_common add_ppx compile
 
-PLUGINS=show gmap compare eq foldl foldr eval stateful fmt html hash #show_typed #htmlTy
+PLUGINS=show gmap compare eq foldl foldr eval stateful gfmt html hash #show_typed #htmlTy
 add_plugins:
 	$(eval OBPARAMS  += -I common)
 	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
@@ -79,7 +79,7 @@ REGRES_CASES += 024 025 021 040
 REGRES_CASES += 081 083 086 087 090 091
 REGRES_CASES += 042
 # PPX based tests
-REGRES_CASES += 816 803 804 805 806 810 811 812 815 820 821 822 823#808 814
+REGRES_CASES += 816 803 804 805 806 810 811 812 815 820 821 822 823 824#808 814
 #mutual cases
 REGRES_CASES += 800 802 #801
 

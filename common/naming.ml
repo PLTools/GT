@@ -40,8 +40,10 @@ let fix_result_record trait tdecls =
   String.concat ~sep:"_" [trait; "fix"; name]
 
 let trf_function trait s = Printf.sprintf "%s_%s" trait s
+let make_stub_class_name ~plugin tname =
+  sprintf "%s_%s_t_stub" plugin tname
 let stub_class_name ~plugin tdecl =
-  sprintf "%s_%s_t_stub" plugin tdecl.ptype_name.txt
+  make_stub_class_name ~plugin tdecl.ptype_name.txt
 
 let init_trf_function trait s = trf_function trait s ^ "_0"
 

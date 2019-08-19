@@ -132,7 +132,7 @@ class g args tdecls = object(self)
       Exp.fun_ ~loc (Pat.any  ~loc) @@
       Exp.string_const ~loc "\"<opaque>\""
       ) @@
-    List.find t.ptyp_attributes ~f:(fun ({txt},_) -> String.equal txt "opaque")
+    List.find t.ptyp_attributes ~f:(fun {attr_name={txt}} -> String.equal txt "opaque")
 
 
 end

@@ -119,7 +119,7 @@ First, we define the non-binding part of the terms:
 Separating this type looks a natural idea since potentially there can be many binding constructs (lambdas, lets, etc.) and by combining them
 with the non-binding part (and with themselves) one can acquire a variety of languages with a coherent behaviour.
 
-The type ``\lstinline{lam}'' is polymorphic: the first parameters is used to represent names or de Bruijn indices, the second one is needed
+The type ``\lstinline{lam}'' is polymorphic: the first parameter is used to represent names or de Bruijn indices, the second one is needed
 for open recursion (we here follow the known technique for describing extensible data structures with polymorphic variants~\cite{PolyVarReuse}).
 
 What would the transformation to the nameless representation look like for this type? In our terms, what the transformation class is? It is shown
