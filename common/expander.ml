@@ -70,7 +70,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in
   let rs =
     List.map rows ~f:(function
-        | Rtag (lab, _, _, args) ->
+        | Rtag (lab, _, args) ->
           let args = match args with
             | [t] -> unfold_tuple t
             | [] -> []
@@ -212,8 +212,9 @@ let make_interface_class_sig ~loc tdecl =
           | Ptyp_variant (rows,_,labels) ->
               (* rows go to virtual methods. label goes to inherit fields *)
               let meths =
-                List.concat_map rows ~f:(function
-                  | Rtag (lab,_,_,args)  ->
+                List.concat_map rows ~f:(fun rf ->
+                  match rf.prf_desc with
+                  | Rtag (lab, _, args)  ->
                     let args = match args with
                       | [] -> []
                       | [{ptyp_desc=Ptyp_tuple ts; _}] -> ts
@@ -336,8 +337,9 @@ let make_interface_class ~loc tdecl =
           | Ptyp_variant (rows,_,labels) ->
               (* rows go to virtual methods. label goes to inherit fields *)
             ans ~is_poly:true @@
-              List.concat_map rows ~f:(function
-                | Rtag (lab,_,_,[]) ->
+              List.concat_map rows ~f:(fun rf ->
+                match rf.prf_desc with
+                | Rtag (lab, _, []) ->
                     let methname = sprintf "c_%s" lab.txt in
                     [ Cf.method_virtual ~loc methname @@
                       Typ.( var ~loc "syn"
@@ -346,7 +348,7 @@ let make_interface_class ~loc tdecl =
                             |> arrow ~loc (var ~loc "inh")
                           )
                     ]
-                | Rtag (lab,_,_,[typ]) ->
+                | Rtag (lab, _, [typ]) ->
                       (* print_endline "HERE"; *)
                       let args = match typ.ptyp_desc with
                         | Ptyp_tuple ts -> ts
@@ -362,9 +364,7 @@ let make_interface_class ~loc tdecl =
                             |> (arrow ~loc (var ~loc "inh"))
                           )
                       ]
-                | Rtag (_,_,_,_args) ->
-                  failwith "Can't deal with conjunctive types"
-
+                | Rtag (_, _, _) -> failwith "Can't deal with conjunctive types"
                 | Rinherit typ -> match typ.ptyp_desc with
                       | Ptyp_constr ({txt;loc}, params) ->
                         wrap ~is_poly:true txt params
@@ -549,7 +549,8 @@ let make_gcata_str ~loc tdecl =
         | Ptyp_variant (rows,_,maybe_labels) ->
           let subj_s = "subj" in
           ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc subj_s)
-            rows maybe_labels
+            (List.map rows ~f:(fun {prf_desc} -> prf_desc))
+            maybe_labels
             ~onrow:(fun cname names ->
                 List.fold_left
                   ~init:(Exp.send ~loc (Exp.ident ~loc "tr") ("c_" ^ cname.txt))

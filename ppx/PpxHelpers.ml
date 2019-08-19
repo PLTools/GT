@@ -230,7 +230,9 @@ module Typ = struct
   (* let ground  ~loc s = constr ~loc (Located.mk ~loc s) [] *)
   let class_  ~loc = ptyp_class ~loc
   let object_ ~loc flg xs =
-    ptyp_object ~loc (List.map xs ~f:(fun (l,r) -> Otag (Located.mk ~loc l,[],r)) ) flg
+    ptyp_object ~loc
+    (List.map xs ~f:(fun (l,r) -> { pof_desc = Otag (Located.mk ~loc l, r); pof_loc=loc; pof_attributes=[]}) )
+    flg
   let package ~loc lident =
     ptyp_package ~loc (lident, [])
   let arrow ~loc l r =
@@ -532,7 +534,7 @@ open Parsetree
 
 let openize_helper ~is_open ~loc typ =
   let loc = typ.ptyp_loc in
-  Typ.variant ~loc ~is_open [Rinherit typ]
+  Typ.variant ~loc ~is_open [{prf_desc= Rinherit typ; prf_loc=loc; prf_attributes=[] }]
 
 let openize_poly ~loc = openize_helper ~is_open:true ~loc
 let closize_poly ~loc = openize_helper ~is_open:false ~loc

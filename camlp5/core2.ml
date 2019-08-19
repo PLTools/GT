@@ -133,7 +133,7 @@ let get_val loc = function
  *   (args, name, convert t.tdDef) *)
 
 module Migr =
-  Migrate_parsetree.Convert(Migrate_parsetree.OCaml_current)(Migrate_parsetree.OCaml_407)
+  Migrate_parsetree.Convert(Migrate_parsetree.OCaml_current)(Migrate_parsetree.OCaml_408)
 
 
 

@@ -292,9 +292,9 @@ module Typ = struct
     helper root_typ
   (* this might need to be changed *)
   let variant ~loc ?(is_open=false) fs =
-    let vs = fs |> List.map (function
+    let vs = fs |> List.map (fun rf -> match rf.Ppxlib.prf_desc with
         | Ppxlib.Rinherit core_typ -> PvInh (loc, from_caml core_typ)
-        | Rtag (lb, _, is_open, args) ->
+        | Rtag (lb, is_open, args) ->
           PvTag (loc, VaVal lb.txt, VaVal is_open, VaVal (List.map from_caml args) )
       ) in
     if is_open

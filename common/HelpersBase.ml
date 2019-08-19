@@ -101,12 +101,13 @@ let map_core_type ?(onconstr=(fun _ _ -> None)) ~onvar t =
     | Ptyp_arrow (lab, from, to_) ->
       { t with ptyp_desc= Ptyp_arrow (lab, helper from, helper to_) }
     | Ptyp_variant (rows,flg,opt) ->
-      let rows = List.map rows ~f:(function
-          | Rinherit t -> Rinherit (helper t)
-          | Rtag (name,attrs, flg, ps) ->
+      let rows = List.map rows ~f:(fun rf ->
+          match rf.prf_desc with
+          | Rinherit t -> { rf with prf_desc = Rinherit (helper t) }
+          | Rtag (name, flg, ps) ->
             (* Format.printf "got tag `%s`\n%!" name.txt; *)
             let params = List.map ps ~f:helper in
-            Rtag (name,attrs,flg, params)
+            { rf with prf_desc = Rtag (name, flg, params) }
         )
       in
       {t with ptyp_desc= Ptyp_variant (rows,flg,opt) }
@@ -226,7 +227,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = pexp_match ~loc what cs in
   let rs =
     List.map rows ~f:(function
-        | Rtag (lab, _, _, args) ->
+        | Rtag (lab, _, args) ->
           let args = match args with
             | [t] -> unfold_tuple t
             | [] -> []
