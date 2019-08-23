@@ -1,5 +1,5 @@
 type 'a t = C of {xxx: 'a; yyy: GT.int}
-[@@deriving gt ~options:{ html; fmt }]
+[@@deriving gt ~options:{ html; fmt; gmap }]
 
 let () =
   let x1 = C {xxx="asdf"; yyy=1} in
