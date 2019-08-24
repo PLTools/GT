@@ -549,7 +549,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
             helper @@ constr_of_tuple ~loc:typ.ptyp_loc ts
           | Ptyp_variant (rows,_,_) ->
             self#got_polyvar ~loc tdecl (self#do_typ_gen ~mutal_decls:mutual_decls ~is_self_rec tdecl)
-              ~is_self_rec ~mutal_decls:mutual_decls 
+              ~is_self_rec ~mutal_decls:mutual_decls
               (List.map rows ~f:(fun {prf_desc} -> prf_desc))
               (fun x -> x)
         | _ -> assert false
@@ -848,6 +848,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
     type_declaration ->
     [ `Normal of string | `Poly of string ] ->
     (* pattern variable, label name, typ of label *)
+    (* TODO: Replace next to arguments by single of type (string * label_declaration) list *)
     (string * string * core_type) list ->
     label_declaration list ->
     Exp.t
@@ -1128,7 +1129,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
               List.map bindings ~f:(fun (s,_) -> Exp.ident ~loc s)
             in
             self#abstract_trf ~loc (fun einh esubj ->
-              prepare_patt_match_poly ~loc esubj 
+              prepare_patt_match_poly ~loc esubj
                 (List.map rows ~f:(fun {prf_desc} -> prf_desc))
                 maybe_labels
                 ~onrow

@@ -7,6 +7,7 @@ This library implements a framework for datatype-generic programming in Objectiv
 The key feature of the approach in question is object-oriented representation of transformations performed over regular algebraic datatypes. Our implementation supports polymorphic variants; in particular, a transformation for a "joined" polymorphic variant type can be acquired via inheritance from the transformations for its counterparts.
 
 ### See also
+
 [visitors](https://gitlab.inria.fr/fpottier/visitors)
 
 [BAP's vistors](http://binaryanalysisplatform.github.io/bap/api/master/Bap.Std.Exp.visitor-c.html)
@@ -14,8 +15,10 @@ The key feature of the approach in question is object-oriented representation of
 [Janestreet's PPX Traverse](https://github.com/janestreet-deprecated/ppx_traverse)
 
 ## Usage
+
 ### As PPX
-Use findlib package `GT.ppx` in combination with `ppxlib`. See  `ppxlib`'s manual for full guidance. In short do
+
+Use findlib package `GT.ppx` in combination with `ppxlib`. See `ppxlib`'s manual for full guidance. In short do
 
 ```
 ~ ocaml
@@ -39,29 +42,29 @@ To preprocess only the code in this library (for example, a test) use the follow
 
 ## Directory structure
 
- * The framework for generation is in `common/`. The generic plugin for adding new transformations is in `common/plugin.ml`.
- * All built-in plugins live in `plugins/` and depend on the stuff in `common/`.
- * Camlp5-specific preprocessing plugin lives in `camlp5/`. Depend on stuff in `common/`.
- * PPX-specific preprocessing plugin lives in `ppx/`. Depends on stuff in `common/`.
- * Built-in plugins that represent transformations live in `plugins/`. Depends on `common/`.
- * A library for built-in types and transformations for types from Pervasives live in `src/`. Depends on syntax extension from `camlp5/` and plugins from `plugins/`.
+- The framework for generation is in `common/`. The generic plugin for adding new transformations is in `common/plugin.ml`.
+- All built-in plugins live in `plugins/` and depend on the stuff in `common/`.
+- Camlp5-specific preprocessing plugin lives in `camlp5/`. Depend on stuff in `common/`.
+- PPX-specific preprocessing plugin lives in `ppx/`. Depends on stuff in `common/`.
+- Built-in plugins that represent transformations live in `plugins/`. Depends on `common/`.
+- A library for built-in types and transformations for types from Pervasives live in `src/`. Depends on syntax extension from `camlp5/` and plugins from `plugins/`.
 
 # Dependencies
 
-  * `ppxlib`
-  * `camlp5
-  * `ocamlgraph` for topological sorting
-  * `ocamlbuild` as build system
+- `ppxlib`
+- `camlp5
+- `ocamlgraph` for topological sorting
+- `ocamlbuild` as build system
 
 # Compilation
 
-* `make` to compile whole library.
-* `make && make tests` to compile regression tests too.
+- `make` to compile whole library.
+- `make && make tests` to compile regression tests too.
 
 In case some of the tests do not compile use following commands to see generated code:
-* with camlp5 use `(cd _build && ../camlp5o_pp.sh pr_o.cmo regression/testname.ml)`
-* with PPX use `./pp_gt.native -pretty regression/testname.ml`
 
+- with camlp5 use `(cd _build && ../camlp5o_pp.sh pr_o.cmo regression/testname.ml)`
+- with PPX use `./pp_gt.native -pretty regression/testname.ml`
 
 In the following section we describe our approach in a nutshell by a typical example.
 
@@ -89,11 +92,11 @@ decoration of the original declaration:
 ```
 
 For mutually recursive type declarations add decoration only to the last type
+
 ```
 type t = ....
 and heap = t [@@deriving gt ~options:{ show }]
 ```
-
 
 We replaced here `int` and `string` with `GT.int` and `GT.string` respectively, and added `[@@deriving gt ~options:{show}]` to the end of type declaration to make the framework generate all "boilerplate" code for us. `GT.int` and
 `GT.string` are two synonyms for regular standard types, equipped with some
@@ -110,10 +113,10 @@ Having made this, we can instantly print expressions with the following
 
 Here
 
-* `GT.transform(expr)` - type-indexed function, applied to the type **expr**; in our framework all computations are performed by this single function;
-* `new show_expr_t` - an expression, which creates a _transformation object_, encapsulating the "show" functionality for type `expr`;
-* we provide unit value as additional parameter, which in fact is not used; think of it as an initial value for fold-like transformations;
-* the rest is the expression tree we're going to show.
+- `GT.transform(expr)` - type-indexed function, applied to the type **expr**; in our framework all computations are performed by this single function;
+- `new show_expr_t` - an expression, which creates a _transformation object_, encapsulating the "show" functionality for type `expr`;
+- we provide unit value as additional parameter, which in fact is not used; think of it as an initial value for fold-like transformations;
+- the rest is the expression tree we're going to show.
 
 The result of this expression evaluation, as expected, is
 
@@ -126,9 +129,10 @@ In our framework (at least by now) all transformations are expressed by the foll
 ```ocaml
   GT.transform(t) tr_obj init value
 ```
+
 or more precisely
 
-```ocaml
+````ocaml
 GT.fix (fun fself init value ->
     GT.transform tree (new tr_class f_1 ... f_n fself) init value
   ) init value
@@ -162,7 +166,7 @@ GT.fix (fun fself ->
     GT.transform tree (new show' fself) ()
   )
   (Mul (Var "a", Add (Int 1, Var "b")))
-```
+````
 
 Now the result is
 
@@ -190,6 +194,7 @@ The result now is
 ```ocaml
  Mul (a, Add (1, b))
 ```
+
 In the next step we're going to switch to infix representation of operators; this case is interesting since we have to adjust the behavior of the transformation not only for the single node, but to all its sub-trees as well. Fortunately, this is easy:
 
 ```ocaml
@@ -204,15 +209,15 @@ In the next step we're going to switch to infix representation of operators; thi
 
 Method "`c_Add`" takes four arguments:
 
-  * inherited attribute (here unit);
-  * _augmented_ original node;
-  * _augmented_ parameters of the constructor ("`x`" and "`y`").
+- inherited attribute (here unit);
+- _augmented_ original node;
+- _augmented_ parameters of the constructor ("`x`" and "`y`").
 
 Augmentation attaches to a value a transformation for the type of that value. Augmented value is represented as a structure with the following fields:
 
-  * `GT.x` is the original value;
-  * `GT.f` is current transformation function for the type of original value;
-  * `GT.fx` is a (partial) application of "`GT.f`" to "`GT.x`".
+- `GT.x` is the original value;
+- `GT.f` is current transformation function for the type of original value;
+- `GT.fx` is a (partial) application of "`GT.f`" to "`GT.x`".
 
 In other word, the construct `x.GT.fx` here means "the same transformation we're dealing with right now, applied to the node `x`"; note that due to late binding this transformation is not necessarily that defined by the class `show'''`.
 
@@ -347,20 +352,22 @@ The interesting part of this implementation is an explicit utilization of a supe
 
 The complete example can be found in file `sample/expr.ml`.
 
-
 ## Limitations
 
 Known to be not supported or not taken to account:
 
-  * non-regular recursive types
-  * GADTs
+- non-regular recursive types
+- GADTs
 
 ## TODO
 
-* Documentation for `src/GT.ml` is not generated (possible because of a macro)
+- Documentation for `src/GT.ml` is not generated (possible because of a macro)
+- For `compare` and `eq` plugins in case of ADT with single constructor we generate unreachable pattern matching pattern that gives a warning.
+- Better signature for `method virtual on_record_constr`
+- method `on_record_declaration` doesn't introduce new pattern names systematically
 
 ## References
 
-  * Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers]( http://oops.math.spbu.ru/db/generics-tfp-2014.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
-  * Dmitry Boulytchev. [Code Reuse with Transformation Objects](http://oops.math.spbu.ru/db/transformation-objects.pdf) // unpublished.
-  * Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
+- Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers](http://oops.math.spbu.ru/db/generics-tfp-2014.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
+- Dmitry Boulytchev. [Code Reuse with Transformation Objects](http://oops.math.spbu.ru/db/transformation-objects.pdf) // unpublished.
+- Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
