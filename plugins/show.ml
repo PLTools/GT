@@ -96,6 +96,38 @@ class g args tdecls = object(self)
                      )
       )
 
+  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs =
+    assert Int.(List.length labs > 0);
+
+    let constr_name = match info with
+      | `Poly s -> sprintf "`%s" s
+      | `Normal s -> s
+    in
+
+    Exp.fun_list ~loc
+      (List.map bindings ~f:(fun (ident,_,_) -> Pat.sprintf ~loc "%s" ident))
+      (if List.length bindings = 0
+       then failwith "Record constructors can't have empty label list"
+       else
+          List.fold_left bindings
+            ~f:(fun acc (ident, labname, typ) ->
+              Exp.app ~loc acc @@
+                self#app_transformation_expr ~loc
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                  (Exp.unit ~loc)
+                  (Exp.ident ~loc ident)
+            )
+            ~init:Exp.(app ~loc
+                        (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
+
+                      let fmt = String.concat ~sep:", " @@ List.map bindings
+                          ~f:(fun (_,lab,_) -> Printf.sprintf "%s=%%s" lab)
+                      in
+                      Exp.string_const ~loc @@ Printf.sprintf "%s {%s}" constr_name fmt
+                     )
+      )
+
+
   method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->

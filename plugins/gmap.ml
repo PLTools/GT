@@ -211,46 +211,6 @@ class g args tdecls = object(self: 'self)
       | `Normal s -> false,  s
       | `Poly   s -> true,   s
     in
-    (*
-    let main_case =
-      let pat_names = List.map labs ~f:(fun _ -> gen_symbol ()) in
-      let lhs =
-        let arg_pats =
-          match pat_names with
-          | []  -> []
-          | [s] -> [Pat.var ~loc s]
-          | __  -> List.map pat_names ~f:(Pat.var ~loc)
-        in
-        Pat.constr ~loc cname
-          [ Pat.record ~loc @@ List.map2_exn labs pat_names ~f:(fun l name ->
-              (lident l.pld_name.txt, Pat.var ~loc name) )
-          ]
-      in
-      let rhs =
-        List.fold_left ~init:(self#chain_init ~loc)
-          (List.map2_exn bindings pat_names ~f:(fun (name1,_,typ) iname -> (name1,iname,typ)))
-          ~f:(fun acc (sname, iname, typ) ->
-            self#chain_exprs ~loc
-              acc
-              (self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
-                  (Exp.ident ~loc iname)
-                  (Exp.ident ~loc sname)
-              )
-          )
-      in
-      case ~lhs ~rhs
-    in
-    let other_case =
-      let other_name = "other" in
-      let lhs = Pat.var ~loc other_name in
-      let rhs =
-        self#on_different_constructors ~loc is_poly other_name cname @@
-        `Record bindings
-      in
-      case ~lhs ~rhs
-    in
-    *)
     Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@
     (if is_poly then Exp.variant ~loc cname
     else Exp.construct ~loc (lident cname))
