@@ -17,7 +17,7 @@ TESTS_ENVIRONMENT=./test.sh
 
 .PHONY: all syntax lib camlp5 all_plugins ppx bundle samples
 .PHONY: add_common common add_lib lib add_camlp5 add_mymetaquot mymetaquot camlp5
-.PHONY: celan clean rebuild clean_tests install uninstall
+.PHONY: celan clean rebuild clean_tests cleanppx install uninstall
 .PHONY: tests test regression promote
 
 .DEFAULT_GOAL: all
@@ -66,7 +66,8 @@ doc:
 celan: clean
 clean: clean_tests
 	$(RM) -r _build *.log *.native *.byte
-
+cleanppx:
+	$(RM) -r _build/ppx
 
 ######################## Tests related stuff  ##########################
 REGRES_CASES :=
@@ -142,6 +143,7 @@ test: tests
 INSTALL_TARGETS=META \
 	$(wildcard _build/common/GTCommon.cma) \
 	$(wildcard _build/common/GTCommon.cmxa) \
+	$(wildcard _build/common/GTCommon.a) \
 	$(wildcard _build/common/expander.cmi) \
 	_build/camlp5/pa_gt.cma \
 	_build/camlp5/pp5gt.cma \
