@@ -28,11 +28,19 @@ package "ppx" (
   ppx(-ppx_driver,-custom_ppx) = "./pp_gt.native --as-ppx"
 )
 
+package "ppx_gt" (
+  description = "A library for easy linking to preprocessor executable"
+  # TODO: we need to specify plugins for bytecode too, isn't it 
+  archive(byte)    = "ppx_deriving_gt.cma"
+  archive(native)  = "ppx_deriving_gt.cmxa show.cmx gfmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
+  requires(native) = "base ppxlib ocamlgraph"
+ 
+)
 package "expander" (
   description = "Contains code that actually generates the code"
-  archive(byte)   = "ppx_gt_expander.cma"
-  archive(native) = "ppx_gt_expander.cmxa"
-  requires = "ppx_core"
+  archive(byte)   = "GTCommon.cma"
+  archive(native) = "GTCommon.cmxa"
+  requires = "ppxlib ocamlgraph"
 )
 # TODO: maybe plugins aren't requiring GT.syntax since we support PPX too?
 package "syntax" (
