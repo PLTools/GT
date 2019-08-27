@@ -614,22 +614,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
     is_rec:bool -> type_declaration  -> Sig.t list
     = fun ~loc ~is_rec tdecl ->
       (* we skip initial functions in the interface *)
-
-      (* let fixt =
-       *   if List.length self#tdecls <= 1 then []
-       *   else
-       *     [
-       *       Sig.value ~loc
-       *         ~name:(sprintf "%s_%s_fix" self#trait_name tdecl.ptype_name.txt) @@
-       *       Typ.arrow ~loc
-       *         (Typ.tuple ~loc @@
-       *          List.map self#tdecls ~f:(fun tdecl ->
-       *              (self#class_constructor_sig ~loc ~a_stub:true tdecl)
-       *            ))
-       *         (Typ.unit ~loc)
-       *     ]
-       * in *)
-
       List.concat
         [ [Sig.value ~loc
              ~name:(Naming.trf_function self#trait_name tdecl.ptype_name.txt)
@@ -650,6 +634,16 @@ class virtual generator initial_args tdecls = object(self: 'self)
   (* only for non-recursive types *)
   method virtual make_trans_function_body: loc:loc -> ?rec_typenames: string list ->
     string -> type_declaration -> Exp.t
+
+  method is_combinatorial tdecl =
+    let cmb_attr = List.find tdecl.ptype_attributes
+          ~f:(fun {attr_name={txt}} -> String.equal txt "combinatorial")
+    in
+    if Option.is_some cmb_attr && Caml.(=) tdecl.ptype_kind Ptype_abstract
+    then match tdecl.ptype_manifest with
+          | Some t -> Some t
+          | None -> None
+    else None
 
   method make_trans_functions : loc:loc -> is_rec:bool -> Str.t list
     = fun ~loc ~is_rec ->
@@ -683,18 +677,22 @@ class virtual generator initial_args tdecls = object(self: 'self)
         match self#tdecls with
         | [] -> []
         | [tdecl] ->
-          [value_binding ~loc
-             ~pat:(Pat.sprintf ~loc "%s" @@
-                   Naming.trf_function self#trait_name tdecl.ptype_name.txt)
-            ~expr:(
-              Exp.fun_list ~loc
-                (map_type_param_names tdecl.ptype_params
-                   ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
-              @@
-              self#make_trans_function_body ~loc
-                (self#make_class_name ~is_mutal:false tdecl)
-                tdecl
-            )]
+          [ value_binding ~loc
+              ~pat:(Pat.sprintf ~loc "%s" @@
+                    Naming.trf_function self#trait_name tdecl.ptype_name.txt)
+              ~expr:(
+                match self#is_combinatorial tdecl with
+                | Some typ ->
+                    self#do_typ_gen ~loc ~mutal_decls:[tdecl] ~is_self_rec:(fun _ -> `Nonrecursive) tdecl typ
+                | None ->
+                    Exp.fun_list ~loc
+                      (map_type_param_names tdecl.ptype_params
+                        ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
+                    @@
+                    self#make_trans_function_body ~loc
+                      (self#make_class_name ~is_mutal:false tdecl)
+                      tdecl
+              )]
         | tdecls ->
           List.mapi tdecls ~f:(fun n {ptype_name={txt}} ->
               value_binding ~loc
@@ -1047,21 +1045,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
               helper txt
             in
             Exp.ident ~loc (self#self_arg_name cname)
-          | `Nonregular ->
-            failwith "non-regular types are not supported"
-            (* let args = List.map params
-             *     ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
-             * in
-             * let cname =
-             *   let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
-             *   helper txt
-             * in
-             * Exp.(app_list ~loc (ident ~loc Naming.mut_arg_composite) @@
-             *      [construct ~loc (Ldot (Lident self#index_module_name,
-             *                             Naming.cname_index cname)) []] @
-             *      args
-             *     ) *)
-
+          | `Nonregular -> failwith "non-regular types are not supported"
           | `Nonrecursive -> begin
               (* it is not a recursion but it can be a mutual recursion *)
               match txt with
@@ -1070,10 +1054,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                 let args = List.map params
                     ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls:mutal_decls tdecl)
                 in
-                let open Exp in
-                app_list ~loc
-                  (ident ~loc @@ Naming.for_ s)
-                  args
+                Exp.( app_list ~loc (ident ~loc @@ Naming.for_ s) args )
               | _ ->
                 let init =
                   Exp.(app ~loc
@@ -1097,7 +1078,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
                       )
                       einh esubj
                   )
-
             end
         end
 
