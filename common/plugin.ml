@@ -372,7 +372,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                         Cty.constr ~loc
                           (map_longident cid.txt
                              ~f:(Naming.trait_class_name_for_typ ~trait:self#plugin_name))
-                          (self# final_typ_params_for_alias ~loc tdecl params)
+                          (self#final_typ_params_for_alias ~loc tdecl params)
                      )
                      ~fail:(fun () -> assert false)
               | Rtag (lab, _, typs) -> begin
