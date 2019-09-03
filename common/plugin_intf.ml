@@ -52,7 +52,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
 
   (** The parameters that the plugin class will have in its definition.
     * Add ['extra] manually if needed. *)
-  method virtual plugin_class_params: Ppxlib.type_declaration -> 'type_arg list
+  method virtual plugin_class_params: loc:'loc -> Ppxlib.core_type list -> typname:string -> 'typ list
 
   (** Arguments of inherit class field that will be generated using the types
       applied in the RHS of type definition. *)

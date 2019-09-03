@@ -50,19 +50,9 @@ class g args tdecls = object(self)
   method syn_of_param ~loc _           = Typ.ident ~loc "string"
   method inh_of_param ~loc tdecl _name = self#inh_of_main ~loc tdecl
 
-  method plugin_class_params tdecl =
-    (* TODO: reuse alias_inherit_type_params here *)
-    let ps =
-      List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
-    in
-    ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
-
-  method alias_inherit_type_params ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+  method plugin_class_params ~loc typs ~typname =
+    (List.map typs ~f:Typ.from_caml) @
+    [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =

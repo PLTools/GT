@@ -65,12 +65,8 @@ class g initial_args tdecls = object(self: 'self)
   method! app_transformation_expr ~loc trf inh subj =
     Exp.app_list ~loc trf [ inh; subj ]
 
-  method! plugin_class_params tdecl =
-    super#plugin_class_params tdecl @
-    [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) "env"]
-
-  method! alias_inherit_type_params ~loc tdecl rhs_args =
-    super#alias_inherit_type_params ~loc tdecl rhs_args @
+  method plugin_class_params ~loc (typs: Ppxlib.core_type list) ~typname =
+    super#plugin_class_params ~loc typs ~typname @
     [ Typ.var ~loc "env"]
 
   method! extra_class_sig_members tdecl =

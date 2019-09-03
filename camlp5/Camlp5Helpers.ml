@@ -290,6 +290,7 @@ module Typ = struct
       | _ -> failwith "Not implemented: conversion from OCaml ast to Camlp5 Ast"
     in
     helper root_typ
+
   (* this might need to be changed *)
   let variant ~loc ?(is_open=false) fs =
     let vs = fs |> List.map (fun rf -> match rf.Ppxlib.prf_desc with
@@ -323,6 +324,14 @@ module Typ = struct
   let poly ~loc names t = <:ctyp< ! $list:names$ . $t$ >>
 
   let map ~onvar t = t
+
+  let to_type_arg = function
+    | <:ctyp< '$s$ >> -> Some (named_type_arg ~loc:noloc s)
+    | _ -> None
+  let to_type_arg_exn = function
+    | <:ctyp< '$s$ >> -> named_type_arg ~loc:noloc s
+    | _ -> failwith "bad argument of to_type_arg_exn"
+
 end
 
 type type_declaration = MLast.type_decl

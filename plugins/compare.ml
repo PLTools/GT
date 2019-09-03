@@ -51,16 +51,10 @@ class g initial_args tdecls = object(self: 'self)
 
   method inh_of_param ~loc _tdecl name = Typ.var ~loc name
 
-  method plugin_class_params tdecl =
-    List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t) @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
-
-  method alias_inherit_type_params ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
-
+  method plugin_class_params ~loc (typs: Ppxlib.core_type list) ~typname =
+    (* the same as in 'show' plugin *)
+    (List.map typs ~f:Typ.from_caml) @
+    [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->

@@ -57,12 +57,8 @@ class g initial_args tdecls = object(self: 'self)
     in
     Typ.tuple ~loc [self#inh_of_main ~loc tdecl; super#syn_of_main ~loc ~in_class tdecl]
 
-  method! plugin_class_params tdecl =
-    super#plugin_class_params tdecl @
-    [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) "env"]
-
-  method! alias_inherit_type_params ~loc tdecl rhs_args =
-    super#alias_inherit_type_params ~loc tdecl rhs_args @
+  method plugin_class_params ~loc typs ~typname =
+    super#plugin_class_params ~loc typs ~typname @
     [ Typ.var ~loc "env"]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =

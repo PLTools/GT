@@ -45,18 +45,10 @@ class g initial_args tdecls = object(self: 'self)
 
   method inh_of_param ~loc tdecl _ = self#syn_of_param ~loc "dummy"
 
-  method plugin_class_params tdecl =
-    let loc = loc_from_caml tdecl.ptype_loc in
-    List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t) @
-    [ named_type_arg ~loc "syn"
-    ; named_type_arg ~loc @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
-
-  method alias_inherit_type_params ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml @
-    [ self#syn_of_main ~loc tdecl
-    ; Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
+  method plugin_class_params ~loc typs ~typname =
+    (List.map typs ~f:Typ.from_caml) @
+    [ Typ.var ~loc "syn"
+    ; Typ.var ~loc @@ Naming.make_extra_param typname ]
 
   (* new type of trasfomation function is 'syn -> old_type *)
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->

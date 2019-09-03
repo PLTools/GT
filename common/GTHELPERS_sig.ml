@@ -125,6 +125,9 @@ and Typ :
     val map: onvar:(string -> t option) -> t -> t
     (* Inherit type using [> t ] with optional as annotation *)
     val openize: loc:loc -> ?as_:string -> t -> t
+
+    val to_type_arg_exn: t -> type_arg
+    val to_type_arg: t -> type_arg option
   end
 and Cf :
   sig

@@ -265,6 +265,8 @@ module Typ = struct
     | Some name -> alias ~loc ans name
     | None ->  ans
 
+  let to_type_arg x = Some x
+  let to_type_arg_exn = Fn.id
 end
 
 type nonrec class_declaration = class_declaration

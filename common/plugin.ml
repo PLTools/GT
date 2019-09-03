@@ -182,7 +182,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
     let mutual_decls = self#tdecls in
     let is_mutal = (List.length mutual_decls > 1) in
     Str.class_single ~loc
-      ~params:(self#plugin_class_params tdecl)
+      ~params:(self#plugin_class_params_tdecl tdecl)
       ~name:(self#make_class_name ~is_mutal tdecl)
       ~virt:false
       ~wrap:(fun body ->
@@ -239,7 +239,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
         (self#make_typ_of_self_trf ~loc ~in_class:true tdecl) @@
       Typ.constr ~loc
         (Lident (self#make_class_name ~is_mutal:a_stub tdecl))
-        (List.map (self#plugin_class_params tdecl) ~f:(Typ.of_type_arg ~loc))
+        (List.map (self#plugin_class_params_tdecl tdecl) ~f:(Typ.of_type_arg ~loc))
     in
     let funcs_for_args =
       let names = map_type_param_names tdecl.ptype_params ~f:id in
@@ -268,7 +268,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method make_class_sig ~loc ?(a_stub=false) ~is_rec tdecl =
     let k fields =
       [ Sig.class_ ~loc
-          ~params:(self#plugin_class_params tdecl)
+          ~params:(self#plugin_class_params_tdecl tdecl)
           ~name:(self#make_class_name ~is_mutal:a_stub tdecl)
           ~virt:false
           ~wrap:(fun sign ->
@@ -742,6 +742,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
     self#alias_inherit_type_params ~loc tdecl rhs @
     []
 
+  method alias_inherit_type_params ~loc tdecl rhs_args =
+    self#plugin_class_params ~loc rhs_args ~typname:tdecl.ptype_name.txt
+
   method do_mutuals_sigs ~loc ~is_rec =
     List.concat
       [ List.concat_map self#tdecls ~f:(fun tdecl ->
@@ -765,14 +768,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ; self#make_shortend_class ~loc tdecls
       ]
 
-  (* TODO: remove *)
-  (* method virtual trf_scheme: loc:loc -> Typ.t
-   *
-   * method virtual trf_scheme_params: string list *)
-
-  (* method virtual index_functor : type_declaration list -> string
-   * method virtual index_modtyp_name : type_declaration list -> string *)
-
   method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
     let names = map_type_param_names tdecl.ptype_params ~f:id in
     List.fold_left names
@@ -783,13 +778,14 @@ class virtual generator initial_args tdecls = object(self: 'self)
             (fun f arg -> acc @@ f arg)
         )
 
-  (* method specialize tdecl typ (map: (string * Ppxlib.core_type) List.t) : Typ.t =
-   *   let (_:type_declaration) = tdecl in
-   *   Typ.map typ
-   *     ~onvar:(fun s ->
-   *         Option.map ~f:Typ.from_caml @@
-   *         (List.Assoc.find ~equal:String.equal map s)
-   *       ) *)
+  method plugin_class_params_tdecl tdecl =
+    let params_typs =
+      self#plugin_class_params ~loc:(loc_from_caml tdecl.ptype_loc)
+        ~typname:tdecl.ptype_name.txt
+        (List.map ~f:fst tdecl.ptype_params)
+    in
+    (* FIXME: dirty hacks *)
+    List.map params_typs ~f:Typ.to_type_arg_exn
 
   method make_shortend_class_sig ~loc =
     List.map self#tdecls ~f:(fun tdecl ->
@@ -797,7 +793,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
         let class_name =
           Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
         in
-        let params = self#plugin_class_params tdecl in
+        let params = self#plugin_class_params_tdecl tdecl in
         let stub_name = "asdf" in
         Sig.class_ ~loc ~name:class_name
           ~params
@@ -825,7 +821,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
             )
         in
 
-        let params = self#plugin_class_params tdecl in
+        let params = self#plugin_class_params_tdecl tdecl in
         Str.class_single ~loc ~name:class_name
           ~wrap:(fun cl ->
               Cl.fun_ ~loc

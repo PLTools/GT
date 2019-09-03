@@ -67,22 +67,13 @@ class g initial_args tdecls = object(self: 'self)
       ; Typ.use_tdecl tdecl
       ]
 
+
   (* Type parameters of the class are type parameters of type being processed
      plus extra parameter to support polymorphic variants *)
-  method plugin_class_params tdecl =
-    let ps =
-      List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
-    in
-    ps @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
-
-  (* when we will inherrit trait class we will use these type parameters.
-     An extra argument for polymorphic variants will be added on call site.
-  *)
-  method alias_inherit_type_params ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml
+  method plugin_class_params ~loc (typs: Ppxlib.core_type list) ~typname =
+    (* the same as in 'show' plugin *)
+    (List.map typs ~f:Typ.from_caml) @
+    [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
   (* method [on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl cinfo ts]
      receive expression fo rinherited attribute in [inhe],
