@@ -44,14 +44,14 @@ let ht_typ ~loc =
    constructor and not to generation method
 *)
 class g initial_args tdecls = object(self: 'self)
-  inherit P.with_inherit_arg initial_args tdecls
+  inherit P.with_inherited_attr initial_args tdecls
 
   method trait_name = trait_name
 
   (* Default inherited attribute is a predefined in GT type of hash table *)
-  method main_inh ~loc _tdecl = ht_typ ~loc
+  method inh_of_main ~loc _tdecl = ht_typ ~loc
   (* Inherited attribute for parameter is the same as default one*)
-  method inh_of_param tdecl _name = ht_typ ~loc:(loc_from_caml tdecl.ptype_loc)
+  method inh_of_param ~loc _tdecl _name = ht_typ ~loc
 
   (* The synthesized attribute of hashconsing is a tuple of new value and
      a new hash table *)
@@ -61,7 +61,7 @@ class g initial_args tdecls = object(self: 'self)
       ; Typ.var ~loc s
       ]
   (* The same for default synthsized attribute *)
-  method main_syn ~loc ?in_class tdecl =
+  method syn_of_main ~loc ?in_class tdecl =
     Typ.tuple ~loc
       [ ht_typ ~loc
       ; Typ.use_tdecl tdecl
@@ -81,7 +81,7 @@ class g initial_args tdecls = object(self: 'self)
   (* when we will inherrit trait class we will use these type parameters.
      An extra argument for polymorphic variants will be added on call site.
   *)
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+  method alias_inherit_type_params ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml
 
   (* method [on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl cinfo ts]

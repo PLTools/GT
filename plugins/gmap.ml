@@ -53,12 +53,11 @@ class g args tdecls = object(self: 'self)
 
   method trait_name = trait_name
 
-  method main_inh ~loc _tdecl = Typ.ident ~loc "unit"
+  method inh_of_main ~loc _tdecl = Typ.ident ~loc "unit"
   method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
-  method inh_of_param tdecl _name =
-    self#main_inh ~loc:(loc_from_caml tdecl.ptype_loc) tdecl
+  method inh_of_param ~loc tdecl _name = self#inh_of_main ~loc tdecl
 
-  method main_syn ~loc ?(in_class=false) tdecl =
+  method syn_of_main ~loc ?(in_class=false) tdecl =
     if in_class && is_polyvariant_tdecl tdecl then
       Typ.var ~loc @@ sprintf "syn_%s" tdecl.ptype_name.txt
     else
@@ -81,7 +80,7 @@ class g args tdecls = object(self: 'self)
       sprintf "syn_%s" tdecl.ptype_name.txt
     ]
 
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+  method alias_inherit_type_params ~loc tdecl rhs_args =
     let _param_names,_rez_names,find_param,_blownup_params =
       hack_params tdecl.ptype_params
     in

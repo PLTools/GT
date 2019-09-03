@@ -73,16 +73,16 @@ class g args tdecls = object(self)
   inherit P.no_inherit_arg args tdecls
 
   method trait_name = trait_name
-  method main_inh ~loc _tdecl = Typ.ident ~loc "unit"
-  method main_syn ~loc ?in_class _tdecl = self#syn_of_param ~loc "dummy"
+  method inh_of_main ~loc _tdecl = Typ.ident ~loc "unit"
+  method syn_of_main ~loc ?in_class _tdecl = self#syn_of_param ~loc "dummy"
 
   method syn_of_param ~loc _     =
     Typ.constr ~loc (Ldot (Lident "HTML", "er")) []
 
-  method inh_of_param tdecl _name = self#main_inh ~loc:noloc tdecl
+  method inh_of_param ~loc tdecl _name = self#inh_of_main ~loc tdecl
 
   method plugin_class_params tdecl =
-    (* TODO: reuse prepare_inherit_typ_params_for_alias here *)
+    (* TODO: reuse alias_inherit_type_params here *)
     let ps =
       List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
     in
@@ -91,7 +91,7 @@ class g args tdecls = object(self)
       Naming.make_extra_param tdecl.ptype_name.txt
     ]
 
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+  method alias_inherit_type_params ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
     [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 

@@ -62,7 +62,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
 
 (** Base class for all plugins. Implements {!Plugin_intf.typ_g} interface
 
-    Is subclassed by {!with_inherit_arg} and {!no_inherite_arg}. Use them for
+    Is subclassed by {!with_inherited_attr} and {!no_inherite_arg}. Use them for
     convenience.
 *)
 class virtual generator initial_args tdecls = object(self: 'self)
@@ -134,10 +134,10 @@ class virtual generator initial_args tdecls = object(self: 'self)
     let k fields =
       let inh_params =
         prepare_param_triples ~loc
-          ~inh:(fun ~loc -> self#inh_of_param tdecl)
+          ~inh:(self#inh_of_param tdecl)
           ~syn:self#syn_of_param
-          ~default_syn:(self#main_syn ~loc ~in_class:true tdecl)
-          ~default_inh:(self#main_inh ~loc tdecl)
+          ~default_syn:(self#syn_of_main ~loc ~in_class:true tdecl)
+          ~default_inh:(self#inh_of_main ~loc tdecl)
           ~extra:(Typ.var ~loc @@
                   sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
           (map_type_param_names tdecl.ptype_params ~f:id)
@@ -307,9 +307,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
           k [ Ctf.method_ ~loc (Naming.meth_name_for_record tdecl) ~virt:false @@
               Typ.chain_arrow ~loc @@
               let open Typ in
-              [ self#main_inh ~loc tdecl
+              [ self#inh_of_main ~loc tdecl
               ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
-              [ self#main_syn ~loc tdecl ]
+              [ self#syn_of_main ~loc tdecl ]
             ]
         )
       ~onvariant:(fun cds ->
@@ -320,10 +320,10 @@ class virtual generator initial_args tdecls = object(self: 'self)
               in
               let new_ts =
                 let open Typ in
-                [ self#main_inh ~loc tdecl
+                [ self#inh_of_main ~loc tdecl
                 ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
                 (List.map typs ~f:Typ.from_caml) @
-                [ self#main_syn ~loc ~in_class:true tdecl ]
+                [ self#syn_of_main ~loc ~in_class:true tdecl ]
                 (* There changing default_syn to 'extra can introduce problems *)
               in
 
@@ -380,24 +380,24 @@ class virtual generator initial_args tdecls = object(self: 'self)
                   match typs with
                   | [] ->
                     Typ.(chain_arrow ~loc
-                           [ self#main_inh ~loc tdecl
+                           [ self#inh_of_main ~loc tdecl
                            ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
-                           ; self#main_syn ~loc ~in_class:true tdecl
+                           ; self#syn_of_main ~loc ~in_class:true tdecl
                            ]
                         )
                   | [t] ->
                       Typ.(chain_arrow ~loc @@
-                             [ self#main_inh ~loc tdecl
+                             [ self#inh_of_main ~loc tdecl
                              ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
                              (List.map ~f:Typ.from_caml @@ unfold_tuple t) @
-                             [self#main_syn ~loc ~in_class:true tdecl]
+                             [self#syn_of_main ~loc ~in_class:true tdecl]
                           )
                   | typs ->
                       Typ.(chain_arrow ~loc @@
-                             [ self#main_inh ~loc tdecl
+                             [ self#inh_of_main ~loc tdecl
                              ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt ] @
                              (List.map ~f:Typ.from_caml typs) @
-                             [self#main_syn ~loc ~in_class:true tdecl]
+                             [self#syn_of_main ~loc ~in_class:true tdecl]
                           )
                 end
               )
@@ -569,9 +569,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
   method make_typ_of_mutal_trf ~loc mutal_tdecl (k: Typ.t -> _) : Typ.t =
     let subj_t = Typ.use_tdecl mutal_tdecl in
-    k Typ.(arrow ~loc subj_t (self#main_syn ~loc mutal_tdecl))
+    k Typ.(arrow ~loc subj_t (self#syn_of_main ~loc mutal_tdecl))
 
-    (* k @@ Typ.from_caml [%type: ([%t subj_t] -> [%t self#main_syn ~loc mutal_tdecl]) ] *)
+    (* k @@ Typ.from_caml [%type: ([%t subj_t] -> [%t self#syn_of_main ~loc mutal_tdecl]) ] *)
 
 
   (* val name : <typeof fa> -> ... -> <typeof fz> ->
@@ -581,7 +581,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
   (* method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
    *   let subj_t = Option.value subj_t
    *       ~default:(Typ.use_tdecl tdecl) in
-   *   let syn_t  = Option.value syn_t ~default:(self#main_syn ~loc tdecl) in
+   *   let syn_t  = Option.value syn_t ~default:(self#syn_of_main ~loc tdecl) in
    *   Typ.arrow ~loc subj_t syn_t *)
 
   (* method chain_inh_syn ~loc ~inh_t ~syn_t subj_t =
@@ -739,7 +739,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ]
 
   method final_typ_params_for_alias ~loc tdecl rhs =
-    self#prepare_inherit_typ_params_for_alias ~loc tdecl rhs @
+    self#alias_inherit_type_params ~loc tdecl rhs @
     []
 
   method do_mutuals_sigs ~loc ~is_rec =
@@ -948,8 +948,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
    *       prepare_param_triples ~loc
    *         ~inh:(fun ~loc -> self#inh_of_param tdecl)
    *         ~syn:self#syn_of_param
-   *         ~default_syn:(self#main_syn ~loc ~extra_path tdecl)
-   *         ~default_inh:(self#main_inh ~loc tdecl)
+   *         ~default_syn:(self#syn_of_main ~loc ~extra_path tdecl)
+   *         ~default_inh:(self#inh_of_main ~loc tdecl)
    *         ~extra:(Typ.var ~loc @@
    *                 sprintf "%s_%s" Naming.extra_param_name tdecl.ptype_name.txt)
    *         (map_type_param_names tdecl.ptype_params ~f:id)
@@ -1142,7 +1142,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method virtual make_typ_of_self_trf:
     loc:loc -> ?in_class:bool -> type_declaration -> Typ.t
 
-  (* method virtual main_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t *)
+  (* method virtual inh_of_main : loc:loc -> Ppxlib.type_declaration -> Typ.t *)
 
   method virtual make_RHS_typ_of_transformation: loc:AstHelpers.loc ->
     ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
@@ -1166,12 +1166,12 @@ class virtual no_inherit_arg0 args _tdecls = object(self: 'self)
   inherit generator args _tdecls
 
   method virtual plugin_name: string
-  method virtual main_syn : loc:loc ->
+  method virtual syn_of_main : loc:loc ->
       ?in_class:bool ->
       Ppxlib.type_declaration -> Typ.t
-  method virtual main_inh : loc:loc -> Ppxlib.type_declaration -> Typ.t
+  method virtual inh_of_main : loc:loc -> Ppxlib.type_declaration -> Typ.t
   method virtual syn_of_param: loc:loc -> string -> Typ.t
-  method virtual inh_of_param: type_declaration -> string -> Typ.t
+  method virtual inh_of_param: loc:loc -> type_declaration -> string -> Typ.t
   method virtual make_trans_function_typ: loc:loc -> type_declaration -> Typ.t
 
   method use_tdecl = Typ.use_tdecl
@@ -1181,11 +1181,11 @@ class virtual no_inherit_arg0 args _tdecls = object(self: 'self)
   method make_typ_of_self_trf ~loc ?(in_class=false) tdecl =
     let openize_poly typ = Typ.from_caml typ in
     let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
-    let syn_t  = self#main_syn ~loc ~in_class tdecl in
+    let syn_t  = self#syn_of_main ~loc ~in_class tdecl in
 
     let ans = Typ.(arrow ~loc subj_t @@ syn_t) in
     if self#need_inh_attr
-    then Typ.arrow ~loc (self#main_inh ~loc tdecl) ans
+    then Typ.arrow ~loc (self#inh_of_main ~loc tdecl) ans
     else Typ.arrow ~loc (Typ.unit ~loc) ans
 
   (* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
@@ -1203,7 +1203,7 @@ class virtual no_inherit_arg0 args _tdecls = object(self: 'self)
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
     fun ~loc tdecl chain name k ->
-      let inh_t = self#inh_of_param tdecl name in
+      let inh_t = self#inh_of_param ~loc tdecl name in
       let subj_t = Typ.var ~loc name in
       let syn_t = self#syn_of_param ~loc name in
       k @@ (fun arg -> chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t) arg)
@@ -1211,7 +1211,7 @@ class virtual no_inherit_arg0 args _tdecls = object(self: 'self)
   method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t
         ~default:(Typ.use_tdecl tdecl) in
-    let syn_t  = Option.value syn_t ~default:(self#main_syn ~loc tdecl) in
+    let syn_t  = Option.value syn_t ~default:(self#syn_of_main ~loc tdecl) in
     Typ.arrow ~loc subj_t syn_t
 
   method app_gcata ~loc egcata =
@@ -1244,13 +1244,13 @@ end
 
 (** Base plugin class where transformation functions receive inherited attribute for
     type parameter *)
-class virtual with_inherit_arg args _tdecls = object(self: 'self)
+class virtual with_inherited_attr args _tdecls = object(self: 'self)
   inherit no_inherit_arg0 args _tdecls as super
 
   method! need_inh_attr = true
 
   (* method! make_typ_of_self_trf ~loc tdecl =
-   *   Typ.arrow ~loc (self#main_inh ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl) *)
+   *   Typ.arrow ~loc (self#inh_of_main ~loc tdecl) (super#make_typ_of_self_trf ~loc tdecl) *)
 
   (* method long_typ_of_self_trf ~loc tdecl = self#make_typ_of_self_trf ~loc tdecl *)
 
@@ -1262,15 +1262,15 @@ class virtual with_inherit_arg args _tdecls = object(self: 'self)
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
     fun ~loc tdecl chain name k ->
-      let inh_t = self#inh_of_param tdecl name in
+      let inh_t = self#inh_of_param ~loc tdecl name in
       let subj_t = Typ.var ~loc name in
       let syn_t = self#syn_of_param ~loc name in
       k @@ (fun arg -> chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t) arg)
 
   method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t ~default:(Typ.use_tdecl tdecl) in
-    let syn_t  = Option.value syn_t  ~default:(self#main_syn ~loc tdecl) in
-    Typ.arrow ~loc (self#main_inh ~loc tdecl)
+    let syn_t  = Option.value syn_t  ~default:(self#syn_of_main ~loc tdecl) in
+    Typ.arrow ~loc (self#inh_of_main ~loc tdecl)
       (super#make_RHS_typ_of_transformation ~loc ~subj_t ~syn_t tdecl)
 
   method abstract_trf ~loc k =
@@ -1323,7 +1323,7 @@ class virtual no_inherit_arg args _tdecls = object(self: 'self)
    *   (\* almost copy-paste of inherit_arg0 class*\)
    *   let openize_poly typ = Typ.from_caml typ in
    *   let subj_t = openize_poly @@ using_type ~typename:tdecl.ptype_name.txt tdecl in
-   *   let syn_t  = self#main_syn ~loc tdecl in
+   *   let syn_t  = self#syn_of_main ~loc tdecl in
    *   Typ.(arrow ~loc subj_t @@ syn_t) *)
 
   (* let <plugin-name> fa ... fz = <this body> *)
@@ -1348,7 +1348,7 @@ class virtual no_inherit_arg args _tdecls = object(self: 'self)
   method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t
         ~default:(Typ.use_tdecl tdecl) in
-    let syn_t  = Option.value syn_t ~default:(self#main_syn ~loc tdecl) in
+    let syn_t  = Option.value syn_t ~default:(self#syn_of_main ~loc tdecl) in
     Typ.arrow ~loc subj_t syn_t
 
   (* method compose_apply_transformations ~loc ~left right (typ:core_type) =

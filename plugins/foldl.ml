@@ -35,16 +35,15 @@ let make_dest_param_names ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 
 class g initial_args tdecls = object(self: 'self)
-  inherit P.with_inherit_arg initial_args tdecls as super
+  inherit P.with_inherited_attr initial_args tdecls as super
 
   method trait_name = trait_name
 
   method syn_of_param ~loc s = Typ.var ~loc "syn"
-  method main_inh  ~loc tdecl = self#main_syn ~loc tdecl
-  method main_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+  method inh_of_main  ~loc tdecl = self#syn_of_main ~loc tdecl
+  method syn_of_main  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
-  method inh_of_param tdecl _ =
-    self#syn_of_param ~loc:(loc_from_caml tdecl.ptype_loc) "dummy"
+  method inh_of_param ~loc tdecl _ = self#syn_of_param ~loc "dummy"
 
   method plugin_class_params tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
@@ -54,9 +53,9 @@ class g initial_args tdecls = object(self: 'self)
       Naming.make_extra_param tdecl.ptype_name.txt
     ]
 
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+  method alias_inherit_type_params ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
-    [ self#main_syn ~loc tdecl
+    [ self#syn_of_main ~loc tdecl
     ; Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
 
   (* new type of trasfomation function is 'syn -> old_type *)
@@ -66,7 +65,7 @@ class g initial_args tdecls = object(self: 'self)
     fun ~loc tdecl chain name k ->
       let subj_t = Typ.var ~loc name in
       let syn_t = self#syn_of_param ~loc name in
-      let inh_t = self#inh_of_param tdecl name in
+      let inh_t = self#inh_of_param ~loc tdecl name in
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
   method join_args ~loc do_typ ~init (xs: (string * core_type) list) =

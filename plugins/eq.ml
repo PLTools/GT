@@ -31,7 +31,7 @@ class g initial_args tdecls = object(self: 'self)
   method! trait_name = trait_name
 
   method! syn_of_param ~loc s = Typ.sprintf ~loc "bool"
-  method! main_syn ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+  method! syn_of_main ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method! on_different_constructors ~loc is_poly other_name cname arg_typs =
     Exp.false_ ~loc

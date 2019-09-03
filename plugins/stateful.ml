@@ -41,28 +41,28 @@ open AstHelpers
 class g initial_args tdecls = object(self: 'self)
   (* TODO: maybe do not inherit from gmap a.k.a. functor *)
   inherit G.g initial_args tdecls as super
-  inherit P.with_inherit_arg initial_args tdecls
+  inherit P.with_inherited_attr initial_args tdecls
 
   method trait_name = trait_name
 
-  method! main_inh ~loc _tdecl = Typ.var ~loc "env"
+  method! inh_of_main ~loc _tdecl = Typ.var ~loc "env"
   method! syn_of_param ~loc s =
     Typ.tuple ~loc [Typ.var ~loc "env"; Typ.var ~loc @@ Gmap.param_name_mangler s]
-  method inh_of_param tdecl _name = Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
+  method inh_of_param ~loc tdecl _name = Typ.var ~loc "env"
 
-  method! main_syn ~loc ?in_class tdecl =
+  method! syn_of_main ~loc ?in_class tdecl =
     let in_class = match in_class with
       | None -> false
       | Some b -> b
     in
-    Typ.tuple ~loc [self#main_inh ~loc tdecl; super#main_syn ~loc ~in_class tdecl]
+    Typ.tuple ~loc [self#inh_of_main ~loc tdecl; super#syn_of_main ~loc ~in_class tdecl]
 
   method! plugin_class_params tdecl =
     super#plugin_class_params tdecl @
     [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) "env"]
 
-  method! prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    super#prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args @
+  method! alias_inherit_type_params ~loc tdecl rhs_args =
+    super#alias_inherit_type_params ~loc tdecl rhs_args @
     [ Typ.var ~loc "env"]
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
