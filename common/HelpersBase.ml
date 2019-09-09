@@ -208,6 +208,11 @@ let is_polyvariant typ =
   | Ptyp_variant (_,_,_) -> true
   | _ -> false
 
+let is_tuple typ =
+  match typ.ptyp_desc with
+  | Ptyp_tuple _ts -> true
+  | _ -> false
+
 let is_polyvariant_tdecl tdecl =
   let loc = tdecl.ptype_loc in
   visit_typedecl ~loc tdecl
@@ -216,6 +221,15 @@ let is_polyvariant_tdecl tdecl =
     ~onvariant:(fun _ -> false)
     ~onabstract:(fun () -> false)
     ~onmanifest:(fun typ -> is_polyvariant typ)
+
+let is_tuple_tdecl tdecl =
+  let loc = tdecl.ptype_loc in
+  visit_typedecl ~loc tdecl
+    ~onopen:(fun () -> false)
+    ~onrecord:(fun _ -> false)
+    ~onvariant:(fun _ -> false)
+    ~onabstract:(fun () -> false)
+    ~onmanifest:(fun typ -> is_tuple typ)
 
 let unfold_tuple t =
   match t.ptyp_desc with

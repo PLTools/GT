@@ -203,7 +203,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                           Pat.var ~loc @@
                           if String.equal name tdecl.ptype_name.txt
                           then sprintf "fself_%s" name
-                          else Naming.for_ name
+                          else Naming.for_ self#trait_name name
                         ))
                      Naming.mutuals_pack
                   ) :: ps
@@ -419,7 +419,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
     in
     (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
-    args (* @ [ Exp.sprintf ~loc "%s" Naming.self_arg_name] *)
+    args
 
 
   (* When we got declaration of type alias via type application *)
@@ -636,10 +636,12 @@ class virtual generator initial_args tdecls = object(self: 'self)
     string -> type_declaration -> Exp.t
 
   method is_combinatorial tdecl =
-    let cmb_attr = List.find tdecl.ptype_attributes
+    (* We are allowed to use combinatorial interface for types which are type abbreviations *)
+    (* let cmb_attr = List.find tdecl.ptype_attributes
           ~f:(fun {attr_name={txt}} -> String.equal txt "combinatorial")
-    in
-    if Option.is_some cmb_attr && Caml.(=) tdecl.ptype_kind Ptype_abstract
+    in *)
+    if (* Option.is_some cmb_attr &&*) Caml.(=) tdecl.ptype_kind Ptype_abstract
+      && not (is_polyvariant_tdecl tdecl) && not (is_tuple_tdecl tdecl)
     then match tdecl.ptype_manifest with
           | Some t -> Some t
           | None -> None
@@ -681,14 +683,14 @@ class virtual generator initial_args tdecls = object(self: 'self)
               ~pat:(Pat.sprintf ~loc "%s" @@
                     Naming.trf_function self#trait_name tdecl.ptype_name.txt)
               ~expr:(
+                Exp.fun_list ~loc
+                      (map_type_param_names tdecl.ptype_params
+                        ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
+                @@
                 match self#is_combinatorial tdecl with
                 | Some typ ->
                     self#do_typ_gen ~loc ~mutal_decls:[tdecl] ~is_self_rec:(fun _ -> `Nonrecursive) tdecl typ
                 | None ->
-                    Exp.fun_list ~loc
-                      (map_type_param_names tdecl.ptype_params
-                        ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
-                    @@
                     self#make_trans_function_body ~loc
                       (self#make_class_name ~is_mutal:false tdecl)
                       tdecl
@@ -715,7 +717,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
                 )
             )
       in
-      List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive) (intials @ knots)
+      (* TODO: insert Recursive only if type is recursive *)
+      List.map ~f:(Str.of_vb ~loc ~rec_flag:Recursive) (intials @ knots)
 
   method fix_func_name ?for_ () =
     match for_ with
@@ -1054,7 +1057,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                 let args = List.map params
                     ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutal_decls:mutal_decls tdecl)
                 in
-                Exp.( app_list ~loc (ident ~loc @@ Naming.for_ s) args )
+                Exp.( app_list ~loc (ident ~loc @@ Naming.for_ self#trait_name s) args )
               | _ ->
                 let init =
                   Exp.(app ~loc

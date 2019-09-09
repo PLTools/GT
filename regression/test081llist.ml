@@ -21,6 +21,7 @@ module L : sig
 end = struct
   @type 'a list = ('a, 'a list) AL.alist with show,gmap,foldl
 end
+
 let () =
   let open L in
   let sh x = GT.show list id x in
