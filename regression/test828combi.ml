@@ -12,11 +12,7 @@ let t =
 
 let () = Format.printf "Should be a number: `%s`\n%!" (GT.show t (A 5))
 
-(* By default t2 uses inheritance from class_t_t and output is default one *)
+(* By default t2 as being type abbreviation constructed in combinatorial manner
+  (by not using class for type t *)
 type t2 = t [@@deriving gt ~options:{show}]
-let () = Format.printf "Should be an ADT:   `%s`\n%!" (GT.show t2 (A 5))
-
-(* The [@@combinatorial] annotation asks the library to generate transformation function in
-   combinatorial manner (only for type aliases). *)
-type t3 = t [@@deriving gt ~options:{show}] [@@combinatorial]
-let () = Format.printf "Should be a number: `%s`\n%!" (GT.show t3 (A 5))
+let () = Format.printf "Should be a number: `%s`\n%!" (GT.show t2 (A 5))

@@ -80,4 +80,4 @@ let fix_func_name_tdecls trait tdecls =
   fix_func_name ~for_:(List.hd_exn tdecls).ptype_name.txt trait
 
 
-let for_ s = sprintf "for_%s" s
+let for_ trait s = sprintf "%s_%s" trait s
