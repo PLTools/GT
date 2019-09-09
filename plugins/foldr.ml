@@ -28,12 +28,12 @@ let trait_name = "foldr"
 
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
-module P = Foldl.Make(AstHelpers)
+module Foldl = Foldl.Make(AstHelpers)
 
 let trait_name =  trait_name
 
 class g initial_args tdecls = object(self: 'self)
-  inherit P.g initial_args tdecls as super
+  inherit Foldl.g initial_args tdecls as super
 
   method trait_name = trait_name
 
@@ -48,10 +48,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let create =
-  (new g :>
-     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+let create = (new g :> Foldl.P.plugin_constructor)
 
 end
 

@@ -16,13 +16,14 @@ open Printf
 open Asttypes
 open HelpersBase
 
-let extra_param_name = Naming.extra_param_name
-
 module Make(AstHelpers : GTHELPERS_sig.S) = struct
 
 open AstHelpers
 module Intf = Plugin_intf.Make(AstHelpers)
 
+type plugin_constructor =
+  Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
+    (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g
 
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = Exp.match_ ~loc what cs in

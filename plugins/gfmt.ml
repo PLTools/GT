@@ -133,10 +133,7 @@ class g args tdecls = object(self)
 
 end
 
-let create =
-  (new g :>
-     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+let create = (new g :> P.plugin_constructor)
 
 end
 
