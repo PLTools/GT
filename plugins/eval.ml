@@ -46,13 +46,12 @@ open AstHelpers
 
 class g initial_args tdecls = object(self: 'self)
   inherit G.g initial_args tdecls as super
-  inherit P.with_inherit_arg initial_args tdecls as super2
+  inherit P.with_inherited_attr initial_args tdecls as super2
 
   method trait_name = trait_name
 
-  method! main_inh ~loc _tdecl = Typ.var ~loc "env"
-  method inh_of_param tdecl _name =
-    Typ.var ~loc:(loc_from_caml tdecl.ptype_loc) "env"
+  method! inh_of_main ~loc _tdecl = Typ.var ~loc "env"
+  method inh_of_param ~loc tdecl _name = Typ.var ~loc "env"
 
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
@@ -60,18 +59,14 @@ class g initial_args tdecls = object(self: 'self)
     fun ~loc tdecl chain name k ->
       let subj_t = Typ.var ~loc name in
       let syn_t = self#syn_of_param ~loc name in
-      let inh_t = self#main_inh ~loc tdecl in
+      let inh_t = self#inh_of_main ~loc tdecl in
       k @@ chain (Typ.arrow ~loc inh_t @@ Typ.arrow ~loc subj_t syn_t)
 
   method! app_transformation_expr ~loc trf inh subj =
     Exp.app_list ~loc trf [ inh; subj ]
 
-  method! plugin_class_params tdecl =
-    super#plugin_class_params tdecl @
-    [named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) "env"]
-
-  method! prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    super#prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args @
+  method plugin_class_params ~loc (typs: Ppxlib.core_type list) ~typname =
+    super#plugin_class_params ~loc typs ~typname @
     [ Typ.var ~loc "env"]
 
   method! extra_class_sig_members tdecl =
@@ -136,10 +131,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let create =
-  (new g :>
-     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+let create = (new g :> P.plugin_constructor)
 
 end
 

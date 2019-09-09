@@ -31,7 +31,7 @@ class g initial_args tdecls = object(self: 'self)
   method! trait_name = trait_name
 
   method! syn_of_param ~loc s = Typ.sprintf ~loc "bool"
-  method! main_syn ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+  method! syn_of_main ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method! on_different_constructors ~loc is_poly other_name cname arg_typs =
     Exp.false_ ~loc
@@ -41,10 +41,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let create =
-  (new g :>
-     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+let create = (new g :> C.P.plugin_constructor)
 end
 
 let register () =

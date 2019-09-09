@@ -35,11 +35,11 @@ let trait_name = trait_name
 let access_GT s = Ldot (Lident "GT", s)
 
 class g initial_args tdecls = object(self: 'self)
-  inherit P.with_inherit_arg initial_args tdecls
+  inherit P.with_inherited_attr initial_args tdecls
 
   method trait_name = trait_name
 
-  method main_inh ~loc tdecl =
+  method inh_of_main ~loc tdecl =
     let ans = Typ.use_tdecl tdecl in
     if is_polyvariant_tdecl tdecl
     then Typ.alias ~loc (Typ.variant_of_t ~loc ans) @@
@@ -47,22 +47,14 @@ class g initial_args tdecls = object(self: 'self)
     else ans
 
   method syn_of_param ~loc _s = Typ.of_longident ~loc (Ldot (Lident "GT", "comparison"))
-  method main_syn  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
+  method syn_of_main  ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
-  method inh_of_param tdecl name =
-    let loc = loc_from_caml tdecl.ptype_loc in
-    Typ.var ~loc name
+  method inh_of_param ~loc _tdecl name = Typ.var ~loc name
 
-  method plugin_class_params tdecl =
-    List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t) @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ]
-
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    List.map rhs_args ~f:Typ.from_caml @
-    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt ]
-
+  method plugin_class_params ~loc (typs: Ppxlib.core_type list) ~typname =
+    (* the same as in 'show' plugin *)
+    (List.map typs ~f:Typ.from_caml) @
+    [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
   method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
@@ -230,10 +222,7 @@ class g initial_args tdecls = object(self: 'self)
 
 end
 
-let create =
-  (new g :>
-     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+let create = (new g :> P.plugin_constructor)
 
 end
 

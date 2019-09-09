@@ -9,7 +9,7 @@
 *)
 
 (*
- * Generic transformers (GT): `hash` plugin.
+ * Generic transformers (GT): `gmap` plugin.
  * Copyright (C) 2017-2019
  *   Dmitrii Kosarev a.k.a. Kakadu
  * St.Petersburg University, JetBrains Research
@@ -53,12 +53,11 @@ class g args tdecls = object(self: 'self)
 
   method trait_name = trait_name
 
-  method main_inh ~loc _tdecl = Typ.ident ~loc "unit"
+  method inh_of_main ~loc _tdecl = Typ.ident ~loc "unit"
   method syn_of_param ~loc s = Typ.var ~loc @@ param_name_mangler s
-  method inh_of_param tdecl _name =
-    self#main_inh ~loc:(loc_from_caml tdecl.ptype_loc) tdecl
+  method inh_of_param ~loc tdecl _name = self#inh_of_main ~loc tdecl
 
-  method main_syn ~loc ?(in_class=false) tdecl =
+  method syn_of_main ~loc ?(in_class=false) tdecl =
     if in_class && is_polyvariant_tdecl tdecl then
       Typ.var ~loc @@ sprintf "syn_%s" tdecl.ptype_name.txt
     else
@@ -72,30 +71,18 @@ class g args tdecls = object(self: 'self)
     in
     ans
 
-  method plugin_class_params tdecl =
-    let param_names,_,find_param,blownup_params = hack_params tdecl.ptype_params in
-    blownup_params @
-    [ named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      Naming.make_extra_param tdecl.ptype_name.txt
-    ; named_type_arg ~loc:(loc_from_caml tdecl.ptype_loc) @@
-      sprintf "syn_%s" tdecl.ptype_name.txt
-    ]
-
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
-    let _param_names,_rez_names,find_param,_blownup_params =
-      hack_params tdecl.ptype_params
+  method plugin_class_params ~loc (typs: Ppxlib.core_type list) ~typname : Typ.t list =
+    let typs2 = List.map typs ~f:(fun typ ->
+        map_core_type typ ~onvar:(fun s ->
+            let open Ppxlib.Ast_builder.Default in
+            Option.some @@ ptyp_var ~loc:typ.ptyp_loc (param_name_mangler s)
+          ))
     in
-    let ps =
-      List.concat_map rhs_args ~f:(fun t ->
-          let open Ppxlib.Ast_builder.Default in
-          [ t
-          ; map_core_type t ~onvar:(fun s -> Some (ptyp_var ~loc:t.ptyp_loc (find_param s)))
-          ]
-        )
-    in
-    List.map ~f:Typ.from_caml ps @
-    [ Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt
-    ; Typ.var ~loc @@ Printf.sprintf "syn_%s" tdecl.ptype_name.txt
+    let blownup_params =
+      List.concat @@ List.map2_exn ~f:(fun a b -> [a;b]) typs typs2 in
+    (List.map blownup_params ~f:Typ.from_caml) @
+    [ Typ.var ~loc @@ Naming.make_extra_param typname
+    ; Typ.var ~loc @@ sprintf "syn_%s" typname
     ]
 
   method hack ~loc (mangler: string -> string) param tdecl: Typ.t =
@@ -141,11 +128,6 @@ class g args tdecls = object(self: 'self)
 
   method! extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
-    (* let wrap =
-     *   if is_polyvariant_tdecl tdecl
-     *   then Typ.openize ~loc
-     *   else (fun ?as_ x -> x)
-     * in *)
     (super#extra_class_sig_members tdecl) @
     [ let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
       Ctf.constraint_ ~loc
@@ -161,7 +143,6 @@ class g args tdecls = object(self: 'self)
         (Typ.var ~loc @@ syn)
         (self#hack ~loc param_name_mangler syn tdecl)
     ]
-
 
   method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
     Exp.fun_list ~loc
@@ -227,10 +208,8 @@ class g args tdecls = object(self: 'self)
 
 end
 
-let create =
-  (new g :>
-     (Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
-      (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g))
+let create = (new g :> P.plugin_constructor)
+
 
 end
 

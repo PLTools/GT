@@ -68,7 +68,7 @@ class g args = object(self)
   method inh_of_param tdecl _name = self#default_inh ~loc:noloc tdecl
 
   method plugin_class_params tdecl =
-    (* TODO: reuse prepare_inherit_typ_params_for_alias here *)
+    (* TODO: reuse alias_inherit_type_params here *)
     let ps =
       List.map tdecl.ptype_params ~f:(fun (t,_) -> typ_arg_of_core_type t)
     in
@@ -78,7 +78,7 @@ class g args = object(self)
       Naming.make_extra_param tdecl.ptype_name.txt
     ]
 
-  method prepare_inherit_typ_params_for_alias ~loc tdecl rhs_args =
+  method alias_inherit_type_params ~loc tdecl rhs_args =
     List.map rhs_args ~f:Typ.from_caml @
     [ Typ.var ~loc html_param_name
     ]

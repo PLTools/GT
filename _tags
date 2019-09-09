@@ -1,4 +1,4 @@
-true: debug, bin_annot, short_paths, warn_error(+5)
+true: debug, bin_annot, short_paths, warn_error(+5), warn(-13)
 <sample> or <papers>: -traverse
 
 <common/*>:  package(ppxlib,ocamlgraph,base)

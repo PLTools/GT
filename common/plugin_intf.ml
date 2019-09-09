@@ -38,25 +38,25 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
   method virtual trait_name : string
 
   (** Inherited attribute for whole type declaration. Is is defined by plugin kind. *)
-  method virtual main_inh : loc:'loc -> Ppxlib.type_declaration -> 'typ
+  method virtual inh_of_main : loc:'loc -> Ppxlib.type_declaration -> 'typ
 
   (** Synthesized attribute for whole type declaration. Is is defined by plugin kind. *)
-  method virtual main_syn  : loc:'loc -> ?in_class:bool ->
+  method virtual syn_of_main : loc:'loc -> ?in_class:bool ->
     Ppxlib.type_declaration -> 'typ
 
-  (** [syn_of_param ~loc name ] constructs synthethized attribute for type paramter [name]. *)
+  (** [syn_of_param ~loc name] constructs synthethized attribute for type paramter [name]. *)
   method virtual syn_of_param : loc:'loc -> string -> 'typ
 
-  (** [inh_of_param ~loc name ] constructs inherited attribute for type paramter [name]. *)
-  method virtual inh_of_param : Ppxlib.type_declaration -> string -> 'typ
+  (** [inh_of_param ~loc tdecl name ] constructs inherited attribute for type parameter [name]. *)
+  method virtual inh_of_param : loc:'loc -> Ppxlib.type_declaration -> string -> 'typ
 
   (** The parameters that the plugin class will have in its definition.
     * Add ['extra] manually if needed. *)
-  method virtual plugin_class_params: Ppxlib.type_declaration -> 'type_arg list
+  method virtual plugin_class_params: loc:'loc -> Ppxlib.core_type list -> typname:string -> 'typ list
 
   (** Arguments of inherit class field that will be generated using the types
       applied in the RHS of type definition. *)
-  method virtual prepare_inherit_typ_params_for_alias: loc:'loc ->
+  method virtual alias_inherit_type_params: loc:'loc ->
     Ppxlib.type_declaration -> Ppxlib.core_type list -> 'typ list
 
   (* These methods will be implemented in plugin.ml *)
