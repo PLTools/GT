@@ -24,10 +24,11 @@ let () =
 include (struct
   type 'a wtf = [ `C of 'a | 'a pv ] maybe
   [@@deriving gt ~options:{show; fmt}]
-end : sig
+end (* : sig
    type 'a wtf = [ `C of 'a | 'a pv ] maybe
    [@@deriving gt ~options:{show; fmt}]
- end)
+ end *)
+)
 
 let () =
   let sh x = GT.show wtf GT.id x in

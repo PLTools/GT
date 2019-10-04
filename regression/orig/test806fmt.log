@@ -1,9 +1,10 @@
 { a=1; 
  b="x"; }
 
-QQQ
-("azerty")
-LLL
+QQQ (
+     "azerty"
+     )
+LLL 
 ([ 1; 2; 3]
 )
 

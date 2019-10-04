@@ -19,15 +19,5 @@ class ['e] show_a' (for_a,for_b) =
 let show_a' () s =
   (fst @@ fix_a (new show_a') (new show_b_t_stub)) () s
 
-(* let new_fix =
- *   Fix_show_a.fixv
- *     (fun f ->
- *        {call =
- *          fun (type a) (sym : a Ishow_a.i) ->
- *            (match sym with
- *               Ishow_a.A -> GT.transform_gc gcata_a (new show_a'  f)
- *             | Ishow_a.B -> GT.transform_gc gcata_b (new show_b_t f)
- *             : a) } ) *)
-
 let () =
   Printf.printf "%s\n" (show_a' () x)
