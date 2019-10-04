@@ -144,28 +144,22 @@ class g args tdecls = object(self: 'self)
         (self#hack ~loc param_name_mangler syn tdecl)
     ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
-    Exp.fun_list ~loc
-      (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
-      (let ctuple =
-         List.map ts
-           ~f:(fun (name, typ) ->
-               self#app_transformation_expr ~loc
-                 (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
-                 inhe
-                 (Exp.ident ~loc name)
-             )
-       in
-       (match constr_info with
-        | `Normal s -> Exp.construct ~loc (lident s) ctuple
-        | `Poly s   ->
-          let ans =  Exp.variant ~loc s ctuple in
-          ans
-       )
-      )
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
+    let ctuple =
+      List.map ts
+        ~f:(fun (name, typ) ->
+            self#app_transformation_expr ~loc
+              (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+              inhe
+              (Exp.ident ~loc name)
+          )
+    in
+    match constr_info with
+    | Some (`Normal s) -> Exp.construct ~loc (lident s) ctuple
+    | Some (`Poly s)   -> Exp.variant ~loc s ctuple
+    | None -> Exp.tuple ~loc ctuple
 
-
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
@@ -179,26 +173,26 @@ class g args tdecls = object(self: 'self)
         ~f:(fun {pld_name; pld_type} ->
             lident pld_name.txt,
             self#app_transformation_expr ~loc
-              (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type)
+              (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
               (Exp.unit ~loc)
               (Exp.ident ~loc pld_name.txt)
           )
     ]
 
-  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs =
+  method! on_record_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl info bindings labs =
     assert Int.(List.length labs > 0);
     let is_poly,cname =
       match info with
       | `Normal s -> false,  s
       | `Poly   s -> true,   s
     in
-    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@
+    (* Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@ *)
     (if is_poly then Exp.variant ~loc cname
     else Exp.construct ~loc (lident cname))
       [Exp.record ~loc @@ List.map bindings ~f:(fun (s,labname,typ) ->
         ( lident labname
         , self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
                   inhe
                   (Exp.ident ~loc s)
         )

@@ -54,39 +54,42 @@ class g args tdecls = object(self)
     (List.map typs ~f:Typ.from_caml) @
     [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
+
   (* Adapted to generate only single method per constructor definition *)
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
-      | `Poly s -> sprintf "`%s" s
-      | `Normal s -> s
+      | Some (`Poly s) -> sprintf "`%s" s
+      | Some (`Normal s) -> sprintf "%s" s
+      | None -> ""
     in
 
     let names = List.map ts ~f:fst in
-    Exp.fun_list ~loc
-      (List.map names ~f:(Pat.sprintf ~loc "%s"))
-      (if List.length ts = 0
-       then Exp.string_const ~loc constr_name
-       else
-         List.fold_left ts
-           ~f:(fun acc (name, typ) ->
-               Exp.app ~loc acc
-                 (self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
-                    (Exp.unit ~loc)
-                    (Exp.ident ~loc name)
-                 )
-             )
-           ~init:Exp.(app ~loc
-                        (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
 
-                      let fmt = String.concat ~sep:", " @@ List.map names
-                          ~f:(fun _ -> "%s")
-                      in
-                      Exp.string_const ~loc @@ Printf.sprintf "%s (%s)" constr_name fmt
-                     )
-      )
+    if List.length ts = 0
+    then Exp.string_const ~loc constr_name
+    else
+      List.fold_left ts
+        ~f:(fun acc (name, typ) ->
+            Exp.app ~loc acc
+              (self#app_transformation_expr ~loc
+                (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                (Exp.unit ~loc)
+                (Exp.ident ~loc name)
+              )
+          )
+        ~init:Exp.(app ~loc
+                    (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
 
-  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs =
+                  let fmt = String.concat ~sep:", " @@ List.map names
+                      ~f:(fun _ -> "%s")
+                  in
+                  Exp.string_const ~loc @@ Printf.sprintf "%s%s(%s)"
+                    constr_name
+                    (if List.is_empty ts || Option.is_none constr_info then "" else " ")
+                    fmt
+                  )
+
+  method! on_record_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl info bindings labs =
     assert Int.(List.length labs > 0);
 
     let constr_name = match info with
@@ -94,8 +97,8 @@ class g args tdecls = object(self)
       | `Normal s -> s
     in
 
-    Exp.fun_list ~loc
-      (List.map bindings ~f:(fun (ident,_,_) -> Pat.sprintf ~loc "%s" ident))
+    (* Exp.fun_list ~loc
+      (List.map bindings ~f:(fun (ident,_,_) -> Pat.sprintf ~loc "%s" ident)) *)
       (if List.length bindings = 0
        then failwith "Record constructors can't have empty label list"
        else
@@ -103,7 +106,7 @@ class g args tdecls = object(self)
             ~f:(fun acc (ident, labname, typ) ->
               Exp.app ~loc acc @@
                 self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
                   (Exp.unit ~loc)
                   (Exp.ident ~loc ident)
             )
@@ -118,7 +121,7 @@ class g args tdecls = object(self)
       )
 
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
@@ -137,7 +140,7 @@ class g args tdecls = object(self)
             ~f:(fun acc {pld_name; pld_type} ->
                 Exp.app ~loc acc
                   (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type)
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
                      (Exp.unit ~loc)
                      (Exp.ident ~loc pld_name.txt)
                   )

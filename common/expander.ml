@@ -119,7 +119,6 @@ let params_of_interface_class ~loc params =
     ]
 
 let make_interface_class_sig ~loc tdecl =
-  let params = List.map ~f:fst tdecl.ptype_params in
   let name = tdecl.ptype_name in
 
   let k fields =
@@ -128,6 +127,19 @@ let make_interface_class_sig ~loc tdecl =
         ~params:(params_of_interface_class ~loc tdecl.ptype_params)
         fields
     ]
+  in
+  let on_constructor pcd_args pcd_name =
+    let methname = Naming.meth_name_for_constructor pcd_name.txt in
+    let typs = match pcd_args with
+      | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+      | Pcstr_tuple ts -> ts
+    in
+    Ctf.method_ ~loc methname ~virt:true @@
+    Typ.chain_arrow ~loc @@
+      [ Typ.var ~loc "inh"
+      ; Typ.var ~loc "extra" ] @
+      (List.map typs ~f:Typ.from_caml) @
+      [ Typ.var ~loc "syn" ]
   in
   visit_typedecl ~loc tdecl
     ~onrecord:(fun _labels ->
@@ -146,20 +158,7 @@ let make_interface_class_sig ~loc tdecl =
         []
       )
     ~onvariant:(fun cds ->
-      k @@
-      List.map cds ~f:(fun cd ->
-        let methname = Naming.meth_name_for_constructor cd.pcd_name.txt in
-        let typs = match cd.pcd_args with
-          | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
-          | Pcstr_tuple ts -> ts
-        in
-        Ctf.method_ ~loc methname ~virt:true @@
-        Typ.chain_arrow ~loc
-          ([ Typ.var ~loc "inh"
-           ; Typ.var ~loc "extra" ] @
-           (List.map typs ~f:Typ.from_caml) @
-           [ Typ.var ~loc "syn" ])
-      )
+      k @@ List.map cds ~f:(fun cd -> on_constructor cd.pcd_args cd.pcd_name)
     )
     ~onmanifest:(fun typ ->
         let wrap name params =
@@ -204,6 +203,7 @@ let make_interface_class_sig ~loc tdecl =
           | Ptyp_alias (typ, new_name) ->
             let loc = typ.ptyp_loc in
             map_core_type typ ~onvar:(fun as_ ->
+                let params = List.map ~f:fst tdecl.ptype_params in
                 let open Ppxlib.Ast_builder.Default in
                 if String.equal as_ new_name
                 then Some (ptyp_constr ~loc (Located.lident ~loc name.txt) params)
@@ -242,7 +242,14 @@ let make_interface_class_sig ~loc tdecl =
                                   (string_of_core_type typ)
           |  _ -> failwith " not implemented"
           in
-          helper typ
+          let toplevel typ = match typ.ptyp_desc with
+          | Ptyp_tuple _
+          | Ptyp_var _ ->
+              k  @@ [ on_constructor (Pcstr_tuple []) @@
+                      Located.mk ~loc:typ.ptyp_loc @@ String.uppercase tdecl.ptype_name.txt ]
+          | _ -> helper typ
+          in
+          toplevel typ
     )
 
 let inherit_iface_class ~loc name params =
@@ -276,6 +283,19 @@ let make_interface_class ~loc tdecl =
       ~virt:true
       ~params:(params_of_interface_class ~loc tdecl.ptype_params)
   in
+  let on_constructor pcd_args pcd_name =
+    let methname = Naming.meth_of_constr pcd_name.txt in
+    let typs = match pcd_args with
+      | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+      | Pcstr_tuple ts -> ts
+    in
+    Cf.method_virtual ~loc methname @@
+      Typ.(List.fold_right typs ~init:(var ~loc "syn")
+          ~f:(fun t -> arrow ~loc (from_caml t))
+      |> (arrow ~loc (var ~loc "extra"))
+      |> (arrow ~loc (var ~loc "inh"))
+        )
+  in
   visit_typedecl ~loc tdecl
     ~onopen:(fun () -> ans [])
     ~onrecord:(fun _ ->
@@ -289,19 +309,7 @@ let make_interface_class ~loc tdecl =
       )
     ~onvariant:(fun cds ->
       ans @@
-      List.map cds ~f:(fun cd ->
-        let methname = Naming.meth_of_constr cd.pcd_name.txt in
-        let typs = match cd.pcd_args with
-          | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
-          | Pcstr_tuple ts -> ts
-        in
-        Cf.method_virtual ~loc methname @@
-          Typ.(List.fold_right typs ~init:(var ~loc "syn")
-             ~f:(fun t -> arrow ~loc (from_caml t))
-          |> (arrow ~loc (var ~loc "extra"))
-          |> (arrow ~loc (var ~loc "inh"))
-          )
-      )
+      List.map cds ~f:(fun cd -> on_constructor cd.pcd_args cd.pcd_name)
     )
     ~onmanifest:(fun typ ->
         let wrap ?(is_poly=false) name params =
@@ -374,7 +382,14 @@ let make_interface_class ~loc tdecl =
                                   (string_of_core_type typ)
           | _ -> failwith "not implemented "
           in
-          helper typ
+          let toplevel typ = match typ.ptyp_desc with
+          | Ptyp_tuple _
+          | Ptyp_var _ ->
+              ans @@ [ on_constructor (Pcstr_tuple []) @@
+                       Located.mk ~loc:typ.ptyp_loc @@ String.uppercase tdecl.ptype_name.txt ]
+          | _ -> helper typ
+          in
+          toplevel typ
     )
 
 let wildcard_tdecl td =
@@ -509,6 +524,17 @@ let make_gcata_str ~loc tdecl =
           ~rhs:(Exp.ident ~loc new_name)
       ]
   in
+  let onvariant cds =
+    ans @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
+      (fun cd names ->
+        (* TODO: Subj ident has to be passed as an argument *)
+        let subj = "subj" in
+        List.fold_left ("inh"::subj::names)
+            ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
+                    (Naming.meth_of_constr cd.pcd_name.txt))
+            ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
+    )
+  in
   visit_typedecl ~loc tdecl
     ~onopen:(fun () ->
         ans @@ Exp.failwith_ ~loc "Extensible types not yet supported")
@@ -518,25 +544,14 @@ let make_gcata_str ~loc tdecl =
                   (send ~loc (ident ~loc "tr") methname)
                   [ident ~loc "inh"; ident ~loc "subj"])
       )
-    ~onvariant:(fun cds ->
-        ans @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds)
-          (fun cd names ->
-            (* TODO: Subj ident has to be passed as an argument *)
-            let subj = "subj" in
-            List.fold_left ("inh"::subj::names)
-               ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                        (Naming.meth_of_constr cd.pcd_name.txt))
-               ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
-        )
-      )
     ~onmanifest:(fun typ ->
-        let rec do_typ t = match t.ptyp_desc with
-        | Ptyp_alias (t,_) -> do_typ t
+        let rec helper t = match t.ptyp_desc with
+        | Ptyp_alias (t,_) -> helper t
         | Ptyp_var name ->
           let new_lident = Ldot (Lident "GT", "free") in
           let open Ppxlib.Ast_builder.Default in
           let loc = typ.ptyp_loc in
-          do_typ @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
+          helper @@ ptyp_constr ~loc (Located.mk ~loc new_lident) [ptyp_var ~loc name]
 
         | Ptyp_constr ({txt},_) ->
           Str.single_value ~loc
@@ -545,7 +560,7 @@ let make_gcata_str ~loc tdecl =
              map_longident txt ~f:Naming.gcata_name_for_typ)
         | Ptyp_tuple ts ->
           (* let's say we have predefined aliases for now *)
-          do_typ @@ constr_of_tuple ~loc:t.ptyp_loc ts
+          helper @@ constr_of_tuple ~loc:t.ptyp_loc ts
         | Ptyp_variant (rows,_,maybe_labels) ->
           let subj_s = "subj" in
           ans @@ prepare_patt_match_poly ~loc (Exp.ident ~loc subj_s)
@@ -569,10 +584,28 @@ let make_gcata_str ~loc tdecl =
                    map_longident cident ~f:(gcata_name_for_typ))
                   (List.map ["tr";"inh";patname] ~f:(Exp.sprintf ~loc "%s"))
               )
-        | _ -> failwith "not implemented"
+        | Ptyp_object (_,_) -> failwith "not implemented: object types"
+        | Ptyp_class (_,_) -> failwith "not implemented: class types"
+        | Ptyp_package _ -> failwith "not implemented: package types"
+        | Ptyp_extension _ -> failwith "not implemented: extension types"
+        | Ptyp_arrow _ -> failwith "not implemented: arrow types"
+        | Ptyp_any -> failwith "not implemented: wildcard types (but it should be easy to rewrite)"
+        | Ptyp_poly (_,_) -> failwith "not implemented: existential types"
         in
-        do_typ typ
+
+        let toplevel t = match t.ptyp_desc with
+        | Ptyp_var _
+        | Ptyp_tuple _ ->
+            ans @@
+            Exp.app_list ~loc
+              (Exp.send ~loc (Exp.ident ~loc "tr")
+                  (Naming.meth_of_constr (String.uppercase tdecl.ptype_name.txt)))
+              (List.map ~f:(Exp.ident ~loc) ["inh"; "subj"])
+        | _ -> helper t
+        in
+        toplevel typ
       )
+    ~onvariant
 
 (* create opened renaming for polymorphic variant *)
 (* seems that we don't need it no more *)

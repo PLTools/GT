@@ -86,32 +86,29 @@ class g args tdecls = object(self)
     (List.map typs ~f:Typ.from_caml) @
     [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
-      | `Poly s -> sprintf "`%s" s
-      | `Normal s -> s
+      | Some (`Poly s) -> sprintf "`%s" s
+      | Some (`Normal s) -> s
+      | None -> ""
     in
 
-    let names = List.map ts ~f:fst in
-    Exp.fun_list ~loc
-      (List.map names ~f:(Pat.sprintf ~loc "%s"))
-      (if List.length ts = 0
-       then H.(ul ~loc [pcdata ~loc constr_name])
-       else
-         H.ul ~loc @@ (
+    if List.length ts = 0
+    then H.(ul ~loc [pcdata ~loc constr_name])
+    else
+        H.ul ~loc @@ (
            (H.li ~loc [H.pcdata ~loc constr_name]) ::
            (List.map ts ~f:(fun (name, typ) ->
               H.li ~loc
                 [ self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
                     (Exp.unit ~loc)
                     (Exp.ident ~loc name)
                 ]
               ))
          )
-      )
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
@@ -127,7 +124,7 @@ class g args tdecls = object(self)
             H.li ~loc
               [ H.pcdata ~loc pld_name.txt
               ; self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
                   (Exp.unit ~loc)
                   (Exp.ident ~loc pld_name.txt)
               ]
@@ -138,19 +135,19 @@ class g args tdecls = object(self)
 
   method! on_record_constr: loc:loc ->
     is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ]) ->
-    mutal_decls:type_declaration list ->
+    mutual_decls:type_declaration list ->
     inhe:Exp.t ->
     _ ->
     [ `Normal of string | `Poly of string ] ->
     (string * _ * core_type) list ->
     label_declaration list ->
-    Exp.t = fun  ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs ->
+    Exp.t = fun  ~loc ~is_self_rec ~mutual_decls ~inhe tdecl info bindings labs ->
     let constr_name = match info with
       | `Poly s -> sprintf "`%s" s
       | `Normal s -> s
     in
 
-    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@
+
     let open H  in
     ul ~loc @@
     [pcdata ~loc constr_name] @
@@ -159,7 +156,7 @@ class g args tdecls = object(self)
           H.li ~loc
               [ H.pcdata ~loc lname
               ; self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
                   (Exp.unit ~loc)
                   (Exp.ident ~loc pname)
               ]

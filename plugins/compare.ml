@@ -76,12 +76,19 @@ class g initial_args tdecls = object(self: 'self)
   method chain_init ~loc = Exp.construct ~loc (access_GT "EQ") []
 
   method on_different_constructors ~loc is_poly other_name cname arg_typs =
+    assert (not @@ String.is_empty cname);
+    (* Format.printf "%s %s %d\n" cname __FILE__ __LINE__; *)
+
+    let (_: [ `Record of (string * string * core_type) list
+            | `Tuples of (string * core_type) list ]) = arg_typs in
+
     Exp.app_list ~loc
       (Exp.of_longident ~loc (access_GT "compare_vari"))
       [ Exp.ident ~loc other_name
       ; ( if is_poly
           then Exp.variant ~loc cname
-          else Exp.construct ~loc (lident cname)) @@
+          else Exp.construct ~loc (lident cname)
+        ) @@
         (match arg_typs with
         | `Tuples ts -> List.map ts ~f:(fun _ -> Exp.objmagic_unit ~loc)
         | `Record rs ->
@@ -93,53 +100,66 @@ class g initial_args tdecls = object(self: 'self)
         *)
       ]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info args =
+
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info args =
     let is_poly,cname =
       match constr_info with
-      | `Normal s -> false,  s
-      | `Poly   s -> true,   s
+      | Some (`Normal s) -> false,  s
+      | Some (`Poly   s) -> true,   s
+      | None -> false,""
     in
 
-        let main_case =
-          let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
-          let lhs =
-            let arg_pats =
-              match pat_names with
-              | []  -> []
-              | [s] -> [Pat.var ~loc s]
-              | __  -> List.map pat_names ~f:(Pat.var ~loc)
-            in
-            if is_poly
-            then Pat.variant   ~loc  cname arg_pats
-            else Pat.constr    ~loc  cname arg_pats
-          in
-          let rhs =
-            List.fold_left  ~init:(self#chain_init ~loc)
-              (List.map2_exn pat_names args ~f:(fun a (b,c) -> (a,b,c)))
-              ~f:(fun acc (pname, name, typ) ->
-                self#chain_exprs ~loc
-                  acc
-                  (self#app_transformation_expr ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
-                     (Exp.ident ~loc pname)
-                     (Exp.ident ~loc name)
-                  )
+    let main_case =
+      let pat_names = List.map args ~f:(fun _ -> gen_symbol ()) in
+      let lhs =
+        let arg_pats =
+          match pat_names with
+          | []  -> []
+          | [s] -> [Pat.var ~loc s]
+          | __  -> List.map pat_names ~f:(Pat.var ~loc)
+        in
+        match constr_info with
+        | Some (`Normal s) -> Pat.constr  ~loc  s arg_pats
+        | Some (`Poly   s) -> Pat.variant ~loc  s arg_pats
+        | None             -> Pat.tuple   ~loc    arg_pats
+      in
+      let rhs =
+        (* TODO: rewrite with fold2_exn *)
+        List.fold_left  ~init:(self#chain_init ~loc)
+          (List.map2_exn pat_names args ~f:(fun a (b,c) -> (a,b,c)))
+          ~f:(fun acc (pname, name, typ) ->
+            self#chain_exprs ~loc
+              acc
+              (self#app_transformation_expr ~loc
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                  (Exp.ident ~loc pname)
+                  (Exp.ident ~loc name)
               )
-          in
-          case ~lhs ~rhs
-        in
+          )
+      in
+      case ~lhs ~rhs
+    in
 
-        let other_case =
-          let other_name = "other" in
-          let lhs = Pat.var ~loc other_name in
+    (* TODO: pass information about other constructors to omit other_cases more often *)
+    let other_cases =
+      let other_name = gen_symbol ~prefix:"other" () in
+      let lhs = Pat.var ~loc other_name in
+      match constr_info with
+      | Some (`Normal s) ->
+          assert (not (String.equal "" s));
           let rhs =
-            self#on_different_constructors ~loc is_poly other_name cname (`Tuples args)
+            self#on_different_constructors ~loc false other_name cname (`Tuples args)
           in
-          case ~lhs ~rhs
-        in
-
-        Exp.fun_list ~loc (List.map args ~f:(fun (s,_) -> Pat.sprintf ~loc "%s" s)) @@
-        Exp.match_ ~loc inhe [ main_case; other_case ]
+          [case ~lhs ~rhs]
+      | Some (`Poly s) ->
+          assert (not (String.equal "" s));
+          let rhs =
+            self#on_different_constructors ~loc true other_name cname (`Tuples args)
+          in
+          [case ~lhs ~rhs]
+      | None -> []
+    in
+    Exp.match_ ~loc inhe ( main_case :: other_cases )
 
   method app_transformation_expr ~loc trf inh subj =
     Exp.app_list ~loc trf [ inh; subj ]
@@ -147,9 +167,9 @@ class g initial_args tdecls = object(self: 'self)
   method abstract_trf ~loc k =
     Exp.fun_list ~loc [Pat.sprintf ~loc "inh"; Pat.sprintf ~loc "subj"] @@
     k (Exp.sprintf ~loc "inh") (Exp.sprintf ~loc "subj")
-    (* [%expr fun inh subj -> [%e k [%expr inh ] [%expr subj]]] *)
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+
+  method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     assert Int.(List.length labs > 0);
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun {pld_name} ->
@@ -163,7 +183,7 @@ class g initial_args tdecls = object(self: 'self)
         [ Pat.sprintf ~loc "inh"; pat] @@
         let wrap lab =
           self#app_transformation_expr ~loc
-            (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl lab.pld_type)
+            (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl lab.pld_type)
             (Exp.field ~loc (Exp.ident ~loc "inh") (Lident lab.pld_name.txt))
             (Exp.ident ~loc lab.pld_name.txt )
         in
@@ -172,8 +192,9 @@ class g initial_args tdecls = object(self: 'self)
           ~f:(fun acc lab -> self#chain_exprs ~loc acc (wrap lab))
     ]
 
-  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs =
+  method! on_record_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl info bindings labs =
     assert Int.(List.length labs > 0);
+
     let is_poly,cname =
       match info with
       | `Normal s -> false,  s
@@ -182,12 +203,6 @@ class g initial_args tdecls = object(self: 'self)
     let main_case =
       let pat_names = List.map labs ~f:(fun _ -> gen_symbol ()) in
       let lhs =
-        let arg_pats =
-          match pat_names with
-          | []  -> []
-          | [s] -> [Pat.var ~loc s]
-          | __  -> List.map pat_names ~f:(Pat.var ~loc)
-        in
         Pat.constr ~loc cname
           [ Pat.record ~loc @@ List.map2_exn labs pat_names ~f:(fun l name ->
               (lident l.pld_name.txt, Pat.var ~loc name) )
@@ -200,7 +215,7 @@ class g initial_args tdecls = object(self: 'self)
             self#chain_exprs ~loc
               acc
               (self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
                   (Exp.ident ~loc iname)
                   (Exp.ident ~loc sname)
               )
@@ -217,7 +232,6 @@ class g initial_args tdecls = object(self: 'self)
       in
       case ~lhs ~rhs
     in
-    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@
     Exp.match_ ~loc inhe [ main_case; other_case ]
 
 end
