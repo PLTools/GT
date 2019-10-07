@@ -1,7 +1,7 @@
 (*
  * Generic Transformers: `format` plugin.
- * Copyright (C) 2016-2017
- *   Dmitrii Kosarev aka Kakadu
+ * Copyright (C) 2016-2020
+ *   Dmitrii Kosarev a.k.a Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
 
@@ -54,33 +54,32 @@ class g args tdecls = object(self)
     [ Typ.var ~loc @@ Naming.make_extra_param typname ]
 
   (* Adapted to generate only single method per constructor definition *)
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
     let constr_name = match constr_info with
-      | `Poly s -> sprintf "`%s" s
-      | `Normal s -> s
+      | Some (`Poly s) -> sprintf "`%s " s
+      | Some (`Normal s) -> sprintf "%s " s
+      | None -> ""
     in
 
     let fmt = List.map ts ~f:(fun _ -> "%a") |> String.concat ~sep:",@,@ " in
-    let fmt = sprintf "%s@ @[(@,%s@,)@]" constr_name fmt in
+    let fmt = sprintf "%s@[(@,%s@,)@]" constr_name fmt in
 
-    Exp.fun_list ~loc
-      (List.map ts ~f:(fun (s,_) -> Pat.sprintf ~loc "%s" s))
-      (if List.length ts = 0
-       then app_format_fprintf ~loc inhe @@ Exp.string_const ~loc constr_name
-       else
-         List.fold_left ts
-           ~f:(fun acc (name, typ) ->
-                Exp.app_list ~loc acc
-                  [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ
-                  ; Exp.ident ~loc name
-                  ]
-             )
-            ~init:(app_format_fprintf ~loc inhe @@
-                   Exp.string_const ~loc fmt
-                  )
-      )
+    if List.length ts = 0
+    then app_format_fprintf ~loc inhe @@ Exp.string_const ~loc constr_name
+    else
+      List.fold_left ts
+        ~f:(fun acc (name, typ) ->
+            Exp.app_list ~loc acc
+              [ self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ
+              ; Exp.ident ~loc name
+              ]
+          )
+        ~init:(app_format_fprintf ~loc inhe @@
+                Exp.string_const ~loc fmt
+              )
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+
+  method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
@@ -99,7 +98,7 @@ class g args tdecls = object(self)
       List.fold_left labs
             ~f:(fun acc {pld_name; pld_type} ->
                 Exp.app_list ~loc acc
-                  [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl pld_type
+                  [ self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type
                   ; Exp.ident ~loc pld_name.txt
                   ]
               )
@@ -108,7 +107,7 @@ class g args tdecls = object(self)
                   )
     ]
 
-  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl info bindings labs =
+  method! on_record_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl info bindings labs =
     let cname = match info with
       | `Normal s -> s
       | `Poly s -> s
@@ -118,11 +117,10 @@ class g args tdecls = object(self)
             sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc l.pld_name.txt
           )
     in
-    Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.var ~loc s)) @@
     List.fold_left bindings
       ~f:(fun acc (name, _, typ) ->
         Exp.app_list ~loc acc
-          [ self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ
+          [ self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ
           ; Exp.ident ~loc name
           ]
       )

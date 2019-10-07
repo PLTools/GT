@@ -69,14 +69,12 @@ class g initial_args tdecls = object(self: 'self)
         ~init
         xs
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info args =
-    let names = List.map args ~f:fst in
-    Exp.fun_list ~loc (List.map names ~f:(Pat.sprintf ~loc "%s")) @@
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info args =
     self#join_args ~loc ~init:inhe
-        (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+        (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl)
         args
 
-  method on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+  method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     (* TODO: introduce fresh pattern names here *)
     let pat = Pat.record ~loc @@
       List.map labs ~f:(fun l ->
@@ -88,17 +86,17 @@ class g initial_args tdecls = object(self: 'self)
       Exp.fun_list ~loc
         [ Pat.sprintf ~loc "inh"; pat] @@
         self#join_args ~loc ~init:(Exp.ident ~loc "inh")
-          (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+          (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl)
           (List.map labs ~f:(fun l -> (l.pld_name.txt, l.pld_type)))
 
     ]
 
-  method! on_record_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl _info bindings labs =
+  method! on_record_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl _info bindings labs =
     assert Int.(List.length labs > 0);
 
     Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_,_) -> Pat.sprintf ~loc "%s" s)) @@
     self#join_args ~loc ~init:inhe
-      (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl)
+      (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl)
       (List.map bindings ~f:(fun (name,_,typ) -> (name, typ)))
 
 end

@@ -3,7 +3,7 @@ module T1 = struct
   [@@deriving gt ~options:{ compare }]
 
   let () =
-    let cmp1 x y = compare_t (GT.compare GT.int) (GT.compare GT.string) x y in
+    let cmp1 x y = GT.compare t (GT.compare GT.int) (GT.compare GT.string) x y in
     assert (GT.EQ =  cmp1 (A 5) (A 5) );
     assert (GT.EQ =  cmp1 (B ("",5)) (B ("",5))  );
     assert (GT.EQ <> cmp1 (A 5) (B ("",5)) );

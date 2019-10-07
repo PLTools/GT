@@ -61,16 +61,17 @@ class g initial_args tdecls = object(self: 'self)
     super#plugin_class_params ~loc typs ~typname @
     [ Typ.var ~loc "env"]
 
-  method on_tuple_constr ~loc ~is_self_rec ~mutal_decls ~inhe tdecl constr_info ts =
-    Exp.fun_list ~loc
-      (List.map ts ~f:(fun p -> Pat.sprintf ~loc "%s" @@ fst p))
-      (let c = match constr_info with
-          | `Normal s -> Exp.construct ~loc (lident s)
-          | `Poly s   -> Exp.variant ~loc s
-       in
-       match ts with
-       | [] -> Exp.tuple ~loc [ inhe; c [] ]
-       | ts ->
+  method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
+    let c = match constr_info with
+          | Some (`Normal s) -> Exp.construct ~loc (lident s)
+          | Some (`Poly s)   -> Exp.variant ~loc s
+          | None ->
+              assert (List.length ts >=2);
+              Exp.tuple ~loc
+    in
+    match ts with
+    | [] -> Exp.tuple ~loc [ inhe; c [] ]
+    | ts ->
          let res_var_name = sprintf "%s_rez" in
          let ys = List.mapi ~f:(fun n x -> (n,x)) ts in
          List.fold_right ys
@@ -85,15 +86,15 @@ class g initial_args tdecls = object(self: 'self)
                  (Pat.tuple ~loc [ Pat.sprintf ~loc "env%d" (i+1)
                                  ; Pat.sprintf ~loc "%s" @@ res_var_name name])
                  (self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutal_decls tdecl typ)
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
                     (if i=0 then inhe else Exp.sprintf ~loc "env%d" i)
                     (Exp.ident ~loc name)
                  )
                  acc
              )
-      )
 
-  method! on_record_declaration ~loc ~is_self_rec ~mutal_decls tdecl labs =
+
+  method! on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     (* TODO: *)
     failwith "not implemented"
 end

@@ -1,10 +1,10 @@
 @type ('a, 'b) t = GT.int * (GT.string * ('a * 'b))
-with show, gmap, eq, compare, foldl,foldr
+with show, gmap, eq, compare, foldl, foldr
 
-class ['a, 'b] print (fa: unit -> 'a -> unit) fb _fself =
+class ['a, 'b] print (fa: unit -> 'a -> unit) (fb: unit -> 'b -> unit) _fself =
   object
     inherit [unit, 'a, unit, unit, 'b, unit, unit, _, unit] @t
-    method c_Pair () _ x (y, (a, b)) =
+    method c_T () (x, (y, (a, b))) =
       Printf.printf "%d\n" x;
       Printf.printf "%s\n" y;
       fa () a;

@@ -4,3 +4,4 @@ B ../_build/plugins
 S ../common
 B ../_build/common
 PKG ppxlib
+FLG -w -13

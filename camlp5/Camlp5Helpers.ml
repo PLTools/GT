@@ -44,16 +44,16 @@ module Pat = struct
   let var = lid
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt
   let of_longident ~loc lid =
-    let open Ppxlib.Longident in
     let wrap s =
+      assert (s <> "");
       let c1 = String.get s 0 in
       if Char.(equal (uppercase_ascii c1) c1)
       then <:patt< $uid:s$ >>
       else <:patt< $lid:s$ >>
     in
     let rec helper = function
-      | Lident s -> wrap s
-      | Ldot (left, s) -> <:patt< $helper left$ . $wrap s$ >>
+      | Longident.Lident s -> wrap s
+      | Longident.Ldot (left, s) -> <:patt< $helper left$ . $wrap s$ >>
       | _ -> assert false
     in
     helper lid
@@ -65,6 +65,7 @@ module Pat = struct
     failwith "Record constructors are not available for camlp5"
 
   let constr ~loc uid ps =
+    assert (uid <> "");
     let c = <:patt< $uid:uid$ >> in
     match ps with
     | [] -> c
@@ -126,10 +127,12 @@ module Exp = struct
   let of_longident ~loc l =
     let rec helper = function
       (* | Longident.Lident s when Char.equal s.[0] (Char.uppercase_ascii s.[0]) -> uid ~loc s *)
-      | Longident.Lident s -> ident ~loc s
+      | Longident.Lident s ->
+          assert (s <> "");
+          ident ~loc s
       | Ldot (l, r) ->
-        let u = helper l in
-        <:expr< $u$ . $ident ~loc r$ >>
+          let u = helper l in
+          <:expr< $u$ . $ident ~loc r$ >>
       | _ -> assert false
     in
     helper l
@@ -164,6 +167,7 @@ module Exp = struct
 
   let construct ~loc lident args =
     app_list ~loc (of_longident ~loc lident) args
+
   let variant ~loc s args =
     app_list ~loc <:expr< ` $s$ >> args
   let tuple ~loc le =
@@ -215,13 +219,14 @@ module Typ = struct
   type t = MLast.ctyp
 
   let of_longident ~loc lid =
-    let open Ppxlib.Longident in
     let wrap s =
+      assert (s <> "");
       let c1 = String.get s 0 in
       if Char.(equal (uppercase_ascii c1) c1)
       then <:ctyp< $uid:s$ >>
       else <:ctyp< $lid:s$ >>
     in
+    let open Ppxlib.Longident in
     let rec helper = function
       | Lident s -> wrap s
       | Ldot (left, s) -> <:ctyp< $helper left$ . $wrap s$ >>
