@@ -25,6 +25,7 @@ depends: [
   "ocamlfind"  {build}
   "ocamlbuild" {build}
   "ocamlgraph" {build}
+  "base"       {<= "v0.12.2"}
   "ppxlib"     {>= "0.9.0" }
   "camlp5"
   "ppx_import" {with-test}
