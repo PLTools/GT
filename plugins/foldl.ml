@@ -30,7 +30,7 @@ module Make(AstHelpers : GTHELPERS_sig.S) = struct
 open AstHelpers
 module P = Plugin.Make(AstHelpers)
 
-let trait_name =  trait_name
+let trait_name = trait_name
 let make_dest_param_names ps =
   map_type_param_names ps ~f:(sprintf "%s_2")
 

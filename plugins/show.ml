@@ -33,6 +33,7 @@ let trait_name = trait_name
 module P = Plugin.Make(AstHelpers)
 open AstHelpers
 
+
 let app_format_sprintf ~loc arg =
   Exp.app ~loc
     (Exp.of_longident ~loc (Ldot(Lident "Format", "sprintf")))
@@ -53,7 +54,6 @@ class g args tdecls = object(self)
   method plugin_class_params ~loc typs ~typname =
     (List.map typs ~f:Typ.from_caml) @
     [ Typ.var ~loc @@ Naming.make_extra_param typname ]
-
 
   (* Adapted to generate only single method per constructor definition *)
   method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
@@ -97,29 +97,25 @@ class g args tdecls = object(self)
       | `Normal s -> s
     in
 
-    (* Exp.fun_list ~loc
-      (List.map bindings ~f:(fun (ident,_,_) -> Pat.sprintf ~loc "%s" ident)) *)
-      (if List.length bindings = 0
-       then failwith "Record constructors can't have empty label list"
-       else
-          List.fold_left bindings
-            ~f:(fun acc (ident, labname, typ) ->
-              Exp.app ~loc acc @@
-                self#app_transformation_expr ~loc
-                  (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
-                  (Exp.unit ~loc)
-                  (Exp.ident ~loc ident)
-            )
-            ~init:Exp.(app ~loc
-                        (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
+    if List.length bindings = 0
+    then failwith "Record constructors can't have empty label list"
+    else
+      List.fold_left bindings
+        ~f:(fun acc (ident, labname, typ) ->
+          Exp.app ~loc acc @@
+            self#app_transformation_expr ~loc
+              (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+              (Exp.unit ~loc)
+              (Exp.ident ~loc ident)
+        )
+        ~init:Exp.(app ~loc
+                    (of_longident ~loc (Ldot(Lident "Printf", "sprintf"))) @@
 
-                      let fmt = String.concat ~sep:", " @@ List.map bindings
-                          ~f:(fun (_,lab,_) -> Printf.sprintf "%s=%%s" lab)
-                      in
-                      Exp.string_const ~loc @@ Printf.sprintf "%s {%s}" constr_name fmt
-                     )
-      )
-
+                  let fmt = String.concat ~sep:", " @@ List.map bindings
+                      ~f:(fun (_,lab,_) -> Printf.sprintf "%s=%%s" lab)
+                  in
+                  Exp.string_const ~loc @@ Printf.sprintf "%s {%s}" constr_name fmt
+                 )
 
   method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
     let pat = Pat.record ~loc @@
@@ -127,13 +123,12 @@ class g args tdecls = object(self)
           (Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         )
     in
-    let methname = Naming.meth_name_for_record tdecl in
     let fmt = List.fold_left labs ~init:""
         ~f:(fun acc x ->
             sprintf "%s %s=%%s;" acc x.pld_name.txt
           )
     in
-    [ Cf.method_concrete ~loc methname @@
+    [ Cf.method_concrete ~loc (Naming.meth_name_for_record tdecl) @@
       Exp.fun_ ~loc (Pat.unit ~loc) @@
       Exp.fun_ ~loc pat @@
       List.fold_left labs
@@ -158,7 +153,6 @@ class g args tdecls = object(self)
       Exp.string_const ~loc "\"<opaque>\""
       ) @@
     List.find t.ptyp_attributes ~f:(fun {attr_name={txt}} -> String.equal txt "opaque")
-
 
 end
 
