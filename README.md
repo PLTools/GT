@@ -365,7 +365,8 @@ Known to be not supported or not taken to account:
 - For `compare` and `eq` plugins in case of ADT with single constructor we generate unreachable pattern matching pattern that gives a warning.
 - Better signature for `method virtual on_record_constr`
 - method `on_record_declaration` doesn't introduce new pattern names systematically
-- Custon transformation functions for type parameters has become broken after introducing combinatorial interface for type abbreviations.
+- Custom transformation functions for type parameters has become broken after introducing combinatorial interface for type abbreviations.
+- Sometimes we need override class definition for a plugin. It should be possible to specify new custom class inside the attribute
 
 ## References
 
