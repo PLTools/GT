@@ -326,7 +326,8 @@ Equally, we can handle the simplification of multiplication:
      | _, Int _ -> Mul (b, a)
      | _ -> Mul (a, b)
    in
-   object inherit simplify_add
+   object
+     inherit simplify_add
      method c_Mul _ _ x y = x.GT.fx () * y.GT.fx ()
    end
 ```
@@ -361,15 +362,19 @@ Known to be not supported or not taken to account:
 
 ## TODO
 
-- Documentation for `src/GT.ml` is not generated (possible because of a macro)
+Can be a bug:
+
+- Method `on_record_declaration` doesn't introduce new pattern names systematically
 - For `compare` and `eq` plugins in case of ADT with single constructor we generate unreachable pattern matching pattern that gives a warning.
-- Better signature for `method virtual on_record_constr`
-- method `on_record_declaration` doesn't introduce new pattern names systematically
+
+Improvements:
+- Documentation for `src/GT.ml` is not generated (possible because of a macro).
+- Better signature for `method virtual on_record_constr`.
 - Custom transformation functions for type parameters has become broken after introducing combinatorial interface for type abbreviations.
-- Sometimes we need override class definition for a plugin. It should be possible to specify new custom class inside the attribute
+- Sometimes we need override class definition for a plugin. It should be possible to specify new custom class inside the attribute.
 
 ## References
 
-- Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers](http://oops.math.spbu.ru/db/generics-tfp-2014.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
+- Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers](![](http://oops.math.spbu.ru/db/generics-tfp-2014.pdf)) // A talk at the International Symposium on Trends in Functional Programming, 2014.
 - Dmitry Boulytchev. [Code Reuse with Transformation Objects](http://oops.math.spbu.ru/db/transformation-objects.pdf) // unpublished.
 - Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
