@@ -435,9 +435,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
     let args =
       List.mapi cparams ~f:(fun i t ->
           (* Stdio.printf "checking for arg with index (%d+1)\n%!" i; *)
-          try List.Assoc.find_exn reinterpreted_args ~equal:Int.equal (i+1)
-            |> Exp.from_caml
-          with Caml.Not_found -> do_typ ~loc t
+          match List.Assoc.find reinterpreted_args ~equal:Int.equal (i+1) with
+          | Some e -> Exp.from_caml e
+          | None   -> do_typ ~loc t
         )
     in
     (* for typ aliases we can cheat because first argument of constructor of type
