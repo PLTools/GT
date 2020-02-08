@@ -140,26 +140,31 @@ class g initial_args tdecls = object(self: 'self)
       case ~lhs ~rhs
     in
 
-    (* TODO: pass information about other constructors to omit other_cases more often *)
-    let other_cases =
-      let other_name = gen_symbol ~prefix:"other" () in
-      let lhs = Pat.var ~loc other_name in
-      match constr_info with
-      | Some (`Normal s) ->
-          assert (not (String.equal "" s));
-          let rhs =
-            self#on_different_constructors ~loc false other_name cname (`Tuples args)
-          in
-          [case ~lhs ~rhs]
-      | Some (`Poly s) ->
-          assert (not (String.equal "" s));
-          let rhs =
-            self#on_different_constructors ~loc true other_name cname (`Tuples args)
-          in
-          [case ~lhs ~rhs]
-      | None -> []
+    let all_cases =
+      if has_many_constructors_tdecl tdecl
+      then
+        let other_cases =
+          let other_name = gen_symbol ~prefix:"other" () in
+          let lhs = Pat.var ~loc other_name in
+          match constr_info with
+          | Some (`Normal s) ->
+              assert (not (String.equal "" s));
+              let rhs =
+                self#on_different_constructors ~loc false other_name cname (`Tuples args)
+              in
+              [case ~lhs ~rhs]
+          | Some (`Poly s) ->
+              assert (not (String.equal "" s));
+              let rhs =
+                self#on_different_constructors ~loc true other_name cname (`Tuples args)
+              in
+              [case ~lhs ~rhs]
+          | None -> []
+        in
+        main_case :: other_cases
+      else [ main_case ]
     in
-    Exp.match_ ~loc inhe ( main_case :: other_cases )
+    Exp.match_ ~loc inhe all_cases
 
   method app_transformation_expr ~loc trf inh subj =
     Exp.app_list ~loc trf [ inh; subj ]
@@ -223,16 +228,22 @@ class g initial_args tdecls = object(self: 'self)
       in
       case ~lhs ~rhs
     in
-    let other_case =
-      let other_name = "other" in
-      let lhs = Pat.var ~loc other_name in
-      let rhs =
-        self#on_different_constructors ~loc is_poly other_name cname @@
-        `Record bindings
-      in
-      case ~lhs ~rhs
+    let all_cases =
+      if has_many_constructors_tdecl tdecl
+      then
+        let other_cases =
+          let other_name = "other" in
+          let lhs = Pat.var ~loc other_name in
+          let rhs =
+            self#on_different_constructors ~loc is_poly other_name cname @@
+            `Record bindings
+          in
+          case ~lhs ~rhs
+        in
+        [ main_case ; other_cases ]
+      else [ main_case ]
     in
-    Exp.match_ ~loc inhe [ main_case; other_case ]
+    Exp.match_ ~loc inhe all_cases
 
 end
 

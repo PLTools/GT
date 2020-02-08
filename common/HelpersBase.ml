@@ -56,7 +56,7 @@ let compare_core_type a b =
 let visit_typedecl ~loc
   ?(onrecord  =fun _ -> not_implemented ~loc "record types")
   ?(onmanifest=fun _ -> not_implemented ~loc "manifest")
-  ?(onvariant =fun _ -> not_implemented ~loc "variant types")
+  ?(onvariant =fun _ -> not_implemented ~loc "algebraic types")
   ?(onabstract=fun _ -> not_implemented ~loc "abstract types without manifest")
   ?(onopen    =fun ()-> not_implemented ~loc "open types")
   tdecl =
@@ -69,7 +69,6 @@ let visit_typedecl ~loc
       | None -> onabstract ()
       | Some typ -> onmanifest typ
 
-open Longident
 let affect_longident ~f = function
   | Lident x -> Lident (f x)
   | (Ldot _) as l -> l
@@ -230,6 +229,30 @@ let is_tuple_tdecl tdecl =
     ~onvariant:(fun _ -> false)
     ~onabstract:(fun () -> false)
     ~onmanifest:(fun typ -> is_tuple typ)
+
+let is_algebraic_tdecl tdecl =
+  let loc = tdecl.ptype_loc in
+  visit_typedecl ~loc tdecl
+    ~onopen:(fun () -> false)
+    ~onrecord:(fun _ -> false)
+    ~onvariant:(fun _ -> true)
+    ~onabstract:(fun () -> false)
+    ~onmanifest:(fun typ -> false)
+
+let has_many_constructors_tdecl tdecl =
+  let loc = tdecl.ptype_loc in
+  visit_typedecl ~loc tdecl
+    ~onopen:(fun () -> false)
+    ~onrecord:(fun _ -> false)
+    ~onvariant:(fun cs -> Base.Int.(>) (List.length cs) 1)
+    ~onabstract:(fun () -> false)
+    ~onmanifest:(fun typ ->
+      match typ.ptyp_desc with
+      | Ptyp_variant (rf,_,_labels) ->
+        (* TODO: we don't take to account labels here *)
+        (List.length rf) > 1
+      | _ -> false
+      )
 
 let unfold_tuple t =
   match t.ptyp_desc with

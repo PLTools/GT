@@ -9,3 +9,5 @@ _build
 /_esy
 /.vscode
 
+/qtc-gt.*
+
