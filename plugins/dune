@@ -1,37 +1,54 @@
 (library
+ (name show)
+ (modules show)
+ (libraries GTCommon)
+ (flags (:standard -w -27 -warn-error -A))
+)
+
+(library
+ (name fmt)
+ (modules gfmt)
+ (libraries GTCommon)
+ (flags (:standard -w -27 -warn-error -A))
+)
+
+(library
  (name foldl)
  (modules foldl)
  (libraries GTCommon)
- (flags ())
+ (flags (:standard -w -27 -warn-error -A))
 )
 (library
  (name foldr)
  (modules foldr)
- (libraries GTCommon)
- (flags ())
-)
-(library
- (name show)
- (modules show)
- (libraries GTCommon)
- (flags ())
+ (libraries GTCommon foldl)
+ (flags (:standard -w -27 -warn-error -A))
 )
 
 (library
  (name eq)
  (modules eq)
+ (libraries GTCommon compare)
+ (flags (:standard -w -27 -warn-error -A))
+)
+
+(library
+ (name compare)
+ (modules compare)
  (libraries GTCommon)
- (flags ())
+ (flags (:standard -w -27-7-9 -warn-error -A))
+)
+
+(library
+ (name gmap)
+ (modules gmap)
+ (libraries GTCommon)
+ (flags (:standard -w -27 -warn-error -A))
 )
 (library
  (name eval)
  (modules eval)
- (libraries GTCommon)
- (flags ())
+ (libraries GTCommon gmap)
+ (flags (:standard -w -27-7-9-13-36 -warn-error -A))
 )
-(library
- (name fmt)
- (modules fmt)
- (libraries GTCommon)
- (flags ())
-)
+

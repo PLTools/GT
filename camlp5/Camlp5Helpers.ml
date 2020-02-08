@@ -17,6 +17,7 @@
    https://camlp5.github.io/doc/htmlc/ast_strict.html
 *)
 
+open GTCommon
 open Ploc
 open MLast
 

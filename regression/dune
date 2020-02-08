@@ -1,17 +1,17 @@
-(executable
- (name test081llist)
- (libraries lwt.unix)
- (preprocess (action (run camlp5 %{read-strings:../camlp5.cmd} %{input-file})) )
-)
+;(executable
+; (name test081llist)
+; (libraries lwt.unix)
+; (preprocess (action (run camlp5 %{read-strings:../camlp5.cmd} %{input-file})) )
+;)
 
-(rule
-  (targets test081llist.output)
-  (deps    test081llist.exe)
-  (action  (with-stdout-to %{targets} (run %{deps}))))
+;(rule
+;  (targets test081llist.output)
+;  (deps    test081llist.exe)
+;  (action  (with-stdout-to %{targets} (run %{deps}))))
 
-(alias
-  (name   runtest)
-  (deps   test081llist.expected test081llist.output)
-  (action (run diff -u test081llist.expected test081llist.output)))
+;(alias
+;  (name   runtest)
+;  (deps   test081llist.expected test081llist.output)
+;  (action (run diff -u test081llist.expected test081llist.output)))
 
 ;(test (name test081llist.exe))

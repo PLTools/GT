@@ -1,5 +1,6 @@
 open Ppxlib
 open Base
+open GTCommon
 open HelpersBase
 open Ppxlib.Ast_builder.Default
 let (@@) = Caml.(@@)

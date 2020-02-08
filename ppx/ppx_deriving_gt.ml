@@ -7,7 +7,8 @@
  *)
 
 open Ppxlib
-open Plugin
+open GTCommon
+open GTCommon.Plugin
 
 module E = Expander.Make(PpxHelpers)
 
