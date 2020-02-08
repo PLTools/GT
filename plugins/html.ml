@@ -22,8 +22,9 @@
 
 open Base
 open Ppxlib
-open HelpersBase
 open Printf
+open GTCommon
+open HelpersBase
 
 let trait_name = "html"
 

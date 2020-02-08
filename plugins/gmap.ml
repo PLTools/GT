@@ -16,10 +16,11 @@
  *)
 
 open Base
-open HelpersBase
 open Ppxlib
 open Printf
 open Ast_helper
+open GTCommon
+open HelpersBase
 
 let trait_name = "gmap"
 let param_name_mangler = sprintf "%s_2"

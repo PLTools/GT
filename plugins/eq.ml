@@ -14,6 +14,7 @@
 open Base
 open Ppxlib
 open Printf
+open GTCommon
 
 let trait_name = "eq"
 

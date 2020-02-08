@@ -11,56 +11,56 @@ class virtual ['inh, 'self, 'syn] $1_t =
 
 class ['extra] html_$1_t _fself =
   object
-    inherit [unit, 'extra, HTML.viewer] @$1
+    inherit [unit, 'extra, HTML.viewer] $1_t
     method t_$1 inh x = HTML.string (string_of_$1 x)
   end
 class ['extra] show_$1_t _fself =
   object
-    inherit [unit, 'extra, string] @$1
+    inherit [unit, 'extra, string] $1_t
     method t_$1 inh x = string_of_$1 x
   end
 class ['extra] fmt_$1_t _fself =
   object
-    inherit [Format.formatter, 'extra, unit] @$1
+    inherit [Format.formatter, 'extra, unit] $1_t
     method t_$1 fmt x = Format.pp_print_$1 fmt x
   end
 class ['syn, 'extra] foldl_$1_t _fself =
   object
-    inherit ['syn, 'extra, 'syn] @$1
+    inherit ['syn, 'extra, 'syn] $1_t
     method t_$1 s _ = s
   end
 class ['syn, 'extra] foldr_$1_t _fself =
   object
-    inherit ['syn, 'extra, 'syn] @$1
+    inherit ['syn, 'extra, 'syn] $1_t
     method t_$1 s _ = s
   end
 class ['extra] eq_$1_t _fself =
   object
-    inherit [$1, 'extra, 'bool] @$1
+    inherit [$1, 'extra, 'bool] $1_t
     method t_$1 inh x = x = inh
   end
 class ['extra] compare_$1_t _fself =
   object
-    inherit [$1, 'extra, 'comparison] @$1
+    inherit [$1, 'extra, 'comparison] $1_t
     method t_$1 inh x = compare_primitive inh x
   end
 
 class ['extra, 'syn] gmap_$1_t _fself =
   object
     constraint 'syn = $1
-    inherit [unit, 'extra, 'syn'] @$1
+    inherit [unit, 'extra, 'syn'] $1_t
     method t_$1 _ x = x
   end
 class [ 'extra, 'syn, 'env] eval_$1_t _fself =
   object
     constraint 'syn = $1
-    inherit ['env, 'extra, '$1] @$1
+    inherit ['env, 'extra, '$1] $1_t
     method t_$1 inh x = x
   end
 class [ 'extra, 'syn, 'env] stateful_$1_t _fself =
   object
     constraint 'syn = $1
-    inherit ['env, 'extra, 'env * $1] @$1
+    inherit ['env, 'extra, 'env * $1] $1_t
     method t_$1 inh x = (inh,x)
   end
 
@@ -82,16 +82,16 @@ let $1 : (('inh, $1, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
    fix = (fun c -> transform_gc gcata_$1 c);
    plugins =
       object
-        method show    = transform_gc gcata_$1 (new @$1[show]    ) ()
-        method gmap    = transform_gc gcata_$1 (new @$1[gmap]    ) ()
-        method html    = transform_gc gcata_$1 (new @$1[html]    ) ()
-        method fmt     = transform_gc gcata_$1 (new @$1[fmt]     )
-        method compare = transform_gc gcata_$1 (new @$1[compare] )
-        method eq      = transform_gc gcata_$1 (new @$1[eq]      )
-        method eval    = transform_gc gcata_$1 (new @$1[eval]    )
-        method stateful= transform_gc gcata_$1 (new @$1[stateful])
-        method foldl   = transform_gc gcata_$1 (new @$1[foldl]   )
-        method foldr   = transform_gc gcata_$1 (new @$1[foldr]   )
+        method show    = transform_gc gcata_$1 (new show_$1_t    ) ()
+        method gmap    = transform_gc gcata_$1 (new gmap_$1_t    ) ()
+        method html    = transform_gc gcata_$1 (new html_$1_t    ) ()
+        method fmt     = transform_gc gcata_$1 (new fmt_$1_t     )
+        method compare = transform_gc gcata_$1 (new compare_$1_t )
+        method eq      = transform_gc gcata_$1 (new eq_$1_t      )
+        method eval    = transform_gc gcata_$1 (new eval_$1_t    )
+        method stateful= transform_gc gcata_$1 (new stateful_$1_t)
+        method foldl   = transform_gc gcata_$1 (new foldl_$1_t   )
+        method foldr   = transform_gc gcata_$1 (new foldr_$1_t   )
       end
   }
 ]])

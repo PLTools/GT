@@ -1,0 +1,26 @@
+
+(library
+  (name View)
+  (public_name GT.View)
+  (modules View)
+  (flags (:standard -w -27-33 -warn-error -A))
+)
+
+(library
+  (name HTML)
+  (public_name GT.HTML)
+  (libraries View)
+  (modules HTML)
+  (flags (:standard -w -27-33 -warn-error -A))
+)
+
+(library
+  (name GT)
+  (public_name GT)
+  (modules GT)
+  (libraries HTML)
+  (preprocess (per_module
+               ( (action (run m4 ../../src/macro.m4 %{input-file})) GT)
+  ))
+  (flags (:standard -w -27-33 -warn-error -A))
+)

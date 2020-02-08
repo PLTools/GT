@@ -20,9 +20,10 @@
 *)
 
 open Base
-open HelpersBase
 open Ppxlib
 open Printf
+open GTCommon
+open HelpersBase
 
 let trait_name = "foldl"
 

@@ -30,6 +30,7 @@ open Pcaml
 open MLast
 open Ploc
 open Core2
+open GTCommon
 
 let hdtl loc xs = (List.hd xs, List.tl xs)
 let trait_proto_t typ trait = Printf.sprintf "%s_proto_%s" trait typ
