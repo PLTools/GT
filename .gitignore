@@ -3,12 +3,14 @@
 _build
 *.native
 *.byte
-/Makefile
+Makefile
 # documentation directory
 /GT.docdir
 /_esy
 /.vscode
-/qtc-GT.*
+/.merlin
 
 /qtc-gt.*
+/qtc-GT.*
+
 
