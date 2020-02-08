@@ -1,9 +1,0 @@
-SRC .
-B _build 
-SRC ../src
-B ../_build/src
-
-PKG GT
-PKG GT.ppx
-PKG compiler-libs.common
-PKG ppxlib

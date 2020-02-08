@@ -1,9 +1,0 @@
-S .
-S ../common
-
-B ../_build/ppx
-B ../_build/common
-
-FLG -short-paths
-PKG ppxlib
-PKG ppxlib.metaquot
