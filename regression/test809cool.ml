@@ -36,9 +36,9 @@ module Location = struct
   end
   let fmt_t fmt subj = GT.transform_gc gcata_t (new fmt_t_t) fmt subj
   let t =
-    {
-      GT.gcata = gcata_t;
-      GT.plugins = (object method html = html_t () method fmt = fmt_t end)
+    { GT.gcata = gcata_t
+    ; GT.fix = (fun eta -> transform_gc gcata_t eta)
+    ; GT.plugins = (object method html = html_t () method fmt = fmt_t end)
     }
 
   type 'a loc = [%import: 'a Location.loc]
@@ -68,67 +68,68 @@ open Asttypes
 
 type constant = [%import: Parsetree.constant] [@@deriving gt ~options:{ fmt; html }]
 
+(*
+type attribute = [%import: Parsetree.attribute]
+and extension = [%import: Parsetree.extension]
+and attributes = [%import: Parsetree.attributes]
+and payload = [%import: Parsetree.payload]
+and core_type = [%import: Parsetree.core_type]
+and core_type_desc = [%import: Parsetree.core_type_desc]
+and package_type = [%import: Parsetree.package_type]
 
-(* type attribute = [%import: Parsetree.attribute]
- * and extension = [%import: Parsetree.extension]
- * and attributes = [%import: Parsetree.attributes]
- * and payload = [%import: Parsetree.payload]
- * and core_type = [%import: Parsetree.core_type]
- * and core_type_desc = [%import: Parsetree.core_type_desc]
- * and package_type = [%import: Parsetree.package_type]
- *
- * and row_field = [%import: Parsetree.row_field]
- *
- * and object_field = [%import: Parsetree.object_field]
- * and structure = [%import: Parsetree.structure]
- * and structure_item = [%import: Parsetree.structure_item]
- * and structure_item_desc = [%import: Parsetree.structure_item_desc]
- * and value_binding = [%import: Parsetree.value_binding]
- * and value_description = [%import: Parsetree.value_description]
- * and type_declaration = [%import: Parsetree.type_declaration]
- * and type_extension = [%import: Parsetree.type_extension]
- * and module_binding = [%import: Parsetree.module_binding]
- * and module_type_declaration = [%import: Parsetree.module_type_declaration]
- * and open_description = [%import: Parsetree.open_description]
- * and class_type_declaration = [%import: Parsetree.class_type_declaration]
- * and class_type = [%import: Parsetree.class_type]
- * and class_type_desc = [%import: Parsetree.class_type_desc]
- * and class_signature = [%import: Parsetree.class_signature]
- * and class_type_field = [%import: Parsetree.class_type_field]
- * and class_type_field_desc = [%import: Parsetree.class_type_field_desc]
- * and include_declaration = [%import: Parsetree.include_declaration]
- * and 'a include_infos = [%import: 'a Parsetree.include_infos]
- * and module_expr = [%import: Parsetree.module_expr]
- * and module_expr_desc = [%import: Parsetree.module_expr_desc]
- * and module_type = [%import: Parsetree.module_type]
- * and module_type_desc = [%import: Parsetree.module_type_desc]
- * and class_declaration = [%import: Parsetree.class_declaration]
- * and 'a class_infos = [%import: 'a Parsetree.class_infos]
- * and class_expr = [%import: Parsetree.class_expr]
- * and class_expr_desc = [%import: Parsetree.class_expr_desc]
- * and class_structure = [%import: Parsetree.class_structure]
- * and class_field = [%import: Parsetree.class_field]
- * and class_field_desc = [%import: Parsetree.class_field_desc]
- * and class_field_kind = [%import: Parsetree.class_field_kind]
- * and type_kind = [%import: Parsetree.type_kind]
- * and constructor_declaration = [%import: Parsetree.constructor_declaration]
- * and constructor_arguments = [%import: Parsetree.constructor_arguments]
- * and label_declaration = [%import: Parsetree.label_declaration]
- * and with_constraint = [%import: Parsetree.with_constraint]
- * and signature = [%import: Parsetree.signature]
- * and signature_item = [%import: Parsetree.signature_item]
- * and signature_item_desc = [%import: Parsetree.signature_item_desc]
- * and module_declaration = [%import: Parsetree.module_declaration]
- * and include_description = [%import: Parsetree.include_description]
- * and class_description = [%import: Parsetree.class_description]
- * and pattern = [%import: Parsetree.pattern]
- * and pattern_desc = [%import: Parsetree.pattern_desc]
- * and expression = [%import: Parsetree.expression]
- * and expression_desc = [%import: Parsetree.expression_desc]
- * and extension_constructor = [%import: Parsetree.extension_constructor]
- * and extension_constructor_kind = [%import: Parsetree.extension_constructor_kind]
- * and case = [%import: Parsetree.case]
- * [@@deriving gt ~options:{ fmt; html }] *)
+and row_field = [%import: Parsetree.row_field]
+
+and object_field = [%import: Parsetree.object_field]
+and structure = [%import: Parsetree.structure]
+and structure_item = [%import: Parsetree.structure_item]
+and structure_item_desc = [%import: Parsetree.structure_item_desc]
+and value_binding = [%import: Parsetree.value_binding]
+and value_description = [%import: Parsetree.value_description]
+and type_declaration = [%import: Parsetree.type_declaration]
+and type_extension = [%import: Parsetree.type_extension]
+and module_binding = [%import: Parsetree.module_binding]
+and module_type_declaration = [%import: Parsetree.module_type_declaration]
+and open_description = [%import: Parsetree.open_description]
+and class_type_declaration = [%import: Parsetree.class_type_declaration]
+and class_type = [%import: Parsetree.class_type]
+and class_type_desc = [%import: Parsetree.class_type_desc]
+and class_signature = [%import: Parsetree.class_signature]
+and class_type_field = [%import: Parsetree.class_type_field]
+and class_type_field_desc = [%import: Parsetree.class_type_field_desc]
+and include_declaration = [%import: Parsetree.include_declaration]
+and 'a include_infos = [%import: 'a Parsetree.include_infos]
+and module_expr = [%import: Parsetree.module_expr]
+and module_expr_desc = [%import: Parsetree.module_expr_desc]
+and module_type = [%import: Parsetree.module_type]
+and module_type_desc = [%import: Parsetree.module_type_desc]
+and class_declaration = [%import: Parsetree.class_declaration]
+and 'a class_infos = [%import: 'a Parsetree.class_infos]
+and class_expr = [%import: Parsetree.class_expr]
+and class_expr_desc = [%import: Parsetree.class_expr_desc]
+and class_structure = [%import: Parsetree.class_structure]
+and class_field = [%import: Parsetree.class_field]
+and class_field_desc = [%import: Parsetree.class_field_desc]
+and class_field_kind = [%import: Parsetree.class_field_kind]
+and type_kind = [%import: Parsetree.type_kind]
+and constructor_declaration = [%import: Parsetree.constructor_declaration]
+and constructor_arguments = [%import: Parsetree.constructor_arguments]
+and label_declaration = [%import: Parsetree.label_declaration]
+and with_constraint = [%import: Parsetree.with_constraint]
+and signature = [%import: Parsetree.signature]
+and signature_item = [%import: Parsetree.signature_item]
+and signature_item_desc = [%import: Parsetree.signature_item_desc]
+and module_declaration = [%import: Parsetree.module_declaration]
+and include_description = [%import: Parsetree.include_description]
+and class_description = [%import: Parsetree.class_description]
+and pattern = [%import: Parsetree.pattern]
+and pattern_desc = [%import: Parsetree.pattern_desc]
+and expression = [%import: Parsetree.expression]
+and expression_desc = [%import: Parsetree.expression_desc]
+and extension_constructor = [%import: Parsetree.extension_constructor]
+and extension_constructor_kind = [%import: Parsetree.extension_constructor_kind]
+and case = [%import: Parsetree.case]
+[@@deriving gt ~options:{ fmt; }]
+*)
 
 type attribute = (string Asttypes.loc * payload)
 and extension = (string Asttypes.loc * payload)
@@ -489,3 +490,6 @@ and case =
   pc_guard: expression option ;
   pc_rhs: expression }
 [@@deriving gt ~options:{ fmt;  }]
+
+
+

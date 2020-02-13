@@ -46,7 +46,7 @@ true: debug, bin_annot, short_paths, warn_error(+5), warn(-13)
 <regression/test801*.*> or <regression/test802*.*> or <regression/test806*.*> or <regression/test807*.*> or <regression/test808*.*>: ppx(ppx/pp_gt.native --as-ppx), rectypes
 # for 809 test we need ppx_import. And order matters!
 <regression/test809*.*>: package(compiler-libs.common,ocaml-migrate-parsetree), use_ppx_import
-<regression/test810*.*>: package(compiler-libs.common)
+<regression/test810*.*>: package(compiler-libs.common), use_ppx_import
 <regression/test814*.*> or <regression/test816*.*> or <regression/test800*.*> or <regression/test803*.*> or <regression/test804*.*> or <regression/test811*.*> or <regression/test812*.*> or <regression/test815*.*> or <regression/test820*.*> or <regression/test821*.*> or <regression/test822*.*>  or <regression/test824*.*> or <regression/test826*.*> or <regression/test828*.*>: ppx(ppx/pp_gt.native --as-ppx), use_GT
 <regression/orig/*>: traverse
 
