@@ -440,8 +440,7 @@ module Str = struct
     <:str_item< type $list:[ltd]$ >>
 
   let module_ ~loc name me =
-    let lsme = [ (VaVal (Some (VaVal name)), me)] in
-    <:str_item< module $list:lsme$ >>
+    <:str_item< module $uid:name$ = $mexp:me$ >>
 
   let modtype ~loc (_,name,topt) =
     match topt with
@@ -555,7 +554,7 @@ module Sig = struct
     let mt1 = <:module_type< sig $list:sigs_arg$ end >> in
     let mt2 = <:module_type< sig $list:sigs_r$ end >> in
     let mt  = <:module_type< functor ($param$ : $mt1$) -> $mt2$ >> in
-    <:sig_item< module $list:[ (VaVal (Some (VaVal name)), mt) ]$ >>
+    <:sig_item< module $uid:name$ : $mtyp:mt$ >>
 
 
   let simple_gadt (* : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t *) =
@@ -594,7 +593,7 @@ module Sig = struct
     <:sig_item< type $list:[td]$ >>
 
   let module_ ~loc (_,name,mtyp) =
-    <:sig_item< module $list:[(VaVal (Some (VaVal name)),mtyp)]$ >>
+    <:sig_item< module $uid:name$ : $mtyp:mtyp$ >>
 
   let modtype ~loc (_loc,s,mt_opt) =
     let mt =
