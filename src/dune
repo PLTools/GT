@@ -25,11 +25,15 @@
  (libraries HTML)
  (synopsis "Generic transformers for algebraic types")
  (preprocessor_deps
-  (file %{project_root}/src/macro.m4))
+  (file %{project_root}/src/macro.m4)
+  (file %{project_root}/camlp5/pp5+gt+dump.exe))
  (preprocess
   (per_module
    ((action
-     (run m4 %{project_root}/src/macro.m4 %{input-file}))
+     (run
+      sh
+      -c
+      "m4 %{project_root}/src/macro.m4 %{input-file} > GT.tmp && %{project_root}/camlp5/pp5+gt+dump.exe -impl GT.tmp && rm -f GT.tmp"))
     GT)))
  (flags
   (:standard -w -27-33)))

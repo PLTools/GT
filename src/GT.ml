@@ -60,8 +60,8 @@ let compare_primitive x y =
        then GT
        else EQ
 
-let cmp_to_int x = 
-  match x with 
+let cmp_to_int x =
+  match x with
   | LT -> (-1)
   | GT -> 1
   | EQ -> 0
@@ -78,7 +78,7 @@ let compare_poly x y =
 
 let compare_vari x y =
   let x, y = Obj.repr x, Obj.repr y in
-  let b = Obj.is_block x in 
+  let b = Obj.is_block x in
   (* TODO: rewrite with built-in structural equality *)
   match compare_primitive b (Obj.is_block y) with
   | EQ -> compare_primitive (vari_tag x) (vari_tag y)
@@ -129,12 +129,12 @@ let gcata_list tr inh s = match s with
 
 class ['a, 'self] html_list_t fa fself =
   object
-    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] list_t
-    method c_Nil  _ _      = View.empty
+    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @list
+    method c_Nil  _ _      = View.string "[]"
     method c_Cons _ _ x xs =
-      HTML.ul @@ HTML.seq (
-        [ HTML.string "list" ] @ List.map (fun x -> HTML.li @@ fa () x) (x::xs)
-        )
+      HTML.seq (
+         [HTML.string "list"; HTML.ul @@ HTML.seq (List.map (fun x -> HTML.li @@ fa () x) (x::xs))]
+      )
 (*      View.concat (fa x) (match xs with [] -> View.empty | xs -> HTML.li (fself () xs)) *)
   end
 

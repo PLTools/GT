@@ -56,6 +56,8 @@ module H = struct
 
   let li ~loc xs =
     Exp.app ~loc (wrap ~loc "li") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs
+  let seq ~loc xs =
+    Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs    
   (* let ol ~loc xs =
    *   Exp.app ~loc (wrap ~loc "ol") @@ Exp.app ~loc (wrap ~loc "seq") @@ to_list_e ~loc xs *)
   let ul ~loc xs =
@@ -91,22 +93,23 @@ class g args tdecls = object(self)
     let constr_name = match constr_info with
       | Some (`Poly s) -> sprintf "`%s" s
       | Some (`Normal s) -> s
-      | None -> ""
+      | None -> "tuple"
     in
 
     if List.length ts = 0
-    then H.(ul ~loc [pcdata ~loc constr_name])
+    then H.(pcdata ~loc constr_name) 
     else
-        H.ul ~loc @@ (
-           (H.li ~loc [H.pcdata ~loc constr_name]) ::
-           (List.map ts ~f:(fun (name, typ) ->
-              H.li ~loc
-                [ self#app_transformation_expr ~loc
-                    (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
-                    (Exp.unit ~loc)
-                    (Exp.ident ~loc name)
-                ]
-              ))
+        H.seq ~loc @@ (
+           (H.pcdata ~loc constr_name) ::
+           [H.ul ~loc
+             (List.map ts ~f:(fun (name, typ) ->
+                H.li ~loc
+                  [ self#app_transformation_expr ~loc
+                      (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                      (Exp.unit ~loc)
+                      (Exp.ident ~loc name)
+                  ]
+                ))]
          )
 
   method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =

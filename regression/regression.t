@@ -319,8 +319,8 @@
   $ (cd ../../../../default && ./regression/test032.exe)
   "abc"
   $ (cd ../../../../default && ./regression/test036.exe)
-  <html><ul><li><ul><li>Add</li><li><ul><li>Ident</li><li>&quot;b&quot;</li></ul></li><li><ul><li>Add</li><li><ul><li>Sub</li><li><ul><li></li><li><ul><li>Ident</li><li>&quot;a&quot;</li></ul></li><li><ul><li>Ident</li><li>&quot;b&quot;</li></ul></li></ul></li></ul></li><li><ul><li>Const</li><li>1</li></ul></li></ul></li></ul></li></ul></html>
-  <html><ul><li><ul>str<li>a<ul><li>Add</li><li><ul><li>Ident</li><li>&quot;b&quot;</li></ul></li><li><ul><li>Add</li><li><ul><li>Sub</li><li><ul><li></li><li><ul><li>Ident</li><li>&quot;a&quot;</li></ul></li><li><ul><li>Ident</li><li>&quot;b&quot;</li></ul></li></ul></li></ul></li><li><ul><li>Const</li><li>1</li></ul></li></ul></li></ul></li><li>b<ul><li>Ident</li><li>&quot;c&quot;</li></ul></li></ul></li></ul></html>
+  <html><ul><li>Add<ul><li>Ident<ul><li>&quot;b&quot;</li></ul></li><li>Add<ul><li>Sub<ul><li>tuple<ul><li>Ident<ul><li>&quot;a&quot;</li></ul></li><li>Ident<ul><li>&quot;b&quot;</li></ul></li></ul></li></ul></li><li>Const<ul><li>1</li></ul></li></ul></li></ul></li></ul></html>
+  <html><ul><li><ul>str<li>aAdd<ul><li>Ident<ul><li>&quot;b&quot;</li></ul></li><li>Add<ul><li>Sub<ul><li>tuple<ul><li>Ident<ul><li>&quot;a&quot;</li></ul></li><li>Ident<ul><li>&quot;b&quot;</li></ul></li></ul></li></ul></li><li>Const<ul><li>1</li></ul></li></ul></li></ul></li><li>bIdent<ul><li>&quot;c&quot;</li></ul></li></ul></li></ul></html>
   $ (cd ../../../../default && ./regression/test037.exe)
   a=`B (`B (`A)), map a=`B (`B (`A))
   b=`D (`D (`C)), map b=`D (`D (`C))
