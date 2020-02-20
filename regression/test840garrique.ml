@@ -17,25 +17,25 @@ let gensym = let n = ref 0 in fun () -> incr n; "_" ^ string_of_int !n
 type var = [`Var of string ] [@@deriving gt]
 
 class ['v, 'extra] var_eval (fself: _ -> [> var ] -> _) = object
-  inherit [(string * 'v) list, 'v, 'extra] class_var
-  method c_Var inh name = try List.assoc name inh with Not_found -> `Var name
+  inherit [(string * 'v) list, 'v, 'extra] var_t
+  method c_Var inh _ name = try List.assoc name inh with Not_found -> `Var name
 end
 
 type 'a lambda = [var | `Abs of string * 'a | `App of 'a * 'a] [@@deriving gt]
 
 class ['a, 'v, 'extra] lambda_eval (fself: _ -> [> 'v lambda ] -> _) fa = object(self)
-  inherit ['a, (string * 'v) list, 'sa
-          , (string * 'v) list, 'v
-          , 'extra] class_lambda
+  inherit [ (string * 'v) list, 'a,     'sa
+          , (string * 'v) list, 'extra, 'v
+          ] lambda_t
   inherit ['v, 'extra] var_eval fself
   constraint 'a = [> _ lambda ]
   constraint 'sa = 'v
 
-  method c_Abs s name l1 =
+  method c_Abs s _ name (l1: 'a) =
     let s' = gensym () in
     `Abs (s', fself ((name, `Var s')::s) l1)
 
-  method c_App s l1 l2 =
+  method c_App s _ l1 l2 =
     let l2' = fself s l2 in
     match fself s l1 with
     | `Abs (s, body) -> fa [s, l2'] body
@@ -53,16 +53,17 @@ class ['a, 'v, 'extra] lambda_eval (fself: _ -> [> 'v lambda ] -> _) fa = object
 type 'a var_expr = [var | `Num of int | `Add of 'a * 'a | `Mult of 'a * 'a] [@@deriving gt]
 
 class ['a, 'v, 'extra] var_expr_eval (fself:  _ -> [> 'v var_expr] -> _) = object
-  inherit ['a, 'inh, 'v, (string * 'v) list, 'v, 'extra] class_var_expr
+  inherit [ 'inh, 'a, 'v
+          , 'inh, 'v, 'extra] var_expr_t
   inherit ['v, 'extra] var_eval fself
   constraint 'inh = (string * 'v) list
 
-  method c_Num  s i   = `Num i
-  method c_Add  s x y =
+  method c_Num  s _ i   = `Num i
+  method c_Add  s _ x y =
     match fself s x, fself s y with
     | `Num x, `Num y -> `Num (x+y)
     | x, y -> `Add (x, y)
-  method c_Mult s x y =
+  method c_Mult s _ x y =
     match fself s x, fself s y with
     | `Num x, `Num y -> `Num (x*y)
     | x, y -> `Mult (x, y)
@@ -75,7 +76,7 @@ class ['a, 'v, 'extra] var_expr_eval (fself:  _ -> [> 'v var_expr] -> _) = objec
 type 'a expr = ['a lambda | 'a var_expr] [@@deriving gt]
 
 class ['a, 'v] expr_eval fself = object
-  inherit ['a, (string * 'v) list, 'v, (string * 'v) list, 'v, 'extra] class_expr
+  inherit [(string * 'v) list, 'a, 'v, (string * 'v) list, 'v, 'extra] expr_t
   inherit ['a, 'v, 'extra] lambda_eval fself fself
   inherit ['a, 'v, 'extra] var_expr_eval fself
 end
