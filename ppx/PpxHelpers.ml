@@ -27,6 +27,9 @@ let lab_decl ~loc name mut type_ =
     ~mutable_:(if mut then Mutable else Immutable)
     ~type_
 
+type case = Ppxlib.case
+let case  ~lhs ~rhs = case ~lhs ~rhs ~guard:None
+
 module Pat = struct
   type t = pattern
 
@@ -123,7 +126,7 @@ module Exp = struct
         ~init:e
         ~f:(fun arg -> pexp_fun ~loc Nolabel None arg)
 
-  let case ?guard lhs rhs = case ~lhs ~rhs ~guard
+  let case ?guard lhs rhs = Ast_builder.Default.case ~lhs ~rhs ~guard
 
   let record ~loc ts =
     pexp_record ~loc (List.map ts ~f:(fun (l,r) -> (Located.mk ~loc l, r))) None
@@ -176,28 +179,6 @@ module Exp = struct
 
   let constraint_ ~loc e t = pexp_constraint ~loc e t
 end
-
-module Cl = struct
-  open Ast_helper
-  include Cl
-
-  type t = class_expr
-  let fun_list ~loc args e =
-    if List.is_empty args then e else
-    List.fold_right args ~init:e
-      ~f:(fun arg acc -> Cl.fun_ ~loc Asttypes.Nolabel None arg acc)
-
-  let apply ~loc e args =
-    if List.is_empty args then e else Cl.apply ~loc e (nolabelize args)
-
-  let fun_ ~loc = pcl_fun ~loc Nolabel None
-
-  let constr ~loc (lid: longident) ts =
-    pcl_constr ~loc (Located.mk ~loc lid) ts
-  let structure ~loc = pcl_structure ~loc
-  let let_ ~loc ?(flg=Nonrecursive) = Cl.let_ ~loc flg
-end
-
 
 module Typ = struct
   open Ast_helper
@@ -278,6 +259,22 @@ let class_declaration ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fiel
   Ast_helper.Ci.mk ~loc ~virt ~params (Located.mk ~loc name) @@
   wrap (Ast_helper.Cl.structure ~loc (Ast_helper.Cstr.mk pat fields))
 
+type nonrec type_kind =
+  | Ptype_abstract
+  | Ptype_record of lab_decl list
+
+type nonrec type_declaration = type_declaration
+let type_declaration ~loc ~name ~params ~manifest ~kind =
+  type_declaration ~loc ~name:(Located.mk ~loc name)
+    ~params:(List.map params ~f:(fun p -> (p,Invariant)))
+    ~cstrs:[]
+    ~private_:Public
+    ~manifest
+    ~kind:(match kind with
+        | Ptype_abstract -> Parsetree.Ptype_abstract
+        | Ptype_record ls -> Parsetree.Ptype_record ls
+      )
+
 module Str = struct
 
   type t = structure_item
@@ -293,7 +290,9 @@ module Str = struct
   let tdecl ~loc ~name ~params typ =
     let params = List.map ~f:(fun s -> Typ.var ~loc s, Invariant) params in
     pstr_type ~loc Recursive @@
-    [ type_declaration ~loc ~name:(Located.mk ~loc name) ~params
+    [ Ast_builder.Default.type_declaration ~loc
+        ~name:(Located.mk ~loc name)
+        ~params
         ~manifest:(Some typ)
         ~kind:Ptype_abstract
         ~cstrs:[] ~private_:Public
@@ -302,7 +301,9 @@ module Str = struct
   let tdecl_record ~loc ~name ~params labels =
     let params = List.map ~f:(fun s -> Typ.var ~loc s, Invariant) params in
     pstr_type ~loc Nonrecursive @@
-    [ type_declaration ~loc ~name:(Located.mk ~loc name) ~params
+    [ Ast_builder.Default.type_declaration ~loc
+        ~name:(Located.mk ~loc name)
+        ~params
         ~manifest:None
         ~kind:(Ptype_record labels)
         ~cstrs:[] ~private_:Public
@@ -330,7 +331,8 @@ module Str = struct
 
   let tdecl_abstr ~loc name params =
     pstr_type ~loc Recursive @@
-    [ type_declaration ~loc ~name:(Located.mk ~loc name)
+    [ Ast_builder.Default.type_declaration ~loc
+        ~name:(Located.mk ~loc name)
         ~params:(List.map params ~f:(function
             | None -> (ptyp_any ~loc, Invariant)
             | Some s -> (ptyp_var ~loc s, Invariant) ))
@@ -351,7 +353,8 @@ module Str = struct
   let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
     fun ~loc ~name ~params_count xs ->
     pstr_type ~loc Recursive
-      [ type_declaration ~loc ~name:(Located.mk ~loc name)
+      [ Ast_builder.Default.type_declaration ~loc
+          ~name:(Located.mk ~loc name)
           ~params:(List.init params_count ~f:(fun _ -> (ptyp_any ~loc, Invariant)))
           ~cstrs:[]
           ~private_:Public
@@ -378,10 +381,24 @@ module Me = struct
   let functor_ ~loc name = pmod_functor ~loc (Located.mk ~loc name)
 end
 
-module Sig = struct
-  (* open Ast_helper *)
-  (* include Sig *)
+module Mt = struct
+  type t = module_type
+  let ident ~loc lident = pmty_ident ~loc (Located.mk ~loc lident)
+  let signature ~loc = pmty_signature ~loc
+  let functor_ ~loc argname argt t = pmty_functor ~loc (Located.mk ~loc argname) argt t
+  let with_ ~loc = pmty_with ~loc
+end
 
+type nonrec module_declaration = module_declaration
+type nonrec module_type_declaration = module_type_declaration
+
+let module_declaration ~loc ~name type_ =
+  module_declaration ~loc ~name:(Located.mk ~loc name) ~type_
+
+let module_type_declaration ~loc ~name type_ =
+  module_type_declaration ~loc ~name:(Located.mk ~loc name) ~type_
+
+module Sig = struct
   type t = signature_item
   let of_tdecls ~loc decl = Ast_helper.Sig.type_ ~loc Recursive [decl]
   let class_ ~loc  ~name ~params ?(virt=false)
@@ -400,7 +417,8 @@ module Sig = struct
 
   let tdecl_abstr ~loc name params =
     psig_type ~loc Recursive @@
-    [ type_declaration ~loc ~name:(Located.mk ~loc name)
+    [ Ast_builder.Default.type_declaration ~loc
+        ~name:(Located.mk ~loc name)
         ~params:(List.map params ~f:(function
             | None -> (ptyp_any ~loc, Invariant)
             | Some s -> (ptyp_var ~loc s, Invariant) ))
@@ -411,7 +429,8 @@ module Sig = struct
     ]
 
   let functor1 ~loc name ~param sigs strs =
-    psig_module ~loc @@ module_declaration ~loc ~name:(Located.mk ~loc name)
+    psig_module ~loc @@
+    Ast_builder.Default.module_declaration ~loc ~name:(Located.mk ~loc name)
       ~type_:(pmty_functor ~loc (Located.mk ~loc param)
                (Option.some @@
                 pmty_signature ~loc sigs) @@
@@ -421,7 +440,8 @@ module Sig = struct
   let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
     fun ~loc ~name ~params_count xs ->
     psig_type ~loc Recursive
-      [ type_declaration ~loc ~name:(Located.mk ~loc name)
+      [ Ast_builder.Default.type_declaration ~loc
+          ~name:(Located.mk ~loc name)
           ~params:(List.init params_count ~f:(fun _ -> (ptyp_any ~loc, Invariant)))
           ~cstrs:[]
           ~private_:Public
@@ -436,37 +456,25 @@ module Sig = struct
   let modtype ~loc = psig_modtype ~loc
 end
 
-
-module Mt = struct
-  type t = module_type
-  let ident ~loc lident = pmty_ident ~loc (Located.mk ~loc lident)
-  let signature ~loc = pmty_signature ~loc
-  let functor_ ~loc argname argt t = pmty_functor ~loc (Located.mk ~loc argname) argt t
-  let with_ ~loc = pmty_with ~loc
-end
-
-type nonrec module_declaration = module_declaration
-type nonrec module_type_declaration = module_type_declaration
-
-let module_declaration ~loc ~name type_ =
-  module_declaration ~loc ~name:(Located.mk ~loc name) ~type_
-
-let module_type_declaration ~loc ~name type_ =
-  module_type_declaration ~loc ~name:(Located.mk ~loc name) ~type_
-
 module WC = struct
   type t = Ppxlib.with_constraint
 
   (* There is no helper functions in Ast_builder *)
   let typ ~loc ~params name typ =
     Pwith_type (Located.mk ~loc (Lident name),
-                type_declaration ~loc ~name:(Located.mk ~loc name)
+                Ast_builder.Default.type_declaration ~loc
+                  ~name:(Located.mk ~loc name)
                   ~params:(List.map params ~f:(fun s -> (Typ.var ~loc s, Invariant)))
                   ~private_:Public ~cstrs:[]
                   ~kind:Ptype_abstract
                   ~manifest:(Some typ)
                )
 end
+
+module Vb = struct
+  type t = Ppxlib.value_binding
+end
+let value_binding = value_binding
 
 module Cf = struct
   type t = class_field
@@ -482,8 +490,8 @@ module Cf = struct
     method_ ~loc name ~flg:Public (Cfk_concrete (Fresh, e))
   let method_virtual ~loc name (* ?(flg=Public) *) typ =
     method_ ~loc name ~flg:Public (Cfk_virtual typ)
-
 end
+
 module Ctf = struct
   type t = class_type_field
   let method_ ~loc ?(virt=false) name kind =
@@ -493,6 +501,7 @@ module Ctf = struct
   let inherit_ ~loc = pctf_inherit ~loc
   let constraint_ ~loc l r = pctf_constraint ~loc (l,r)
 end
+
 module Cty = struct
   (* include Ast_helper.Cty *)
   type t = class_type
@@ -502,35 +511,35 @@ module Cty = struct
     pcty_constr ~loc (Located.mk ~loc lident) ts
 end
 
-module Vb = struct
-  type t = Ppxlib.value_binding
-end
-let value_binding = value_binding
-module Cstr = struct
-  let mk ~self fields = class_structure ~self ~fields
+module Cl = struct
+  open Ast_helper
+  include Cl
+
+  type t = class_expr
+  let fun_list ~loc args e =
+    if List.is_empty args then e else
+    List.fold_right args ~init:e
+      ~f:(fun arg acc -> Cl.fun_ ~loc Asttypes.Nolabel None arg acc)
+
+  let apply ~loc e args =
+    if List.is_empty args then e else Cl.apply ~loc e (nolabelize args)
+
+  let fun_ ~loc = pcl_fun ~loc Nolabel None
+
+  let constr ~loc (lid: longident) ts =
+    pcl_constr ~loc (Located.mk ~loc lid) ts
+  let structure ~loc = pcl_structure ~loc
+  let let_ ~loc ?(flg=Nonrecursive) = Cl.let_ ~loc flg
 end
 
-type case = Ppxlib.case
-let case  ~lhs ~rhs = case ~lhs ~rhs ~guard:None
+
+(*
+module Cstr = struct
+  let mk ~self fields = class_structure ~self ~fields
+end*)
 
 type class_structure = Ppxlib.class_structure
 let class_structure = Ast_builder.Default.class_structure
-
-type nonrec type_kind =
-  | Ptype_abstract
-  | Ptype_record of lab_decl list
-
-type nonrec type_declaration = type_declaration
-let type_declaration ~loc ~name ~params ~manifest ~kind =
-  type_declaration ~loc ~name:(Located.mk ~loc name)
-    ~params:(List.map params ~f:(fun p -> (p,Invariant)))
-    ~cstrs:[]
-    ~private_:Public
-    ~manifest
-    ~kind:(match kind with
-        | Ptype_abstract -> Parsetree.Ptype_abstract
-        | Ptype_record ls -> Parsetree.Ptype_record ls
-      )
 
 open Parsetree
 

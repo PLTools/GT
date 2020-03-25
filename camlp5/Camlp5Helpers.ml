@@ -37,6 +37,12 @@ let noloc = Ploc.dummy
 type type_arg = MLast.type_var
 let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), None)
 
+type lab_decl = (loc * string * bool * ctyp)
+let lab_decl ~loc name is_mut typ = (loc, name, is_mut, typ)
+
+type case = patt * expr option * expr
+let case ~lhs ~rhs : case = (lhs, None, rhs)
+
 module Pat = struct
   type t = MLast.patt
   let any ~loc = <:patt< _ >>
@@ -99,9 +105,6 @@ module Pat = struct
   let unit ~loc = <:patt< () >>
 end
 
-
-type case = patt * expr option * expr
-let case ~lhs ~rhs : case = (lhs, None, rhs)
 
 let use_new_type ~loc name e =
   let p = <:patt< (type $lid:name$) >> in
@@ -211,9 +214,6 @@ module Exp = struct
   (* let new_type ~loc = failwith "Not implemented" *)
   let constraint_ ~loc e t = <:expr< ($e$:$t$) >>
 end
-
-type lab_decl = (loc * string * bool * ctyp)
-let lab_decl ~loc name is_mut typ = (loc, name, is_mut, typ)
 
 module Typ = struct
   type t = MLast.ctyp
@@ -630,6 +630,18 @@ module Cf = struct
     <:class_str_item< inherit $ce$ $opt:as_$ >>
   let constraint_ ~loc t1 t2 = <:class_str_item< type $t1$ = $t2$ >>
 end
+
+module Ctf = struct
+  type t = class_sig_item
+  let constraint_ ~loc t1 t2 = <:class_sig_item< type $t1$ = $t2$ >>
+  let method_ ~loc ?(virt=false) s t =
+    if virt
+    then <:class_sig_item< method virtual $lid:s$ : $t$ >>
+    else <:class_sig_item< method $lid:s$ : $t$ >>
+
+  let inherit_ ~loc cty = <:class_sig_item< inherit $cty$ >>
+end
+
 module Cty = struct
   type t = class_type
   let acc ~loc ct1 ct2 = <:class_type< $ct1$ . $ct2$ >>
@@ -647,6 +659,7 @@ module Cty = struct
     let ct = of_longident ~loc longident in
     <:class_type< $ct$ [ $list:lt$ ] >>
 end
+
 module Cl = struct
   type t = class_expr
   let constr ~loc lident args =
@@ -657,19 +670,8 @@ module Cl = struct
   let fun_ ~loc p ce = <:class_expr< fun $p$ -> $ce$ >>
   let fun_list ~loc ps ce =
     List.fold_right (fun_ ~loc) ps ce
-
-
 end
-module Ctf = struct
-  type t = class_sig_item
-  let constraint_ ~loc t1 t2 = <:class_sig_item< type $t1$ = $t2$ >>
-  let method_ ~loc ?(virt=false) s t =
-    if virt
-    then <:class_sig_item< method virtual $lid:s$ : $t$ >>
-    else <:class_sig_item< method $lid:s$ : $t$ >>
 
-  let inherit_ ~loc cty = <:class_sig_item< inherit $cty$ >>
-end
 
 let class_structure ~self ~fields = (self, fields)
 type class_structure = Pat.t * Cf.t list
