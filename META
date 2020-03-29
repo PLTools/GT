@@ -152,10 +152,10 @@ package "syntax" (
   package "all" (
     description = "All supported syntaxes"
 
-    requires(syntax,preprocessor) = "GT.syntax.show, GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
-    requires(syntax,toploop)      = "GT.syntax.show, GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
-    requires(syntax,native,preprocessor) = "GT.syntax.show, GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
-    requires(syntax,native,toploop)      = "GT.syntax.show, GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
+    requires(syntax,preprocessor) = "GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
+    requires(syntax,toploop)      = "GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
+    requires(syntax,native,preprocessor) = "GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
+    requires(syntax,native,toploop)      = "GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
 
     # dirty hack: if we leave RHS empty then querying ocamlfind will be broken
     archive(syntax,preprocessor) = "show.cmo"

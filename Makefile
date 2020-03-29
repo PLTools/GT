@@ -41,7 +41,7 @@ add_mymetaquot:
 mymetaquot: add_mymetaquot compile
 
 add_camlp5: add_common
-	$(eval OBTARGETS += camlp5/pa_gt.cma camlp5/pp5gt.cma)
+	$(eval OBTARGETS += camlp5/pa_gt.cma camlp5/pp5gt.cma camlp5/pa_gt.cmxa camlp5/pp5gt.cmxa)
 camlp5: add_camlp5 compile
 
 add_ppx:
@@ -52,8 +52,8 @@ ppx: add_common add_plugins add_ppx compile
 PLUGINS=gmap show compare eq foldl foldr eval stateful gfmt html hash #show_typed #htmlTy
 add_plugins:
 	$(eval OBPARAMS  += -I common)
-	$(eval OBTARGETS += $(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
-											$(addprefix plugins/,$(addsuffix .cmx,$(PLUGINS))) )
+	$(eval OBTARGETS += 	$(addprefix plugins/,$(addsuffix .cmo,$(PLUGINS))) \
+				$(addprefix plugins/,$(addsuffix .cmx,$(PLUGINS))) )
 plugins: add_plugins compile
 
 add_lib:
@@ -147,7 +147,10 @@ INSTALL_TARGETS=META \
 	$(wildcard _build/common/GTCommon.a) \
 	$(wildcard _build/common/expander.cmi) \
 	_build/camlp5/pa_gt.cma \
+	_build/camlp5/pa_gt.a \
 	_build/camlp5/pp5gt.cma \
+	_build/camlp5/pa_gt.cmxa \
+	_build/camlp5/pp5gt.cmxa \
 	$(wildcard _build/src/GTlib.cmx)  \
 	$(wildcard _build/src/GTlib.cma)  \
 	$(wildcard _build/src/GTlib.cmxa) \
