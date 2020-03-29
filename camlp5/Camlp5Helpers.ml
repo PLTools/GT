@@ -192,6 +192,7 @@ module Exp = struct
 
   let field ~loc e lident = acc ~loc e lident
   let let_ ~loc ?(rec_=false) lpe ewhere =
+    let lpe = List.map (fun (p,e) -> (p,e, <:vala< [] >>)) lpe in
     if rec_
     then <:expr< let rec $list:lpe$ in $ewhere$ >>
     else <:expr< let $list:lpe$ in $ewhere$ >>
@@ -215,24 +216,44 @@ module Exp = struct
   let constraint_ ~loc e t = <:expr< ($e$:$t$) >>
 end
 
+let sep_last l =
+  match List.rev l with
+    last :: rev_pfx -> (last, List.rev rev_pfx)
+  | [] -> failwith "sep_last must be called with nonempty list"
+
+let capitalized s =
+  assert (s <> "");
+  let c1 = String.get s 0 in
+  Char.(equal (uppercase_ascii c1) c1)
+
+module Longid = struct
+  type t = MLast.longid
+  let of_longident ~loc lid =
+    let open Ppxlib.Longident in
+    let rec trec = function
+        Lident s when capitalized s -> <:extended_longident< $uid:s$ >>
+      | Ldot (li, s) when capitalized s -> <:extended_longident< $longid:trec li$ . $uid:s$ >>
+      | Ldot (_, s) when not (capitalized s) ->
+        failwith "Longid.of_longident: should not be called with lowercase ids(1)"
+      | Lident s when not (capitalized s) ->
+        failwith "Longid.of_longident: should not be called with lowercase ids(2)"
+      | Lapply _ -> failwith "Longid.of_longident: should not be called with Lapply"
+      | _ -> assert false
+    in trec lid
+end
+
 module Typ = struct
   type t = MLast.ctyp
 
   let of_longident ~loc lid =
-    let wrap s =
-      assert (s <> "");
-      let c1 = String.get s 0 in
-      if Char.(equal (uppercase_ascii c1) c1)
-      then <:ctyp< $uid:s$ >>
-      else <:ctyp< $lid:s$ >>
-    in
     let open Ppxlib.Longident in
-    let rec helper = function
-      | Lident s -> wrap s
-      | Ldot (left, s) -> <:ctyp< $helper left$ . $wrap s$ >>
-      | _ -> assert false
-    in
-    helper lid
+    match lid with
+      Lident s when not (capitalized s) -> <:ctyp< $lid:s$ >>
+    | Ldot(li, s) when not (capitalized s) ->
+      let li = Longid.of_longident ~loc li in
+      <:ctyp< $longid:li$ . $lid:s$ >>
+    | Lapply _ -> failwith "Typ.of_longident: should not be called with Lapply"
+    | _ -> assert false
 
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:ctyp< $lid:s$ >>) fmt
@@ -273,6 +294,7 @@ module Typ = struct
     | VaVal None -> failwith "bad type arg"
 
   let object_ ~loc flg lst =
+    let lst = List.map (fun (s,t) -> (Some s, t, <:vala< [] >>)) lst in
     <:ctyp< < $list:lst$ $flag:(match flg with Ppxlib.Open -> true | Ppxlib.Closed -> false)$ > >>
   let arrow ~loc t1 t2 = <:ctyp< $t1$ -> $t2$ >>
   let chain_arrow ~loc = function
@@ -301,7 +323,7 @@ module Typ = struct
     let vs = fs |> List.map (fun rf -> match rf.Ppxlib.prf_desc with
         | Ppxlib.Rinherit core_typ -> PvInh (loc, from_caml core_typ)
         | Rtag (lb, is_open, args) ->
-          PvTag (loc, VaVal lb.txt, VaVal is_open, VaVal (List.map from_caml args) )
+          PvTag (loc, VaVal lb.txt, VaVal is_open, VaVal (List.map from_caml args), <:vala< [] >> )
       ) in
     if is_open
     then <:ctyp< [ > $list:vs$ ] >>
@@ -346,7 +368,8 @@ let class_declaration  ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fie
     let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
               ciPrm = (loc, Ploc.VaVal params);
               ciNam = Ploc.VaVal name;
-              ciExp = wrap @@ CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) }
+              ciExp = wrap @@ CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) ;
+              ciAttributes = <:vala< [] >>}
     in
     c
 
@@ -366,7 +389,7 @@ module Str = struct
               | Pcstr_record _ -> assert false
               | Pcstr_tuple ts ->  List.map Typ.from_caml ts
             in
-            (loc, VaVal cd.pcd_name.txt, VaVal args, None)
+            (loc, VaVal cd.pcd_name.txt, VaVal args, None, <:vala< [] >>)
           ) cds
         in
         MLast.TySum (loc, Ploc.VaVal llslt)
@@ -378,16 +401,19 @@ module Str = struct
         tdPrm = VaVal tdPrm;
         tdPrv = VaVal false;
         tdDef;
-        tdCon = VaVal []
+        tdCon = VaVal [] ;
+        tdIsDecl = true ;
+        tdAttributes = <:vala< [] >>
       }
     in
     <:str_item< type $list:[t]$ >>
     (* TODO *)
 
   let single_value ~loc pat body =
-    StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body ])
+    StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body, <:vala< [] >> ])
 
   let values ~loc ?(rec_flag=Ppxlib.Recursive) vbs =
+    let vbs = List.map (fun (p,e) -> (p,e,<:vala< [] >>)) vbs in
     match rec_flag with
     | Recursive -> <:str_item< value rec $list:vbs$ >>
     | Nonrecursive -> <:str_item< value $list:vbs$ >>
@@ -398,7 +424,8 @@ module Str = struct
     let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
               ciPrm = (loc, Ploc.VaVal params);
               ciNam = Ploc.VaVal name;
-              ciExp = wrap @@ CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) }
+              ciExp = wrap @@ CeStr (loc, Ploc.VaVal None, Ploc.VaVal fields) ;
+             ciAttributes = <:vala< [] >> }
     in
 
     <:str_item< class $list:[c]$ >>
@@ -409,6 +436,8 @@ module Str = struct
             ; tdPrv = VaVal false
             ; tdDef = rhs
             ; tdCon = VaVal []
+            ; tdIsDecl = true
+            ; tdAttributes = <:vala< [] >>
             }
     in
     <:str_item< type $list:[t]$ >>
@@ -417,6 +446,7 @@ module Str = struct
     <:str_item< class $list:lcice$ >>
 
   let tdecl_record ~loc ~name ~params llsbt =
+    let llsbt = List.map (fun (a,b,c,d) -> (a,b,c,d,<:vala< [] >>)) llsbt in
     let t = <:ctyp< { $list:llsbt$ } >> in
     tdecl ~loc ~name ~params t
 
@@ -431,7 +461,7 @@ module Str = struct
     let t =
       let llslt = List.map (fun (name,typ) ->
           (* TODO: error about gadts may be here *)
-          (loc,VaVal name, VaVal [], Some typ)
+          (loc,VaVal name, VaVal [], Some typ, <:vala< [] >>)
         ) ts in
       <:ctyp< [ $list:llslt$ ] >>
     in
@@ -471,13 +501,17 @@ end
 
 module Mt = struct
   type t = MLast.module_type
-  let ident ~loc lident =
-    let rec helper = function
-      | Ppxlib.Lident s -> <:module_type< $uid:s$ >>
-      | Ppxlib.Ldot (p, s) -> <:module_type< $helper p$ . $uid:s$ >>
-      | _ -> failwith "Mt.ident not implemented"
-    in
-    helper lident
+  let ident ~loc (lid : Ppxlib.longident) : MLast.module_type =
+    let open Ppxlib in
+    match lid with
+      Lident s ->
+      if capitalized s then <:module_type< $uid:s$ >>
+      else <:module_type< $lid:s$ >>
+    | Ldot(li, s) ->
+      let li = Longid.of_longident ~loc li in
+      if capitalized s then <:module_type< $longid:li$ . $uid:s$ >>
+      else <:module_type< $longid:li$ . $lid:s$ >>
+    | Lapply _ -> failwith "Mt.ident: cannot call with an Lapply"
 
   let signature ~loc lsi =
     <:module_type< sig $list:lsi$ end >>
@@ -514,7 +548,7 @@ module Sig = struct
               | Pcstr_record _ -> assert false
               | Pcstr_tuple ts -> List.map Typ.from_caml ts
             in
-            (loc, VaVal cd.pcd_name.txt, VaVal args, None)
+            (loc, VaVal cd.pcd_name.txt, VaVal args, None, <:vala< [] >>)
           ) cds
         in
         MLast.TySum (loc, Ploc.VaVal llslt)
@@ -531,13 +565,15 @@ module Sig = struct
         tdPrm = VaVal tdPrm;
         tdPrv = VaVal false;
         tdDef;
-        tdCon = VaVal []
+        tdCon = VaVal [] ;
+        tdIsDecl = true ;
+        tdAttributes = <:vala< [] >>
       }
     in
     <:sig_item< type $list:[t]$ >>
 
   let value ~loc ~name typ =
-    SgVal (loc, Ploc.VaVal name, typ)
+    SgVal (loc, Ploc.VaVal name, typ, <:vala< [] >>)
     (* let type_ ~loc recflg *)
 
   let class_ ~loc ~name ~params ?(virt=false) ?(wrap=(fun x -> x)) fields =
@@ -545,7 +581,8 @@ module Sig = struct
     let c = { ciLoc = loc; ciVir = Ploc.VaVal virt;
               ciPrm = (loc, Ploc.VaVal params);
               ciNam = Ploc.VaVal name;
-              ciExp = wrap @@ CtSig (loc, Ploc.VaVal None, Ploc.VaVal fields)
+              ciExp = wrap @@ CtSig (loc, Ploc.VaVal None, Ploc.VaVal fields) ;
+              ciAttributes = <:vala< [] >>
             }
     in
     <:sig_item< class $list:[c]$ >>
@@ -563,7 +600,7 @@ module Sig = struct
     let tdDef =
       (* TODO: error about gadts may be here *)
       let cs =
-        List.map (fun (name,t) -> (loc, VaVal name, VaVal [], Some t) )
+        List.map (fun (name,t) -> (loc, VaVal name, VaVal [], Some t, <:vala< [] >>) )
           constructors in
       (TySum (loc, VaVal cs))
     in
@@ -573,7 +610,9 @@ module Sig = struct
             (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) );
         tdPrv = VaVal false;
         tdDef;
-        tdCon = VaVal []
+        tdCon = VaVal [] ;
+        tdIsDecl = true ;
+        tdAttributes = <:vala< [] >>
       }
     in
     <:sig_item< type $list:[td]$ >>
@@ -587,7 +626,9 @@ module Sig = struct
         tdPrm = VaVal (List.map (fun s -> (VaVal s,None)) params);
         tdPrv = VaVal false;
         tdDef = <:ctyp< 'abstract >>;
-        tdCon = VaVal []
+        tdCon = VaVal [] ;
+        tdIsDecl = true ;
+        tdAttributes = <:vala< [] >>
       }
     in
     <:sig_item< type $list:[td]$ >>
@@ -644,15 +685,19 @@ end
 
 module Cty = struct
   type t = class_type
-  let acc ~loc ct1 ct2 = <:class_type< $ct1$ . $ct2$ >>
-  let id ~loc s = <:class_type< $id:s$ >>
   let of_longident ~loc l =
-    let rec helper = function
-      | Ppxlib.Lident s -> id ~loc s
-      | Ldot (l, s) -> acc ~loc (helper l) (id ~loc s)
+    let open Ppxlib in
+    match l with
+      Lident s when not (capitalized s) -> <:class_type< $lid:s$ >>
+
+    | Ldot(li,s) when capitalized s ->
+      failwith "class_type must end in uncapitalized ident"
+
+    | Ldot(li,s) when not (capitalized s) ->
+      let li = Longid.of_longident ~loc li in
+      <:class_type< $longid:li$ . $lid:s$ >>
+    | Lapply _ -> failwith "Cty.of_longident: cannot call with an Lapply"
       | _ -> assert false
-    in
-    helper l
 
   let arrow ~loc t ct = <:class_type< [ $t$ ] -> $ct$ >>
   let constr ~loc longident lt =
@@ -731,7 +776,7 @@ let prepare_param_triples ~loc ~extra
 let typ_vars_of_typ t =
   let open Base in
   let rec helper acc = function
-    | <:ctyp< $t1$ . $t2$ >>  -> helper acc t2
+    | <:ctyp< $longid:_$ . $lid:_$ >>  -> acc
     | <:ctyp< $t1$ as $t2$ >> -> helper acc t1 (* ??? *)
     | <:ctyp< _ >>            -> acc
     | <:ctyp< $t1$ $t2$ >> -> helper (helper acc t1) t2
@@ -742,17 +787,15 @@ let typ_vars_of_typ t =
     | <:ctyp< $t1$ == private $t2$ >>
     | <:ctyp< $t1$ ==  $t2$        >> -> helper (helper acc t1) t2
     | <:ctyp< < $list:lst$ $flag:b$ > >> ->
-      List.fold ~init:acc ~f:(fun acc (_,t) -> helper acc t) lst
+      List.fold ~init:acc ~f:(fun acc (_,t, _) -> helper acc t) lst
     | <:ctyp< ?$s$: $t$     >> -> helper acc t
     | <:ctyp< (module $mt$) >> -> acc
     | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented"
     | <:ctyp< '$s$ >> -> s :: acc
     | <:ctyp< { $list:llsbt$ } >>  ->
-      List.fold ~init:acc ~f:(fun acc (_,_,_,t) -> helper acc t) llsbt
+      List.fold ~init:acc ~f:(fun acc (_,_,_,t, _) -> helper acc t) llsbt
     | <:ctyp< [ $list:llslt$ ] >> -> failwith "sum"
     | <:ctyp< ( $list:lt$ )    >> -> List.fold ~init:acc ~f:helper lt
-    | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented 2"
-    | <:ctyp< $uid:s$ >>           -> acc
     | <:ctyp< [ = $list:lpv$ ] >>  -> failwith "polyvariant"
     | _ -> acc (* This could be wrong *)
   in

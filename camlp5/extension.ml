@@ -138,29 +138,25 @@ let trait_proto_t typ trait = Printf.sprintf "%s_proto_%s" trait typ
 
 
 EXTEND
-  GLOBAL: sig_item str_item class_expr class_sig_item expr ctyp type_decl;
+  GLOBAL: sig_item str_item class_expr class_sig_item expr ctyp type_decl
+  class_expr_simple extended_longident;
 
   class_sig_item: [[
      "inherit"; cs = class_signature -> <:class_sig_item< inherit $cs$ >>
   ]];
 
   class_signature:
-    [ [ "["; tl = LIST1 ctyp SEP ","; "]"; id = SELF ->
-          <:class_type< $id$ [ $list:tl$ ] >>
-      | "object"; cst = V (OPT class_self_type);
-        csf = V (LIST0 class_sig_item); "end" ->
-          <:class_type< object $_opt:cst$ $_list:csf$ end >> ]
-    | [ ct1 = SELF; "."; ct2 = SELF -> <:class_type< $ct1$ . $ct2$ >>
-      | ct1 = SELF; "("; ct2 = SELF; ")" -> <:class_type< $ct1$ $ct2$ >> ]
-    | [ i = V LIDENT -> <:class_type< $_id: i$ >>
-      | i = V UIDENT -> <:class_type< $_id: i$ >> ]
-    | [ ci = class_type_longident ->
-          match ci with
-          | [x]   -> <:class_type< $id:x$ >>
-          | x::xs -> fold_left (fun ct y ->
-                              let t = <:class_type< $id:y$ >> in
-                              <:class_type< $ct$ . $t$ >>
-                     ) <:class_type< $id:x$ >> xs
+    [ [ ci = class_type_longident ->
+          let last, pfx = Camlp5Helpers.sep_last ci in
+          assert (not (Camlp5Helpers.capitalized last)) ;
+          match pfx with
+            [] -> <:class_type< $lid:last$ >>
+          | h::t ->
+            let rec lirec li = function
+                h::t -> lirec <:extended_longident< $longid:li$ . $uid:h$ >> t
+              | [] -> li in
+            let li = lirec <:extended_longident< $uid:h$ >> t in
+            <:class_type< $longid:li$ . $lid:last$ >>
       ] ]
   ;
 
@@ -180,11 +176,7 @@ EXTEND
   ]]
   ;
 
-  class_self_type:
-    [ [ "("; t = ctyp; ")" -> t ] ]
-  ;
-
-  class_expr: BEFORE "simple" [[
+  class_expr_simple: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
       <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >>
   | "["; ct = ctyp; "]"; ci = class_longident ->
