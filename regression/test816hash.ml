@@ -1,10 +1,17 @@
+(* This decoration is required because hashconsing for standart types is
+ * not yet included in GT module
+ *
+ * Actual example is below.
+ *)
 module GT = struct
   include GT
 
   module H :
   sig
     type t
-
+    (* Call [hc tbl a] return (possibly) updated hash table with
+     * possible old value if [a] was already seen.
+     *)
     val hc : t -> 'a -> t * 'a
     val create : unit -> t
   end =
@@ -38,7 +45,8 @@ module GT = struct
           let old = Obj.magic @@ H.find h o in
           print_endline "use old value";
           (h,old)
-        with Not_found -> H.add h o o;
+        with Not_found ->
+          H.add h o o;
           print_endline "use new value";
           h, x
   end
@@ -58,10 +66,15 @@ module GT = struct
   let hash c = c.plugins#hash
 end
 
+(* Interesting part goes here *)
+
 type expr = Const of GT.int | Binop of expr * expr
 [@@deriving gt ~options: { hash } ]
 
 (* reuses old (Const 5) when accessing another (Const 5) *)
 let (_,_) =
   let h = GT.H.create () in
+  (* [GT.hash typ] takes a value and return its copy where all equal subtrees
+   * have the same location in memory
+   *)
   GT.hash (expr) h (Binop (Const 5, Const 5))
