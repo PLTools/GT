@@ -28,6 +28,7 @@ open List
 open Printf
 open Pcaml
 open MLast
+open Asttools
 open Ploc
 open Core2
 open GTCommon
@@ -179,18 +180,18 @@ EXTEND
 
   class_expr_simple: BEFORE "simple" [[
     "["; ct = ctyp; ","; ctcl = LIST1 ctyp SEP ","; "]"; ci = class_longident ->
-      <:class_expr< [ $list:(ct :: ctcl)$ ] $list:ci$ >>
+      <:class_expr< [ $list:(ct :: ctcl)$ ] $lilongid:ci$ >>
   | "["; ct = ctyp; "]"; ci = class_longident ->
-      <:class_expr< [ $ct$ ] $list:ci$ >>
-  | ci = class_longident -> <:class_expr< $list:ci$ >>
+      <:class_expr< [ $ct$ ] $lilongid:ci$ >>
+  | ci = class_longident -> <:class_expr< $lilongid:ci$ >>
   ]];
 
   expr: BEFORE "simple" [
-   LEFTA [ "new"; i = V class_longident "list" -> <:expr< new $_list:i$ >> ]
+   LEFTA [ "new"; i = V class_longident "list" -> <:expr< new $_lilongid:i$ >> ]
   ];
 
   ctyp: BEFORE "simple" [[
-    "#"; id = V class_longident "list" -> <:ctyp< # $_list:id$ >>
+    "#"; id = V class_longident "list" -> <:ctyp< # $_lilongid:id$ >>
   ]];
 
   class_longident: [[
@@ -201,13 +202,13 @@ EXTEND
         | None   -> Naming.class_name_for_typ n
         | Some t -> Naming.trait_class_name_for_typ t n
       in
-      rev (classname::q)
+      longident_lident_of_string_list loc (rev (classname::q))
 
   | "+"; ci=qname; t=trait ->
       let n, q = hdtl loc (rev ci) in
-      rev ((trait_proto_t n t) :: q)
+      longident_lident_of_string_list loc (rev ((trait_proto_t n t) :: q))
 
-  | ci=qname -> ci
+  | ci=qname -> longident_lident_of_string_list loc ci
   ]];
 
   qname: [[

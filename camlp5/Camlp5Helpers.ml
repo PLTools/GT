@@ -44,6 +44,32 @@ let lab_decl ~loc name is_mut typ = (loc, name, is_mut, typ)
 type case = patt * expr option * expr
 let case ~lhs ~rhs : case = (lhs, None, rhs)
 
+let sep_last l =
+  match List.rev l with
+    last :: rev_pfx -> (last, List.rev rev_pfx)
+  | [] -> failwith "sep_last must be called with nonempty list"
+
+let capitalized s =
+  assert (s <> "");
+  let c1 = String.get s 0 in
+  Char.(equal (uppercase_ascii c1) c1)
+
+module Longid = struct
+  type t = MLast.longid
+  let of_longident ~loc lid =
+    let open Ppxlib.Longident in
+    let rec trec = function
+        Lident s when capitalized s -> <:extended_longident< $uid:s$ >>
+      | Ldot (li, s) when capitalized s -> <:extended_longident< $longid:trec li$ . $uid:s$ >>
+      | Ldot (_, s) when not (capitalized s) ->
+        Ploc.raise loc (Failure "Longid.of_longident: should not be called with lowercase ids(1)")
+      | Lident s when not (capitalized s) ->
+        Ploc.raise loc (Failure "Longid.of_longident: should not be called with lowercase ids(2)")
+      | Lapply _ -> Ploc.raise loc (Failure "Longid.of_longident: should not be called with Lapply")
+      | _ -> assert false
+    in trec lid
+end
+
 module Pat = struct
   type t = MLast.patt
   let any ~loc = <:patt< _ >>
@@ -51,19 +77,15 @@ module Pat = struct
   let var = lid
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt
   let of_longident ~loc lid =
-    let wrap s =
-      assert (s <> "");
-      let c1 = String.get s 0 in
-      if Char.(equal (uppercase_ascii c1) c1)
-      then <:patt< $uid:s$ >>
-      else <:patt< $lid:s$ >>
-    in
-    let rec helper = function
-      | Longident.Lident s -> wrap s
-      | Longident.Ldot (left, s) -> <:patt< $helper left$ . $wrap s$ >>
-      | _ -> assert false
-    in
-    helper lid
+    let is_lident s = not (capitalized s) in
+    match lid with
+      Longident.Lident s when is_lident s -> <:patt< $lid:s$ >>
+    | Ldot(li, s) when is_lident s ->
+      let li = Longid.of_longident ~loc li in
+      <:patt< $longid:li$ . $lid:s$ >>
+    | li ->
+      let li = Longid.of_longident ~loc li in
+      <:patt< $longid:li$ >>
 
   let access2 ~loc m n = of_longident ~loc (Ldot (Lident m, n))
   let constraint_ ~loc p t = <:patt< ($p$ : $t$) >>
@@ -81,7 +103,7 @@ module Pat = struct
       <:patt< $c$ $args$ >>
 
   let type_ ~loc lident =
-    PaTyp (loc, VaVal (Longident.flatten lident) )
+    PaTyp (loc, VaVal (Asttools.longident_lident_of_string_list loc (Longident.flatten lident)) )
 
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
@@ -181,7 +203,7 @@ module Exp = struct
     | le  -> <:expr< ($list:le$) >>
 
   let new_ ~loc lident =
-    <:expr< new $list: Longident.flatten lident$ >>
+    <:expr< new $lilongid: Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >>
   let object_ ~loc (pat, fields) =
     <:expr< object ($pat$) $list:fields$ end >>
   let send ~loc left s = <:expr< $left$ # $s$ >>
@@ -215,32 +237,6 @@ module Exp = struct
 
   (* let new_type ~loc = failwith "Not implemented" *)
   let constraint_ ~loc e t = <:expr< ($e$:$t$) >>
-end
-
-let sep_last l =
-  match List.rev l with
-    last :: rev_pfx -> (last, List.rev rev_pfx)
-  | [] -> failwith "sep_last must be called with nonempty list"
-
-let capitalized s =
-  assert (s <> "");
-  let c1 = String.get s 0 in
-  Char.(equal (uppercase_ascii c1) c1)
-
-module Longid = struct
-  type t = MLast.longid
-  let of_longident ~loc lid =
-    let open Ppxlib.Longident in
-    let rec trec = function
-        Lident s when capitalized s -> <:extended_longident< $uid:s$ >>
-      | Ldot (li, s) when capitalized s -> <:extended_longident< $longid:trec li$ . $uid:s$ >>
-      | Ldot (_, s) when not (capitalized s) ->
-        failwith "Longid.of_longident: should not be called with lowercase ids(1)"
-      | Lident s when not (capitalized s) ->
-        failwith "Longid.of_longident: should not be called with lowercase ids(2)"
-      | Lapply _ -> failwith "Longid.of_longident: should not be called with Lapply"
-      | _ -> assert false
-    in trec lid
 end
 
 module Typ = struct
@@ -282,7 +278,7 @@ module Typ = struct
       List.fold_left (app ~loc) init lt
 
   let class_ ~loc lident  =
-    let init = <:ctyp< # $list:Longident.flatten lident$ >> in
+    let init = <:ctyp< # $lilongid:Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >> in
     function
     | []    -> init
     (* | [r]   -> <:ctyp< $init$ $r$ >> *)
@@ -649,9 +645,9 @@ end
 module WC = struct
   type t = MLast.with_constr
   let typ ~loc ~params name t =
-    let ls = [name] in
+    let ls = (None, <:vala< name >>) in
     let ltv = List.map (fun s -> named_type_arg ~loc s) params in
-    <:with_constr< type $list:ls$ $list:ltv$ = $t$ >>
+    <:with_constr< type $lilongid:ls$ $list:ltv$ = $t$ >>
 end
 
 module Vb = struct
@@ -709,8 +705,8 @@ end
 module Cl = struct
   type t = class_expr
   let constr ~loc lident args =
-    let ls = Longident.flatten lident in
-    <:class_expr< [ $list:args$ ] $list:ls$ >>
+    let ls = Asttools.longident_lident_of_string_list loc (Longident.flatten lident) in
+    <:class_expr< [ $list:args$ ] $lilongid:ls$ >>
   let apply ~loc l xs =
     List.fold_left (fun acc r -> <:class_expr< $acc$ $r$ >>) l  xs
   let fun_ ~loc p ce = <:class_expr< fun $p$ -> $ce$ >>
@@ -782,7 +778,7 @@ let typ_vars_of_typ t =
     | <:ctyp< _ >>            -> acc
     | <:ctyp< $t1$ $t2$ >> -> helper (helper acc t1) t2
     | <:ctyp< $t1$ -> $t2$ >> -> helper (helper acc t1) t2
-    | <:ctyp< # $list:ls$  >> -> acc (* I'm not sure *)
+    | <:ctyp< # $lilongid:_$  >> -> acc (* I'm not sure *)
     | <:ctyp<  ~$s$:$t$   >> -> helper acc t
     | <:ctyp< $lid:s$      >> -> acc
     | <:ctyp< $t1$ == private $t2$ >>
