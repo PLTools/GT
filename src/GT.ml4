@@ -726,7 +726,7 @@ class ['a, 'sa, 'env, 'self] stateful_array_t fa fself =
       if n = 0 then ([||], env0)
       else
         let (x1,env1) = fa env0 (Array.get arr 0) in
-        let env = Pervasives.ref env1 in
+        let env = Stdlib.ref env1 in
         let ans = Array.make n x1 in
         for i=1 to n - 1 do
           let (x,env2) = fa !env (Array.get arr i) in
@@ -754,7 +754,7 @@ class ['a, 'self] eq_array_t fa fself =
     method do_array env arr =
       let n = Array.length arr in
       (Array.length env = n) &&
-      (let ans = Pervasives.ref true in
+      (let ans = Stdlib.ref true in
        for i=0 to n do
          ans := !ans && (fa (Array.get env i) (Array.get arr i) )
        done;
@@ -768,7 +768,7 @@ class ['a, 'self] compare_array_t fa fself =
     method do_array env arr =
       let n = Array.length arr in
       if Array.length env < n then LT else
-      (let ans = Pervasives.ref EQ in
+      (let ans = Stdlib.ref EQ in
        for i=0 to n do
          ans := chain_compare !ans (fun () -> fa (Array.get env i) (Array.get arr i))
        done;
