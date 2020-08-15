@@ -60,6 +60,12 @@ let compare_primitive x y =
        then GT
        else EQ
 
+let cmp_to_int x = 
+  match x with 
+  | LT -> (-1)
+  | GT -> 1
+  | EQ -> 0
+
 let poly_tag x =
   let x = Obj.magic x in
   (Obj.magic (if Obj.is_block x then Obj.field x 0 else x) : int)
@@ -71,10 +77,13 @@ let compare_poly x y =
   compare_primitive (poly_tag x) (poly_tag y)
 
 let compare_vari x y =
-  let x, y = Obj.magic x, Obj.magic y in
-  match compare_primitive (Obj.is_block x) (Obj.is_block y) with
+  let x, y = Obj.repr x, Obj.repr y in
+  let b = Obj.is_block x in 
+  (* TODO: rewrite with built-in structural equality *)
+  match compare_primitive b (Obj.is_block y) with
   | EQ -> compare_primitive (vari_tag x) (vari_tag y)
-  | c  -> x
+  | _ when b -> GT (* block is greater then non-block *)
+  | _ -> LT
 
 let string_of_string  s = "\"" ^ String.escaped s ^ "\""
 let string_of_unit    _ = "()"
