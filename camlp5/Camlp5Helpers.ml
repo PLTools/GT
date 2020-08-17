@@ -103,7 +103,7 @@ module Pat = struct
       <:patt< $c$ $args$ >>
 
   let type_ ~loc lident =
-    PaTyp (loc, VaVal (Asttools.longident_lident_of_string_list loc (Longident.flatten lident)) )
+    <:patt< # $lilongid:Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >>
 
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
@@ -131,7 +131,7 @@ end
 
 let use_new_type ~loc name e =
   let p = <:patt< (type $lid:name$) >> in
-  <:expr< fun [ $list:[ (p,Ploc.VaVal None,e) ]$ ] >>
+  <:expr< fun [ $p$ -> $e$ ] >>
 
 module Exp = struct
   type t = MLast.expr
@@ -389,7 +389,7 @@ module Str = struct
             <:constructor< $uid:cd.pcd_name.txt$ of $list:args$ >>
           ) cds
         in
-        MLast.TySum (loc, Ploc.VaVal llslt)
+        <:ctyp< [ $list:llslt$ ] >>
       | _ -> assert false
 
     in
@@ -399,7 +399,7 @@ module Str = struct
     (* TODO *)
 
   let single_value ~loc pat body =
-    StVal (loc, Ploc.VaVal false, Ploc.VaVal [ pat,body, <:vala< [] >> ])
+    <:str_item< value $pat$ = $body$ >>
 
   let values ~loc ?(rec_flag=Ppxlib.Recursive) vbs =
     let vbs = List.map (fun (p,e) -> (p,e,<:vala< [] >>)) vbs in
@@ -443,7 +443,6 @@ module Str = struct
     let ltt = [] in
     let t =
       let llslt = List.map (fun (name,typ) ->
-          (* TODO: error about gadts may be here *)
           <:constructor< $uid:name$ : $typ$ >>
         ) ts in
       <:ctyp< [ $list:llslt$ ] >>
@@ -534,7 +533,7 @@ module Sig = struct
             <:constructor< $uid:cd.pcd_name.txt$ of $list:args$ >>
           ) cds
         in
-        MLast.TySum (loc, Ploc.VaVal llslt)
+        <:ctyp< [ $list:llslt$ ] >>
       | Ptype_abstract -> begin
           match td.ptype_manifest with
           | None -> assert false
@@ -577,7 +576,7 @@ module Sig = struct
       let cs =
         List.map (fun (name,t) -> <:constructor< $uid:name$ : $t$ >> )
           constructors in
-      (TySum (loc, VaVal cs))
+      <:ctyp< [ $list:cs$ ] >>
     in
     let tdPrm = List.init params_count (fun n ->
             (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) in
@@ -597,6 +596,7 @@ module Sig = struct
   let module_ ~loc (_,name,mtyp) =
     <:sig_item< module $uid:name$ : $mtyp:mtyp$ >>
 
+  (* TODO: Kakadu, what is this?  I don't recognize this.  It doesn't seem to exist in Ocaml, and the construct appears to be something leftover in camlp5. *)
   let modtype ~loc (_loc,s,mt_opt) =
     let mt =
       match mt_opt with
