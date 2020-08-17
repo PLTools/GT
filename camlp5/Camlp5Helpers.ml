@@ -386,22 +386,14 @@ module Str = struct
               | Pcstr_record _ -> assert false
               | Pcstr_tuple ts ->  List.map Typ.from_caml ts
             in
-            (loc, VaVal cd.pcd_name.txt, VaVal args, None, <:vala< [] >>)
+            <:constructor< $uid:cd.pcd_name.txt$ of $list:args$ >>
           ) cds
         in
         MLast.TySum (loc, Ploc.VaVal llslt)
       | _ -> assert false
 
     in
-    let t =
-      { tdNam = VaVal (loc, VaVal td.ptype_name.txt);
-        tdPrm = VaVal tdPrm;
-        tdPrv = VaVal false;
-        tdDef;
-        tdCon = VaVal [] ;
-        tdIsDecl = true ;
-        tdAttributes = <:vala< [] >>
-      }
+    let t = <:type_decl< $tp:(loc, VaVal td.ptype_name.txt)$ $list:tdPrm$ = $tdDef$ >>
     in
     <:str_item< type $list:[t]$ >>
     (* TODO *)
@@ -428,14 +420,8 @@ module Str = struct
     <:str_item< class $list:[c]$ >>
 
   let tdecl ~loc ~name ~params rhs =
-    let t = { tdNam = VaVal (loc, VaVal name)
-            ; tdPrm = VaVal (List.map (fun s -> (VaVal (Some s),None)) params)
-            ; tdPrv = VaVal false
-            ; tdDef = rhs
-            ; tdCon = VaVal []
-            ; tdIsDecl = true
-            ; tdAttributes = <:vala< [] >>
-            }
+    let tdPrm = List.map (fun s -> (VaVal (Some s),None)) params in
+    let t = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = $rhs$ >>
     in
     <:str_item< type $list:[t]$ >>
 
@@ -458,7 +444,7 @@ module Str = struct
     let t =
       let llslt = List.map (fun (name,typ) ->
           (* TODO: error about gadts may be here *)
-          (loc,VaVal name, VaVal [], Some typ, <:vala< [] >>)
+          <:constructor< $uid:name$ : $typ$ >>
         ) ts in
       <:ctyp< [ $list:llslt$ ] >>
     in
@@ -545,7 +531,7 @@ module Sig = struct
               | Pcstr_record _ -> assert false
               | Pcstr_tuple ts -> List.map Typ.from_caml ts
             in
-            (loc, VaVal cd.pcd_name.txt, VaVal args, None, <:vala< [] >>)
+            <:constructor< $uid:cd.pcd_name.txt$ of $list:args$ >>
           ) cds
         in
         MLast.TySum (loc, Ploc.VaVal llslt)
@@ -557,15 +543,7 @@ module Sig = struct
       | _ -> assert false
 
     in
-    let t =
-      { tdNam = VaVal (loc, VaVal td.ptype_name.txt);
-        tdPrm = VaVal tdPrm;
-        tdPrv = VaVal false;
-        tdDef;
-        tdCon = VaVal [] ;
-        tdIsDecl = true ;
-        tdAttributes = <:vala< [] >>
-      }
+    let t = <:type_decl< $tp:(loc, VaVal td.ptype_name.txt)$ $list:tdPrm$ = $tdDef$ >>
     in
     <:sig_item< type $list:[t]$ >>
 
@@ -597,20 +575,13 @@ module Sig = struct
     let tdDef =
       (* TODO: error about gadts may be here *)
       let cs =
-        List.map (fun (name,t) -> (loc, VaVal name, VaVal [], Some t, <:vala< [] >>) )
+        List.map (fun (name,t) -> <:constructor< $uid:name$ : $t$ >> )
           constructors in
       (TySum (loc, VaVal cs))
     in
-    let td =
-      { tdNam = VaVal (loc, VaVal name);
-        tdPrm = VaVal (List.init params_count (fun n ->
-            (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) );
-        tdPrv = VaVal false;
-        tdDef;
-        tdCon = VaVal [] ;
-        tdIsDecl = true ;
-        tdAttributes = <:vala< [] >>
-      }
+    let tdPrm = List.init params_count (fun n ->
+            (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) in
+    let td = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = $tdDef$ >>
     in
     <:sig_item< type $list:[td]$ >>
 
@@ -618,15 +589,8 @@ module Sig = struct
 
   let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc name params ->
 
-    let td =
-      { tdNam = VaVal (loc, VaVal name);
-        tdPrm = VaVal (List.map (fun s -> (VaVal s,None)) params);
-        tdPrv = VaVal false;
-        tdDef = <:ctyp< 'abstract >>;
-        tdCon = VaVal [] ;
-        tdIsDecl = true ;
-        tdAttributes = <:vala< [] >>
-      }
+    let tdPrm = List.map (fun s -> (VaVal s,None)) params in
+    let td = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = 'abstract >>
     in
     <:sig_item< type $list:[td]$ >>
 
