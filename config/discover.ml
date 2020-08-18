@@ -69,7 +69,7 @@ let discover_gt_flags cfg =
   Cfg.Flags.write_lines "gt-flags.cfg" @@ extract_words gt_archives
 *)
 
-(*
+
 let discover_logger_flags cfg =
   (* logger has two kinds of CMOs: two from camlp5 (pr_o and pr_dump) and one for logger.
       `pr_o` is required because logger uses pretty-printing inside itself.
@@ -104,7 +104,7 @@ let discover_logger_flags cfg =
     )
   in
   Cfg.Flags.write_lines "logger-flags.cfg" cmos
-*)
+
 (*** generating dune files ***)
 
 (* generates build rules for `test*.exe` *)
@@ -136,8 +136,8 @@ let args =
     ; ("-tests"       , Arg.Set tests           , " discover tests (tests.txt)"               )
     ; ("-tests-dune"  , Arg.Set tests_dune      , " generate dune build file for tests"       )
     ; ("-camlp5-flags", Arg.Set camlp5_flags    , " discover camlp5 flags (camlp5-flags.cfg)" )
-    ; ("-gt-flags"    , Arg.Set gt_flags        , " discover GT flags (gt-flags.cfg)"         )
-    ; ("-gt-flags"    , Arg.Set logger_flags    , " discover logger flags (logger-flags.cfg)" )
+(*    ; ("-gt-flags"    , Arg.Set gt_flags        , " discover GT flags (gt-flags.cfg)"         )*)
+    ; ("-logger-flags", Arg.Set logger_flags    , " discover logger flags (logger-flags.cfg)" )
     ; ("-all-flags"   , Arg.Set all_flags       , " discover all flags"                       )
     ; ("-all"         , Arg.Set all             , " discover all"                             )
     ]
@@ -156,14 +156,12 @@ let () =
     in
 
     if !tests || !all then
-      discover_tests cfg testnames ;
+      discover_tests cfg testnames;
     if !tests_dune || !all then
-      gen_tests_dune cfg testnames ;
+      gen_tests_dune cfg testnames;
     if !camlp5_flags || !all_flags || !all then
-      discover_camlp5_flags cfg ;
-    (*if !gt_flags || !all_flags || !all then
-      discover_gt_flags cfg ;*)
-    (*if !logger_flags || !all_flags || !all then
-      discover_logger_flags cfg ;*)
+      discover_camlp5_flags cfg;
+    if !logger_flags || !all_flags || !all then
+      discover_logger_flags cfg;
     ()
   )

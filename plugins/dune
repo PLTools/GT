@@ -18,6 +18,7 @@
  (libraries GTCommon)
  (flags (:standard -w -27 -warn-error -A))
 )
+
 (library
  (name foldr)
  (modules foldr)
@@ -45,10 +46,26 @@
  (libraries GTCommon)
  (flags (:standard -w -27 -warn-error -A))
 )
+
 (library
  (name eval)
  (modules eval)
  (libraries GTCommon gmap)
  (flags (:standard -w -27-7-9-13-36 -warn-error -A))
+)
+
+(library
+ (name html)
+ (modules html)
+ (libraries GTCommon)
+ (flags (:standard -w -27-7-9-13-36 -warn-error -A))
+)
+
+
+(library
+ (name stateful)
+ (modules stateful)
+ (libraries GTCommon gmap)
+ (flags (:standard -w -27 -warn-error -A))
 )
 

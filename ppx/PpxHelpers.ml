@@ -37,7 +37,7 @@ module Pat = struct
   let any ~loc = ppat_any ~loc
   let unit ~loc = [%pat? () ]
   let of_longident ~loc lident =
-    let rec helper = function
+    let helper = function
       | Lident s -> ppat_var ~loc (Located.mk ~loc s)
       | Ldot (Lident l, r) as p -> ppat_construct ~loc (Located.mk ~loc p) None
       | _ -> assert false
@@ -182,7 +182,7 @@ module Exp = struct
 end
 
 module Typ = struct
-  open Ast_helper
+
 
   type t = Ppxlib.core_type
   let constr ~loc lident = ptyp_constr ~loc (Located.mk ~loc lident)
@@ -249,7 +249,7 @@ module Typ = struct
 
   let to_type_arg x = Some x
   let to_type_arg_exn = Fn.id
-end
+end[@@warning "-32"]
 
 type nonrec class_declaration = class_declaration
 let class_declaration ~loc ~name ?(virt=false) ?(wrap=(fun x -> x)) ~params fields =

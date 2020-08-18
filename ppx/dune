@@ -8,3 +8,24 @@
   (flags (:standard -w -27-9 -warn-error -A))
 )
 
+;(executable
+;  (name pp_gt)
+;  (modules pp_gt)
+;  (libraries ppxlib.runner ppx show gmap)
+;  (flags (:standard -linkall))
+;  )
+
+(rule
+  (targets pp_gt.exe)
+  (deps    pp_gt.ml ../plugins/show.cmxa)
+  (action  (run
+    ocamlfind ocamlopt -package base,ppxlib,ocamlgraph
+      ../common/GTCommon.cmxa
+      ppx.cmxa
+      ../plugins/show.cmxa
+      ../plugins/gmap.cmxa
+      ../plugins/foldl.cmxa
+      ../plugins/foldr.cmxa
+      pp_gt.ml -linkall -linkpkg
+      -o %{targets} ))
+)

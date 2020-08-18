@@ -8,7 +8,6 @@
 
 open Ppxlib
 open GTCommon
-open GTCommon.Plugin
 
 module E = Expander.Make(PpxHelpers)
 
@@ -101,7 +100,7 @@ let sig_type_decl : (_, _) Deriving.Generator.t =
     )
 
 let () =
-  (* Sys.command "notify-send 'Registering deriver' wtf" |> ignore; *)
+  (*Sys.command "notify-send 'Registering deriver' gt" |> ignore;*)
   Deriving.add
     ~str_type_decl
     ~sig_type_decl
