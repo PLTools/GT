@@ -162,7 +162,7 @@ let create = (new g :> P.plugin_constructor)
 end
 
 let register () =
-  Stdlib.Sys.command "notify-send 'Registering plugin' show" |> ignore;
+  (*Stdlib.Sys.command "notify-send 'Registering plugin' show" |> ignore;*)
   Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
 
 let () = register ()
