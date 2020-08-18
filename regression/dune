@@ -1,17 +1,101 @@
-;(executable
-; (name test081llist)
-; (libraries lwt.unix)
-; (preprocess (action (run camlp5 %{read-strings:../camlp5.cmd} %{input-file})) )
-;)
+(executables
+  (names
+    test000  test001  test002 test003
+    test004  test005  test006  test007 test008  test009  test010
+    test011  test012  test013  test014  test015  test016  test017  test018 test019  test020
+    test021  test022  test023  test024  test025  test026  test027  test028 test029  test030
+    test031  test032  test036  test037  test040  test041  test042
+    test081llist
+    test082mutal
+    test083polyvar
+    test086std
+    test087stateful
+    test089struct
+    ;test090eval
+    ;test091eval
+  )
+  (modules
+    test000  test001  test002  test003
+    test004  test005  test006  test007 test008  test009  test010
+    test011  test012  test013  test014  test015  test016  test017  test018 test019  test020
+    test021  test022  test023  test024  test025  test026  test027  test028 test029  test030
+    test031  test032  test036  test037  test040  test041  test042
+    test081llist
+    test082mutal
+    test083polyvar
+    test086std
+    test087stateful
+    test089struct
+    ;test090eval
+    ;test091eval
+  )
+  (modules_without_implementation test023_pp)
 
-;(rule
-;  (targets test081llist.output)
-;  (deps    test081llist.exe)
-;  (action  (with-stdout-to %{targets} (run %{deps}))))
+  (libraries GT)
+  (flags (:standard -warn-error -A -w -27-39-32-7-34 -rectypes))
 
-;(alias
-;  (name   runtest)
-;  (deps   test081llist.expected test081llist.output)
-;  (action (run diff -u test081llist.expected test081llist.output)))
+  (preprocess
+    (action
+      (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})
+    )
+  )
 
-;(test (name test081llist.exe))
+  (preprocessor_deps
+    ;(file %{workspace_root}/camlp5/pp5+gt+o.exe)
+    (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)
+    ;(file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)
+    )
+)
+
+(executables
+  (names
+  ;test705
+  ;test790showF
+  ;test791showT
+  ;test794camlp5
+  ;test795intoption
+  ;test796expr
+  ;test797nats
+  ;test798gen
+  ;test799
+
+  ;test800    test801mutal    test802mutal    test803polyvar    test804polyvar
+  ;test805std    test806fmt    test807showT    test808ext    test809cool
+  ;test810cool    test811compare    test812html    test813htmlTy    test814nonreg
+  ;test815abstr    test816hash    test820spec    test821clab
+  test822
+  ;test823list    test824mut    test825tuples    test826antiph    test828combi    test840garrique
+  )
+  (modules
+    ;test705
+    ;test790showF
+    ;test791showT
+    ;test794camlp5
+    ;test795intoption
+    ;test796expr
+    ;test797nats
+    ;test798gen
+    ;test799
+
+    ;test800    test801mutal    test802mutal    test803polyvar    test804polyvar
+    ;test805std    test806fmt    test807showT    test808ext    test809cool
+    ;test810cool    test811compare    test812html    test813htmlTy    test814nonreg
+    ;test815abstr    test816hash    test820spec    test821clab
+    test822
+    ;test823list    test824mut    test825tuples    test826antiph    test828combi    test840garrique
+  )
+  (modules_without_implementation test023_pp)
+
+  (libraries GT)
+  (flags (:standard -warn-error -A -w -27-39-32 ))
+
+  (preprocess (pps  show gmap compare GT.ppx))
+  ;(preprocess
+  ;  (action
+  ;    (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})
+  ;  )
+  ;)
+
+  ;(preprocessor_deps
+  ;  (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe))
+)

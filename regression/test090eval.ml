@@ -48,9 +48,12 @@ module Abs = struct
 
 end
 
+
 module Lam = struct
   @type ('name, 'lam) t = [`App of 'lam * 'lam | `Var of 'name] with show,eval,stateful
 end
+
+(*
 module Let = struct
   @type ('name, 'term) t = [`Let of 'name * 'term * 'term] with show,eval,stateful
   class ['me, 'term2, 'extra, 'syn] de_bruijn ft = object
@@ -156,3 +159,5 @@ let _ =
   `LetRec ("z", `App (`Abs ("x", `Var "x"), `Var "z"),
            `Abs ("x", `Abs ("y", `App (`Var "x", `Var "z"))));
   Printf.printf "Imported: %s\n" (GT.show(nominal) @@ import l)
+
+*)

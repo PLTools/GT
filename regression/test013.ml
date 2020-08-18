@@ -6,21 +6,18 @@ and   b = [`C of GT.string | `D of a] with show
 (* Doesn't work for now *)
 class show_c' fself =
   object
-    inherit [_] @c[show] fself
-    method c_C () _ s = "new C " ^ s
+    inherit [c] @c[show] fself
+    method! c_C () _ s = "new C " ^ s
   end
 
 
-class show_b' prereq fself =
+class [ 'fself ] show_b' prereq =
   object
-    inherit [_] show_b_t_stub prereq fself
-    method c_C () _ s = "new C " ^ s
+    inherit [ 'fself ] show_b_t_stub prereq
+    method! c_C () _ s = "new C " ^ s
   end
 
-let show_b_new =
-  let { show_b } = show_fix_a ~b0:{ show_b_func = new show_b' } ()
-  in
-  show_b.show_b_trf
+let show_b_new eta = let (_,f) = fix_a (new show_a_t_stub) (new show_b') in f eta
 
 let _ =
   let y = `D (`B (`C "5")) in

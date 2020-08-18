@@ -122,7 +122,7 @@ module Pat = struct
 
   let alias ~loc p1 name =
     let right = <:patt< $lid:name$ >> in
-    <:patt< ($p1$ as $right$) >>
+    <:patt< (($p1$) as $right$) >>
 
   let optional ~loc p1 e = <:patt< ?{$p1$ = $e$} >>
   let unit ~loc = <:patt< () >>
@@ -195,7 +195,11 @@ module Exp = struct
     app_list ~loc (of_longident ~loc lident) args
 
   let variant ~loc s args =
-    app_list ~loc <:expr< ` $s$ >> args
+    match args with
+    | []  -> <:expr< ` $s$ >>
+    | [x] -> app ~loc <:expr< ` $s$ >> x
+    | le  ->  <:expr< ` $s$ ($list:le$) >>
+
   let tuple ~loc le =
     match le with
     | [] -> failwith "Exp.tuple: bad argument"
