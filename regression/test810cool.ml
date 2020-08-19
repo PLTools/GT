@@ -1,6 +1,6 @@
 module Types =
   struct
-    module Pervasives = struct include Pervasives let ref = GT.ref end
+    module Stdlib = struct include Stdlib let ref = GT.ref end
     (* TODO: ise ppx_import here *)
     type type_expr = Types.type_expr = {
       mutable desc : Types.type_desc;

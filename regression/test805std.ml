@@ -16,7 +16,7 @@ module T : sig
 
   type 'a u3 = {aa: GT.int; bb:GT.string} [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 
-  type 'a r1 = 'a ref [@@deriving gt ~options:{fmt; html}]
+  type 'a r1 = 'a GT.ref [@@deriving gt ~options:{fmt; html}]
 
   type ('a,'b) arr1 = ('a * 'b) GT.array [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 end = struct

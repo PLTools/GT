@@ -13,7 +13,7 @@ module Y = struct
     let () = printf "%s\n%!" @@ GT.(show u) (SS 3.1415) in
     ()
 
-  class ['a,'extra_s] show_s_t2 _ fa _ = object
+  class ['a,'extra_s] show_s_t2 (fa,_,_) = object
     inherit  [unit,'a,string,unit,'extra_s,string] s_t
     method c_SS () _ x = Printf.sprintf "THE '%a'" fa x
   end

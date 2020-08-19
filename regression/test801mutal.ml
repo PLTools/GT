@@ -6,13 +6,25 @@ and     b = I of GT.int a | J | K of b
 and   all = (GT.int a) GT.list
 [@@deriving gt ~options:{show;gmap}]
 
-class ['self_b] show_b_hack prereq  fself = object
-  inherit ['self_b] show_b_t_stub prereq fself
+(*
+class ['self_b] show_b_hack ((show_a,_,_) as prereq) = object
+  inherit ['self_b] show_b_t_stub prereq
   method c_I inh___037_ _ _x__038_ =
     Printf.sprintf "I {%s}"
-      (prereq.show_a.show_a_trf (GT.lift @@ GT.show GT.int) () _x__038_)
+      (show_a (GT.lift @@ GT.show GT.int) () _x__038_)
   method c_K () _ x = Printf.sprintf "K {%a}" fself x
 end
+
+
+let (show_a,show_b, show_all) = fix_a (new show_a_0) (new show_b_hack) (new show_all_0)
+(*
+let show_a_new eta =
+  let (a,b, _) = fix_a (new show_a_0) (new show_b_hack) (new show_all_0) in
+  a eta
+
+let show_b_new eta =
+  let (a,b, _) = fix_a (new show_a_0) (new show_b_hack) (new show_all_0) in
+  a eta
 
 let show_all2, show_b2 =
   let { show_b; show_all } = show_fix_a ~b0:({ show_b_func = new show_b_hack }) () in
@@ -20,7 +32,7 @@ let show_all2, show_b2 =
 
 let show_b2 subj =
   let { show_b } = show_fix_a ~b0:({ show_b_func = new show_b_hack }) () in
-  show_b.show_b_trf () subj
+  show_b.show_b_trf () subj*)
 
 let _ =
   printf "Testing show_a\n";
@@ -40,3 +52,4 @@ let _ =
   printf "%s\n" @@ show_all                  [A(K J)];
 
   ()
+*)

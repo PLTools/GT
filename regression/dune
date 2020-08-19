@@ -13,6 +13,7 @@
     test089struct
     ;test090eval
     ;test091eval
+    test705
   )
   (modules
     test000  test001  test002  test003
@@ -28,6 +29,7 @@
     test089struct
     ;test090eval
     ;test091eval
+    test705
   )
   (modules_without_implementation test023_pp)
 
@@ -49,53 +51,76 @@
 
 (executables
   (names
-  ;test705
-  ;test790showF
   ;test791showT
-  ;test794camlp5
-  ;test795intoption
-  ;test796expr
-  ;test797nats
-  ;test798gen
-  ;test799
 
-  ;test800    test801mutal    test802mutal    test803polyvar    test804polyvar
-  ;test805std    test806fmt    test807showT    test808ext    test809cool
-  ;test810cool    test811compare    test812html    test813htmlTy    test814nonreg
-  ;test815abstr    test816hash    test820spec    test821clab
+  ; test795intoption    ; An experiment. TODO: remove
+
+  ;test797nats
+  test799
+
+  test800
+  ;test801mutal    ; TODO: fix error and reenable test
+  test802mutal    test803polyvar    test804polyvar
+  test805std    test806fmt    test807showT
+  ;test808ext           ; open types are not supported
+  ;test809cool          ; working with ppx_import is not repaired
+  ;test810cool
+  test811compare    test812html    test813htmlTy
+  ;test814nonreg        ; TODO: fix error and reenable test
+  test815abstr    test816hash    test820spec    test821clab
   test822
-  ;test823list    test824mut    test825tuples    test826antiph    test828combi    test840garrique
+  test823list    test824mut    test825tuples    test826antiph    test828combi    test840garrique
   )
   (modules
-    ;test705
-    ;test790showF
     ;test791showT
-    ;test794camlp5
     ;test795intoption
-    ;test796expr
     ;test797nats
-    ;test798gen
-    ;test799
+    test799
 
-    ;test800    test801mutal    test802mutal    test803polyvar    test804polyvar
-    ;test805std    test806fmt    test807showT    test808ext    test809cool
-    ;test810cool    test811compare    test812html    test813htmlTy    test814nonreg
-    ;test815abstr    test816hash    test820spec    test821clab
+    test800
+    ;test801mutal
+    test802mutal    test803polyvar    test804polyvar
+    test805std    test806fmt    test807showT
+    ;test808ext
+    ;test809cool
+    ;test810cool
+    test811compare    test812html    test813htmlTy
+    ;test814nonreg
+    test815abstr    test816hash    test820spec    test821clab
     test822
-    ;test823list    test824mut    test825tuples    test826antiph    test828combi    test840garrique
+    test823list    test824mut    test825tuples    test826antiph    test828combi    test840garrique
   )
   (modules_without_implementation test023_pp)
 
   (libraries GT)
-  (flags (:standard -warn-error -A -w -27-39-32 ))
+  (flags (:standard -warn-error -A -w -27-39-32-7 ))
 
-  (preprocess (pps  show gmap compare GT.ppx))
-  ;(preprocess
-  ;  (action
-  ;    (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})
-  ;  )
-  ;)
+  ;(preprocess (pps  show gmap compare GT.ppx))
+  (preprocess (action
+      (run %{workspace_root}/ppx/pp_gt.exe  %{input-file})
+  ))
 
-  ;(preprocessor_deps
-  ;  (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe))
+  (preprocessor_deps
+    (file %{workspace_root}/ppx/pp_gt.exe))
+)
+
+(executables
+  (names
+  test798gen
+  )
+  (modules
+    test798gen
+  )
+  (modules_without_implementation test023_pp)
+
+  (libraries GT)
+  (flags (:standard -rectypes -warn-error -A -w -27-39-32-7 ))
+
+  ;(preprocess (pps  show gmap compare GT.ppx))
+  (preprocess (action
+    (run %{workspace_root}/ppx/pp_gt.exe  %{input-file})
+  ))
+
+  (preprocessor_deps
+    (file %{workspace_root}/ppx/pp_gt.exe))
 )

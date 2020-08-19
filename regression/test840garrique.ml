@@ -24,6 +24,7 @@ end
 
 type 'a lambda = [var | `Abs of string * 'a | `App of 'a * 'a] [@@deriving gt]
 
+
 class ['a, 'v, 'extra] lambda_eval (fself: _ -> [> 'v lambda ] -> _) fa = object(self)
   inherit [ 'v env, 'a,     'v
           , 'v env, 'extra, 'v

@@ -3,34 +3,34 @@ open Printf
 
 (* FIRST PART *)
 type ('a,'b) t = OK of 'a | Error of 'b
-[@@deriving gt {show}]
+[@@deriving gt ~options:{show}]
 
 let () =
   let show fa fb (e: (_,_) t) =
-    t.GT.gcata (GT.lift fa) (GT.lift fb) (new show_t) () e in
-  printf "%s\n%!" (show string_of_int (GT.lift GT.string.GT.plugins#show ()) (OK 1));
-  printf "%s\n%!" (show string_of_int (GT.lift GT.string.GT.plugins#show ()) (Error "error1"));
+    GT.transform t (new show_t_t (GT.lift fa) (GT.lift fb)) () e in
+  printf "%s\n%!" (show (GT.show GT.int) (GT.show GT.string) (OK 1));
+  printf "%s\n%!" (show (GT.show GT.int) (GT.show GT.string) (Error "error1"));
   ()
 
 
 (* SECOND PART *)
-type 'a     t2 = ('a, string) t
-[@@deriving gt {show}]
+type 'a     t2 = ('a, GT.string) t
+[@@deriving gt ~options:{show}]
 
 let () =
   let show fa (e: _ t2) =
-    t2.GT.gcata (GT.lift fa) (new show_t2) () e in
-  printf "%s\n%!" (show string_of_float (OK 2.));
-  printf "%s\n%!" (show string_of_int (Error "error2"));
+    GT.transform t2 (new show_t2_t fa) () e in
+  printf "%s\n%!" (show (GT.lift @@ GT.show GT.float) (OK 2.));
+  printf "%s\n%!" (show (GT.lift @@ GT.show GT.int) (Error "error2"));
   ()
 
 
 (* THIRD PART *)
-type t3 = char t2
-[@@deriving gt {show}]
+type t3 = GT.char t2
+[@@deriving gt ~options:{show}]
 
 let () =
-  let show (e: t3) = t3.GT.gcata (new show_t3) () e in
+  let show (e: t3) = GT.transform t3 (new show_t3_t) () e in
   printf "%s\n%!" (show (OK '3'));
   printf "%s\n%!" (show (Error "error3"));
   ()

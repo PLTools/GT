@@ -504,10 +504,17 @@ let make_gcata_str ~loc tdecl =
         Pat.constraint_ ~loc (Pat.var ~loc "tr") @@
         Typ.class_ ~loc
           (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
-          (List.concat_map tdecl.ptype_params ~f:(fun _ ->
-               Typ.[any ~loc; any ~loc; any ~loc ]
+          (let param_names = List.mapi tdecl.ptype_params
+            ~f:(fun i _ -> gen_symbol ~prefix:(sprintf "typ%d" i)  ())
+          in
+          let typ_self =
+            Typ.constr ~loc (Lident tdecl.ptype_name.txt) @@
+            List.map param_names ~f:(Typ.var ~loc)
+          in
+          List.concat_map param_names ~f:(fun name ->
+               Typ.[any ~loc; var ~loc name; any ~loc ]
              )
-           @ [Typ.any ~loc; wrap @@ wildcard_tdecl tdecl; Typ.any ~loc]
+           @ [Typ.any ~loc; wrap @@ typ_self; Typ.any ~loc]
           )
     in
     Str.single_value ~loc

@@ -1,3 +1,5 @@
+(* generating HTML5 with TyXML is not repaired *)
+(*
 open Html_tyxml_api
 
 type t = { a : int; b : string }
@@ -36,3 +38,4 @@ let () =
   Tyxml.Html.pp_elt () fmt (Tyxml_html.hr ());
 
   close_out ch
+*)

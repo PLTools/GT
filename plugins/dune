@@ -61,6 +61,12 @@
  (flags (:standard -w -27-7-9-13-36 -warn-error -A))
 )
 
+(library
+ (name hash)
+ (modules hash)
+ (libraries GTCommon)
+ (flags (:standard -w -27-7-9-13-36 -warn-error -A))
+)
 
 (library
  (name stateful)
