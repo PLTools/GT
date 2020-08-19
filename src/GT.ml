@@ -541,7 +541,7 @@ class ['a, 'sa, 'b, 'sb, 'env, 'self] eval_arrow_t fa fb _ =
     method c_Arrow _ _ = failwith "eval for arrows is not implemented"
   end
 
-class ['a, 'sa, 'b, 'sb, 'env, 'self] stateful_arrow_t fa fb _ =
+class ['a, 'sa, 'b, 'sb, 'self, 'syn, 'env ] stateful_arrow_t fa fb _ =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'b, 'sb, 'env, 'self, 'env * ('sa, 'sb) arrow] arrow_t
     method c_Arrow _ _ = failwith "stateful for arrows is not implemented"
@@ -690,9 +690,10 @@ class ['a, 'self] show_array_t fa fself = object
               (fun x s -> Printf.sprintf "%a; %s" fa x s) arr " |]")
 end
 
-class ['a, 'sa, 'self] gmap_array_t fa fself =
+class ['a, 'sa, 'self, 'syn] gmap_array_t fa fself =
   object
-    inherit [unit, 'a, 'sa, unit, 'self, 'sa array] array_t
+    inherit [unit, 'a, 'sa, unit, 'self, 'syn] array_t
+    constraint 'syn = 'sa array
     method do_array () arr = Array.map (fa ()) arr
   end
 class ['a, 'self] html_array_t fa fself =
@@ -713,12 +714,13 @@ class ['a, 'self] fmt_array_t fa fself = object
     Format.fprintf fmt " |]"
 end
 
-class ['a, 'sa, 'env, 'self] eval_array_t fa fself =
+class ['a, 'sa, 'self, 'syn, 'env ] eval_array_t fa fself =
   object
-    inherit ['env, 'a, 'sa, 'env, 'self, 'sa array] array_t
+    inherit ['env, 'a, 'sa, 'env, 'self, 'syn ] array_t
+    constraint 'syn = 'sa array
     method do_array env arr = Array.map (fa env) arr
   end
-class ['a, 'sa, 'env, 'self] stateful_array_t fa fself =
+class ['a, 'sa, 'self, 'syn, 'env ] stateful_array_t fa fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa array] array_t
     method do_array env0 arr =
@@ -818,8 +820,9 @@ class ['self] show_bytes_t fself = object
   inherit [ unit, 'self, string] bytes_t
   method do_bytes () = Bytes.to_string
 end
-class ['self] gmap_bytes_t fself = object
-  inherit [unit, 'self, bytes] bytes_t
+class ['self, 'syn] gmap_bytes_t fself = object
+  inherit [unit, 'self, 'syn] bytes_t
+  constraint 'syn = bytes
   method do_bytes () arr = arr
 end
 
@@ -829,14 +832,16 @@ class ['self] fmt_bytes_t fself = object
   method do_bytes fmt arr =
     Format.fprintf fmt "%S" (Bytes.to_string arr)
 end
-class ['env, 'self] eval_bytes_t fself =
+class [ 'self, 'syn, 'env ] eval_bytes_t fself =
   object
-    inherit [ 'env, 'self, bytes] bytes_t
+    inherit [ 'env, 'self, 'syn] bytes_t
+    constraint 'syn = bytes
     method do_bytes env arr = arr
   end
-class ['env, 'self] stateful_bytes_t fself =
+class [ 'self, 'syn, 'env ] stateful_bytes_t fself =
   object
-    inherit ['env, 'self, 'env * bytes] bytes_t
+    inherit ['env, 'self, 'syn] bytes_t
+    constraint 'syn = 'env * bytes
     method do_bytes env0 arr = (env0,arr)
   end
 

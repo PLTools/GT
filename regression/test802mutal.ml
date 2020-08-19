@@ -16,7 +16,7 @@ module Show2 = struct
   class ['self] show_b_t_stub2 (for_a,for_b) = object
     inherit ['self] show_b_t_stub (for_a,for_b)
     method c_C () (_ :b) a  = Printf.sprintf "new C (%s)" (for_a () a)
-    method c_D () _ s  = Printf.sprintf "new D %s" s
+    method! c_D () _ s  = Printf.sprintf "new D %s" s
   end
 
   let showa0 a = Printf.printf "new!\n"; new show_a_t_stub  a

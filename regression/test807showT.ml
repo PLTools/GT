@@ -1,3 +1,4 @@
+(*
 let id x = x
 
 let show_typed_string = Printf.sprintf "\"%s\""
@@ -108,3 +109,5 @@ end = struct
     Printf.printf "%s\n%!" (sh2 @@ B2 (F2 (B2 (F2 (B1 "z")))) );
     ()
 end
+
+*)

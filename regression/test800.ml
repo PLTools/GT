@@ -1,4 +1,3 @@
-open Printf
 
 module PV: sig
   type a = A of b | C of GT.int    | E of a

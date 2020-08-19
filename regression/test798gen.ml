@@ -1,5 +1,5 @@
 type ('a,'b) glist = Nil | Cons of 'a * 'b
-[@@deriving gt {show}]
+[@@deriving gt ~options:{show}]
 
 let () =
   let rec show fa xs = glist.GT.plugins#show fa (show fa) xs
@@ -11,7 +11,7 @@ let () =
 ()
 
 type 'a list = ('a, 'a list) glist
-[@@deriving gt {show}]
+[@@deriving gt ~options:{show}]
 
 let () =
   let rec show fa xs =
@@ -23,7 +23,7 @@ let () =
   ()
 
 type intlist = int list
-[@@deriving gt {show}]
+[@@deriving gt ~options:{show}]
 
 let () =
   let rec show xs = intlist_gcata (new show_intlist show) () xs in
