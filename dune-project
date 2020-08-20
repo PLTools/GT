@@ -1,4 +1,5 @@
-(lang dune 2.0)
+(lang dune 2.7)
+(cram enable)
 
 (name GT)
 
@@ -10,3 +11,4 @@
 
 (package
   (name GT-p5))
+

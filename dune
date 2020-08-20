@@ -12,3 +12,13 @@
   (deps    config/discover.exe)
   (action  (run config/discover.exe -logger-flags))
 )
+
+;(test (name regression/test000.exe))
+
+
+(cram (deps
+  regression/test000.exe
+  ))
+
+(cram (deps regression/camlp5-tests))
+(cram (deps regression/ppx-tests))
