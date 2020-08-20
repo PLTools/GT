@@ -3,13 +3,12 @@ and   b = [`B of a | `D of GT.string] with show
 
 @type c = [`E of GT.int GT.list | b] with show
 
-class show_c' =
-  object(this)
-    inherit @c[show] as super
-    method c_E i x y = "new " ^ super#c_E i x y
-    method c_B i x y = "new " ^ super#c_B i x y
-    method c_D i x y = "new " ^ super#c_D i x y
-  end
+class ['self] show_c' prereq = object
+  inherit ['self] @c[show] prereq as super
+  method c_E i x y = "new " ^ super#c_E i x y
+  method c_B i x y = "new " ^ super#c_B i x y
+  method c_D i x y = "new " ^ super#c_D i x y
+end
 
 let _ =
   let x = `A (`B (`C 3)) in
