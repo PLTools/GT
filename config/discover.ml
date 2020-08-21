@@ -108,8 +108,15 @@ let camlp5_tests dir =
   ["test705"; ]
 
 let ppx_tests dir =
-  (get_tests "'test8*.ml'" ~except:[] dir) @
-  []
+  let except =
+    [ "test809cool"
+    ; "test810cool"
+    ; "test808ext"
+    ; "test801mutal"
+    ; "test814nonreg"
+    ]
+  in
+  get_tests "test8" ~except dir
 
 let camlp5_rectypes_tests =
   [ "test081llist"
@@ -138,7 +145,9 @@ let gen_tests_dune dir =
     | [] -> ()
     | _ ->
         let names = String.concat " " tests in
-        Format.fprintf fmt "; %s\n" desc;
+        let exes = String.concat " " @@ List.map (Printf.sprintf "%s.exe") tests in
+        Format.fprintf fmt "\n; %s\n" desc;
+        Format.fprintf fmt "(cram (deps %s))\n" exes;
         Format.fprintf fmt "(tests (names ";
         Format.fprintf fmt "%s" names;
         Format.fprintf fmt
@@ -146,7 +155,7 @@ let gen_tests_dune dir =
             (modules |};
         Format.fprintf fmt "%s" names;
         Format.fprintf fmt  " )
-            (flags (:standard -warn-error -A %s))"
+            (flags (:standard %s))"
             flags;
         Format.fprintf fmt "
             (libraries GT)

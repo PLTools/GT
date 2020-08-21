@@ -3,5 +3,5 @@
  (public_name GT.GTCommon)
  (libraries ppxlib ocamlgraph)
  (modules HelpersBase Naming Expander GTHELPERS_sig Plugin_intf Plugin)
- (flags (:standard -w -27 -warn-error -A))
+ (flags (:standard -w -27-32-9 -warn-error -A))
 )

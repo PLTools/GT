@@ -42,7 +42,7 @@ module rec Pat :
     val tuple:   loc:loc -> t list -> t
     val record:  loc:loc -> (Ppxlib.longident * t) list -> t
     val record1: loc:loc -> Ppxlib.longident -> t
-    (** #lident *)
+    (* #lident *)
     val type_:  loc:loc -> Ppxlib.longident -> t
   end
 and Exp :

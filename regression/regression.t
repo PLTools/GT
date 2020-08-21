@@ -372,6 +372,94 @@
   Cons (aaa, Cons (bbb, Nil))
   Var (5)	Value (asdf)
   Value (Cons (aaa, Value (Cons (bbb, Var (15)))))
+  $ (cd ../../../../default && ./regression/test800.exe)
+  $ (cd ../../../../default && ./regression/test802mutal.exe)
+  new!
+  new!
+  new!
+  new!
+  `A (`B (`A (new D 4)))
+  new c0!
+  new!
+  new c0!
+  new `B (`A (new `D 4))
+  new c0!
+  new `E 18
+  $ (cd ../../../../default && ./regression/test803polyvar.exe)
+  Original PV: `A (1)
+  Mapped PV: `A (1)
+  ****************************
+  Original pv: `A (1)
+  Mapped pv and showed as a pv_ext: `A (1)
+  Original pv_ext: `C (1)
+  Mapped PV_ext and showed as a pv_ext: `C (1)
+  ****************************
+  Original pv_ext: `C (1)
+  Mapped pv_ext and showed as a pv_ext2: `C (1)
+  Original pv_ext2: `D (1)
+  Mapped PV_ext2 and showed as a pv_ext2: `D (1)
+  ****************************
+  Original pv_ext2: `D (1)
+  Mapped pv_ext2 and showed as a pv_ext3: `D (1)
+  Original pv_ext3: `E (1)
+  Mapped PV_ext3 and showed as a pv_ext3: `E (1.)
+  $ (cd ../../../../default && ./regression/test804polyvar.exe)
+  `A (aaa)
+  Just (`A (a))	Just (`C (ccc))
+  $ (cd ../../../../default && ./regression/test805std.exe)
+  $ (cd ../../../../default && ./regression/test806fmt.exe)
+  { a=1; 
+   b="x"; }
+  
+  QQQ (
+       "azerty"
+       )
+  LLL 
+  ([ 1; 2; 3]
+  )
+  
+    [ 1.; 2.
+    ; 3.; 4.]
+  $ (cd ../../../../default && ./regression/test807showT.exe)
+  $ (cd ../../../../default && ./regression/test811compare.exe)
+  $ (cd ../../../../default && ./regression/test812html.exe)
+  $ (cd ../../../../default && ./regression/test813htmlTy.exe)
+  $ (cd ../../../../default && ./regression/test815abstr.exe)
+  $ (cd ../../../../default && ./regression/test816hash.exe)
+  use new value
+  use old value
+  use new value
+  $ (cd ../../../../default && ./regression/test820spec.exe)
+  { a=5; b="<opaque>"; }
+  $ (cd ../../../../default && ./regression/test821clab.exe)
+  C { xxx="asdf"; yyy=1; }
+  <ul>C<li>xxx&quot;asdf&quot;</li><li>yyy1</li></ul>
+  $ (cd ../../../../default && ./regression/test822.exe)
+  C (1)
+  $ (cd ../../../../default && ./regression/test823list.exe)
+  $ (cd ../../../../default && ./regression/test824mut.exe)
+  [ ("gl",
+    Lambda { lam_argname=None; lam_api=[]; lam_eff=HEmpty ; lam_body=CInt (5); 
+            lam_is_rec=true;
+    }); ("gl",
+        Lambda { lam_argname=None; lam_api=[]; lam_eff=HEmpty ; 
+                lam_body=CInt (5); lam_is_rec=true;
+        }); ("gl",
+            Lambda { lam_argname=None; lam_api=[]; lam_eff=HEmpty ; 
+                    lam_body=CInt (5); lam_is_rec=true;
+            }); ("gl",
+                Lambda { lam_argname=None; lam_api=[]; lam_eff=HEmpty ; 
+                        lam_body=CInt (5); lam_is_rec=true;
+                })]
+  $ (cd ../../../../default && ./regression/test825tuples.exe)
+  $ (cd ../../../../default && ./regression/test826antiph.exe)
+  "asdf"
+  $ (cd ../../../../default && ./regression/test828combi.exe)
+  Should be an ADT:   `A (5)`
+  Should be a number: `5`
+  Should be a number: `5`
+  $ (cd ../../../../default && ./regression/test840garrique.exe)
+  17
   $ (cd ../../../../default && ./regression/test798gen.exe)
   Nil
   Cons (2, Nil)

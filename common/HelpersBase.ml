@@ -79,7 +79,7 @@ let rec map_longident ~f = function
   | Ldot (l,s) -> Ldot(l, f s)
   | Lapply (l,r) -> Lapply (l, map_longident ~f r)
 
-let rec lident_tail = function
+let lident_tail = function
   | Lident _ as l -> l
   | Ldot (_, s) -> Lident s
   | Lapply (_,_) as l -> l

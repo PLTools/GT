@@ -64,6 +64,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
   (** Adds a few extra members to a plugin class. Could be some constraints that are
       difficult to add in place where type parameters are declared. *)
   method virtual extra_class_sig_members: Ppxlib.type_declaration -> 'ctf list
+
   (** The same as [extra_class_sig_members] but for structures. *)
   method virtual extra_class_str_members: Ppxlib.type_declaration -> 'cf  list
 
@@ -88,6 +89,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign ] typ_g = obj
 
   (** Generate name for transformation function. *)
   method virtual make_trans_function_name: Ppxlib.type_declaration -> string
+
   (** Generate type of a transformation function. *)
   method virtual make_trans_function_typ : loc:'loc -> Ppxlib.type_declaration -> 'typ
 

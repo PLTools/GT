@@ -1,6 +1,0 @@
-Original: `App (`Abs ("x", `Var ("x")), `Abs ("y", `Var ("y")))
-Nameless : `App (`Abs ((), `Var (1)), `Abs ((), `Var (2)))
-Converted: `App (`Abs ((), `Var (0)), `Abs ((), `Var (0)))
-Converted: `Let ((), `Abs ((), `Var (0)), `Abs ((), `Abs ((), `App (`Var (1), `Var (2)))))
-Converted: `LetRec ((), `App (`Abs ((), `Var (0)), `Var (0)), `Abs ((), `Abs ((), `App (`Var (1), `Var (2)))))
-Imported: `App (`Abs (0, `Var (0)), `Abs (1, `Var (1)))
