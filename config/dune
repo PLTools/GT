@@ -10,9 +10,9 @@
 )
 
 (rule
-  (targets tests.txt tests.dune)
+  (targets dune.tests regression.t)
   (alias discover-tests)
-  (deps tests.dune.tpl (source_tree ../regression))
+  ;(deps tests.dune.tpl (source_tree ../regression))
   (mode (promote-into ../regression))
-  (action (run ./discover.exe -tests -tests-dune -tests-dir %{project_root}/regression))
+  (action (run ./discover.exe -tests -tests-dir %{project_root}/regression))
 )

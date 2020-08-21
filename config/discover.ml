@@ -1,4 +1,3 @@
-
 module Cfg = Configurator.V1
 
 (*** utility functions ***)
@@ -23,8 +22,8 @@ let match_fn_ext fn ext =
   String.equal ext @@ Filename.extension fn
 
 (* scans `regression` folder looking for `test*.ml` files *)
-let get_tests tests_dir =
-  let re = Str.regexp "test*" in
+let get_tests ?(except=[]) pattern tests_dir =
+  let re = Str.regexp pattern in
   let check_fn fn =
        (string_match re fn)
     && (match_fn_ext fn ".ml")
@@ -39,13 +38,10 @@ let get_tests tests_dir =
   |> Array.to_list
   |> List.filter check_fn
   |> List.map Filename.remove_extension
+  |> List.filter (fun s -> not (List.mem s except))
   |> List.sort String.compare
 
 (*** discovering ***)
-
-let discover_tests _cfg tests =
-  Cfg.Flags.write_lines "tests.txt" tests
-
 let discover_camlp5_dir cfg = 
   String.trim @@
     Cfg.Process.run_capture_exn cfg
@@ -59,16 +55,6 @@ let discover_camlp5_flags cfg =
       ["pa_o.cmo"; "pa_op.cmo"; "pr_o.cmo"]
   in
   Cfg.Flags.write_lines "camlp5-flags.cfg" camlp5_archives
-
-(*
-let discover_gt_flags cfg =
-  let gt_archives =
-    Cfg.Process.run_capture_exn cfg
-      "ocamlfind" ["query"; "-pp"; "camlp5"; "-a-format"; "-predicates"; "byte"; "GT,GT.syntax.all"]
-  in
-  Cfg.Flags.write_lines "gt-flags.cfg" @@ extract_words gt_archives
-*)
-
 
 let discover_logger_flags cfg =
   (* logger has two kinds of CMOs: two from camlp5 (pr_o and pr_dump) and one for logger.
@@ -105,24 +91,88 @@ let discover_logger_flags cfg =
   in
   Cfg.Flags.write_lines "logger-flags.cfg" cmos
 
+let discover_tests ?(except=[]) cfg pattern =
+  let out =
+    Cfg.Process.run_capture_exn cfg ~dir:"../../regression"
+      "find" ["."; "-maxdepth"; "1"; "-iname"; pattern; "-exec"; "basename"; "{}"; "'.ml'"; "\\;"]
+  in
+  let out = Str.global_replace (Str.regexp "\n") " " out in
+  Format.printf "out = '%s'\n%!" out;
+  let out = Cfg.Flags.extract_blank_separated_words out in
+  let out = List.filter (fun s -> not (List.mem s except)) out in
+  out
+
 (*** generating dune files ***)
+let camlp5_tests dir =
+  (get_tests "test0" ~except:["test081llist"] dir) @
+  ["test705"; ]
+
+let ppx_tests dir =
+  (get_tests "'test8*.ml'" ~except:[] dir) @
+  []
+
+let camlp5_rectypes_tests =
+  [ "test081llist"
+  ]
+
+let ppx_rectypes_tests =
+  [ "test798gen"
+  ]
 
 (* generates build rules for `test*.exe` *)
-let gen_tests_dune _cfg tests =
-  let tpl_fn = "tests.dune.tpl" in
-  let dune_fn = "tests.dune" in
-  let tpl = read_file tpl_fn in
-  let re = Str.regexp "%{tests}" in
-  let tests = String.concat "\n    " tests in
-  let dune = Str.global_replace re tests tpl in
-  let outchn = open_out dune_fn in
-  output_string outchn dune
+let gen_tests_dune dir =
+  let cramch =
+    let f = Format.sprintf "regression.t" in
+    let _ = Sys.command (Format.sprintf "rm -f %s" f) in
+(*    let _ = Sys.command (Format.sprintf "ls %s" f) in*)
+    open_out f
+  in
+(*  let fmtc = Format.formatter_of_out_channel cramch in*)
+  let outch  = open_out (Format.sprintf "dune.tests") in
+  let fmt = Format.formatter_of_out_channel outch in
+  let wrap ?(flags="") desc tests rewriter =
+    tests |> List.iter (fun s ->
+      Printf.fprintf cramch "  $ (cd ../../../../default && ./regression/%s.exe)\n%!" s
+    );
+    match tests with
+    | [] -> ()
+    | _ ->
+        let names = String.concat " " tests in
+        Format.fprintf fmt "; %s\n" desc;
+        Format.fprintf fmt "(tests (names ";
+        Format.fprintf fmt "%s" names;
+        Format.fprintf fmt
+          {| )
+            (modules |};
+        Format.fprintf fmt "%s" names;
+        Format.fprintf fmt  " )
+            (flags (:standard -warn-error -A %s))"
+            flags;
+        Format.fprintf fmt "
+            (libraries GT)
+            (preprocess (action
+              (run %s %%{input-file})))
+            (preprocessor_deps (file %s))
+          )\n"
+          rewriter rewriter ;
+        Format.pp_print_flush fmt ()
+  in
+
+  let p5_rewriter = "%{workspace_root}/camlp5/pp5+gt+plugins+o.exe" in
+  let ppx_rewriter = "%{workspace_root}/ppx/pp_gt.exe" in
+
+  let () = wrap "camlp5 " (camlp5_tests dir) p5_rewriter in
+  let () = wrap ~flags:"-rectypes" "camlp5+rectypes" (camlp5_rectypes_tests) p5_rewriter in
+  let () = wrap "ppx" (ppx_tests dir) ppx_rewriter in
+  let () = wrap ~flags:"-rectypes" "ppx+rectypes" (ppx_rectypes_tests) ppx_rewriter in
+  close_out cramch;
+  close_out outch
 
 (*** command line arguments ***)
 
 let tests         = ref false
 let tests_dune    = ref false
-let tests_dir     = ref None
+let tests_dir     = ref "./regression"
 let camlp5_flags  = ref false
 let gt_flags      = ref false
 let logger_flags  = ref false
@@ -130,11 +180,10 @@ let all_flags     = ref false
 let all           = ref false
 
 let args =
-  let set_tests_dir s = tests_dir := Some s in
+  let set_tests_dir s = tests_dir := s in
   Arg.align @@
-    [ ("-tests-dir"   , Arg.String set_tests_dir, "DIR discover tests in this directory"      )
-    ; ("-tests"       , Arg.Set tests           , " discover tests (tests.txt)"               )
-    ; ("-tests-dune"  , Arg.Set tests_dune      , " generate dune build file for tests"       )
+    [ ("-tests-dir"   , Arg.String set_tests_dir, "DIR discover tests in this directory"      )    
+    ; ("-tests"       , Arg.Set tests_dune      , " generate dune build file for tests"       )
     ; ("-camlp5-flags", Arg.Set camlp5_flags    , " discover camlp5 flags (camlp5-flags.cfg)" )
 (*    ; ("-gt-flags"    , Arg.Set gt_flags        , " discover GT flags (gt-flags.cfg)"         )*)
     ; ("-logger-flags", Arg.Set logger_flags    , " discover logger flags (logger-flags.cfg)" )
@@ -147,18 +196,18 @@ let args =
 let () =
 
   Cfg.main ~name:"GT" ~args (fun cfg ->
-    let testnames =
+    (*let testnames =
       if !tests || !tests_dune || !all then
         match !tests_dir with
         | Some dir -> get_tests dir
         | None     -> failwith "-tests-dir argument is not set"
       else []
-    in
+    in*)
 
-    if !tests || !all then
-      discover_tests cfg testnames;
+    (*if !tests || !all then
+      discover_tests cfg testnames;*)
     if !tests_dune || !all then
-      gen_tests_dune cfg testnames;
+      gen_tests_dune !tests_dir;
     if !camlp5_flags || !all_flags || !all then
       discover_camlp5_flags cfg;
     if !logger_flags || !all_flags || !all then

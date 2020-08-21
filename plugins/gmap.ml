@@ -18,7 +18,6 @@
 open Base
 open Ppxlib
 open Printf
-open Ast_helper
 open GTCommon
 open HelpersBase
 
@@ -110,7 +109,7 @@ class g args tdecls = object(self: 'self)
               List.map rf ~f:(fun rf -> match rf.prf_desc with
                   | (Rtag (name,has_empty, ts)) ->
                     let open Ast_builder.Default in
-                    let rec on_t t = map_core_type
+                    let on_t t = map_core_type
                         ~onvar
                         ~onconstr:(fun name ts ->
                             match name with
