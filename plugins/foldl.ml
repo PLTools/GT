@@ -33,10 +33,10 @@ module P = Plugin.Make(AstHelpers)
 
 let trait_name = trait_name
 let make_dest_param_names ps =
-  map_type_param_names ps ~f:(sprintf "%s_2")
+  map_type_param_names ps ~f:(Printf.sprintf "%s_2")
 
 class g initial_args tdecls = object(self: 'self)
-  inherit P.with_inherited_attr initial_args tdecls as super
+  inherit P.with_inherited_attr initial_args tdecls
 
   method trait_name = trait_name
 

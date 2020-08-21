@@ -1,3 +1,7 @@
+(env
+  (dev
+    (flags (:standard -warn-error -A -w -27))))
+
 (library
  (name pa_gt)
  (public_name GT-p5)
@@ -10,15 +14,6 @@
  ;(preprocess (action (run camlp5 -I /home/kakadu/.opam/4.06.1+fp+flambda/lib/camlp5 pa_o.cmo pa_op.cmo pr_o.cmo %{input-file})) )
 )
 
-
-;(library
-; (name pp5gt)
-; (public_name GT-p5.pp5gt)
-; (modules Empty)
-; (libraries pa_gt compiler-libs.common ppxlib)
-; (library_flags (-linkall))
-; (flags ())
-;)
 
 (rule
   (targets pp5+gt+plugins+dump.exe)

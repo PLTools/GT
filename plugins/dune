@@ -1,3 +1,8 @@
+(env
+  (dev
+    (flags (:standard -warn-error -A -w -7-9-13))))
+
+
 (library
  (name show)
  (modules show)

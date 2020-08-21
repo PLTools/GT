@@ -21,7 +21,6 @@
 
 open Base
 open Ppxlib
-open Printf
 open GTCommon
 
 let trait_name = "foldr"
@@ -33,7 +32,7 @@ module Foldl = Foldl.Make(AstHelpers)
 let trait_name =  trait_name
 
 class g initial_args tdecls = object(self: 'self)
-  inherit Foldl.g initial_args tdecls as super
+  inherit Foldl.g initial_args tdecls
 
   method trait_name = trait_name
 

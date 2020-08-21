@@ -25,12 +25,8 @@
 #load "q_MLast.cmo";;
 
 open List
-open Printf
 open Pcaml
-open MLast
 open Asttools
-open Ploc
-open Core2
 open GTCommon
 
 let hdtl loc xs = (List.hd xs, List.tl xs)
@@ -168,7 +164,7 @@ EXTEND
       let classname =
         match t with
         | None   -> Naming.class_name_for_typ n
-        | Some t -> Naming.trait_class_name_for_typ t n
+        | Some t -> Naming.trait_class_name_for_typ ~trait:t n
       in
       rev (classname::q)
 
@@ -200,7 +196,7 @@ EXTEND
       let classname =
         match t with
         | None   -> Naming.class_name_for_typ n
-        | Some t -> Naming.trait_class_name_for_typ t n
+        | Some t -> Naming.trait_class_name_for_typ ~trait:t n
       in
       longident_lident_of_string_list loc (rev (classname::q))
 
