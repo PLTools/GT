@@ -974,7 +974,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                  (Exp.ident ~loc name)))
     in
     (* extra unit instead of inherited attribute *)
-    let ans = Exp.app_list ~loc ans [Exp.unit ~loc; Exp.ident loc "subj"] in
+    let ans = Exp.app_list ~loc ans [Exp.unit ~loc; Exp.ident ~loc "subj"] in
     let ans = Exp.fun_ ~loc (Pat.var ~loc "subj") ans in
     List.fold_right fs ~init:ans
       ~f:(fun name acc -> Exp.fun_ ~loc (Pat.var ~loc name) acc)
@@ -1116,7 +1116,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
           match is_self_rec t with
           | `Regular ->
             let cname =
-              let rec helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
+              let helper = function Lident s -> s | Ldot (_,s) -> s | _ -> assert false in
               helper txt
             in
             Exp.ident ~loc (self#self_arg_name cname)
@@ -1335,7 +1335,7 @@ class virtual with_inherited_attr args _tdecls = object(self: 'self)
    *   fot a type ('a,'b,....'z) being generated
    **)
 
-  method make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
+  method! make_typ_of_class_argument: 'a . loc:loc -> type_declaration ->
     (Typ.t -> 'a -> 'a) ->
     string -> (('a -> 'a) -> 'a -> 'a) -> 'a -> 'a =
     fun ~loc tdecl chain name k ->
@@ -1394,7 +1394,7 @@ end
     See {!Show} and {!Gmap} plugin for examples.
   *)
 class virtual no_inherit_arg args _tdecls = object(self: 'self)
-  inherit no_inherit_arg0 args _tdecls as super
+  inherit no_inherit_arg0 args _tdecls
 
   method! need_inh_attr = false
 
@@ -1424,7 +1424,7 @@ class virtual no_inherit_arg args _tdecls = object(self: 'self)
     Exp.fun_list ~loc [ Pat.unit ~loc; Pat.sprintf ~loc "subj" ]  @@
     k (Exp.unit ~loc) (Exp.ident ~loc "subj")
 
-  method make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
+  method! make_RHS_typ_of_transformation ~loc ?subj_t ?syn_t tdecl =
     let subj_t = Option.value subj_t
         ~default:(Typ.use_tdecl tdecl) in
     let syn_t  = Option.value syn_t ~default:(self#syn_of_main ~loc tdecl) in

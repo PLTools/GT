@@ -1,3 +1,6 @@
+(env
+  (dev
+    (flags (:standard -warn-error -A -w -32))))
 
 (library
   (name View)

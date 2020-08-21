@@ -7,9 +7,6 @@
 
 #load "q_MLast.cmo";;
 
-open Printf
-open Pcaml
-open MLast
 open Ploc
 
 let oops loc str = Ploc.raise loc (Failure str)

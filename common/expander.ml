@@ -164,9 +164,9 @@ let make_interface_class_sig ~loc tdecl =
         let wrap name params =
           let inh_params =
             List.concat_map params ~f:(fun typ ->
-                [ map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("i"^n)) )
+                [ map_core_type typ ~onvar:(fun n -> Some (ptyp_var ~loc:typ.ptyp_loc ("i"^n)) )
                 ; typ
-                ; map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("s"^n)) )
+                ; map_core_type typ ~onvar:(fun n -> Some (ptyp_var ~loc:typ.ptyp_loc ("s"^n)) )
                 ]
               )
             |> List.map ~f:Typ.from_caml
@@ -255,9 +255,9 @@ let make_interface_class_sig ~loc tdecl =
 let inherit_iface_class ~loc name params =
   let inh_params =
     List.concat_map params ~f:(fun typ ->
-        [ map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("i"^n) ))
+        [ map_core_type typ ~onvar:(fun n -> Some (ptyp_var ~loc:typ.ptyp_loc ("i"^n) ))
         ; typ
-        ; map_core_type typ ~onvar:(fun n -> Some (ptyp_var typ.ptyp_loc ("s"^n) ))
+        ; map_core_type typ ~onvar:(fun n -> Some (ptyp_var ~loc:typ.ptyp_loc ("s"^n) ))
         ]
       )
     |> List.map ~f:Typ.from_caml

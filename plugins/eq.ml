@@ -11,9 +11,6 @@
     Inherited attribute' is the same as argument, synthetized attribute is {!GT.comparison}.
 *)
 
-open Base
-open Ppxlib
-open Printf
 open GTCommon
 
 let trait_name = "eq"
@@ -27,7 +24,7 @@ module C = Compare.Make(AstHelpers)
 open AstHelpers
 
 class g initial_args tdecls = object(self: 'self)
-  inherit C.g initial_args tdecls as super
+  inherit C.g initial_args tdecls
 
   method! trait_name = trait_name
 

@@ -1,6 +1,6 @@
 (env
   (dev
-    (flags (:standard -warn-error -A -w -27))))
+    (flags (:standard -warn-error -A -w -27-9))))
 
 (library
  (name pa_gt)

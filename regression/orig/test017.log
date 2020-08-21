@@ -1,3 +1,0 @@
-x == x: true
-x == y: false
-x == z: false

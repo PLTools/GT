@@ -149,6 +149,7 @@ module Exp = struct
   let string_const ~loc s = <:expr< $str:s$ >>
   let int_const ~loc n = <:expr< $int:string_of_int n$ >>
   let assert_false ~loc = <:expr< assert False >>
+    [@@ocaml.warning "-32"]
 
   let of_longident ~loc l =
     let rec helper = function
