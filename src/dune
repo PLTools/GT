@@ -22,8 +22,9 @@
   (public_name GT)
   (modules GT)
   (libraries HTML)
+  ;(preprocessor_deps (file %{workspace_root}/src/macro.m4))
   (preprocess (per_module
-               ( (action (run m4 ../../src/macro.m4 %{input-file})) GT)
+               ( (action (run m4 src/macro.m4 %{input-file})) GT)
   ))
   (flags (:standard -w -27-33 -warn-error -A))
 )
