@@ -5,6 +5,7 @@
 ;  (action  (run config/discover.exe ))
 ;)
 
+(dirs :standard \ regression_ppx)
 
 
 (rule
