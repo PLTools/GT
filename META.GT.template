@@ -5,7 +5,8 @@ archive(native) = "GTlib.cmxa"
 
 package "common" (
   description = ""
-  requires = "ocamlgraph"
+  directory = "common"
+  requires = "ppxlib,ocamlgraph"
   archive(byte)    = "GTCommon.cma"
   archive(native)  = "GTCommon.cmxa"
 
@@ -13,10 +14,10 @@ package "common" (
 package "ppx" (
   description = "PPX syntax extensionon top of ppx_core"
 
-  requires(ppx_driver)        = "ocamlgraph ppxlib"
+  requires(ppx_driver)        = "ocamlgraph ppxlib GT.syntax.show"
 
   archive(ppx_driver,byte)    = "ppx_deriving_gt.cma"
-  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa show.cmx gfmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
+  archive(ppx_driver,native)  = "ppx_deriving_gt.cmxa gfmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
   plugin(ppx_driver,byte)     = "ppx_deriving_gt.cma"
   plugin(ppx_driver,native)   = "ppx_deriving_gt.cmxs"
   exists_if = "ppx_deriving_gt.cma"
@@ -31,8 +32,8 @@ package "ppx_gt" (
   description = "A library for easy linking to preprocessor executable"
   # TODO: we need to specify plugins for bytecode too, isn't it
   archive(byte)    = "ppx_deriving_gt.cma"
-  archive(native)  = "ppx_deriving_gt.cmxa show.cmx gfmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
-  requires(native) = "base ppxlib ocamlgraph"
+  archive(native)  = "ppx_deriving_gt.cmxa  gfmt.cmx gmap.cmx foldl.cmx foldr.cmx compare.cmx eq.cmx stateful.cmx html.cmx hash.cmx"
+  requires(native) = "base ppxlib ocamlgraph GT.syntax.show"
 
 )
 package "expander" (
@@ -44,17 +45,17 @@ package "expander" (
 
 # TODO: maybe plugins aren't requiring GT.syntax since we support PPX too?
 package "syntax" (
-  description = "Camlp5 syntax extension for generic transformers"
-  requires = "camlp5,ppxlib,ocamlgraph"
+  #description = "Camlp5 syntax extension for generic transformers"
+  #requires = "camlp5,ppxlib,ocamlgraph"
 
-  archive(syntax,preprocessor) = "GTCommon.cma pa_gt.cma"
-  archive(syntax,toploop)      = "GTCommon.cma pa_gt.cma"
-  archive(syntax,native,preprocessor) = "GTCommon.cmxa pa_gt.cmxa"
-  archive(syntax,native,toploop)      = "GTCommon.cmxa pa_gt.cmxa"
+  #archive(syntax,preprocessor) = "GTCommon.cma pa_gt.cma"
+  #archive(syntax,toploop)      = "GTCommon.cma pa_gt.cma"
+  #archive(syntax,native,preprocessor) = "GTCommon.cmxa pa_gt.cmxa"
+  #archive(syntax,native,toploop)      = "GTCommon.cmxa pa_gt.cmxa"
 
   package "compare" (
     description = "Plugin 'compare'"
-    requires = "GT.syntax"
+    requires = "GT-p5"
     archive(syntax,preprocessor) = "compare.cmo"
     archive(syntax,toploop)      = "compare.cmo"
     archive(syntax,native,preprocessor) = "compare.cmx"
@@ -62,15 +63,16 @@ package "syntax" (
   )
   package "show" (
     description = "Plugin 'show'"
-    requires = "GT.syntax"
-    archive(syntax,preprocessor) = "show.cmo"
-    archive(syntax,toploop) = "show.cmo"
-    archive(syntax,native,preprocessor) = "show.cmx"
-    archive(syntax,native,toploop)      = "show.cmx"
+    directory = "syntax/show"
+    requires = "GT-p5"
+    archive(syntax,preprocessor) = "show.cma"
+    archive(syntax,toploop) = "show.cma"
+    archive(syntax,native,preprocessor) = "show.cmxa"
+    archive(syntax,native,toploop)      = "show.cmxa"
   )
   package "fmt" (
     description = "Plugin 'fmt'"
-    requires = "GT.syntax"
+    requires = "GT-p5"
     archive(syntax,preprocessor) = "gfmt.cmo"
     archive(syntax,toploop) = "gfmt.cmo"
     archive(syntax,native,preprocessor) = "gfmt.cmx"
@@ -150,6 +152,7 @@ package "syntax" (
 
   package "all" (
     description = "All supported syntaxes"
+    directory = "syntax/all"
 
     requires(syntax,preprocessor) = "GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"
     requires(syntax,toploop)      = "GT.syntax.fmt, GT.syntax.compare, GT.syntax.eq, GT.syntax.foldl, GT.syntax.foldr, GT.syntax.map, GT.syntax.eval, GT.syntax.stateful, GT.syntax.html, GT.syntax.hash"

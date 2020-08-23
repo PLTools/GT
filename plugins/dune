@@ -5,6 +5,7 @@
 
 (library
  (name show)
+ (public_name GT.syntax.show)
  (modules show)
  (libraries GTCommon)
  (flags (:standard -w -27 -warn-error -A))
@@ -12,6 +13,7 @@
 
 (library
  (name fmt)
+ (public_name GT.syntax.fmt)
  (modules gfmt)
  (libraries GTCommon)
  (flags (:standard -w -27 -warn-error -A))
@@ -19,6 +21,7 @@
 
 (library
  (name foldl)
+ (public_name GT.syntax.foldl)
  (modules foldl)
  (libraries GTCommon)
  (flags (:standard -w -27 -warn-error -A))
@@ -26,6 +29,7 @@
 
 (library
  (name foldr)
+ (public_name GT.syntax.foldr)
  (modules foldr)
  (libraries GTCommon foldl)
  (flags (:standard -w -27 -warn-error -A))
@@ -33,6 +37,7 @@
 
 (library
  (name eq)
+ (public_name GT.syntax.eq)
  (modules eq)
  (libraries GTCommon compare)
  (flags (:standard -w -27 -warn-error -A))
@@ -40,6 +45,7 @@
 
 (library
  (name compare)
+ (public_name GT.syntax.compare)
  (modules compare)
  (libraries GTCommon)
  (flags (:standard -w -27-7-9 -warn-error -A))
@@ -47,6 +53,7 @@
 
 (library
  (name gmap)
+ (public_name GT.syntax.gmap)
  (modules gmap)
  (libraries GTCommon)
  (flags (:standard -w -27 -warn-error -A))
@@ -54,6 +61,7 @@
 
 (library
  (name eval)
+ (public_name GT.syntax.eval)
  (modules eval)
  (libraries GTCommon gmap)
  (flags (:standard -w -27-7-9-13-36 -warn-error -A))
@@ -61,6 +69,7 @@
 
 (library
  (name html)
+ (public_name GT.syntax.html)
  (modules html)
  (libraries GTCommon)
  (flags (:standard -w -27-7-9-13-36 -warn-error -A))
@@ -68,6 +77,7 @@
 
 (library
  (name hash)
+ (public_name GT.syntax.hash)
  (modules hash)
  (libraries GTCommon)
  (flags (:standard -w -27-7-9-13-36 -warn-error -A))
@@ -75,6 +85,7 @@
 
 (library
  (name stateful)
+ (public_name GT.syntax.stateful)
  (modules stateful)
  (libraries GTCommon gmap)
  (flags (:standard -w -27 -warn-error -A))
