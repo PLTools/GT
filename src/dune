@@ -22,7 +22,7 @@
   (public_name GT)
   (modules GT)
   (libraries HTML)
-  (preprocessor_deps (file %{workspace_root}/src/macro.m4))
+  (preprocessor_deps (file %{project_root}/src/macro.m4))
   (preprocess (per_module
                ( (action (run m4 src/macro.m4 %{input-file})) GT)
   ))
