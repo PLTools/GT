@@ -6,7 +6,7 @@
  (name pa_gt)
  (public_name GT-p5)
  (modules Camlp5Helpers extension core2)
- (libraries camlp5 GT.GTCommon)
+ (libraries camlp5 GT.common)
  (preprocess
      (action (run %{workspace_root}/camlp5/pp5+dump.byte %{input-file})))
  (flags (:standard -warn-error -A -rectypes))
@@ -60,6 +60,12 @@
   (deps    ../common/GTCommon.cmxa pa_gt.cmxa )
   (action  (run mkcamlp5.opt -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmx %{deps} pa_log.cmx pr_o.cmx -o %{targets} ))
 )
+
+(rule
+  (targets pp5+gt+o.byte)
+  (deps    ../common/GTCommon.cma pa_gt.cma )
+  (action  (run mkcamlp5 -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmo %{deps} pa_log.cmo pr_o.cmo -o %{targets} -verbose))
+)  
 
 (rule
   (targets pp5+dump.exe)
