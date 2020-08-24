@@ -4,6 +4,7 @@
   (kind ppx_rewriter)
   (libraries base ppxlib GTCommon)
   (modules Ppx_deriving_gt PpxHelpers)
+  (synopsis "PPX syntax extensionon top of ppx_core")
   (preprocess (pps ppxlib.metaquot))
   (flags (:standard -w -27-9 -warn-error -A))
 )

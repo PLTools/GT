@@ -22,9 +22,10 @@
   (public_name GT)
   (modules GT)
   (libraries HTML)
+  (synopsis "Generic transformers for algebraic types")
   (preprocessor_deps (file %{project_root}/src/macro.m4))
   (preprocess (per_module
                ( (action (run m4 %{project_root}/src/macro.m4 %{input-file})) GT)
   ))
-  (flags (:standard -w -27-33 -warn-error -A))
+  (flags (:standard -w -27-33))
 )
