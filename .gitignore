@@ -13,4 +13,5 @@ Makefile
 /qtc-gt.*
 /qtc-GT.*
 
+*.install
 
