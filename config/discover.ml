@@ -42,13 +42,13 @@ let get_tests ?(except=[]) pattern tests_dir =
   |> List.sort String.compare
 
 (*** discovering ***)
-let discover_camlp5_dir cfg = 
+let discover_camlp5_dir cfg =
   String.trim @@
     Cfg.Process.run_capture_exn cfg
       "ocamlfind" ["query"; "camlp5"]
 
 let discover_camlp5_flags cfg =
-  let camlp5_dir = discover_camlp5_dir cfg in 
+  let camlp5_dir = discover_camlp5_dir cfg in
   let camlp5_archives =
     List.map
       (fun arch -> String.concat Filename.dir_sep [camlp5_dir; arch])
@@ -72,7 +72,7 @@ let discover_logger_flags cfg =
     wrong but we can hack it in dune script because we know exact names of cmos.
   *)
 
-  let camlp5_dir = discover_camlp5_dir cfg in 
+  let camlp5_dir = discover_camlp5_dir cfg in
   let logger_archives =
     Cfg.Process.run_capture_exn cfg
       "ocamlfind" ["query"; "-pp"; "camlp5"; "-a-format"; "-predicates"; "byte"; "logger,logger.syntax"]
@@ -80,9 +80,9 @@ let discover_logger_flags cfg =
   let pr_o_cmo = "pr_o.cmo" in
   let pr_dump_cmo = "pr_dump.cmo" in
   let cmos =
-    extract_words logger_archives |> 
+    extract_words logger_archives |>
     List.map (fun file ->
-      if Filename.basename file = pr_o_cmo then 
+      if Filename.basename file = pr_o_cmo then
         Filename.concat camlp5_dir pr_o_cmo
       else if Filename.basename file = pr_dump_cmo then
         Filename.concat camlp5_dir pr_dump_cmo
@@ -159,17 +159,28 @@ let gen_tests_dune dir =
             flags;
         Format.fprintf fmt "
             (libraries GT)
-            (preprocess (action
-              (run %s %%{input-file})))
-            (preprocessor_deps (file %s))
+            %s
           )\n"
-          rewriter rewriter ;
+          rewriter  ;
         Format.pp_print_flush fmt ()
   in
 
-  let p5_rewriter = "%{workspace_root}/camlp5/pp5+gt+plugins+o.exe" in
-  let ppx_rewriter = "%{workspace_root}/ppx/pp_gt.exe" in
-
+  let p5_rewriter =
+    let pp = "%{workspace_root}/camlp5/pp5+gt+plugins+o.exe" in
+    Format.sprintf "
+      (preprocess (action (run %s %%{input-file})))
+      (preprocessor_deps (file %s))"
+      pp
+      pp
+  in
+  let ppx_rewriter =
+    let pp = "%{workspace_root}/ppx/pp_gt.exe" in
+    Format.sprintf "
+    (preprocess (action (run %s %%{input-file})))
+    (preprocessor_deps (file %s))"
+    pp
+    pp
+  in
   let () = wrap "camlp5 " (camlp5_tests dir) p5_rewriter in
   let () = wrap ~flags:"-rectypes" "camlp5+rectypes" (camlp5_rectypes_tests) p5_rewriter in
   let () = wrap "ppx" (ppx_tests dir) ppx_rewriter in
@@ -191,7 +202,7 @@ let all           = ref false
 let args =
   let set_tests_dir s = tests_dir := s in
   Arg.align @@
-    [ ("-tests-dir"   , Arg.String set_tests_dir, "DIR discover tests in this directory"      )    
+    [ ("-tests-dir"   , Arg.String set_tests_dir, "DIR discover tests in this directory"      )
     ; ("-tests"       , Arg.Set tests_dune      , " generate dune build file for tests"       )
     ; ("-camlp5-flags", Arg.Set camlp5_flags    , " discover camlp5 flags (camlp5-flags.cfg)" )
 (*    ; ("-gt-flags"    , Arg.Set gt_flags        , " discover GT flags (gt-flags.cfg)"         )*)

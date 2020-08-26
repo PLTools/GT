@@ -1,7 +1,7 @@
 .PHONY: discover-tests test promote clean celan
 
 all:
-	dune build 
+	dune build
 
 discover-tests:
 	dune build @discover-tests
@@ -13,7 +13,7 @@ promote:
 	dune promote
 
 celan: clean
-clean:	
+clean:
 	$(RM) -r _build
 
 rebuild: clean
@@ -22,9 +22,11 @@ rebuild: clean
 install:
 	dune build @install
 	dune install
+	echo "(lang dune 2.7)" > `ocamlfind query GT`/dune-package
+	echo "(use_meta)" >> `ocamlfind query GT`/dune-package
+	dune describe --only-packages=GT >> `ocamlfind query GT`/dune-package
+
 
 uninstall:
 	dune build @install
 	dune uninstall
-
-

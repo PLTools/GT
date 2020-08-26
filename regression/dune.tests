@@ -5,9 +5,9 @@
             (modules test000 test001 test002 test003 test004 test005 test006 test007 test008 test009 test010 test011 test012 test013 test014 test015 test016 test017 test018 test019 test020 test021 test022 test023 test024 test025 test026 test027 test028 test029 test030 test031 test032 test036 test037 test040 test041 test042 test082mutal test083polyvar test086std test087stateful test089struct test090eval test091eval test705 )
             (flags (:standard ))
             (libraries GT)
-            (preprocess (action
-              (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-            (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe))
+            
+      (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
+      (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe))
           )
 
 ; camlp5+rectypes
@@ -16,9 +16,9 @@
             (modules test081llist )
             (flags (:standard -rectypes))
             (libraries GT)
-            (preprocess (action
-              (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-            (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe))
+            
+      (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
+      (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe))
           )
 
 ; ppx
@@ -27,9 +27,9 @@
             (modules test800 test802mutal test803polyvar test804polyvar test805std test806fmt test807showT test811compare test812html test813htmlTy test815abstr test816hash test820spec test821clab test822 test823list test824mut test825tuples test826antiph test828combi test840garrique )
             (flags (:standard ))
             (libraries GT)
-            (preprocess (action
-              (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
-            (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe))
+            
+    (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+    (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe))
           )
 
 ; ppx+rectypes
@@ -38,7 +38,7 @@
             (modules test798gen )
             (flags (:standard -rectypes))
             (libraries GT)
-            (preprocess (action
-              (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
-            (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe))
+            
+    (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+    (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe))
           )
