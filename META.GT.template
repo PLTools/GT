@@ -79,6 +79,7 @@ package "syntax" (
 
     # By some reason bunch of require directives doesn't include preprocessor directives.
     archive(syntax,preprocessor) = "syntax_all.cma"
+    archive(syntax,preprocessor,native) = "syntax_all.cmxa"
     archive(byte) = "syntax_all.cma"
     archive(native) = "syntax_all.cmxa"
     plugin(byte) = "syntax_all.cma"
@@ -89,7 +90,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'compare'"
     requires = "GT.common"
+
     archive(syntax,preprocessor) = "compare.cma"
+    archive(syntax,preprocessor,native) = "compare.cmxa"
     archive(byte) = "compare.cma"
     archive(native) = "compare.cmxa"
     plugin(byte) = "compare.cma"
@@ -100,7 +103,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'eq'"
     requires = "GT.common GT.syntax.compare"
+
     archive(syntax,preprocessor) = "eq.cma"
+    archive(syntax,preprocessor,native) = "eq.cmxa"
     archive(byte) = "eq.cma"
     archive(native) = "eq.cmxa"
     plugin(byte) = "eq.cma"
@@ -111,7 +116,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'eval'"
     requires = "GT.common GT.syntax.map"
+
     archive(syntax,preprocessor) = "eval.cma"
+    archive(syntax,preprocessor,native) = "eval.cmxa"
     archive(byte) = "eval.cma"
     archive(native) = "eval.cmxa"
     plugin(byte) = "eval.cma"
@@ -122,7 +129,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'fmt'"
     requires = "GT.common"
+
     archive(syntax,preprocessor) = "fmt.cma"
+    archive(syntax,preprocessor,native) = "fmt.cmxa"
     archive(byte) = "fmt.cma"
     archive(native) = "fmt.cmxa"
     plugin(byte) = "fmt.cma"
@@ -133,7 +142,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'foldl'"
     requires = "GT.common"
+
     archive(syntax,preprocessor) = "foldl.cma"
+    archive(syntax,preprocessor,native) = "foldl.cmxa"
     archive(byte) = "foldl.cma"
     archive(native) = "foldl.cmxa"
     plugin(byte) = "foldl.cma"
@@ -144,7 +155,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'foldr'"
     requires = "GT.common GT.syntax.foldl"
+
     archive(syntax,preprocessor) = "foldr.cma"
+    archive(syntax,preprocessor,native) = "foldr.cmxa"
     archive(byte) = "foldr.cma"
     archive(native) = "foldr.cmxa"
     plugin(byte) = "foldr.cma"
@@ -155,7 +168,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'hash'"
     requires = "GT.common"
+
     archive(syntax,preprocessor) = "hash.cma"
+    archive(syntax,preprocessor,native) = "hash.cmxa"
     archive(byte) = "hash.cma"
     archive(native) = "hash.cmxa"
     plugin(byte) = "hash.cma"
@@ -166,7 +181,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'html'"
     requires = "GT.common"
+
     archive(syntax,preprocessor) = "html.cma"
+    archive(syntax,preprocessor,native) = "html.cmxa"
     archive(byte) = "html.cma"
     archive(native) = "html.cmxa"
     plugin(byte) = "html.cma"
@@ -177,7 +194,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'map' a.k.a. functor's fmap"
     requires = "GT.common"
+
     archive(syntax,preprocessor) = "gmap.cma"
+    archive(syntax,preprocessor,native) = "gmap.cmxa"
     archive(byte) = "gmap.cma"
     archive(native) = "gmap.cmxa"
     plugin(byte) = "gmap.cma"
@@ -188,7 +207,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'show'"
     requires = "GT.common"
-    archive(syntax,preprocessor) = "show.cma"
+
+    archive(syntax,preprocessor,byte) = "show.cma"
+    archive(syntax,preprocessor,native) = "show.cmxa"
     archive(byte) = "show.cma"
     archive(native) = "show.cmxa"
     plugin(byte) = "show.cma"
@@ -199,7 +220,9 @@ package "syntax" (
     version = "0.3"
     description = "Plugin 'stateful'"
     requires = "GT.common GT.syntax.map"
+
     archive(syntax,preprocessor) = "stateful.cma"
+    archive(syntax,preprocessor,native) = "stateful.cmxa"
     archive(byte) = "stateful.cma"
     archive(native) = "stateful.cmxa"
     plugin(byte) = "stateful.cma"
