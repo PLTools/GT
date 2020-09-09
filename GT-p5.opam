@@ -1,0 +1,31 @@
+opam-version: "2.0"
+
+name: "GT-p5"
+synopsis: "Generic programming with extensible transformations. Camlp5 syntax extension"
+version: "0.3"
+
+maintainer: "kakadu.hafanana@gmail.com"
+authors: ["https://github.com/dboulytchev" "https://github.com/Kakadu"]
+homepage: "https://github.com/JetBrains-Research/GT"
+bug-reports: "https://github.com/JetBrains-Research/GT/issues"
+depends: [
+  "ocaml"
+  "ocamlfind"  {build}
+  "ocamlbuild" {build}
+  "ocamlgraph" {build}
+  "ppxlib"     {>= "0.9.0" & <= "0.13.0" }
+  "ocaml-migrate-parsetree" { < "2" }
+  "camlp5"     {>= "8.0" }
+  "dune"       {>= "2.7" & build }
+  "base"
+]
+build: [
+  [ make ]
+]
+install: [make "PREFIX=%{prefix}%" "install"]
+remove: [make "PREFIX=%{prefix}%" "uninstall"]
+dev-repo: "git+https://github.com/JetBrains-Research/GT.git"
+url {
+  src: "git+https://github.com/JetBrains-Research/GT.git"
+}
+
