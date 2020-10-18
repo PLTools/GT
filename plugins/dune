@@ -1,13 +1,14 @@
 (env
  (dev
   (flags
-   (:standard -warn-error -A -w -7-9-13-27))))
+   (:standard -warn-error -A -w -7-9-13-27 -linkall))))
 
 (library
  (name show)
  (public_name GT.syntax.show)
  (modules show)
  (libraries GTCommon)
+ ;(flags (:standard -linkall))
  (synopsis "Plugin 'show'"))
 
 (library
