@@ -23,10 +23,6 @@ rebuild: clean
 install:
 	dune build @install
 	dune install
-	# echo "(lang dune 2.7)" > `ocamlfind query GT`/dune-package
-	# echo "(use_meta)" >> `ocamlfind query GT`/dune-package
-	# dune describe --only-packages=GT >> `ocamlfind query GT`/dune-package
-
 
 uninstall:
 	dune build @install
