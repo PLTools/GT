@@ -1,8 +1,8 @@
-type ('a,'b) glist = Nil | Cons of 'a * 'b
+type ('a,'b) list_like = Nil | Cons of 'a * 'b
 [@@deriving gt ~options:{show}]
 
 let () =
-  let rec show fa xs = GT.show glist fa (show fa) xs
+  let rec show fa xs = GT.show list_like fa (show fa) xs
     (* glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs *)
   in
   Printf.printf "%s\n%!" (show string_of_int (Nil));
@@ -12,7 +12,7 @@ let () =
 
 
 
-type 'a list = ('a, 'a list) glist
+type 'a list = ('a, 'a list) list_like
 [@@deriving gt ~options:{show}]
 
 let () =
@@ -71,7 +71,7 @@ let () =
 
 
 module LList2 = struct
-  type 'a t = ('a, 'a t) glist Lo2.t [@@deriving gt ~options:{show}]
+  type 'a t = ('a, 'a t) list_like Lo2.t [@@deriving gt ~options:{show}]
 end
 
 let () =
