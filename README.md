@@ -40,7 +40,7 @@ To preprocess only the code in this library (for example, a test) use the follow
 
     (cd _build && ../camlp5o_pp.sh pr_o.cmo ../regression/test005.ml)
 
-To use camlp5 (>= 7.12) syntax extension in toplevel try this: 
+To use camlp5 (>= 7.12) syntax extension in toplevel try this:
 
     #use "topfind.camlp5"
     #camlp5o;;
@@ -378,6 +378,7 @@ Improvements:
 - Documentation for `src/GT.ml` is not generated (possible because of a macro).
 - Better signature for `method virtual on_record_constr`.
 - Custom transformation functions for type parameters has become broken after introducing combinatorial interface for type abbreviations.
+- Allow `[@@named "..."]` attribute to provide a custom name for non-latin constructors (like lists).
 - Sometimes we need override class definition for a plugin. It should be possible to specify new custom class inside the attribute.
 
 ## References
