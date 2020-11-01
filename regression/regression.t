@@ -67,3 +67,4 @@
   $ (cd ../../../../default && ./regression/test828combi.exe)
   $ (cd ../../../../default && ./regression/test840garrique.exe)
   $ (cd ../../../../default && ./regression/test798gen.exe)
+  $ (cd ../../../../default && ./regression/test817logic.exe)

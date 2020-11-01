@@ -33,9 +33,9 @@
           )
 
 ; ppx+rectypes
-(cram (deps test798gen.exe))
-(tests (names test798gen )
-            (modules test798gen )
+(cram (deps test798gen.exe test817logic.exe))
+(tests (names test798gen test817logic )
+            (modules test798gen test817logic )
             (flags (:standard -rectypes))
             (libraries GT)
             

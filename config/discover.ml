@@ -103,8 +103,16 @@ let discover_tests ?(except=[]) cfg pattern =
   out
 
 (*** generating dune files ***)
+let camlp5_rectypes_tests =
+  [ "test081llist"
+  ]
+
+let ppx_rectypes_tests =
+  [ "test798gen"; "test817logic"
+  ]
+
 let camlp5_tests dir =
-  (get_tests "test0" ~except:["test081llist"] dir) @
+  (get_tests "test0" ~except:camlp5_rectypes_tests dir) @
   ["test705"; ]
 
 let ppx_tests dir =
@@ -114,17 +122,12 @@ let ppx_tests dir =
     ; "test808ext"
     ; "test801mutal"
     ; "test814nonreg"
-    ]
+    ] @ ppx_rectypes_tests
   in
   get_tests "test8" ~except dir
 
-let camlp5_rectypes_tests =
-  [ "test081llist"
-  ]
 
-let ppx_rectypes_tests =
-  [ "test798gen"
-  ]
+
 
 (* generates build rules for `test*.exe` *)
 let gen_tests_dune dir =

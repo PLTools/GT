@@ -37,7 +37,7 @@ let () =
   let open Lo in
   let sh x = GT.show logic id x in
   Printf.printf "%s\t%s\n%!" (sh @@ Var 5) (sh @@ Value "asdf")
-;;
+
 
 module LList : sig
   @type 'a llist = ('a, 'a llist) AL.alist Lo.logic with show,gmap,foldl
@@ -48,3 +48,52 @@ end
 let () =
   let sh x = GT.show LList.llist id x in
   Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) )
+
+
+module Reworked = struct
+  class ['a, 'self] my_show fa fself = object
+    inherit ['a, 'self] Lo.show_logic_t fa fself
+    method c_Value () _ x = fa () x
+  end
+
+  let logic =
+    { Lo.logic with
+      GT.plugins = object
+        method show fa xs =
+          GT.transform (Lo.logic) (new my_show (GT.lift fa)) () xs
+      end }
+end
+
+let () =
+  let open Reworked in
+  let sh x = GT.show logic id x in
+  Printf.printf "Modified implementation:\n%!";
+  Printf.printf "\t%s\n%!" (sh @@ Var 5);
+  Printf.printf "\t%s\n%!" (sh @@ Value "asdf");
+  ()
+
+
+
+(* module ReworkedLList = struct
+  type 'a llist = 'a LList.llist
+
+  class ['a, 'self] my_show fa fself = object
+    inherit [string, _] LList.show_llist_t fa fself
+    method! c_Value () _ (x: string) =
+        assert false
+        (* fa () x *)
+  end
+
+  let llist =
+    { LList.llist with
+      GT.plugins = object
+        method show fa xs =
+          GT.transform (LList.llist) (new my_show (GT.lift fa)) () xs
+      end
+    }
+  let (_:int) = GT.show llist
+end
+
+let () =
+  let sh x = GT.show ReworkedLList.llist (fun x -> x) x in
+  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) ) *)
