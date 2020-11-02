@@ -463,6 +463,9 @@
   Should be a number: `5`
   $ (cd ../../../../default && ./regression/test840garrique.exe)
   17
+  2
+  17
+  2
   $ (cd ../../../../default && ./regression/test798gen.exe)
   Nil
   Cons (2, Nil)
