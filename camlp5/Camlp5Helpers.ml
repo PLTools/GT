@@ -9,6 +9,7 @@
    Implementation of the [GTHELPERS_sig.S] interface which
    allows construction of Camlp5 parse tree
  *)
+
 #load "q_MLast.cmo";;
 
 (* Camlp5 AST
@@ -62,9 +63,9 @@ module Longid = struct
         Lident s when capitalized s -> <:extended_longident< $uid:s$ >>
       | Ldot (li, s) when capitalized s -> <:extended_longident< $longid:trec li$ . $uid:s$ >>
       | Ldot (_, s) when not (capitalized s) ->
-        Ploc.raise loc (Failure "Longid.of_longident: should not be called with lowercase ids(1)")
+        Ploc.raise loc (Failure (Printf.sprintf "Longid.of_longident: should not be called with lowercase ids(1): `%s`" s))
       | Lident s when not (capitalized s) ->
-        Ploc.raise loc (Failure "Longid.of_longident: should not be called with lowercase ids(2)")
+        Ploc.raise loc (Failure (Printf.sprintf "Longid.of_longident: should not be called with lowercase ids(2): `%s`" s))
       | Lapply _ -> Ploc.raise loc (Failure "Longid.of_longident: should not be called with Lapply")
       | _ -> assert false
     in trec lid
@@ -152,7 +153,18 @@ module Exp = struct
     [@@ocaml.warning "-32"]
 
   let of_longident ~loc l =
-    let rec helper = function
+    match l with
+    | Ppxlib.Longident.Lident s when capitalized s -> <:expr< $longid:(Longid.of_longident ~loc l)$ >>
+    | Lident s -> <:expr< $lid:s$ >>
+    | Ldot (Lident f, s) when capitalized f && capitalized s -> <:expr< $longid:(Longid.of_longident ~loc l)$ >>
+    | Ldot (Lident f, s) when not (capitalized f) && not (capitalized s) ->
+        <:expr<  $lid:f$  . $lid:s$  >>
+    | Ldot (Lident f, s) when capitalized f && not (capitalized s) ->
+        <:expr< $longid:(Longid.of_longident ~loc l)$ >>
+
+    | _ ->
+      Ploc.raise loc (Failure (Printf.sprintf "Not implemented: expression_of_longident `"))
+    (* let rec helper = function
       (* | Longident.Lident s when Char.equal s.[0] (Char.uppercase_ascii s.[0]) -> uid ~loc s *)
       | Longident.Lident s ->
           assert (s <> "");
@@ -162,13 +174,18 @@ module Exp = struct
           <:expr< $u$ . $ident ~loc r$ >>
       | _ -> assert false
     in
-    helper l
+    helper l *)
 
-  let acc ~loc e l = <:expr< $e$ . $of_longident ~loc l$ >>
+  let acc ~loc (e: t) l =
+    let open Ppxlib.Longident in
+    match l with
+    | Lident id -> <:expr< $e$ . $lid:id$ >>
+    | Ldot( f, s) -> <:expr< $e$ . $longid:(Longid.of_longident ~loc f)$ . $lid:s$ >>
+    | _ -> failwith "not implemented"
 
   let access ~loc mname iname =
     let u = <:expr< $uid:mname$ >> in
-    <:expr< $u$ . $ident ~loc iname$ >>
+    <:expr< $u$ . $lid:iname$ >>
 
   let app ~loc l r = <:expr< $l$ $r$ >>
   let app_lab ~loc l lab r =
