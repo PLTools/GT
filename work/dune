@@ -1,0 +1,10 @@
+(env
+ (dev
+  (flags (:standard))))
+
+(library
+ (name demo1)
+ (modules demo1)
+ (inline_tests)
+ (preprocess
+  (pps ppx_expect ppx_deriving.fold)))
