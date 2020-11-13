@@ -5,7 +5,8 @@
  * St.Petersburg State University, JetBrains Research
  *)
 
-#load "q_MLast.cmo";;
+(* #load "q_MLast.cmo";; *)
+(* #load "q_ast.cmo";; *)
 
 open Ploc
 
