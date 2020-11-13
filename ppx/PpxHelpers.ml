@@ -92,7 +92,7 @@ module Exp = struct
 
   let unit ~loc = [%expr ()]
   let uid  ~loc = assert false
-  let lid = ident
+
   let access ~loc mname iname =
     assert (Char.is_uppercase mname.[0]);
     let lident = Ldot (Lident mname, iname) in

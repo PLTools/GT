@@ -9,25 +9,25 @@ following compile-time code generation. Provides the way for creating
 plugins (compiled separately from the library) for enchancing supported
 type transformations.
 
-Strongly remids the `visitors` library from François Pottier.
+Strongly reminds the `visitors` library from François Pottier.
 During desing of a library of these kind there many possible
 design decision and in many cases we decided to implement
 the decision opposite to the one used in `visitors`.
 """
-version: "0.3"
+version: "0.3.1"
 
-maintainer: "kakadu.hafanana@gmail.com"
+maintainer: "Kakadu@pm.me"
 authors: ["https://github.com/dboulytchev" "https://github.com/Kakadu"]
 homepage: "https://github.com/JetBrains-Research/GT"
 bug-reports: "https://github.com/JetBrains-Research/GT/issues"
 depends: [
   "ocaml"
-  "ocamlfind"  {build}
-  "ocamlbuild" {build}
-  "ocamlgraph" {build}
+  "ocamlfind"  { build }
+  "ocamlbuild" { build }
+  "ocamlgraph" { build }
   "ppxlib"     {>= "0.9.0" & <= "0.13.0" }
   "ocaml-migrate-parsetree" { < "2" }
-  "camlp5"     { >= "8" | = "8.00~alpha04" }
+  "camlp5"     { >= "8" | = "8.00~alpha07" }
   "dune"       { >= "2.7" & build }
   "base"
   "ppx_import" {with-test}

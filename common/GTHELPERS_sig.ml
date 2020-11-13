@@ -55,8 +55,6 @@ and Exp :
     val access  : loc:loc -> string -> string -> t
 
     val unit : loc:loc -> t
-    (* val uid  : loc:loc -> string -> t *)
-    val lid  : loc:loc -> string -> t
     val int_const : loc:loc -> int -> t
     val string_const : loc:loc -> string -> t
     val record : loc:loc -> (Ppxlib.longident * t) list -> t

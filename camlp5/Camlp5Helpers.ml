@@ -138,10 +138,10 @@ module Exp = struct
   type t = MLast.expr
 
   let ident ~loc s =
-    if capitalized s || Base.String.equal s "[]"
-    then <:expr< $uid:s$ >>
-    else <:expr< $lid:s$ >>
-  let lid = ident
+    assert (String.length s <> 0);
+    match s with
+    | "[]" | "::" | _ when Base.Char.is_alpha s.[0] && capitalized s -> <:expr< $uid:s$ >>
+    | _ -> <:expr< $lid:s$ >>
 
   let unit ~loc =  <:expr< () >>
   let sprintf ~loc fmt =
