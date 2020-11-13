@@ -21,7 +21,9 @@ class ['a, 'self] expr_eval fa fself = object
   inherit [string -> int, 'a, 'self] arith_eval fa
 end
 
+[@@@warning "-8"]
+
 let _ =
   let rec eval f x = GT.transform(expr) (new expr_eval eval) f x in
   Printf.printf "%d\n" @@
-  eval (function "x" -> 1 | "y" -> 2) (`Add (`Var "x", `Var "y"))
+  eval (function "x" -> 1 | "y" -> 2 ) (`Add (`Var "x", `Var "y"))

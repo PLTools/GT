@@ -1,3 +1,5 @@
+[@@@warning "-8"]
+
 open GT
 
 @type 'l t =
