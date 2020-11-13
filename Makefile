@@ -5,6 +5,7 @@ all:
 	dune build -p GT,GT-p5
 
 discover-tests:
+	echo "" > regression/dune.tests
 	dune build @discover-tests
 
 test:

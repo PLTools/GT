@@ -140,49 +140,46 @@ let gen_tests_dune dir =
 (*  let fmtc = Format.formatter_of_out_channel cramch in*)
   let outch  = open_out (Format.sprintf "dune.tests") in
   let fmt = Format.formatter_of_out_channel outch in
-  let wrap ?(flags="") desc tests rewriter =
+  Format.pp_set_margin fmt 80;
+  Format.pp_set_max_indent fmt 6;
+  let wrap ?flags desc tests rewriter =
     tests |> List.iter (fun s ->
       Printf.fprintf cramch "  $ (cd ../../../../default && ./regression/%s.exe)\n%!" s
     );
     match tests with
     | [] -> ()
     | _ ->
-        let names = String.concat " " tests in
+        (* let names = String.concat " " tests in *)
         let exes = String.concat " " @@ List.map (Printf.sprintf "%s.exe") tests in
         Format.fprintf fmt "\n; %s\n" desc;
         Format.fprintf fmt "(cram (deps %s))\n" exes;
-        Format.fprintf fmt "(tests (names ";
-        Format.fprintf fmt "%s" names;
-        Format.fprintf fmt
-          {| )
-            (modules |};
-        Format.fprintf fmt "%s" names;
-        Format.fprintf fmt  " )
-            (flags (:standard %s))"
-            flags;
-        Format.fprintf fmt "
-            (libraries GT)
-            %s
-          )\n"
-          rewriter  ;
+
+        tests |> List.iter (fun test ->
+          Format.fprintf fmt "@[(executable";
+          Format.fprintf fmt "@[<v 2>  ";
+          Format.fprintf fmt "@[(name %s)@]@," test;
+          Format.fprintf fmt "@[(modules %s)@]@," test;
+          let () = match flags with
+            | None -> ()
+            | Some f -> Format.fprintf fmt "@[(flags (:standard %s))@]@," f
+          in
+          Format.fprintf fmt "@[(libraries GT)@]@,";
+          Format.fprintf fmt "@[%a@]" rewriter ();
+          Format.fprintf fmt "@]"; (* close vbox *)
+          Format.fprintf fmt ")@]\n"
+        );
         Format.pp_print_flush fmt ()
   in
 
-  let p5_rewriter =
+  let p5_rewriter ppf () =
     let pp = "%{workspace_root}/camlp5/pp5+gt+plugins+o.exe" in
-    Format.sprintf "
-      (preprocess (action (run %s %%{input-file})))
-      (preprocessor_deps (file %s))"
-      pp
-      pp
+    Format.fprintf ppf "@[(preprocess (action (run %s %%{input-file})))@]@," pp;
+    Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
-  let ppx_rewriter =
+  let ppx_rewriter ppf () =
     let pp = "%{workspace_root}/ppx/pp_gt.exe" in
-    Format.sprintf "
-    (preprocess (action (run %s %%{input-file})))
-    (preprocessor_deps (file %s))"
-    pp
-    pp
+    Format.fprintf ppf "@[(preprocess (action (run %s %%{input-file})))@]@," pp;
+    Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
   let () = wrap "camlp5 " (camlp5_tests dir) p5_rewriter in
   let () = wrap ~flags:"-rectypes" "camlp5+rectypes" (camlp5_rectypes_tests) p5_rewriter in
