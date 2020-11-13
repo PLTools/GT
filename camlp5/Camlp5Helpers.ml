@@ -138,11 +138,11 @@ module Exp = struct
   type t = MLast.expr
 
   let ident ~loc s =
-    if Base.Char.is_uppercase s.[0] || Base.String.equal s "[]"
+    if capitalized s || Base.String.equal s "[]"
     then <:expr< $uid:s$ >>
     else <:expr< $lid:s$ >>
   let lid = ident
-  (* let uid ~loc s = <:expr< $uid:s$ >> *)
+
   let unit ~loc =  <:expr< () >>
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:expr< $lid:s$ >>) fmt
@@ -159,22 +159,11 @@ module Exp = struct
     | Ldot (Lident f, s) when capitalized f && capitalized s -> <:expr< $longid:(Longid.of_longident ~loc l)$ >>
     | Ldot (Lident f, s) when not (capitalized f) && not (capitalized s) ->
         <:expr<  $lid:f$  . $lid:s$  >>
-    | Ldot (Lident f, s) when capitalized f && not (capitalized s) ->
-        <:expr< $longid:(Longid.of_longident ~loc l)$ >>
-
+    | Ldot (ll, s) when (*capitalized f &&*) not (capitalized s) ->
+        <:expr< $longid:(Longid.of_longident ~loc ll)$ . ( $lid:s$ ) >>
     | _ ->
-      Ploc.raise loc (Failure (Printf.sprintf "Not implemented: expression_of_longident `"))
-    (* let rec helper = function
-      (* | Longident.Lident s when Char.equal s.[0] (Char.uppercase_ascii s.[0]) -> uid ~loc s *)
-      | Longident.Lident s ->
-          assert (s <> "");
-          ident ~loc s
-      | Ldot (l, r) ->
-          let u = helper l in
-          <:expr< $u$ . $ident ~loc r$ >>
-      | _ -> assert false
-    in
-    helper l *)
+      Ploc.raise loc (Failure (Printf.sprintf "Not implemented: expression_of_longident `%s`" (String.concat "." (Ppxlib.Longident.flatten_exn l))))
+
 
   let acc ~loc (e: t) l =
     let open Ppxlib.Longident in
