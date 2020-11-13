@@ -130,6 +130,9 @@ let get_val loc = function
  *   in
  *   (args, name, convert t.tdDef) *)
 
+module Migr =
+  Ppxlib_ast__Versions.Convert(Ppxlib_ast__Versions.OCaml_current)(Ppxlib.Import_for_core.Js)
+
 open GTCommon
 
 
@@ -147,6 +150,7 @@ let generate_str tdecls loc =
     let () = assert (List.length caml_ast = 1) in
     match (List.hd caml_ast).pstr_desc with
     | Pstr_type (flg, tds) ->
+       let tds = List.map Migr.copy_type_declaration tds in
        generator_f [sis] (Recursive, tds)
     |  _ -> failwith "type declaration expected"
   in
@@ -169,6 +173,7 @@ let generate_sig tdecls loc =
      assert (List.length caml_ast  =  1);
      match (List.hd caml_ast).psig_desc with
      | Psig_type (flg, tds) ->
+      let tds = List.map Migr.copy_type_declaration tds in
        generator_f [sis] (Recursive, tds)
      | _ -> assert false
   in

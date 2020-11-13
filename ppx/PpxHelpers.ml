@@ -20,7 +20,7 @@ let lid ?(loc=Location.none) txt = { txt; loc }
 let mknoloc txt = lid txt
 let pexp_pair ?(loc=Location.none) a b = pexp_tuple ~loc [a; b]
 
-let const_string ?wtf s = Pconst_string (s, wtf)
+let const_string ~loc ?wtf s = Pconst_string (s, loc, wtf)
 
 type lab_decl = label_declaration
 let lab_decl ~loc name mut type_ =
@@ -102,7 +102,7 @@ module Exp = struct
 
   let constant ~loc = pexp_constant ~loc
   let int_const ~loc n = constant ~loc (Pconst_integer (Int.to_string n, None))
-  let string_const ~loc s = constant ~loc (Pconst_string (s, None))
+  let string_const ~loc s = constant ~loc (Pconst_string (s, loc, None))
 
   let app ~loc l r = pexp_apply ~loc l [(Nolabel, r)]
   let app_lab ~loc l lab r = pexp_apply ~loc l [(Labelled lab, r)]
