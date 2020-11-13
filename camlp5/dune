@@ -62,6 +62,8 @@
  (action
   (run mkcamlp5.opt -package camlp5 pa_o.cmx pr_dump.cmx -o %{targets})))
 
+; Chet, you can replace parser_quotations<->quotations below if you want to test something
+
 (rule
  (targets pp5+dump.byte)
  (action
