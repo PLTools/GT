@@ -195,13 +195,13 @@ and Me : sig
   val structure: loc:loc -> Str.t list -> t
   val ident: loc:loc -> Longident.t -> t
   val apply: loc:loc -> t -> t -> t
-  val functor_ : loc:loc -> string -> Mt.t option -> t -> t
+  (* val functor_ : loc:loc -> string -> Mt.t option -> t -> t *)
 end
 and Mt : sig
   type t
   val ident: loc:loc -> Longident.t -> t
   val signature: loc:loc -> Sig.t list -> t
-  val functor_:  loc:loc -> string -> t option -> t -> t
+  (* val functor_:  loc:loc -> string -> t option -> t -> t *)
   val with_: loc:loc -> t -> WC.t list -> t
 end
 and WC : sig

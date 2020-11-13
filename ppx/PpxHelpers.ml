@@ -345,10 +345,8 @@ module Str = struct
 
   let functor1 ~loc name ~param sigs strs =
     pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name)
-      ~expr:(pmod_functor ~loc (Located.mk ~loc param)
-               (Option.some @@
-                pmty_signature ~loc sigs) @@
-             pmod_structure ~loc strs
+      ~expr:(pmod_functor ~loc (Named (Located.mk ~loc @@ Option.some param, pmty_signature ~loc sigs))
+             (pmod_structure ~loc strs)
             )
 
   let simple_gadt : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t =
@@ -367,7 +365,7 @@ module Str = struct
       ]
 
   let module_ ~loc name me =
-    pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc name) ~expr:me
+    pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc (Some name)) ~expr:me
   let modtype ~loc = pstr_modtype ~loc
 
   let include_ ~loc me =
@@ -379,14 +377,14 @@ module Me = struct
   let structure ~loc sis = pmod_structure ~loc sis
   let ident ~loc lident = pmod_ident ~loc (Located.mk ~loc lident)
   let apply ~loc = pmod_apply ~loc
-  let functor_ ~loc name = pmod_functor ~loc (Located.mk ~loc name)
+  let functor_ ~loc name argt body = pmod_functor ~loc (Named (Located.mk ~loc (Some name), argt)) body
 end
 
 module Mt = struct
   type t = module_type
   let ident ~loc lident = pmty_ident ~loc (Located.mk ~loc lident)
   let signature ~loc = pmty_signature ~loc
-  let functor_ ~loc argname argt t = pmty_functor ~loc (Located.mk ~loc argname) argt t
+  let functor_ ~loc argname argt t = pmty_functor ~loc (Named (Located.mk ~loc (Some argname), argt)) t
   let with_ ~loc = pmty_with ~loc
 end
 
@@ -394,7 +392,7 @@ type nonrec module_declaration = module_declaration
 type nonrec module_type_declaration = module_type_declaration
 
 let module_declaration ~loc ~name type_ =
-  module_declaration ~loc ~name:(Located.mk ~loc name) ~type_
+  module_declaration ~loc ~name:(Located.mk ~loc (Some name)) ~type_
 
 let module_type_declaration ~loc ~name type_ =
   module_type_declaration ~loc ~name:(Located.mk ~loc name) ~type_
@@ -431,10 +429,8 @@ module Sig = struct
 
   let functor1 ~loc name ~param sigs strs =
     psig_module ~loc @@
-    Ast_builder.Default.module_declaration ~loc ~name:(Located.mk ~loc name)
-      ~type_:(pmty_functor ~loc (Located.mk ~loc param)
-               (Option.some @@
-                pmty_signature ~loc sigs) @@
+    Ast_builder.Default.module_declaration ~loc ~name:(Located.mk ~loc (Some name))
+      ~type_:(pmty_functor ~loc (Named (Located.mk ~loc (Some param), pmty_signature ~loc sigs)) @@
               pmty_signature ~loc strs
             )
 
