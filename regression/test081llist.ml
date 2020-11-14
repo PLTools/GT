@@ -1,12 +1,14 @@
 let id x = x
 
 module AL : sig
-  @type ('a,'b) alist = Nil | Cons of 'a * 'b with show,foldl,gmap
+  type ('a,'b) alist = [] [@name "nil"] | (::) of 'a * 'b [@name "cons"]
+(* with show,foldl,gmap *)
 end  = struct
-  @type ('a,'b) alist  = Nil | Cons of 'a * 'b with show,foldl,gmap
+  @type ('a,'b) alist  = [] [@name "nil"] | (::) of 'a * 'b [@name "cons"]
+(* with show,foldl,gmap *)
 end
 
-
+(*
 
 let () =
   let open AL in
@@ -96,4 +98,4 @@ end
 
 let () =
   let sh x = GT.show ReworkedLList.llist (fun x -> x) x in
-  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) ) *)
+  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) ) *) *)
