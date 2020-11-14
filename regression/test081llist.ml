@@ -1,20 +1,20 @@
 let id x = x
 
 module AL : sig
-  type ('a,'b) alist = [] [@name "nil"] | (::) of 'a * 'b [@name "cons"]
-(* with show,foldl,gmap *)
+  @type ('a,'b) alist = [] [@name "nil"] | (::) of 'a * 'b [@name "cons"]
+  with show,foldl,gmap
 end  = struct
   @type ('a,'b) alist  = [] [@name "nil"] | (::) of 'a * 'b [@name "cons"]
-(* with show,foldl,gmap *)
+  with show,foldl,gmap
 end
 
-(*
+
 
 let () =
   let open AL in
   let sh xs = GT.show alist id id xs in
   (* let fo xs = foldl_alist (fun () -> id) (fun () -> id) "" xs in *)
-  Printf.printf "%s\n%!" (sh @@ Cons ("aaa", "bbb"));
+  Printf.printf "%s\n%!" (sh @@ "aaa" :: "bbb");
   (* Printf.printf "%s\n%!" (fo @@ Cons ("aaa", "bbb")); *)
   ()
 
@@ -27,7 +27,7 @@ end
 let () =
   let open L in
   let sh x = GT.show list id x in
-  Printf.printf "%s\n%!" (sh @@ Cons ("aaa", Cons ("bbb", Nil)))
+  Printf.printf "%s\n%!" (sh @@ "aaa" :: "bbb" :: [])
 
 module Lo : sig
   @type 'a logic = Var of GT.int | Value of 'a with show,gmap,foldl
@@ -49,7 +49,7 @@ end
 
 let () =
   let sh x = GT.show LList.llist id x in
-  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) )
+  Printf.printf "%s\n%!" (sh @@ Value ("aaa" :: Value ("bbb" :: Var 15)) )
 
 
 module Reworked = struct
@@ -98,4 +98,4 @@ end
 
 let () =
   let sh x = GT.show ReworkedLList.llist (fun x -> x) x in
-  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) ) *) *)
+  Printf.printf "%s\n%!" (sh @@ Value (Cons ("aaa", Value (Cons ("bbb", Var 15)))) ) *)

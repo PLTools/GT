@@ -438,7 +438,7 @@ let make_gcata_typ ~loc tdecl =
                   (List.map typs ~f:Typ.from_caml) @
                   [Typ.var ~loc "syn"]
                 in
-                (Naming.meth_of_constr cd.pcd_name.txt, Typ.chain_arrow ~loc new_ts)
+                (Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt, Typ.chain_arrow ~loc new_ts)
               )
         )
       ~onmanifest:(fun t ->
