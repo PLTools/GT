@@ -301,9 +301,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
           ((self#extra_class_sig_members tdecl) @ fields)
       ]
     in
-    let on_constructor pcd_args pcd_name =
-      let methname = Naming.meth_of_constr pcd_name.txt in
-      let typs = match pcd_args with
+    let on_constructor cd =
+      let methname = Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt in
+      let typs = match cd.pcd_args with
         | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
         | Pcstr_tuple ts -> ts
       in
@@ -332,7 +332,12 @@ class virtual generator initial_args tdecls = object(self: 'self)
             ]
         )
       ~onvariant:(fun cds ->
-          k @@ List.map cds ~f:(fun cd -> on_constructor cd.pcd_args cd.pcd_name)
+          k @@ List.map cds ~f:(fun cd ->
+            on_constructor cd
+            (* cd.pcd_args
+              (Ast_builder.Default.Located.map
+                (Naming.meth_name_for_constructor cd.pcd_attributes) cd.pcd_name) *)
+          )
         )
       ~onmanifest:(fun typ ->
         let rec helper typ =
@@ -419,13 +424,16 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
             k @@
               [ Ctf.method_ ~loc ~virt:false
-                  (Naming.meth_name_for_constructor (String.uppercase tdecl.ptype_name.txt)) @@
-                  Typ.chain_arrow ~loc new_ts
+                  (Naming.meth_name_for_constructor [] (String.uppercase tdecl.ptype_name.txt))
+                  (Typ.chain_arrow ~loc new_ts)
               ]
         | Ptyp_var _ ->
             let open Ppxlib.Ast_builder.Default in
-            k @@ [ on_constructor (Pcstr_tuple []) @@
-                   Located.mk ~loc:typ.ptyp_loc @@ String.uppercase tdecl.ptype_name.txt ]
+            k @@ [ on_constructor @@
+              Ppxlib.Ast_builder.Default.constructor_declaration ~loc:typ.ptyp_loc
+                ~name:(Located.map String.uppercase tdecl.ptype_name)
+                ~args:(Pcstr_tuple []) ~res:None
+              ]
         | _ -> helper typ
         in
         toplevel typ
@@ -519,7 +527,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
     | Rtag (constr_name, _, []) ->
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
-        Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
+        Cf.method_concrete ~loc (Naming.meth_name_for_constructor [] constr_name.txt) @@
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
         Exp.fun_ ~loc (Pat.any ~loc) @@
         self#on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe:(Exp.ident ~loc inhname)
@@ -529,7 +537,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       k [
         let inhname = gen_symbol ~prefix:"inh_" () in
         let bindings = List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts) in
-        Cf.method_concrete ~loc (Naming.meth_name_for_constructor constr_name.txt) @@
+        Cf.method_concrete ~loc (Naming.meth_name_for_constructor [] constr_name.txt) @@
         Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
         Exp.fun_ ~loc (Pat.any ~loc) @@
         Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s)) @@
@@ -587,10 +595,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
         let toplevel typ = match typ.ptyp_desc with
         | Ptyp_var name -> (* antiphantom types *)
-            (* let inhname = gen_symbol ~prefix:"inh_" () in *)
-            (* let argname = gen_symbol ~prefix:"arg_" () in *)
             [ Cf.method_concrete ~loc
-              (Naming.meth_name_for_constructor (String.uppercase tdecl.ptype_name.txt)) @@
+              (Naming.meth_name_for_constructor [] (String.uppercase tdecl.ptype_name.txt)) @@
               (self#do_typ_gen ~loc ~mutual_decls ~is_self_rec tdecl typ)
             ]
         | Ptyp_tuple ts ->
@@ -600,7 +606,8 @@ class virtual generator initial_args tdecls = object(self: 'self)
             let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
             let bind_pats = List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s) in
             (* We don't need bind_pats, we cat patternmatch original value which is wildcarded for now *)
-            [ Cf.method_concrete ~loc (Naming.meth_name_for_constructor (String.uppercase tdecl.ptype_name.txt)) @@
+            [ Cf.method_concrete ~loc
+              (Naming.meth_name_for_constructor typ.ptyp_attributes (String.uppercase tdecl.ptype_name.txt)) @@
               Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
               Exp.fun_ ~loc (Pat.tuple ~loc @@ bind_pats) @@
               self#on_tuple_constr ~loc ~mutual_decls ~is_self_rec
@@ -924,13 +931,16 @@ class virtual generator initial_args tdecls = object(self: 'self)
   method on_variant ~loc tdecl ~mutual_decls ~is_self_rec cds k =
     k @@
     List.map cds ~f:(fun cd ->
+        let good_constr_name =
+          Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt
+        in
         match cd.pcd_args with
         | Pcstr_tuple ts ->
           let inhname = gen_symbol ~prefix:"inh_" () in
           let loc = loc_from_caml cd.pcd_loc in
           let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
           let bind_pats = List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s) in
-          Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
+          Cf.method_concrete ~loc good_constr_name @@
           Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
           Exp.fun_ ~loc (Pat.any ~loc) @@
           Exp.fun_list ~loc bind_pats @@
@@ -944,7 +954,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
               List.map ls ~f:(fun l -> gen_symbol (), l.pld_name.txt, l.pld_type)
             in
             let bind_pats = List.map bindings ~f:(fun (s,_,_) -> Pat.var ~loc s) in
-            Cf.method_concrete ~loc (Naming.meth_name_for_constructor cd.pcd_name.txt) @@
+            Cf.method_concrete ~loc good_constr_name @@
             Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
             Exp.fun_ ~loc (Pat.any ~loc) @@
             Exp.fun_list ~loc bind_pats @@

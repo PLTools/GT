@@ -128,9 +128,9 @@ let make_interface_class_sig ~loc tdecl =
         fields
     ]
   in
-  let on_constructor pcd_args pcd_name =
-    let methname = Naming.meth_name_for_constructor pcd_name.txt in
-    let typs = match pcd_args with
+  let on_constructor cd =
+    let methname = Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt in
+    let typs = match cd.pcd_args with
       | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
       | Pcstr_tuple ts -> ts
     in
@@ -158,7 +158,7 @@ let make_interface_class_sig ~loc tdecl =
         []
       )
     ~onvariant:(fun cds ->
-      k @@ List.map cds ~f:(fun cd -> on_constructor cd.pcd_args cd.pcd_name)
+      k @@ List.map cds ~f:on_constructor
     )
     ~onmanifest:(fun typ ->
         let wrap name params =
@@ -245,8 +245,10 @@ let make_interface_class_sig ~loc tdecl =
           let toplevel typ = match typ.ptyp_desc with
           | Ptyp_tuple _
           | Ptyp_var _ ->
-              k  @@ [ on_constructor (Pcstr_tuple []) @@
-                      Located.mk ~loc:typ.ptyp_loc @@ String.uppercase tdecl.ptype_name.txt ]
+              k  @@ [ on_constructor @@ Ppxlib.Ast_builder.Default.constructor_declaration ~loc:typ.ptyp_loc
+                ~name:(Located.map String.uppercase tdecl.ptype_name)
+                ~args:(Pcstr_tuple []) ~res:None
+                ]
           | _ -> helper typ
           in
           toplevel typ
@@ -283,9 +285,9 @@ let make_interface_class ~loc tdecl =
       ~virt:true
       ~params:(params_of_interface_class ~loc tdecl.ptype_params)
   in
-  let on_constructor pcd_args pcd_name =
-    let methname = Naming.meth_of_constr pcd_name.txt in
-    let typs = match pcd_args with
+  let on_constructor cd =
+    let methname = Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt in
+    let typs = match cd.pcd_args with
       | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
       | Pcstr_tuple ts -> ts
     in
@@ -308,8 +310,7 @@ let make_interface_class ~loc tdecl =
           ]
       )
     ~onvariant:(fun cds ->
-      ans @@
-      List.map cds ~f:(fun cd -> on_constructor cd.pcd_args cd.pcd_name)
+      ans @@ List.map cds ~f:on_constructor
     )
     ~onmanifest:(fun typ ->
         let wrap ?(is_poly=false) name params =
@@ -385,8 +386,9 @@ let make_interface_class ~loc tdecl =
           let toplevel typ = match typ.ptyp_desc with
           | Ptyp_tuple _
           | Ptyp_var _ ->
-              ans @@ [ on_constructor (Pcstr_tuple []) @@
-                       Located.mk ~loc:typ.ptyp_loc @@ String.uppercase tdecl.ptype_name.txt ]
+              ans @@ [ on_constructor @@ Ppxlib.Ast_builder.Default.constructor_declaration ~loc:typ.ptyp_loc
+                ~name:(Located.map String.uppercase tdecl.ptype_name)
+                ~args:(Pcstr_tuple []) ~res:None ]
           | _ -> helper typ
           in
           toplevel typ
@@ -497,10 +499,6 @@ let make_gcata_str ~loc tdecl =
         then openize_poly ~loc t
         else t
       in
-      (* let tr = Pat.var ~loc "tr" in
-       * if not (is_polyvariant_tdecl tdecl)
-       * then tr
-       * else *)
         Pat.constraint_ ~loc (Pat.var ~loc "tr") @@
         Typ.class_ ~loc
           (Lident (Naming.class_name_for_typ tdecl.ptype_name.txt))
@@ -538,7 +536,7 @@ let make_gcata_str ~loc tdecl =
         let subj = "subj" in
         List.fold_left ("inh"::subj::names)
             ~init:(Exp.send ~loc (Exp.ident ~loc "tr")
-                    (Naming.meth_of_constr cd.pcd_name.txt))
+                    (Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt))
             ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg))
     )
   in

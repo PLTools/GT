@@ -11,7 +11,7 @@ let trait_class_name_for_typ ~trait name =
   class_name_for_typ (if String.equal trait ""
                       then name
                       else Printf.sprintf "%s_%s" trait name)
-let meth_name_for_constructor = meth_of_constr
+
 let fix_name ~plugin_name = sprintf "%s_fix"
 (* 1st structure is planned to contain transformation function *)
 let typ1_for_class_arg ~plugin = sprintf "%s_t_%s_1" plugin
@@ -81,3 +81,20 @@ let fix_func_name_tdecls trait tdecls =
 
 
 let for_ trait s = sprintf "%s_%s" trait s
+
+let meth_name_for_constructor attrs default_name =
+  let good_attr =
+    let open Deriving.Args in
+    attribute ~name:(string "name") ~payload:(single_expr_payload (estring __))
+  in
+  let cond attr =
+    (* Stdlib.Sys.command "notify-send 'hecking an attribute of constructor' " |> ignore; *)
+    Deriving.Args.parse good_attr Ppxlib.Location.none attr (fun s ->
+      (* let _ = Stdlib.Sys.command (Printf.sprintf "notify-send 'found %s'" s) in *)
+      Some s
+    )
+  in
+
+  List.find_map attrs ~f:cond
+  |> Option.value ~default:default_name
+  |> meth_of_constr

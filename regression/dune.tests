@@ -342,147 +342,147 @@
   (name test800)
   (modules test800)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test802mutal)
   (modules test802mutal)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test803polyvar)
   (modules test803polyvar)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test804polyvar)
   (modules test804polyvar)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test805std)
   (modules test805std)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test806fmt)
   (modules test806fmt)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test807showT)
   (modules test807showT)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test811compare)
   (modules test811compare)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test812html)
   (modules test812html)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test813htmlTy)
   (modules test813htmlTy)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test815abstr)
   (modules test815abstr)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test816hash)
   (modules test816hash)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test820spec)
   (modules test820spec)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test821clab)
   (modules test821clab)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test822)
   (modules test822)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test823list)
   (modules test823list)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test824mut)
   (modules test824mut)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test825tuples)
   (modules test825tuples)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test826antiph)
   (modules test826antiph)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test828combi)
   (modules test828combi)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
   (name test840garrique)
   (modules test840garrique)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 ; ppx+rectypes
@@ -493,7 +493,7 @@
   (modules test798gen)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))
 
 (executable
@@ -501,5 +501,5 @@
   (modules test817logic)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe %{input-file})))
+  (preprocess (action (run %{workspace_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{workspace_root}/ppx/pp_gt.exe)))

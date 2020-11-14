@@ -1,14 +1,13 @@
-type ('a,'b) list_like = Nil | Cons of 'a * 'b
+type ('a,'b) list_like = [] [@name "nil"] | (::) of 'a * 'b [@name "cons"]
 [@@deriving gt ~options:{show}]
 
+
 let () =
-  let rec show fa xs = GT.show list_like fa (show fa) xs
-    (* glist_gcata (GT.lift fa) (GT.lift @@ show fa) (new show_glist) () xs *)
-  in
-  Printf.printf "%s\n%!" (show string_of_int (Nil));
-  Printf.printf "%s\n%!" (show string_of_int (Cons (2, Nil)));
-  Printf.printf "%s\n%!" (show string_of_int (Cons (2, Cons (2, Nil))));
-()
+  let rec show fa xs = GT.show list_like fa (show fa) xs in
+  Printf.printf "%s\n%!" (show string_of_int []);
+  Printf.printf "%s\n%!" (show string_of_int [2]);
+  Printf.printf "%s\n%!" (show string_of_int [2;2]);
+  ()
 
 
 
@@ -19,9 +18,9 @@ let () =
   let rec show fa xs =
     GT.transform list  (new show_list_t (GT.lift fa)) () xs
   in
-  Printf.printf "%s\n%!" (show string_of_int (Nil));
-  Printf.printf "%s\n%!" (show (fun x -> x) (Cons ("WTF", Nil)));
-  Printf.printf "%s\n%!" (show string_of_int (Cons (3, Cons (4, Nil))));
+  Printf.printf "%s\n%!" (show string_of_int []);
+  Printf.printf "%s\n%!" (show (fun x -> x)  ["WTF"]);
+  Printf.printf "%s\n%!" (show string_of_int [3;4]);
   ()
 
 type intlist = GT.int list
@@ -29,9 +28,9 @@ type intlist = GT.int list
 
 let () =
   let rec show xs = GT.transform intlist (new show_intlist_t) () xs in
-  Printf.printf "%s\n%!" (show  Nil);
-  Printf.printf "%s\n%!" (show  (Cons (6, Nil)));
-  Printf.printf "%s\n%!" (show  (Cons (7, Cons (8, Nil))));
+  Printf.printf "%s\n%!" (show []);
+  Printf.printf "%s\n%!" (show [6]);
+  Printf.printf "%s\n%!" (show [7;8]);
   ()
 
 
@@ -77,6 +76,6 @@ end
 let () =
   let show xs = GT.show LList2.t (GT.show GT.int) xs in
   Printf.printf "Modified logic list values\n%!";
-  Printf.printf "\t%s\n%!" (show  @@ Value Nil);
-  Printf.printf "\t%s\n%!" (show  @@ Value (Cons (6, Value Nil)));
+  Printf.printf "\t%s\n%!" (show  @@ Value []);
+  Printf.printf "\t%s\n%!" (show  @@ Value (6 :: Value []));
   ()

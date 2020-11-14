@@ -178,7 +178,10 @@ let gen_tests_dune dir =
   in
   let ppx_rewriter ppf () =
     let pp = "%{workspace_root}/ppx/pp_gt.exe" in
-    Format.fprintf ppf "@[(preprocess (action (run %s %%{input-file})))@]@," pp;
+    (* --as-pp will output serialized AST
+        without it the human-readable AST will be printed
+    ***)
+    Format.fprintf ppf "@[(preprocess (action (run %s --as-pp %%{input-file})))@]@," pp;
     Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
   let () = wrap "camlp5 " (camlp5_tests dir) p5_rewriter in
