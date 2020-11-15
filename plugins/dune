@@ -11,11 +11,11 @@
  (synopsis "Plugin 'show'"))
 
 (library
- (name fmt)
- (public_name GT.syntax.fmt)
+ (name gfmt)
+ (public_name GT.syntax.gfmt)
  (modules gfmt)
  (libraries GTCommon)
- (synopsis "Plugin 'fmt'"))
+ (synopsis "Plugin 'gfmt'"))
 
 (library
  (name foldl)

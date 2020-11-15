@@ -19,7 +19,7 @@
 (rule
  (targets pp5+gt+plugins+dump.exe)
  (deps ../common/GTCommon.cmxa pa_gt.cmxa ../plugins/show.cmxa
-   ../plugins/gmap.cmxa ../plugins/fmt.cmxa ../plugins/compare.cmxa
+   ../plugins/gmap.cmxa ../plugins/gfmt.cmxa ../plugins/compare.cmxa
    ../plugins/eq.cmxa ../plugins/foldl.cmxa ../plugins/foldr.cmxa
    ../plugins/stateful.cmxa ../plugins/eval.cmxa ../plugins/html.cmxa)
  (action
@@ -29,7 +29,7 @@
 (rule
  (targets pp5+gt+plugins+o.exe)
  (deps ../common/GTCommon.cmxa pa_gt.cmxa ../plugins/show.cmxa
-   ../plugins/gmap.cmxa ../plugins/fmt.cmxa ../plugins/compare.cmxa
+   ../plugins/gmap.cmxa ../plugins/gfmt.cmxa ../plugins/compare.cmxa
    ../plugins/eq.cmxa ../plugins/foldl.cmxa ../plugins/foldr.cmxa
    ../plugins/stateful.cmxa ../plugins/eval.cmxa ../plugins/html.cmxa)
  (action
