@@ -1,6 +1,6 @@
 (*
  * Generic Transformers: Camlp5 syntax extension.
- * Copyright (C) 2016-2019
+ * Copyright (C) 2016-2021
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -77,10 +77,13 @@ module Pat = struct
   let lid ~loc s  = <:patt< $lid:s$ >>
   let var = lid
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt
+
   let of_longident ~loc lid =
     let is_lident s = not (capitalized s) in
     match lid with
-      Longident.Lident s when is_lident s -> <:patt< $lid:s$ >>
+    | Longident.Lident ("[]" as s)
+    | Lident ("::" as s) -> <:patt< $uid:s$ >>
+    | Longident.Lident s when is_lident s -> <:patt< $lid:s$ >>
     | Ldot(li, s) when is_lident s ->
       let li = Longid.of_longident ~loc li in
       <:patt< $longid:li$ . $lid:s$ >>
@@ -97,11 +100,7 @@ module Pat = struct
   let constr ~loc uid ps =
     assert (uid <> "");
     let c = <:patt< $uid:uid$ >> in
-    match ps with
-    | [] -> c
-    | [x] -> <:patt< $c$ $x$ >>
-    | _  -> let args = <:patt< ($list:ps$) >> in
-      <:patt< $c$ $args$ >>
+    List.fold_left (fun acc x -> <:patt< $acc$ $x$ >>) c ps
 
   let type_ ~loc lident =
     <:patt< # $lilongid:Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >>

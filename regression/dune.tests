@@ -6,323 +6,323 @@
   (name test000)
   (modules test000)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test001)
   (modules test001)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test002)
   (modules test002)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test003)
   (modules test003)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test004)
   (modules test004)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test005)
   (modules test005)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test006)
   (modules test006)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test007)
   (modules test007)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test008)
   (modules test008)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test009)
   (modules test009)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test010)
   (modules test010)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test011)
   (modules test011)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test012)
   (modules test012)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test013)
   (modules test013)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test014)
   (modules test014)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test015)
   (modules test015)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test016)
   (modules test016)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test017)
   (modules test017)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test018)
   (modules test018)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test019)
   (modules test019)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test020)
   (modules test020)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test021)
   (modules test021)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test022)
   (modules test022)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test023)
   (modules test023)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test024)
   (modules test024)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test025)
   (modules test025)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test026)
   (modules test026)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test027)
   (modules test027)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test028)
   (modules test028)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test029)
   (modules test029)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test030)
   (modules test030)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test031)
   (modules test031)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test032)
   (modules test032)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test036)
   (modules test036)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test037)
   (modules test037)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test040)
   (modules test040)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test041)
   (modules test041)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test042)
   (modules test042)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test082mutal)
   (modules test082mutal)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test083polyvar)
   (modules test083polyvar)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test086std)
   (modules test086std)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test087stateful)
   (modules test087stateful)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test089struct)
   (modules test089struct)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test090eval)
   (modules test090eval)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test091eval)
   (modules test091eval)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (executable
   (name test705)
   (modules test705)
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 ; camlp5+rectypes
 (cram (deps test081llist.exe))
@@ -332,8 +332,8 @@
   (modules test081llist)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+o.exe %{input-file})))
-  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+o.exe)))
+  (preprocess (action (run %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{workspace_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 ; ppx
 (cram (deps test800.exe test802mutal.exe test803polyvar.exe test804polyvar.exe test805std.exe test806fmt.exe test807showT.exe test811compare.exe test812html.exe test813htmlTy.exe test815abstr.exe test816hash.exe test820spec.exe test821clab.exe test822.exe test823list.exe test824mut.exe test825tuples.exe test826antiph.exe test828combi.exe test840garrique.exe))

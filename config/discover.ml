@@ -172,7 +172,7 @@ let gen_tests_dune dir =
   in
 
   let p5_rewriter ppf () =
-    let pp = "%{workspace_root}/camlp5/pp5+gt+plugins+o.exe" in
+    let pp = "%{workspace_root}/camlp5/pp5+gt+plugins+dump.exe" in
     Format.fprintf ppf "@[(preprocess (action (run %s %%{input-file})))@]@," pp;
     Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in

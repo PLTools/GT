@@ -45,6 +45,7 @@ let prepare_patt_match ~loc ?else_case what constructors make_rhs =
           ~rhs:(make_rhs cd names)
       | Pcstr_tuple args ->
             let names = List.map args ~f:(fun _ -> gen_symbol ()) in
+            (* notify "constructing %s of %s" cd.pcd_name.txt (String.concat ~sep:" " names); *)
             case
               ~lhs:(Pat.constr ~loc cd.pcd_name.txt @@
                     List.map ~f:(Pat.var ~loc) names

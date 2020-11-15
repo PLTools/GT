@@ -37,6 +37,3 @@ let _ =
   Printf.printf "Tree: %s\n" (toString t);
   Printf.printf "Number of nodes: %d\n" (num_of_nodes t);
   Printf.printf "Incremented: %s\n" (toString (increment t))
-
-
-let () = print_endline "wtf"
