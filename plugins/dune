@@ -94,6 +94,6 @@
  (public_name GT.syntax.all)
  (wrapped false)
  (modules)
- (libraries GT.syntax.show GT.syntax.fmt GT.syntax.foldl GT.syntax.foldr
+ (libraries GT.syntax.show GT.syntax.gfmt GT.syntax.foldl GT.syntax.foldr
    GT.syntax.eq GT.syntax.compare GT.syntax.map GT.syntax.eval
    GT.syntax.stateful GT.syntax.html GT.syntax.hash))
