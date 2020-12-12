@@ -126,7 +126,7 @@ package "syntax" (
     plugin(native) = "eval.cmxs"
   )
   package "fmt" (
-    directory = "fmt"
+    directory = "gfmt"
     version = "0.3"
     description = "Plugin 'fmt'"
     requires = "GT.common"
