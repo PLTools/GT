@@ -10,10 +10,9 @@
  (libraries camlp5 GT.common)
  (preprocess
   (action
-   (run %{workspace_root}/camlp5/pp5+dump.byte %{input-file})))
+   (run %{project_root}/camlp5/pp5+dump.byte %{input-file})))
  (flags
   (:standard -warn-error -A -rectypes))
- ;(preprocess (action (run camlp5 -I /home/kakadu/.opam/4.06.1+fp+flambda/lib/camlp5 pa_o.cmo pa_op.cmo pr_o.cmo %{input-file})) )
  )
 
 (rule
