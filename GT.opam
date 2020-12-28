@@ -30,7 +30,7 @@ depends: [
   "camlp5"     { >= "8"  }
   "dune"       { >= "2.7" & build }
   "base"
-  "ppx_import" {with-test}
+#  "ppx_import" {with-test}
 ]
 build: [
   [make]
