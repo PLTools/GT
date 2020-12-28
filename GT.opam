@@ -27,7 +27,7 @@ depends: [
   "ocamlgraph" { build }
   "ppxlib"     {>= "0.18.0" & <= "0.20.0" }
   "ocaml-migrate-parsetree" { >= "2.1.0" }
-  "camlp5"     { >= "8" | = "8.00~alpha07" }
+  "camlp5"     { >= "8"  }
   "dune"       { >= "2.7" & build }
   "base"
   "ppx_import" {with-test}
