@@ -16,3 +16,8 @@
  (inline_tests)
  (preprocess
   (pps ppx_expect ppx_deriving.fold)))
+
+(executable
+ (name demo_mutual)
+ (modules demo_mutual)
+)
