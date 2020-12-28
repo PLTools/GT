@@ -1,11 +1,11 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2019
+ * Copyright (C) 2016-2020
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
 
-(** {i Stateful} plugin: functors + inherited value
+(** {i Eval} plugin: functors + inherited value
     to make decisions about how to map values.
 
     Essentially, is a {!Gmap} trait with polymorphic inherited attributes.

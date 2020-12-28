@@ -37,7 +37,7 @@ let loc_from_caml camlloc =
 let noloc = Ploc.dummy
 
 type type_arg = MLast.type_var
-let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), None)
+let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), (None, false))
 
 type lab_decl = (loc * string * bool * ctyp)
 let lab_decl ~loc name is_mut typ = (loc, name, is_mut, typ)
@@ -430,7 +430,7 @@ module Str = struct
     <:str_item< class $list:[c]$ >>
 
   let tdecl ~loc ~name ~params rhs =
-    let tdPrm = List.map (fun s -> (VaVal (Some s),None)) params in
+    let tdPrm = List.map (fun s -> (VaVal (Some s), (None,false))) params in
     let t = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = $rhs$ >>
     in
     <:str_item< type $list:[t]$ >>
@@ -448,7 +448,7 @@ module Str = struct
     fun ~loc ~name ~params_count ts ->
     let ltv =
       List.init params_count (fun n ->
-          (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) in
+          (VaVal (Some (Printf.sprintf "dummy%d" n)), (None, false))) in
     let ls = (loc, VaVal name) in
     let ltt = [] in
     let t =
@@ -589,7 +589,7 @@ module Sig = struct
       <:ctyp< [ $list:cs$ ] >>
     in
     let tdPrm = List.init params_count (fun n ->
-            (VaVal (Some (Printf.sprintf "dummy%d" n)), None)) in
+            (VaVal (Some (Printf.sprintf "dummy%d" n)), (None,false))) in
     let td = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = $tdDef$ >>
     in
     <:sig_item< type $list:[td]$ >>
@@ -598,7 +598,7 @@ module Sig = struct
 
   let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc name params ->
 
-    let tdPrm = List.map (fun s -> (VaVal s,None)) params in
+    let tdPrm = List.map (fun s -> (VaVal s, (None,false))) params in
     let td = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = 'abstract >>
     in
     <:sig_item< type $list:[td]$ >>
