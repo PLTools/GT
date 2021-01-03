@@ -8,14 +8,14 @@ homepage:    "https://github.com/JetBrains-Research/GT"
 bug-reports: "https://github.com/JetBrains-Research/GT/issues"
 
 build: [
-  ["dune" "subst"] { dev }
+  #["dune" "subst"] { dev }
   ["dune" "build" "-p" name "-j" jobs]
 ]
 
 depends: [
   "ocamlfind"  { build }
-  "dune"       
-  "ppxlib"     
+  "dune"
+  "ppxlib"
   "camlp5"     { >= "8" }
 ]
 
