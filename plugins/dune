@@ -81,9 +81,9 @@
   (:standard -w -7-9-13-36)))
 
 (library
- (name hash)
+ (name ghash)
  (public_name GT.syntax.hash)
- (modules hash)
+ (modules ghash)
  (libraries GTCommon)
  (synopsis "Plugin 'hash'")
  (flags

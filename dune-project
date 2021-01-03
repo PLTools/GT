@@ -4,12 +4,12 @@
 
 (allow_approximate_merlin)
 
-(version 0.3)
-
 (package
  (name GT)
- (version 0.3))
+ (synopsis "Generic transformers for algebraic types")
+ (version 0.4.1))
 
 (package
  (name GT-p5)
- (version 0.3))
+ (synopsis "Camlp5 extension for GT")
+ (version 0.4.1))

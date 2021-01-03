@@ -1,5 +1,5 @@
-version = "0.3"
-description = "Generic transformers for algebraic types"
+# DISABLED DUNE_GEN
+version = "0.4.1"
 requires = "GT.HTML base"
 archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
@@ -8,7 +8,6 @@ plugin(native) = "GT.cmxs"
 
 package "HTML" (
   directory = "HTML"
-  version = "0.3"
   description = ""
   requires = "GT.View"
   archive(byte) = "HTML.cma"
@@ -18,7 +17,6 @@ package "HTML" (
 )
 package "View" (
   directory = "View"
-  version = "0.3"
   description = ""
   requires = ""
   archive(byte) = "View.cma"
@@ -28,9 +26,7 @@ package "View" (
 )
 package "common" (
   directory = "common"
-  version = "0.3"
-  description =
-  "Actual code that perform codegeneration. Will used for creating new plugins"
+  description = "Actual code that perform codegeneration. Will used for creating new plugins"
   requires = "ocamlgraph ppxlib base"
   archive(byte) = "GTCommon.cma"
   archive(native) = "GTCommon.cmxa"
@@ -39,7 +35,6 @@ package "common" (
 )
 package "ppx" (
   directory = "ppx"
-  version = "0.3"
   description = "PPX syntax extensionon top of ppx_core"
   requires(ppx_driver) = "GT.common base ppxlib"
   archive(ppx_driver,byte) = "ppx.cma"
@@ -54,8 +49,7 @@ package "ppx" (
 )
 package "syntax" (
   directory = "syntax"
-  version = "0.3"
-  description = ""
+  description = "Various GT.syntax.* all together"
   requires = "GT-p5"
   archive(byte) = "syntax_p5.cma"
   archive(native) = "syntax_p5.cmxa"
@@ -63,7 +57,6 @@ package "syntax" (
   plugin(native) = "syntax_p5.cmxs"
   package "all" (
     directory = "all"
-    version = "0.3"
     description = ""
     requires =
     "GT.syntax.compare
@@ -88,7 +81,6 @@ package "syntax" (
   )
   package "compare" (
     directory = "compare"
-    version = "0.3"
     description = "Plugin 'compare'"
     requires = "GT.common"
 
@@ -101,7 +93,6 @@ package "syntax" (
   )
   package "eq" (
     directory = "eq"
-    version = "0.3"
     description = "Plugin 'eq'"
     requires = "GT.common GT.syntax.compare"
 
@@ -114,7 +105,6 @@ package "syntax" (
   )
   package "eval" (
     directory = "eval"
-    version = "0.3"
     description = "Plugin 'eval'"
     requires = "GT.common GT.syntax.map"
 
@@ -127,7 +117,6 @@ package "syntax" (
   )
   package "fmt" (
     directory = "gfmt"
-    version = "0.3"
     description = "Plugin 'fmt'"
     requires = "GT.common"
 
@@ -140,7 +129,6 @@ package "syntax" (
   )
   package "foldl" (
     directory = "foldl"
-    version = "0.3"
     description = "Plugin 'foldl'"
     requires = "GT.common"
 
@@ -153,7 +141,6 @@ package "syntax" (
   )
   package "foldr" (
     directory = "foldr"
-    version = "0.3"
     description = "Plugin 'foldr'"
     requires = "GT.common GT.syntax.foldl"
 
@@ -166,20 +153,18 @@ package "syntax" (
   )
   package "hash" (
     directory = "hash"
-    version = "0.3"
     description = "Plugin 'hash'"
     requires = "GT.common"
 
-    archive(syntax,preprocessor) = "hash.cma"
-    archive(syntax,preprocessor,native) = "hash.cmxa"
-    archive(byte) = "hash.cma"
-    archive(native) = "hash.cmxa"
-    plugin(byte) = "hash.cma"
-    plugin(native) = "hash.cmxs"
+    archive(syntax,preprocessor) = "ghash.cma"
+    archive(syntax,preprocessor,native) = "ghash.cmxa"
+    archive(byte) = "ghash.cma"
+    archive(native) = "ghash.cmxa"
+    plugin(byte) = "ghash.cma"
+    plugin(native) = "ghash.cmxs"
   )
   package "html" (
     directory = "html"
-    version = "0.3"
     description = "Plugin 'html'"
     requires = "GT.common"
 
@@ -192,7 +177,6 @@ package "syntax" (
   )
   package "map" (
     directory = "map"
-    version = "0.3"
     description = "Plugin 'map' a.k.a. functor's fmap"
     requires = "GT.common"
 
@@ -205,7 +189,6 @@ package "syntax" (
   )
   package "show" (
     directory = "show"
-    version = "0.3"
     description = "Plugin 'show'"
     requires = "GT.common"
 
@@ -218,7 +201,6 @@ package "syntax" (
   )
   package "stateful" (
     directory = "stateful"
-    version = "0.3"
     description = "Plugin 'stateful'"
     requires = "GT.common GT.syntax.map"
 

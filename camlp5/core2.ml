@@ -146,7 +146,7 @@ let generate_str tdecls loc =
   in
   let out =
     let sis = <:str_item< type $list:(List.map fst tdecls)$ >>  in
-    let caml_ast = Ast2pt.implem "filename.here" [sis] in
+    let caml_ast = Ast2pt.implem "harcoded_filename.ml" [sis] in
     let () = assert (List.length caml_ast = 1) in
     match (List.hd caml_ast).pstr_desc with
     | Pstr_type (flg, tds) ->
@@ -168,8 +168,8 @@ let generate_sig tdecls loc =
 
   let out =
      let ts = List.map fst tdecls in
-     let sis = <:sig_item< type $list:ts$ >>  in
-     let caml_ast = Ast2pt.interf "asdf" [sis] in
+     let sis = <:sig_item< type $list:ts$ >> in
+     let caml_ast = Ast2pt.interf "harcoded_filename.mli" [sis] in
      assert (List.length caml_ast  =  1);
      match (List.hd caml_ast).psig_desc with
      | Psig_type (flg, tds) ->
