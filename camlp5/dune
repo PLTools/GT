@@ -63,5 +63,5 @@
 (rule
  (targets pp5+dump.byte)
  (action
-  (run mkcamlp5 -verbose -package camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o pa_extend.cmo -o
+  (run mkcamlp5 -verbose -package camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o,camlp5.extend -o
     %{targets})))
