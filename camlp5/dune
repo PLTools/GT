@@ -12,8 +12,7 @@
   (action
    (run %{project_root}/camlp5/pp5+dump.byte %{input-file})))
  (flags
-  (:standard -warn-error -A -rectypes))
- )
+  (:standard -warn-error -A -rectypes)))
 
 (rule
  (targets pp5+gt+plugins+dump.exe)
@@ -61,10 +60,9 @@
  (action
   (run mkcamlp5.opt -package camlp5 pa_o.cmx pr_dump.cmx -o %{targets})))
 
-; Chet, you can replace parser_quotations<->quotations below if you want to test something
-
 (rule
  (targets pp5+dump.byte)
+ ; Chet, you can try to add -package    camlp5.extend,camlp5.extend.link below
  (action
   (run mkcamlp5 -package camlp5,camlp5.quotations pa_o.cmo pr_dump.cmo -o
     %{targets})))
