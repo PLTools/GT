@@ -21,8 +21,6 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
-#load "pa_extend.cmo";;
-
 open Pcaml
 open GTCommon
 

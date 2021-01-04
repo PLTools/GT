@@ -21,7 +21,7 @@
    ../plugins/eq.cmxa ../plugins/foldl.cmxa ../plugins/foldr.cmxa
    ../plugins/stateful.cmxa ../plugins/eval.cmxa ../plugins/html.cmxa)
  (action
-  (run mkcamlp5.opt -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmx
+  (run mkcamlp5.opt -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations,base,ppxlib,ocamlgraph,logger
     %{deps} pa_log.cmx pr_dump.cmx -o %{targets})))
 
 (rule
@@ -31,38 +31,38 @@
    ../plugins/eq.cmxa ../plugins/foldl.cmxa ../plugins/foldr.cmxa
    ../plugins/stateful.cmxa ../plugins/eval.cmxa ../plugins/html.cmxa)
  (action
-  (run mkcamlp5.opt -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmx
+  (run mkcamlp5.opt -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations,base,ppxlib,ocamlgraph,logger
     %{deps} pa_log.cmx pr_o.cmx -o %{targets})))
 
 (rule
  (targets pp5+gt+dump.exe)
  (deps ../common/GTCommon.cmxa pa_gt.cmxa)
  (action
-  (run mkcamlp5.opt -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmx
+  (run mkcamlp5.opt -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations,base,ppxlib,ocamlgraph,logger
     %{deps} pa_log.cmx pr_dump.cmx -o %{targets})))
 
 (rule
  (targets pp5+gt+o.exe)
  (deps ../common/GTCommon.cmxa pa_gt.cmxa)
  (action
-  (run mkcamlp5.opt -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmx
+  (run mkcamlp5.opt -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations,base,ppxlib,ocamlgraph,logger
     %{deps} pa_log.cmx pr_o.cmx -o %{targets})))
 
 (rule
  (targets pp5+gt+o.byte)
  (deps ../common/GTCommon.cma pa_gt.cma)
  (action
-  (run mkcamlp5 -package camlp5,base,ppxlib,ocamlgraph,logger pa_o.cmo
+  (run mkcamlp5 -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations,base,ppxlib,ocamlgraph,logger
     %{deps} pa_log.cmo pr_o.cmo -o %{targets} -verbose)))
 
 (rule
  (targets pp5+dump.exe)
  (action
-  (run mkcamlp5.opt -package camlp5 pa_o.cmx pr_dump.cmx -o %{targets})))
+  (run mkcamlp5.opt -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations pr_dump.cmx -o %{targets})))
 
 (rule
  (targets pp5+dump.byte)
  ; Chet, you can try to add -package    camlp5.extend,camlp5.extend.link below
  (action
-  (run mkcamlp5 -package camlp5,camlp5.quotations pa_o.cmo pr_dump.cmo -o
+  (run mkcamlp5 -package camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations pr_dump.cmo -o
     %{targets})))
