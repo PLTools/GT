@@ -62,7 +62,6 @@
 
 (rule
  (targets pp5+dump.byte)
- ; Chet, you can try to add -package    camlp5.extend,camlp5.extend.link below
  (action
-  (run mkcamlp5 -package camlp5,camlp5.quotations pa_o.cmo pr_dump.cmo -o
+  (run mkcamlp5 -verbose -package camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o pa_extend.cmo -o
     %{targets})))
