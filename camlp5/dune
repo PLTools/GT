@@ -33,31 +33,31 @@
    ../plugins/stateful.cmxa ../plugins/eval.cmxa ../plugins/html.cmxa)
  (action
   (run mkcamlp5.opt -package
-    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger
+    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
     %{deps} -o %{targets})))
 
 (rule
  (targets pp5+gt+dump.exe)
- (deps ../common/GTCommon.cmxa pa_gt.cmxa)
+ (deps pa_gt.cmxa)
  (action
   (run mkcamlp5.opt -package
-    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger
+    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger,ppxlib,GT.common,ocamlgraph
     %{deps} -o %{targets})))
 
 (rule
  (targets pp5+gt+o.exe)
- (deps ../common/GTCommon.cmxa pa_gt.cmxa)
+ (deps pa_gt.cmxa)
  (action
   (run mkcamlp5.opt -package
-    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger
+    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
     %{deps} -o %{targets})))
 
 (rule
  (targets pp5+gt+o.byte)
- (deps ../common/GTCommon.cma pa_gt.cma)
+ (deps pa_gt.cma)
  (action
   (run mkcamlp5 -package
-    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger
+    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
     %{deps} -o %{targets})))
 
 (rule
@@ -71,5 +71,5 @@
  (targets pp5+dump.byte)
  (action
   (run mkcamlp5 -verbose -package
-    camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o,camlp5.extend -o
-    %{targets})))
+    camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o,camlp5.extend,ocamlgraph
+    -o %{targets})))
