@@ -1,7 +1,7 @@
 (**************************************************************************
- *  Copyright (C) 2005-2008
+ *  Copyright (C) 2005-2021
  *  Dmitri Boulytchev (db@tepkom.ru), St.Petersburg State University
- *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
+ *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -58,7 +58,7 @@ let seqa   = View.seqa
 
 let br = raw "<br>"
 
-let tag ?(attrs="") s p = 
+let tag ?(attrs="") s p =
   seq [raw (sprintf "<%s>" (s ^ (if attrs = "" then "" else " ") ^ attrs)); p; raw (sprintf "</%s>" s)]
 
 let link url =
@@ -88,14 +88,14 @@ let div      ?(attrs="") = tag "div"      ~attrs:(sprintf "%s contentEditable=\"
 let text     ?(attrs="") = tag "input"    ~attrs:(sprintf "%s type=\"text\"" attrs)
 let textarea ?(attrs="") = tag "textarea" ~attrs:attrs
 
-let radio ?(attrs="") triples = 
+let radio ?(attrs="") triples =
   seq (List.map (fun (name, v, a) -> seq [tag "input" ~attrs:(sprintf "%s %s type=\"radio\" value=\"%s\"" attrs a v) name; raw "&nbsp;"])
         triples
       )
 
 let select ?(attrs="") triples =
   tag "select" ~attrs:attrs (
-    seq (List.map (fun (name, v, a) -> tag "option" ~attrs:(sprintf "%s value=\"%s\"" a v) name) 
+    seq (List.map (fun (name, v, a) -> tag "option" ~attrs:(sprintf "%s value=\"%s\"" a v) name)
           triples
         )
   )
@@ -109,34 +109,34 @@ let list  p = tag "ul" (seq  (List .map (tag "li") p))
 let array p = tag "ul" (seqa (Array.map (tag "li") p))
 
 let fields l = list (List.map (fun (n, x) -> named n x) l)
-  
+
 let make f x = raw (f x)
 
 module Wizard =
   struct
- 
+
     module Page =
       struct
 
         module Item =
           struct
 
-            type typ = 
+            type typ =
 	      | String of string
 	      | Text   of string * string
 	      | Div    of string * string
 	      | Flag   of string
-	      | Select of string * (viewer * string * string) list 
-	      | Radio  of string * (viewer * string * string) list 
+	      | Select of string * (viewer * string * string) list
+	      | Radio  of string * (viewer * string * string) list
 
             type t = {name: string; id: string; typ: typ}
 
             let make id name typ = {name=name; id=sprintf "%s_%s" id name; typ=typ}
-           
+
             let render t =
               let attrs' attrs = sprintf "%s id=\"%s\"" attrs t.id in
               t.id,
-              (seq [             
+              (seq [
                 td ~attrs:"align=\"right\" valign=\"center\"" (raw t.name);
                 td ~attrs:"align=\"center\" valign=\"center\"" (raw ":");
                 td ~attrs:"align=\"left\" valign=\"center\"" (
@@ -148,15 +148,15 @@ module Wizard =
                   | Select (attrs, triples) -> select ~attrs:(attrs' attrs) triples
 		  | Radio  (attrs, triples) -> radio ~attrs:(attrs' (sprintf "%s name=\"%s\"" attrs t.id)) triples
                 )
-              ])              
+              ])
 
           end
- 
+
         class c id attrs =
           object(this)
             val mutable items : Item.t list = []
-            method add name item = 
-	      items <- (Item.make id name item) :: items; 
+            method add name item =
+	      items <- (Item.make id name item) :: items;
 	      this
             method text   ?(attrs="") ?(default="" ) name = this#add name (Item.Text   (attrs, default))
             method div    ?(attrs="") ?(default="" ) name = this#add name (Item.Div    (attrs, default))
@@ -167,20 +167,20 @@ module Wizard =
             method radio  ?(attrs="") name items = this#add name (Item.Radio  (attrs, items))
 
             method id name = (List.find (fun i -> i.Item.name = name) items).Item.id
-	    method render (back, backA, backCb) (next, nextA, nextCb) = 
+	    method render (back, backA, backCb) (next, nextA, nextCb) =
               let ids, rendered =
 	        List.split (
-	          List.map 
+	          List.map
 		    (fun t -> let id, r = Item.render t in (t.Item.name, id, t.Item.typ), r)
                     (List.rev items)
                 )
 	      in
               let html =
                 table ~attrs:attrs (
-                  seq ( 
+                  seq (
                     (List.map tr rendered) @
-                    [tr (td ~attrs:"colspan=\"3\"" (raw "<hr>"));  
-                     tr (td ~attrs:"colspan=\"3\" align=\"center\"" 
+                    [tr (td ~attrs:"colspan=\"3\"" (raw "<hr>"));
+                     tr (td ~attrs:"colspan=\"3\" align=\"center\""
                            (seq [
                              button ~attrs:(sprintf "%s onclick=\"%s\"" backA backCb) (raw back);
                              raw "&nbsp;&nbsp;";
@@ -189,8 +189,8 @@ module Wizard =
                      )
                     ]
 	          )
-                )        
-	      in 
+                )
+	      in
               let savef = sprintf "save_%s" id in
               let loadf = sprintf "load_%s" id in
               let js = Buffer.create 1024 in
@@ -205,12 +205,12 @@ module Wizard =
 	      in
               generate (sprintf "function %s (curr) {\n" loadf);
                 generate "  var coll = null;\n";
-                List.iter 
+                List.iter
                   (fun (name, id, t) ->
                      match t with
                      | Item.Flag _ -> generate (sprintf "  if (curr[\"%s\"]) document.getElementById (\"%s\").checked = curr[\"%s\"];\n" name id name);
-		     | Item.Div _ -> 
-                         innerText (sprintf "document.getElementById (\"%s\")" id) 
+		     | Item.Div _ ->
+                         innerText (sprintf "document.getElementById (\"%s\")" id)
                                    (fun elem -> sprintf "  if (curr[\"%s\"]) %s = curr[\"%s\"];\n" name elem name)
                      | Item.Radio _ ->
                          generate (sprintf "  if (curr[\"%s\"]) {\n"  name);
@@ -225,23 +225,23 @@ module Wizard =
                 generate "}\n";
               generate (sprintf "function %s (curr) {\n" savef);
                 generate "  var coll = null;\n";
-                List.iter 
-                  (fun (name, id, t) -> 
+                List.iter
+                  (fun (name, id, t) ->
                      match t with
                      | Item.Flag  _ -> generate (sprintf "  curr[\"%s\"] = document.getElementById(\"%s\").checked;\n" name id)
-                     | Item.Div   _ -> 
+                     | Item.Div   _ ->
                          innerText (sprintf "document.getElementById(\"%s\")" id)
                                    (fun elem -> sprintf "  curr[\"%s\"] = %s.replace(/\\u00a0/g, \" \");\n" name elem)
-                     | Item.Radio _ -> 
+                     | Item.Radio _ ->
                        generate (sprintf "  coll = document.getElementsByName (\"%s\");\n" id);
                        generate          "  for (var i = 0 ; i<coll.length; i++) {\n";
                        generate          "    if (coll[i].checked) {\n";
                        generate (sprintf "       curr[\"%s\"] = coll[i].value;\n" name);
                        generate          "       break;\n";
                        generate          "    }\n";
-                       generate          "  }\n";                    
+                       generate          "  }\n";
                      | _ -> generate (sprintf "  curr[\"%s\"] = document.getElementById(\"%s\").value;\n" name id)
-                  ) 
+                  )
                   ids;
                 generate "}\n";
               savef, loadf, Buffer.contents js, html
@@ -268,11 +268,11 @@ module Wizard =
     let text   ?(attrs="") ?(default="") name (p:page) = p#text ~attrs:attrs ~default:default name
     let div    ?(attrs="") ?(default="") name (p:page) = p#div  ~attrs:attrs ~default:default name
 
-    let mapi f l = 
+    let mapi f l =
       let rec inner i = function
       | []    -> []
       | h::tl -> f i h :: inner (i+1) tl
-      in inner 0 l 
+      in inner 0 l
 
     class c attrs id target navigate =
       object
@@ -290,7 +290,7 @@ module Wizard =
           let nb = sprintf "nb_%s"        id in
           let pg = sprintf "page_%s"      id in
           let bf = sprintf "do_back_%s"   id in
-          let nf = sprintf "do_next_%s"   id in 
+          let nf = sprintf "do_next_%s"   id in
           let pc = sprintf "pages_%s"     id in
           let pr = sprintf "present_%s"   id in
           let sf = sprintf "savefs_%s"    id in
@@ -302,15 +302,15 @@ module Wizard =
           let sp = sprintf "stack_ptr_%s" id in
           let pu = sprintf "push_%s"      id in
           let po = sprintf "pop_%s"       id in
-          let js = Buffer.create 1024        in    
+          let js = Buffer.create 1024        in
           let generate s = Buffer.add_string js s in
           let funs, pages =
-            List.split ( 
-              mapi (fun i p -> 
-                let savef, loadf, script, page = 
+            List.split (
+              mapi (fun i p ->
+                let savef, loadf, script, page =
                   p#render
-                    ("Back", sprintf "id=\"%s\"" bb, bf ^ " ()") 
-                    ("Next", sprintf "id=\"%s\"" nb, nf ^ " ()")                      
+                    ("Back", sprintf "id=\"%s\"" bb, bf ^ " ()")
+                    ("Next", sprintf "id=\"%s\"" nb, nf ^ " ()")
                 in
                 generate script;
                 (savef, loadf), toHTML page
@@ -346,12 +346,12 @@ module Wizard =
             generate (sprintf "  %s[%s] (%s);\n" lf pg cr);
             generate "}\n";
           generate (sprintf "function %s () {\n" pr);
-            generate (sprintf "  document.getElementById (\"%s\").innerHTML = %s[%s];\n" target pc pg); 
+            generate (sprintf "  document.getElementById (\"%s\").innerHTML = %s[%s];\n" target pc pg);
             generate (sprintf "  %s (%s);\n" ld cr);
             generate (sprintf "  document.getElementById (\"%s\").disabled = 0 == %s;\n" bb pg);
             generate "}\n";
           generate (sprintf "function %s () {\n" bf);
-            generate (sprintf "  %s (%s);\n" sv cr);       
+            generate (sprintf "  %s (%s);\n" sv cr);
             generate (sprintf "  %s = %s ();\n" pg po);
             generate (sprintf "  %s ();\n" pr);
             generate "}\n";
@@ -383,7 +383,7 @@ module L = List
 
 module String =
   struct
-    
+
     type t = string
 
     let named  n v = toHTML (named n (raw v))
@@ -398,11 +398,11 @@ module String =
 module Anchor (X : sig type t val name : string end) =
   struct
 
-    module H = Hashtbl.Make 
+    module H = Hashtbl.Make
 	(
-	 struct 
+	 struct
 
-	   type t = X.t 
+	   type t = X.t
 
 	   let hash  = Hashtbl.hash
 	   let equal = (==)
@@ -413,17 +413,17 @@ module Anchor (X : sig type t val name : string end) =
     let h = H.create 1024
     let index =
       let i = ref' 0 in
-      (fun () -> 
+      (fun () ->
 	incr i;
 	!i
       )
 
     let set x   = H.add h x (index ())
     let isSet x = H.mem h x
-    let get x   = 
+    let get x   =
       if not (isSet x) then set x;
       sprintf "%s.anchor%d" X.name (H.find h x)
-      
+
     let url t = "#" ^ get t
 
     let ref t text = ref (url t) text
@@ -471,9 +471,9 @@ module NamedPair (N : sig val first : string val second : string end) (F : Eleme
 
     type t = F.t * S.t
 
-    let toHTML (f, s) = 
+    let toHTML (f, s) =
       toHTML
-	(list 
+	(list
 	   [named N.first  (make F.toHTML f);
             named N.second (make S.toHTML s);
 	   ]
@@ -488,9 +488,9 @@ module Set (S : Set.S) (V : Element with type t = S.elt) =
 
     type t = S.t
 
-    let toHTML x =     
+    let toHTML x =
       let module LL = List (String) in
-      LL.toHTML (L.sort compare (L.map V.toHTML (S.elements x)))
+      LL.toHTML (L.sort Stdlib.compare (L.map V.toHTML (S.elements x)))
 
   end
 
@@ -499,10 +499,10 @@ module Map (M : Map.S) (K : Element with type t = M.key) (V : Element) =
 
     type t = V.t M.t
 
-    let toHTML x =     
-      let module P  = NamedPair (struct let first = "key" let second = "value" end)(K)(V) in 
+    let toHTML x =
+      let module P  = NamedPair (struct let first = "key" let second = "value" end)(K)(V) in
       let module LL = List (String) in
-      LL.toHTML (L.sort compare (M.fold (fun x y acc -> (P.toHTML (x, y)) :: acc) x []))
+      LL.toHTML (L.sort Stdlib.compare (M.fold (fun x y acc -> (P.toHTML (x, y)) :: acc) x []))
 
   end
 
@@ -511,11 +511,9 @@ module Hashtbl (M : Hashtbl.S) (K : Element with type t = M.key) (V : Element) =
 
     type t = V.t M.t
 
-    let toHTML x =     
-      let module P  = NamedPair(struct let first = "key" let second = "value" end)(K)(V) in 
+    let toHTML x =
+      let module P  = NamedPair(struct let first = "key" let second = "value" end)(K)(V) in
       let module LL = List (String) in
-      LL.toHTML (L.sort compare (M.fold (fun x y acc -> (P.toHTML (x, y)) :: acc) x []))
+      LL.toHTML (L.sort Stdlib.compare (M.fold (fun x y acc -> (P.toHTML (x, y)) :: acc) x []))
 
   end
-
-

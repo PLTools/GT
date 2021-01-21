@@ -1,7 +1,7 @@
 (**************************************************************************
- *  Copyright (C) 2005-2008
+ *  Copyright (C) 2005-2021
  *  Dmitri Boulytchev (db@tepkom.ru), St.Petersburg State University
- *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA    
+ *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -51,9 +51,9 @@ let break     = string "\n"
 let seq  v b = List .iter (fun x -> x b) v
 let seqa v b = Array.iter (fun x -> x b) v
 
-let listBy d v b = 
-  ignore 
-    (List.fold_left 
+let listBy d v b =
+  ignore
+    (List.fold_left
        (fun l x ->
 	 x b;
 	 match l with [] -> [] | hd :: tl -> d b; tl
@@ -64,7 +64,7 @@ let listBy d v b =
 
 let list = listBy comma
 
-let arrayBy d v b =   
+let arrayBy d v b =
   let n = Array.length v in
   Array.iteri (fun i x -> x b; if i < n - 1 then d b) v
 
@@ -80,7 +80,7 @@ let concatWithDelimiter delimiter acc x = match acc with "" -> x | _ -> acc ^ de
 let concatWithComma = concatWithDelimiter ", "
 let concatWithSemicolon = concatWithDelimiter "; "
 
-module type Viewable = 
+module type Viewable =
   sig
 
     type t
@@ -104,8 +104,8 @@ module ListC (C : Concat) (X : Viewable) =
   struct
 
     type t = X.t list
-    let toString = fold_left (fun acc x -> C.concat acc (X.toString x)) "" 
-    
+    let toString = fold_left (fun acc x -> C.concat acc (X.toString x)) ""
+
   end
 
 module List = ListC (struct let concat = concatWithComma end)
@@ -126,7 +126,7 @@ module SetC (C : Concat) (S : Set.S) (V : Viewable with type t = S.elt) =
   struct
 
     type t = S.t
-    let toString x = 
+    let toString x =
       let module X = ListC (C) (V) in
       X.toString (S.elements x)
 
@@ -139,8 +139,8 @@ module NamedPair (N : sig val first : string val second : string end) (F : Viewa
 
     type t = F.t * S.t
 
-    let toString (x, y) = 
-      let field value = function "" -> value | name -> sprintf "%s=%s" name value in      
+    let toString (x, y) =
+      let field value = function "" -> value | name -> sprintf "%s=%s" name value in
       sprintf "(%s, %s)" (field (F.toString x) N.first) (field (S.toString y) N.second)
 
   end
@@ -151,7 +151,7 @@ module Char =
   struct
 
     type t = char
-    let toString = String.make 1 
+    let toString = String.make 1
 
   end
 
@@ -167,10 +167,10 @@ module MapC (C : Concat) (M : Map.S) (K : Viewable with type t = M.key) (V : Vie
   struct
 
     type t = V.t M.t
-    let toString x = 
+    let toString x =
       let module P = Pair (K) (V) in
       let module X = ListC (C) (String) in
-      X.toString (L.sort compare (M.fold (fun x y acc -> (P.toString (x, y)) :: acc) x []))
+      X.toString (L.sort Stdlib.compare (M.fold (fun x y acc -> (P.toString (x, y)) :: acc) x []))
 
   end
 
@@ -180,10 +180,10 @@ module HashtblC (C : Concat) (M : Hashtbl.S) (K : Viewable with type t = M.key) 
   struct
 
     type t = V.t M.t
-    let toString x = 
+    let toString x =
       let module P = Pair (K) (V) in
       let module X = ListC (C) (String) in
-      X.toString (L.sort compare (M.fold (fun x y acc -> (P.toString (x, y)) :: acc) x []))
+      X.toString (L.sort Stdlib.compare (M.fold (fun x y acc -> (P.toString (x, y)) :: acc) x []))
 
   end
 
