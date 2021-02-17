@@ -1,9 +1,15 @@
 (env
  (_
+  (ocamlopt_flags -S)
   (flags
    (:standard -w -32-33))))
 
 (executable
  (name bench1)
  (modules bench1)
+ (libraries benchmark))
+
+(executable
+ (name bench2)
+ (modules bench2)
  (libraries benchmark))

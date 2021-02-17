@@ -102,8 +102,8 @@ module Trees = struct
 
     let rec fold () xs =
       match xs with
-      | Leaf -> Leaf
-      | Node (l,r) -> Node (fold () l, fold () r)
+      | Leaf -> ()
+      | Node (l,r) -> fold (fold () l) r
 
   end
 
@@ -299,9 +299,9 @@ let __ () =
   [300; 500; 700; 900; 1000 ] |> List.iter (fun n ->
     let xs = M.create n in
     let wrap f () =
-      Gc.major ();
+      (* Gc.major ();
       Gc.minor ();
-      Gc.compact ();
+      Gc.compact (); *)
       let _ = f () xs  in
       ()
     in
@@ -324,9 +324,9 @@ let __ () =
   [300; 500; (*700; 900; 1100*) ] |> List.iter (fun n ->
     let xs = M.create n in
     let wrap f () =
-      Gc.major ();
+      (* Gc.major ();
       Gc.minor ();
-      Gc.compact ();
+      Gc.compact (); *)
       let _ = f () xs in
       ()
     in
@@ -346,9 +346,9 @@ let () =
   [ 10; 15; 20 (*700; 900*) ] |> List.iter (fun n ->
     let xs = M.create n in
     let wrap f () =
-      Gc.major ();
+      (* Gc.major ();
       Gc.minor ();
-      Gc.compact ();
+      Gc.compact (); *)
       let _ = f () xs in
       ()
     in
@@ -368,17 +368,17 @@ let  () =
   [ 10; 15; 20 (* 700; 900*) ] |> List.iter (fun n ->
     let xs = M.create n in
     let wrap f () =
-      Gc.major ();
+      (* Gc.major ();
       Gc.minor ();
-      Gc.compact ();
+      Gc.compact (); *)
       let _ = f () xs in
       ()
     in
     let res =
       throughputN ~repeat timeout
-        [ (Printf.sprintf "%s_D" M.name, wrap M.A.fold, ())
-        ; (Printf.sprintf "%s_V" M.name, wrap M.B.fold, ())
-        ; (Printf.sprintf "%s_G" M.name, wrap M.C.fold, ())
+        [ (Printf.sprintf "%s_D_%d" M.name n, wrap M.A.fold, ())
+        ; (Printf.sprintf "%s_V_%d" M.name n, wrap M.B.fold, ())
+        ; (Printf.sprintf "%s_G_%d" M.name n, wrap M.C.fold, ())
         ]
     in
     print_newline();
