@@ -5,7 +5,7 @@
 ;  (action  (run config/discover.exe ))
 ;)
 
-(dirs :standard \ regression_ppx)
+(dirs :standard \ regression_ppx work)
 
 (rule
  (targets logger-flags.cfg)
