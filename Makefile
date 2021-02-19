@@ -1,18 +1,22 @@
-.PHONY: discover-tests test promote clean celan
+.PHONY: release discover-tests test promote clean celan
+DFLAGS=
 
 # compiler packages without tests
 all:
-	dune build -p GT,GT-p5
+	dune build -p GT,GT-p5 $(DFLAGS)
+
+release: DFLAGS := --profile=release
+release: all
 
 discover-tests:
 	echo "" > regression/dune.tests
 	dune build @discover-tests
 
 test:
-	dune runtest
+	dune runtest $(DUNE_FLAGS)
 
 promote:
-	dune promote
+	dune promote $(DUNE_FLAGS)
 
 celan: clean
 clean:
@@ -22,9 +26,9 @@ rebuild: clean
 	$(MAKE) all tests
 
 install:
-	dune build @install
-	dune install
+	dune build @install $(DUNE_FLAGS)
+	dune install $(DUNE_FLAGS)
 
 uninstall:
-	dune build @install
-	dune uninstall
+	dune build @install $(DUNE_FLAGS)
+	dune uninstall $(DUNE_FLAGS)
