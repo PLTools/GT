@@ -29,6 +29,7 @@ depends: [
   "camlp5"     { >= "8"  }
   "dune"       { >= "2.7" & build }
   "base"
+	"logger-p5"
   "ppx_expect" {with-test}
 #  "ppx_import" {with-test}
 ]
@@ -41,3 +42,4 @@ dev-repo: "git+https://github.com/JetBrains-Research/GT.git"
 url {
   src: "git+https://github.com/JetBrains-Research/GT.git"
 }
+
