@@ -52,9 +52,9 @@ jobs:
       - run: opam install . --deps-only --with-test
       - run: opam exec -- make #dune build
       - run: opam exec -- make test # dune runtest
-      - run: opam exec -- dune build @doc # dune runtest
 
       - run: opam install odoc -y
+      - run: opam exec -- dune build @doc
       - name: Publish generated content to GitHub Pages
         uses: tsunematsu21/actions-publish-gh-pages@v1.0.1
         with:
