@@ -1,0 +1,28 @@
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A -w -7-32-39))))
+
+(executable
+ (name expr)
+ (public_name GT-samples.expr)
+ (package GT-samples)
+ (modules Expr)
+ (libraries GT)
+ (preprocess
+  (action
+   (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
+
+(executable
+ (name lambdas)
+ (public_name GT-samples.lambdas)
+ (package GT-samples)
+ (modules Lambdas)
+ (libraries GT)
+ (preprocess
+  (action
+   (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
