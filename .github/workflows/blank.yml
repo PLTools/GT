@@ -54,6 +54,7 @@ jobs:
       - run: opam exec -- make test # dune runtest
       - run: opam exec -- dune build @doc # dune runtest
 
+      - run: opam install odoc -y
       - name: Publish generated content to GitHub Pages
         uses: tsunematsu21/actions-publish-gh-pages@v1.0.1
         with:
