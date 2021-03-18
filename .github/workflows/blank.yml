@@ -44,11 +44,12 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
 
+      - run: opam pin add GT.dev . --no-action
+      - run: opam depext GT.dev --yes --with-test
+
       - name: Install dependecies for documentation
         run: opam install odoc pa_ppx --yes
 
-      - run: opam pin add GT.dev . --no-action
-      - run: opam depext GT.dev --yes --with-test
       - run: opam install . --deps-only --with-test
       - run: opam exec -- make #dune build
       - run: opam exec -- make test # dune runtest
