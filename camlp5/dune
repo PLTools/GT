@@ -17,25 +17,27 @@
 (rule
  (targets pp5+gt+plugins+dump.exe)
  (deps
-  ../common/GTCommon.cmxa
-  pa_gt.cmxa
-  ../plugins/show.cmxa
-  ../plugins/gmap.cmxa
-  ../plugins/gfmt.cmxa
-  ../plugins/compare.cmxa
-  ../plugins/eq.cmxa
-  ../plugins/foldl.cmxa
-  ../plugins/foldr.cmxa
-  ../plugins/stateful.cmxa
-  ../plugins/eval.cmxa
-  ../plugins/html.cmxa)
+  %{project_root}/config/package-doc.cfg
+  (:cmas
+   ../common/GTCommon.cmxa
+   pa_gt.cmxa
+   ../plugins/show.cmxa
+   ../plugins/gmap.cmxa
+   ../plugins/gfmt.cmxa
+   ../plugins/compare.cmxa
+   ../plugins/eq.cmxa
+   ../plugins/foldl.cmxa
+   ../plugins/foldr.cmxa
+   ../plugins/stateful.cmxa
+   ../plugins/eval.cmxa
+   ../plugins/html.cmxa))
  (action
   (run
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
-   %{read-lines:../config/package-doc.sexp}
-   %{deps}
+   %{read-lines:../config/package-doc.cfg}
+   %{cmas}
    -o
    %{targets})))
 
@@ -59,19 +61,22 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
+   %{read-lines:../config/package-doc.cfg}
    %{deps}
    -o
    %{targets})))
 
 (rule
  (targets pp5+gt+dump.exe)
- (deps %{project_root}/common/GTCommon.cmxa pa_gt.cmxa)
+ (deps %{project_root}/config/package-doc.cfg
+  (:cmas %{project_root}/common/GTCommon.cmxa pa_gt.cmxa))
  (action
   (run
    mkcamlp5.opt
-   -package
-   camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
-   %{deps}
+   -package camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base
+   -package logger,ppxlib,ocamlgraph
+   %{read-lines:../config/package-doc.cfg}
+   %{cmas}
    -o
    %{targets})))
 

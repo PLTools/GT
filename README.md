@@ -70,8 +70,11 @@ To use camlp5 (>= 7.12) syntax extension in toplevel try this:
 
 In case some of the tests do not compile use following commands to see generated code:
 
-- with camlp5 use `(cd _build && ../camlp5o_pp.sh pr_o.cmo regression/testname.ml)`
-- with PPX use `./pp_gt.native -pretty regression/testname.ml`
+- with camlp5 use `dune exec camlp5/pp5+gt+plugins+o.exe regression/test817logic.ml`
+- with PPX use `dune exec ppx/pp_gt.exe regression/test801mutal.ml`
+
+To build documentation set the environment variable `GT_WITH_DOCS` and run `opam install odoc --yes && dune build @doc`.
+The generated HTML files will be located at `_build/default/_doc/_html/index.html`.
 
 In the following section we describe our approach in a nutshell by a typical example.
 

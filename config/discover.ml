@@ -134,22 +134,19 @@ let gen_tests_dune dir =
   let cramch =
     let f = Format.sprintf "regression.t" in
     let _ = Sys.command (Format.sprintf "rm -f %s" f) in
-(*    let _ = Sys.command (Format.sprintf "ls %s" f) in*)
     open_out f
   in
-(*  let fmtc = Format.formatter_of_out_channel cramch in*)
   let outch  = open_out (Format.sprintf "dune.tests") in
   let fmt = Format.formatter_of_out_channel outch in
   Format.pp_set_margin fmt 80;
   Format.pp_set_max_indent fmt 6;
   let wrap ?flags desc tests rewriter =
     tests |> List.iter (fun s ->
-      Printf.fprintf cramch "  $ (cd ../../../../default && ./regression/%s.exe)\n%!" s
+      Printf.fprintf cramch "  $ ./%s.exe\n%!" s
     );
     match tests with
     | [] -> ()
     | _ ->
-        (* let names = String.concat " " tests in *)
         let exes = String.concat " " @@ List.map (Printf.sprintf "%s.exe") tests in
         Format.fprintf fmt "\n; %s\n" desc;
         Format.fprintf fmt "(cram (deps %s))\n" exes;
@@ -192,7 +189,8 @@ let gen_tests_dune dir =
   close_out outch
 
 let discover_doc () =
-  let filename = "package-doc.sexp" in
+  let filename = "package-doc.cfg" in
+  Sys.command (Printf.sprintf "rm -fr '%s'" filename) |> ignore;
   try
     let _ = Unix.getenv "GT_WITH_DOCS" in
     Cfg.Flags.write_lines filename ["-package"; "pa_ppx"]
@@ -205,8 +203,8 @@ let discover_doc () =
 let tests         = ref false
 let tests_dune    = ref false
 let tests_dir     = ref "./regression"
-let camlp5_flags  = ref false
-let gt_flags      = ref false
+let camlp5_flags   = ref false
+let doc_flags      = ref false
 let logger_flags  = ref false
 let all_flags     = ref false
 let all           = ref false
@@ -214,10 +212,10 @@ let all           = ref false
 let args =
   let set_tests_dir s = tests_dir := s in
   Arg.align @@
-    [ ("-tests-dir"   , Arg.String set_tests_dir, "DIR discover tests in this directory"      )
-    ; ("-tests"       , Arg.Set tests_dune      , " generate dune build file for tests"       )
-    ; ("-camlp5-flags", Arg.Set camlp5_flags    , " discover camlp5 flags (camlp5-flags.cfg)" )
-(*    ; ("-gt-flags"    , Arg.Set gt_flags        , " discover GT flags (gt-flags.cfg)"         )*)
+    [ ("-tests-dir"  , Arg.String set_tests_dir, "DIR discover tests in this directory"      )
+    ; ("-tests"      , Arg.Set tests_dune      , " generate dune build file for tests"       )
+    ; ("-camlp5-flags", Arg.Set camlp5_flags      , " discover camlp5 flags (camlp5-flags.cfg)" )
+    ; ("-doc-flags"   , Arg.Set doc_flags        , " discover whether to build documentation")
     ; ("-logger-flags", Arg.Set logger_flags    , " discover logger flags (logger-flags.cfg)" )
     ; ("-all-flags"   , Arg.Set all_flags       , " discover all flags"                       )
     ; ("-all"         , Arg.Set all             , " discover all"                             )
@@ -228,16 +226,9 @@ let args =
 let () =
 
   Cfg.main ~name:"GT" ~args (fun cfg ->
-    (*let testnames =
-      if !tests || !tests_dune || !all then
-        match !tests_dir with
-        | Some dir -> get_tests dir
-        | None     -> failwith "-tests-dir argument is not set"
-      else []
-    in*)
+    if !doc_flags || !all then
+      discover_doc ();
 
-    (*if !tests || !all then
-      discover_tests cfg testnames;*)
     if !tests_dune || !all then
       gen_tests_dune !tests_dir;
     if !camlp5_flags || !all_flags || !all then

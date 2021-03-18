@@ -7,11 +7,11 @@
 
 (dirs :standard \ regression_ppx work)
 
-(rule
- (targets logger-flags.cfg)
- (deps config/discover.exe)
- (action
-  (run config/discover.exe -logger-flags)))
+;(rule
+; (targets logger-flags.cfg)
+; (deps config/discover.exe)
+; (action
+;  (run config/discover.exe -logger-flags)))
 
 ;(cram (deps
 ;  regression/test000.exe

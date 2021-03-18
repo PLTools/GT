@@ -1,4 +1,4 @@
-.PHONY: release discover-tests test promote clean celan
+.PHONY: release discover-tests test promote clean celan doc
 DFLAGS=
 
 # compiler packages without tests
@@ -11,6 +11,12 @@ release: all
 discover-tests:
 	echo "" > regression/dune.tests
 	dune build @discover-tests
+
+doc:
+	dune build @doc
+
+doc-sphinx:
+	echo TODO
 
 test:
 	dune runtest $(DUNE_FLAGS)
