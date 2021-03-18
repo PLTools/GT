@@ -191,6 +191,15 @@ let gen_tests_dune dir =
   close_out cramch;
   close_out outch
 
+let discover_doc () =
+  let filename = "package-doc.sexp" in
+  try
+    let _ = Unix.getenv "GT_WITH_DOCS" in
+    Cfg.Flags.write_lines filename ["-package"; "pa_ppx"]
+  with Not_found ->
+    Cfg.Flags.write_lines filename [];
+    ()
+
 (*** command line arguments ***)
 
 let tests         = ref false

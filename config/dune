@@ -5,7 +5,7 @@
 )
 
 (rule
-  (targets camlp5-flags.cfg )
+  (targets camlp5-flags.cfg package-doc.sexp)
   (action (run ./discover.exe -all-flags))
 )
 

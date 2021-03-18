@@ -1,7 +1,7 @@
-name: Build master
+name: Build PR
 
 on:
-  push:
+  pull_request:
     paths-ignore:
       - 'README.md'
     branches:
@@ -16,9 +16,6 @@ jobs:
           - ubuntu-20.04
         ocaml-version:
           - 4.10.1
-
-    env:
-      GT_WITH_DOCS: yes
 
     runs-on: ${{ matrix.os }}
 
@@ -44,20 +41,8 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
 
-      - name: Install dependecies for documentation
-        run: opam install odoc pa_ppx --yes
-
       - run: opam pin add GT.dev . --no-action
       - run: opam depext GT.dev --yes --with-test
       - run: opam install . --deps-only --with-test
       - run: opam exec -- make #dune build
       - run: opam exec -- make test # dune runtest
-
-      - name: Build documentation
-        run: opam exec -- dune build @doc
-
-      - name: Deploy documentation
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_build/default/_doc/_html

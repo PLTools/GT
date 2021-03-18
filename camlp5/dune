@@ -34,6 +34,7 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
+   %{read-lines:../config/package-doc.sexp}
    %{deps}
    -o
    %{targets})))
