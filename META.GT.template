@@ -69,6 +69,7 @@ package "syntax" (
      GT.syntax.html
      GT.syntax.map
      GT.syntax.show
+     GT.syntax.enum
      GT.syntax.stateful"
 
     # By some reason bunch of require directives doesn't include preprocessor directives.
