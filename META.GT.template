@@ -1,5 +1,5 @@
 # DISABLED DUNE_GEN
-version = "0.4.1"
+version = "0.4.2"
 requires = "GT.HTML base"
 archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
