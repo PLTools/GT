@@ -199,6 +199,18 @@ package "syntax" (
     plugin(byte) = "show.cma"
     plugin(native) = "show.cmxs"
   )
+  package "enum" (
+    directory = "enum"
+    description = "Plugin 'enum'"
+    requires = "GT.common"
+
+    archive(syntax,preprocessor,byte) = "enum.cma"
+    archive(syntax,preprocessor,native) = "enum.cmxa"
+    archive(byte) = "enum.cma"
+    archive(native) = "enum.cmxa"
+    plugin(byte) = "enum.cma"
+    plugin(native) = "enum.cmxs"
+  )
   package "stateful" (
     directory = "stateful"
     description = "Plugin 'stateful'"

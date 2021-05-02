@@ -145,6 +145,13 @@ class ['a, 'self] show_list_t fa fself =
     method c_Cons _ _ x xs = (fa () x) ^ (match xs with [] -> "" | _ -> "; " ^ (fself () xs))
   end
 
+class ['a, 'self] enum_list_t fa fself =
+  object
+    inherit [unit, 'a, int, unit, 'self, int] list_t
+    method c_Nil  _ _ = 0
+    method c_Cons _ _ _x _xs = 1
+  end
+
 class ['a, 'self] fmt_list_t fa fself =
   object
     inherit ['inh, 'a, unit, 'inh, 'self, unit] list_t
@@ -230,6 +237,7 @@ let list :
   , < show    : ('a -> string)      -> 'a list -> string;
       html    : ('a -> HTML.viewer) -> 'a list -> HTML.viewer;
       gmap    : ('a -> 'b)          -> 'a list -> 'b list;
+      enum    : ('a -> int)         -> 'a list -> int;
 
       fmt     : (Format.formatter -> 'a -> unit) ->
                 Format.formatter -> 'a list -> unit;
@@ -245,23 +253,28 @@ let list :
        'inh -> 'a list -> 'syn
   ) t =
 
-  {gcata   = gcata_list;
-   fix = (fun c -> transform_gc gcata_list c);
-   plugins = object
+
+  { gcata   = gcata_list;
+    fix = (fun c -> transform_gc gcata_list c);
+    plugins =
+      let tr  obj subj     = transform_gc gcata_list obj ()  subj in
+      let tr1 obj inh subj = transform_gc gcata_list obj inh subj in
+             object
                method show fa l =
                  sprintf "[%a]" (transform_gc gcata_list (new show_list_t (lift fa))) l
-               method html    fa   = transform_gc gcata_list (new html_list_t (lift fa)) ()
-               method gmap    fa   = transform_gc gcata_list (new gmap_list_t (lift fa)) ()
+               method html    fa   = tr (new html_list_t (lift fa))
+               method gmap    fa   = tr (new gmap_list_t (lift fa))
+               method enum    fa   = tr (new enum_list_t (lift fa))
 
                method fmt fa inh l =
                   (transform_gc gcata_list (new fmt_list_t fa)) inh l
 
-               method stateful fa  = transform_gc gcata_list (new stateful_list_t fa)
-               method eval     fa  = transform_gc gcata_list (new eval_list_t fa)
-               method eq       fa  = transform_gc gcata_list (new eq_list_t fa)
-               method compare  fa  = transform_gc gcata_list (new compare_list_t fa)
-               method foldl    fa  = transform_gc gcata_list (new foldl_list_t fa)
-               method foldr    fa  = transform_gc gcata_list (new foldr_list_t fa)
+               method stateful fa  = tr1 (new stateful_list_t fa)
+               method eval     fa  = tr1 (new eval_list_t fa)
+               method eq       fa  = tr1 (new eq_list_t fa)
+               method compare  fa  = tr1 (new compare_list_t fa)
+               method foldl    fa  = tr1 (new foldl_list_t fa)
+               method foldr    fa  = tr1 (new foldr_list_t fa)
              end
   }
 
@@ -285,6 +298,12 @@ module Lazy =
       object
         inherit [unit, 'a, string, unit, 'self, string ] t_t
         method t_t inh subj = fa () @@ Lazy.force subj
+      end
+
+    class ['a, 'self ] enum_t_t fa _fself =
+      object
+        inherit [unit, 'a, int, unit, 'self, int ] t_t
+        method t_t _ _ = 0
       end
 
     class ['a, 'self ] html_t_t fa _fself =
@@ -342,6 +361,7 @@ module Lazy =
 
     let t : ( ('ia, 'a, 'sa, 'inh, _, 'syn) #t_t -> 'inh -> 'a t -> 'syn,
              < show    : ('a -> string)      -> 'a t -> string;
+               enum    : ('a -> int)         -> 'a t -> int;
                html    : ('a -> HTML.viewer) -> 'a t -> HTML.viewer;
                gmap    : ('a -> 'b)          -> 'a t -> 'b t;
 
@@ -357,6 +377,7 @@ module Lazy =
        fix     = (fun c -> transform_gc gcata_lazy c);
        plugins = object
                    method show     fa  = gcata_lazy (new show_t_t fself (lift fa)) ()
+                   method enum     fa  = gcata_lazy (new enum_t_t fself (lift fa)) ()
                    method html     fa  = gcata_lazy (new html_t_t fself (lift fa)) ()
                    method gmap     fa  = gcata_lazy (new gmap_t_t fself (lift fa)) ()
 
@@ -515,6 +536,12 @@ class ['a, 'b, 'self] show_arrow_t fa fb _ =
     method c_Arrow () _ = Printf.sprintf "<function>"
   end
 
+class ['a, 'b, 'self] enum_arrow_t fa fb _ =
+  object
+    inherit [unit, 'a, int, unit, 'b, int, unit, 'self, int] arrow_t
+    method c_Arrow () _ = failwith "enumerating of arrows is not supported"
+  end
+
 class ['a, 'b, 'self] fmt_arrow_t fa fb _ =
   object
     inherit ['inh, 'a, unit, 'inh, 'b, unit, 'inh, 'self, unit] arrow_t
@@ -580,7 +607,8 @@ let arrow:
                           ('a, 'b) arrow -> HTML.viewer;
                 gmap    : ('a -> 'c) -> ('b -> 'd) ->
                           ('a, 'b) arrow -> ('c, 'd) arrow;
-
+                enum    : ('a -> int) -> ('b -> int) ->
+                          ('a, 'b) arrow -> int;
                 fmt     : (Format.formatter -> 'a -> unit) ->
                           (Format.formatter -> 'b -> unit) ->
                           Format.formatter -> ('a,'b) arrow -> unit;
@@ -605,6 +633,7 @@ let arrow:
        method show     fa fb = tr  (new show_arrow_t (lift fa) (lift fb))
        method html     fa fb = tr  (new html_arrow_t (lift fa) (lift fb))
        method gmap     fa fb = tr  (new gmap_arrow_t (lift fa) (lift fb))
+       method enum     fa fb = tr  (new enum_arrow_t (lift fa) (lift fb))
 
        method fmt      fa fb = tr1 (new fmt_arrow_t  fa fb)
        method eval     fa fb = tr1 (new eval_arrow_t fa fb)
@@ -690,12 +719,18 @@ class ['a, 'self] show_array_t fa fself = object
               (fun x s -> Printf.sprintf "%a; %s" fa x s) arr " |]")
 end
 
+class ['a, 'self] enum_array_t fa fself = object
+  inherit [unit, 'a, int, unit, 'self, int ] array_t
+  method do_array () _ = 0
+end
+
 class ['a, 'sa, 'self, 'syn] gmap_array_t fa fself =
   object
     inherit [unit, 'a, 'sa, unit, 'self, 'syn] array_t
     constraint 'syn = 'sa array
     method do_array () arr = Array.map (fa ()) arr
   end
+
 class ['a, 'self] html_array_t fa fself =
   object
     inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] array_t
@@ -720,6 +755,7 @@ class ['a, 'sa, 'self, 'syn, 'env ] eval_array_t fa fself =
     constraint 'syn = 'sa array
     method do_array env arr = Array.map (fa env) arr
   end
+
 class ['a, 'sa, 'self, 'syn, 'env ] stateful_array_t fa fself =
   object
     inherit ['env, 'a, 'env * 'sa, 'env, 'self, 'env * 'sa array] array_t
@@ -796,6 +832,7 @@ let array =
         method eq       fa = tr1 (new eq_array_t) fa
         method foldl    fa = tr1 (new foldl_array_t) fa
         method foldr    fa = tr1 (new foldr_array_t) fa
+        method enum     fa = tr1 (new enum_array_t) fa
     end
   }
 
@@ -908,3 +945,4 @@ let eq      t = t.plugins#eq
 let compare t = t.plugins#compare
 let stateful t = t.plugins#stateful
 let eval     t = t.plugins#eval
+let enum     t = t.plugins#enum

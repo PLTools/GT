@@ -462,6 +462,9 @@
   Should be an ADT:   `A (5)`
   Should be a number: `5`
   Should be a number: `5`
+  $ ./test829enum.exe
+  0 1 2
+  65 66 67
   $ ./test840garrique.exe
   17
   2

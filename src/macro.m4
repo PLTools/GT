@@ -19,6 +19,11 @@ class ['extra] show_$1_t _fself =
     inherit [unit, 'extra, string] $1_t
     method t_$1 inh x = string_of_$1 x
   end
+class ['extra] enum_$1_t _fself =
+  object
+    inherit [unit, 'extra, int] $1_t
+    method t_$1 inh x = 0
+  end
 class ['extra] fmt_$1_t _fself =
   object
     inherit [Format.formatter, 'extra, unit] $1_t
@@ -68,6 +73,7 @@ let gcata_$1 tr inh x = tr#t_$1 inh x
 
 let $1 : (('inh, $1, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
           < show    : $1 -> string;
+            enum    : $1 -> int;
             html    : $1 -> HTML.viewer;
             fmt     : Format.formatter -> $1 -> unit;
             compare : $1 -> $1 -> comparison;
@@ -83,6 +89,7 @@ let $1 : (('inh, $1, 'syn) # $1_t -> 'inh -> $1 -> 'syn,
    plugins =
       object
         method show    = transform_gc gcata_$1 (new show_$1_t    ) ()
+        method enum    = transform_gc gcata_$1 (new enum_$1_t    ) ()
         method gmap    = transform_gc gcata_$1 (new gmap_$1_t    ) ()
         method html    = transform_gc gcata_$1 (new html_$1_t    ) ()
         method fmt     = transform_gc gcata_$1 (new fmt_$1_t     )

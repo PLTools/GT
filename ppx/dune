@@ -23,7 +23,8 @@
    ../plugins/gfmt.cmxa ../plugins/gmap.cmxa ../plugins/eval.cmxa
    ../plugins/stateful.cmxa ../plugins/foldl.cmxa ../plugins/foldr.cmxa
    ../plugins/compare.cmxa ../plugins/eq.cmxa ../plugins/html.cmxa
-   ../plugins/ghash.cmxa pp_gt.ml)
+   ../plugins/ghash.cmxa ../plugins/enum.cmxa
+   pp_gt.ml)
  (action
-  (run ocamlfind ocamlopt -package base,ppxlib,ocamlgraph %{deps} -linkall
+  (run ocamlfind ocamlopt -I ../common -package base,ppxlib,ocamlgraph %{deps} -linkall
     -linkpkg -o %{targets})))

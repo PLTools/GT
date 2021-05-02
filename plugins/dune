@@ -90,6 +90,15 @@
   (:standard -w -7-9-13-36)))
 
 (library
+ (name enum)
+ (public_name GT.syntax.enum)
+ (modules genum)
+ (libraries GTCommon)
+ (synopsis "Plugin 'enum'")
+ (flags
+  (:standard -w -7-9-13-36)))
+
+(library
  (name syntax_all)
  (public_name GT.syntax.all)
  (wrapped false)
