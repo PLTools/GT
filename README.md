@@ -1,4 +1,6 @@
-[![Build Status](https://travis-ci.org/JetBrains-Research/GT.svg?branch=master)](https://travis-ci.org/JetBrains-Research/GT)
+[![Build Status](https://github.com/JetBrains-Research/GT/actions/workflows/blank.yml/badge.svg
+)](https://travis-ci.org/JetBrains-Research/GT)
+
 
 # Datatype-generic object-oriented transformations for OCaml (a.k.a. GT)
 
