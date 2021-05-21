@@ -4,18 +4,20 @@
  (kind ppx_rewriter)
  (libraries base ppxlib GTCommon)
  (modules Ppx_deriving_gt PpxHelpers)
- (synopsis "PPX syntax extensionon top of ppx_core")
+ (synopsis "PPX syntax extension on top of ppxlib")
  (preprocess
   (pps ppxlib.metaquot))
  (flags
   (:standard -w -27-9 -warn-error -A)))
 
-;(executable
-;  (name pp_gt)
-;  (modules pp_gt)
-;  (libraries ppxlib.runner ppx show gmap)
-;  (flags (:standard -linkall))
-;  )
+(library
+  (name pp_gt_all)
+  (public_name GT.ppx_all)
+  (kind ppx_rewriter)
+  (modules pp_gt_all)
+  (synopsis "PPX syntax extension on top of ppxlib + plugins")
+  (libraries ppxlib.runner ppx show gmap)
+  (flags (:standard -linkall)))
 
 (rule
  (targets pp_gt.exe)

@@ -35,7 +35,7 @@ package "common" (
 )
 package "ppx" (
   directory = "ppx"
-  description = "PPX syntax extensionon top of ppx_core"
+  description = "PPX syntax extension on top of ppxlib"
   requires(ppx_driver) = "GT.common base ppxlib"
   archive(ppx_driver,byte) = "ppx.cma"
   archive(ppx_driver,native) = "ppx.cmxa"
@@ -47,6 +47,21 @@ package "ppx" (
   ppx(-ppx_driver,-custom_ppx) = "./ppx.exe --as-ppx"
   library_kind = "ppx_rewriter"
 )
+package "ppx_all" (
+  directory = "ppx_all"
+  description = "PPX syntax extensionon top of ppxlib + plugins"
+  requires(ppx_driver) = "GT.common base ppxlib"
+  archive(ppx_driver,byte) = "ppx_all.cma"
+  archive(ppx_driver,native) = "ppx_all.cmxa"
+  plugin(ppx_driver,byte) = "ppx_all.cma"
+  plugin(ppx_driver,native) = "ppx_all.cmxs"
+  # This line makes things transparent for people mixing preprocessors
+  # and normal dependencies
+  requires(-ppx_driver) = ""
+  ppx(-ppx_driver,-custom_ppx) = "./ppx.exe --as-ppx"
+  library_kind = "ppx_rewriter"
+)
+
 package "syntax" (
   directory = "syntax"
   description = "Various GT.syntax.* all together"
@@ -193,6 +208,7 @@ package "syntax" (
     description = "Plugin 'show'"
     requires = "GT.common"
 
+    archive(toploop) = "show.cma"
     archive(syntax,preprocessor,byte) = "show.cma"
     archive(syntax,preprocessor,native) = "show.cmxa"
     archive(byte) = "show.cma"
