@@ -3,7 +3,13 @@
   | `Var of 'name
   ] with show
 
-let index _ _ = assert false
+let index xs v =
+  let rec helper i = function
+    | [] -> failwith "No such variable introduced"
+    | h :: _ when h = v -> i
+    | _ :: tl -> helper (1+i) tl
+  in
+  helper 0 xs
 
 class [ 'lam , 'nless ] lam_to_nameless
   (flam : string list -> 'lam -> 'nless) =
@@ -50,4 +56,5 @@ let to_nameless term =
     term
 
 let () =
-  Format.printf "%s\n%!" (GT.show nameless (to_nameless (`Abs ("x", `Var "x"))))
+  Format.printf "%s\n%!" (GT.show nameless (to_nameless (`Abs ("x", `Var "x"))));
+  Format.printf "%s\n%!" (GT.show nameless (to_nameless (`Abs ("x", `Abs ("y", `Var "x"))) ) )
