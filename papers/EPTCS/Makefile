@@ -11,5 +11,6 @@ main.pdf: $(OCANREN_TEX)
 	pdflatex $<
 
 clean:
-	$(RM) *.bak *.out
+	$(RM) *.bak *.out *.log *.pag
+
 
