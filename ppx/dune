@@ -11,12 +11,12 @@
   (:standard -w -27-9 -warn-error -A)))
 
 (library
-  (name pp_gt_all)
+  (name ppx_all)
   (public_name GT.ppx_all)
   (kind ppx_rewriter)
   (modules pp_gt_all)
   (synopsis "PPX syntax extension on top of ppxlib + plugins")
-  (libraries ppxlib.runner ppx show gmap)
+  (libraries GT.ppx show fmt gmap compare eq)
   (flags (:standard -linkall)))
 
 (rule
@@ -30,3 +30,9 @@
  (action
   (run ocamlfind ocamlopt -I ../common -package base,ppxlib,ocamlgraph %{deps} -linkall
     -linkpkg -o %{targets})))
+
+;(executable
+; (name pp_all)
+; (modules pp_gt)
+; (flags (:standard -linkall))
+; (libraries ppx_all ppxlib))
