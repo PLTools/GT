@@ -8,16 +8,17 @@
  (preprocess
   (pps ppxlib.metaquot))
  (flags
-  (:standard -w -27-9 -warn-error -A)))
+  (:standard -w -27-9 -warn-error -A -linkall)))
 
 (library
   (name ppx_all)
   (public_name GT.ppx_all)
   (kind ppx_rewriter)
-  (modules pp_gt_all)
+  (libraries ppx show fmt gmap compare eq)
+  (modules ppx_all)
+  (wrapped false )
   (synopsis "PPX syntax extension on top of ppxlib + plugins")
-  (libraries GT.ppx show fmt gmap compare eq)
-  (flags (:standard -linkall)))
+  (flags (:standard -linkall -w -33)))
 
 (rule
  (targets pp_gt.exe)
