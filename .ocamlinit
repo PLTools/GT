@@ -1,5 +1,8 @@
 #use "topfind";;
 #rectypes;;
 #require "GT";;
-#require "GT.syntax.show";;
+(*
+#require "GT.ppx";;
+*)
 #require "GT.ppx_all";;
+#require "GT.syntax.show";;

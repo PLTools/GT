@@ -26,10 +26,11 @@ Use findlib package `GT.ppx` in combination with `ppxlib`. See `ppxlib`'s manual
 ~ ocaml
         OCaml version 4.07.1
 
-# #require "GT.ppx";;
-../GT: added to search path
-../GT/./pp_gt.native --as-ppx: activated
-# type 'a list = Nil | Cons of 'a * 'a list [@@deriving gt ~options:{show}];;
+# #require "GT.ppx_all";;
+../GT/ppx_all: added to search path
+../GT/ppx_all/./ppx.exe --as-ppx: activated
+# type 'a list = Nil | Cons of 'a * 'a list [@@deriving gt ~options:{fmt; show}];;
+...
 ```
 
 ### As Camlp5 syntax extension
