@@ -14,7 +14,7 @@
   (name ppx_all)
   (public_name GT.ppx_all)
   (kind ppx_rewriter)
-  (libraries ppx show fmt gmap compare eq)
+  (libraries ppx show gfmt gmap compare eq foldl foldr eval stateful)
   (modules ppx_all)
   (wrapped false )
   (synopsis "PPX syntax extension on top of ppxlib + plugins")

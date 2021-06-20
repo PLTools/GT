@@ -24,6 +24,7 @@ depends: [
   "ocamlfind"  { build }
   "ocamlbuild" { build }
   "ocamlgraph" { build }
+  "conf-m4"    { build }
   "ppxlib"     {>= "0.22.0" }
   "ocaml-migrate-parsetree" { >= "2.1.0" }
   "camlp5"     { >= "8.00.01"  }
