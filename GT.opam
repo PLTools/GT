@@ -38,6 +38,10 @@ build: [
   [make "release"]
   [make "test"] {with-test}
 ]
+install: [ 
+  [ "dune" "build" "@install" ]
+  [ "dune" "install" "-p" "GT,GT-p5" ]
+]
 
 dev-repo: "git+https://github.com/JetBrains-Research/GT.git"
 url {
