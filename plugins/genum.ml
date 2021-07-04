@@ -101,6 +101,8 @@ class g args tdecls = object(self)
       Exp.int_const ~loc 0
     ]
 
+  method! make_inh ~loc =
+    (Pat.unit ~loc, Exp.unit ~loc)
 end
 
 let create = (new g :> P.plugin_constructor)

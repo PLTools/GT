@@ -32,7 +32,8 @@ class g initial_args tdecls = object(self: 'self)
   method! syn_of_main ~loc ?in_class tdecl = self#syn_of_param ~loc "dummy"
 
   method! on_different_constructors ~loc is_poly other_name cname arg_typs =
-    Exp.false_ ~loc
+    Exp.let_ ~loc [Pat.any ~loc, Exp.ident ~loc other_name]
+      (Exp.false_ ~loc)
   method! chain_exprs ~loc e1 e2 =
     Exp.app_list ~loc (Exp.ident ~loc "&&") [ e1; e2 ]
   method! chain_init ~loc = Exp.true_ ~loc

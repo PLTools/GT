@@ -199,7 +199,9 @@ class g args tdecls = object(self: 'self)
       )
       ]
 
-
+  method! make_inh ~loc = 
+    (Pat.unit ~loc, Exp.unit ~loc)
+    
 end
 
 let create = (new g :> P.plugin_constructor)

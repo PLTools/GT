@@ -66,6 +66,7 @@ class g args tdecls = object(self)
 
     let names = List.map ts ~f:fst in
 
+    Exp.let_ ~loc [Pat.unit ~loc, inhe] @@
     if List.length ts = 0
     then Exp.string_const ~loc constr_name
     else
@@ -155,6 +156,8 @@ class g args tdecls = object(self)
       ) @@
     List.find t.ptyp_attributes ~f:(fun {attr_name={txt}} -> String.equal txt "opaque")
 
+  method! make_inh ~loc = 
+    (Pat.unit ~loc, Exp.unit ~loc)
 end
 
 let create = (new g :> P.plugin_constructor)

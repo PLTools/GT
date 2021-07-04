@@ -202,7 +202,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                       List.map self#tdecls ~f:(fun {ptype_name={txt=name}} ->
                           Pat.var ~loc @@
                           if String.equal name tdecl.ptype_name.txt
-                          then sprintf "fself_%s" name
+                          then self#self_arg_name name
                           else Naming.for_ self#trait_name name
                         ))
                      Naming.mutuals_pack
@@ -498,6 +498,9 @@ class virtual generator initial_args tdecls = object(self: 'self)
     in
     k @@ ans class_args
 
+  method make_inh ~loc =
+    let inhname = gen_symbol ~prefix:"inh_" () in
+    (Pat.var ~loc inhname, Exp.ident ~loc inhname)
 
   method got_polyvar ~loc ~is_self_rec ~mutual_decls tdecl do_typ rows k =
     List.concat_map rows ~f:(function
@@ -526,22 +529,22 @@ class virtual generator initial_args tdecls = object(self: 'self)
     (* tag by default have 1 argument which is a tuple instead of many arguments *)
     | Rtag (constr_name, _, []) ->
       k [
-        let inhname = gen_symbol ~prefix:"inh_" () in
+        let (inhp, inhe) = self#make_inh ~loc in
         Cf.method_concrete ~loc (Naming.meth_name_for_constructor [] constr_name.txt) @@
-        Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+        Exp.fun_ ~loc inhp @@
         Exp.fun_ ~loc (Pat.any ~loc) @@
-        self#on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe:(Exp.ident ~loc inhname)
+        self#on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe
           tdecl (Option.some @@ `Poly constr_name.txt) []
       ]
     | Rtag (constr_name, _, [arg]) ->
       k [
-        let inhname = gen_symbol ~prefix:"inh_" () in
+        let (inhp,inhe) = self#make_inh ~loc in
         let bindings = List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts) in
         Cf.method_concrete ~loc (Naming.meth_name_for_constructor [] constr_name.txt) @@
-        Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+        Exp.fun_ ~loc inhp @@
         Exp.fun_ ~loc (Pat.any ~loc) @@
         Exp.fun_list ~loc (List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s)) @@
-        self#on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe:(Exp.ident ~loc inhname)
+        self#on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe
           tdecl (Option.some @@ `Poly constr_name.txt) bindings
       ]
     | Rtag (constr_name, _, args) ->
@@ -601,18 +604,17 @@ class virtual generator initial_args tdecls = object(self: 'self)
             ]
         | Ptyp_tuple ts ->
           begin
-            let inhname = gen_symbol ~prefix:"inh_" () in
             let loc = loc_from_caml tdecl.ptype_loc in
+            let inhp,inhe = self#make_inh ~loc in
             let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
             let bind_pats = List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s) in
             (* We don't need bind_pats, we cat patternmatch original value which is wildcarded for now *)
             [ Cf.method_concrete ~loc
               (Naming.meth_name_for_constructor typ.ptyp_attributes (String.uppercase tdecl.ptype_name.txt)) @@
-              Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+              Exp.fun_ ~loc inhp @@
               Exp.fun_ ~loc (Pat.tuple ~loc @@ bind_pats) @@
               self#on_tuple_constr ~loc ~mutual_decls ~is_self_rec
-                ~inhe:(Exp.ident ~loc inhname)
-                tdecl None bindings]
+                ~inhe tdecl None bindings]
           end
         | Ptyp_object (_,_) -> failwith "not implemented: object types"
         | Ptyp_class (_,_) -> failwith "not implemented: class types"
@@ -808,8 +810,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
       ]
 
   method final_typ_params_for_alias ~loc tdecl rhs =
-    self#alias_inherit_type_params ~loc tdecl rhs @
-    []
+    self#alias_inherit_type_params ~loc tdecl rhs
 
   method alias_inherit_type_params ~loc tdecl rhs_args =
     self#plugin_class_params ~loc rhs_args ~typname:tdecl.ptype_name.txt
@@ -936,30 +937,29 @@ class virtual generator initial_args tdecls = object(self: 'self)
         in
         match cd.pcd_args with
         | Pcstr_tuple ts ->
-          let inhname = gen_symbol ~prefix:"inh_" () in
           let loc = loc_from_caml cd.pcd_loc in
+          let inhp,inhe = self#make_inh ~loc in
           let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
           let bind_pats = List.map bindings ~f:(fun (s,_) -> Pat.var ~loc s) in
           Cf.method_concrete ~loc good_constr_name @@
-          Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+          Exp.fun_ ~loc inhp @@
           Exp.fun_ ~loc (Pat.any ~loc) @@
           Exp.fun_list ~loc bind_pats @@
-          self#on_tuple_constr ~loc ~mutual_decls ~is_self_rec
-            ~inhe:(Exp.ident ~loc inhname)
+          self#on_tuple_constr ~loc ~mutual_decls ~is_self_rec ~inhe
             tdecl (Option.some @@ `Normal cd.pcd_name.txt) bindings
         | Pcstr_record ls ->
-            let inhname = gen_symbol ~prefix:"inh_" () in
             let loc = loc_from_caml cd.pcd_loc in
+            let inhp,inhe = self#make_inh ~loc in
             let bindings =
               List.map ls ~f:(fun l -> gen_symbol (), l.pld_name.txt, l.pld_type)
             in
             let bind_pats = List.map bindings ~f:(fun (s,_,_) -> Pat.var ~loc s) in
             Cf.method_concrete ~loc good_constr_name @@
-            Exp.fun_ ~loc (Pat.sprintf "%s" ~loc inhname) @@
+            Exp.fun_ ~loc inhp @@
             Exp.fun_ ~loc (Pat.any ~loc) @@
             Exp.fun_list ~loc bind_pats @@
             self#on_record_constr ~loc ~mutual_decls ~is_self_rec
-              ~inhe:(Exp.ident ~loc inhname)
+              ~inhe
               tdecl
               (`Normal cd.pcd_name.txt)
               bindings
@@ -1046,11 +1046,11 @@ class virtual generator initial_args tdecls = object(self: 'self)
    *   [ clas ] *)
 
   method self_arg_name cname  =
-    sprintf "%s_%s" Naming.self_arg_name cname
+    sprintf "_%s_%s" Naming.self_arg_name cname
 
-  (* TODO: maybe we can buble from the botton not whole expression  but mayse eitehr
-     full expression or not yet applied expression to attribute and subject. That will
-     allow to implement sprintf effectively *)
+  (* TODO: maybe we can bubble from the botton not whole already applied  expression  
+    but either 1) full expression or 2) expression not yet applied 
+    to a) attribute and b) subject. That will allow to implement sprintf effectively *)
   (* TODO: decide expression of which type should be returned here *)
   (* do_type_gen will return an expression which after being applied
    * to inherited attribute and subject will return synthetized one
