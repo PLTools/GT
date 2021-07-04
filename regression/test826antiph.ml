@@ -1,5 +1,5 @@
 include (struct
-  type 'a foo = 'a [@@deriving gt ~options:{show; gmap; compare; foldl; eval; }]
+  type nonrec 'a foo = 'a [@@deriving gt ~options:{show; gmap; compare; foldl; eval; }]
 end : sig
   type 'a foo = 'a [@@deriving gt ~options:{show; gmap; compare; foldl; eval; }]
 end)

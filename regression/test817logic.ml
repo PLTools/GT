@@ -9,13 +9,11 @@ let () =
   Printf.printf "%s\n%!" (show string_of_int [2;2]);
   ()
 
-
-
 type 'a list = ('a, 'a list) list_like
 [@@deriving gt ~options:{show}]
 
 let () =
-  let rec show fa xs =
+  let show fa xs =
     GT.transform list  (new show_list_t (GT.lift fa)) () xs
   in
   Printf.printf "%s\n%!" (show string_of_int []);
@@ -23,16 +21,18 @@ let () =
   Printf.printf "%s\n%!" (show string_of_int [3;4]);
   ()
 
-type intlist = GT.int list
-[@@deriving gt ~options:{show}]
+  let () = ()
+
+
+type nonrec intlist = GT.int list
+  [@@deriving gt ~options:{show}]
 
 let () =
-  let rec show xs = GT.transform intlist (new show_intlist_t) () xs in
+  let show xs = GT.transform intlist (new show_intlist_t) () xs in
   Printf.printf "%s\n%!" (show []);
   Printf.printf "%s\n%!" (show [6]);
   Printf.printf "%s\n%!" (show [7;8]);
   ()
-
 
 module Lo = struct
   type 'a t = Var of GT.int | Value of 'a [@@deriving gt ~options:{show}]
@@ -67,7 +67,6 @@ let () =
   Printf.printf "\t%s\n%!" (show  (Var 5));
   Printf.printf "\t%s\n%!" (show  (Value 6));
   ()
-
 
 module LList2 = struct
   type 'a t = ('a, 'a t) list_like Lo2.t [@@deriving gt ~options:{show}]

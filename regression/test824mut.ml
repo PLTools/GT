@@ -43,5 +43,3 @@ let api1 =
 
 let () = 
   (GT.fmt api) Format.std_formatter api1
-
-

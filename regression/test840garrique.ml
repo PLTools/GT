@@ -76,7 +76,7 @@ module Manual = struct
     inherit ['a, 'v, 'extra] var_expr_eval fself
   end
 
-  let rec eval3 s e =
+  let eval3 s e =
     (* TODO: define generic catamrhisms to use GT.transform_gc instead of GT.fix0 *)
     GT.fix0 (fun self -> gcata_expr (new expr_eval self) ) s e
 
