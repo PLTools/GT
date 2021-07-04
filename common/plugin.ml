@@ -1,6 +1,6 @@
 (*
  * Generic Transformers PPX syntax extension.
- * Copyright (C) 2016-2019
+ * Copyright (C) 2016-2021
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -22,7 +22,7 @@ open AstHelpers
 module Intf = Plugin_intf.Make(AstHelpers)
 
 type plugin_constructor =
-  Plugin_intf.plugin_args -> Ppxlib.type_declaration list ->
+  Plugin_intf.plugin_args -> bool * Ppxlib.type_declaration list -> 
     (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g
 
 let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
@@ -65,10 +65,11 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
     Is subclassed by {!with_inherited_attr} and {!no_inherite_arg}. Use them for
     convenience.
 *)
-class virtual generator initial_args tdecls = object(self: 'self)
+class virtual generator initial_args (is_rec,tdecls) = object(self)
   inherit Intf.g
 
   method tdecls = tdecls
+  method is_rec = is_rec
 
   method plugin_name = self#trait_name
   (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
@@ -84,12 +85,6 @@ class virtual generator initial_args tdecls = object(self: 'self)
                           ~f:(fun n -> (n,expr) :: acc)
           | _ -> acc
         )
-
-  method show_args =
-    (* Stdio.printf "showing %d args\n%!" (List.length reinterpreted_args); *)
-    List.iter reinterpreted_args ~f:(fun (k,e) ->
-        Format.printf "%d -> %a\n%!" k Pprintast.expression e
-      )
 
   method extra_class_sig_members tdecl =
     let loc = loc_from_caml tdecl.ptype_loc in
@@ -727,7 +722,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
 
          let show_typ1 = #5 (fix ....)
       *)
-      let mutal_names = List.map self#tdecls ~f:(fun {ptype_name={txt}} -> txt) in
+      let mutual_names = List.map self#tdecls ~f:(fun {ptype_name={txt}} -> txt) in
       let intials =
         if List.length self#tdecls > 1
         then
@@ -737,7 +732,7 @@ class virtual generator initial_args tdecls = object(self: 'self)
                       Naming.init_trf_function self#trait_name tdecl.ptype_name.txt)
                 ~expr:(
                   let class_name = self#make_class_name
-                      ~is_mutal:(not (List.is_empty mutal_names))
+                      ~is_mutal:(not (List.is_empty mutual_names))
                       tdecl
                   in
                   Exp.new_ ~loc (Lident class_name)
@@ -746,32 +741,36 @@ class virtual generator initial_args tdecls = object(self: 'self)
         else []
       in
 
-      let knots =
+      let (need_rec,knots) =
         match self#tdecls with
-        | [] -> []
+        | [] -> (false, [])
         | [tdecl] ->
-          [ value_binding ~loc
+          let (need_rec,body) = 
+            match self#is_combinatorial tdecl with 
+            | Some typ ->
+              (self#is_rec, self#do_typ_gen ~loc ~mutual_decls:[tdecl] ~is_self_rec:(fun _ -> `Nonrecursive) tdecl typ)
+            | None -> ( false
+                      , self#make_trans_function_body ~loc
+                          (self#make_class_name ~is_mutal:false tdecl)
+                          tdecl)  
+            in
+          (need_rec,[ value_binding ~loc
               ~pat:(Pat.sprintf ~loc "%s" @@
                     Naming.trf_function self#trait_name tdecl.ptype_name.txt)
               ~expr:(
                 Exp.fun_list ~loc
                       (map_type_param_names tdecl.ptype_params
                         ~f:(fun txt -> Pat.sprintf ~loc "f%s" txt))
-                @@
-                match self#is_combinatorial tdecl with
-                | Some typ ->
-                    self#do_typ_gen ~loc ~mutual_decls:[tdecl] ~is_self_rec:(fun _ -> `Nonrecursive) tdecl typ
-                | None ->
-                    self#make_trans_function_body ~loc
-                      (self#make_class_name ~is_mutal:false tdecl)
-                      tdecl
-              )]
+                body
+              )])
         | tdecls ->
+          true,
           List.mapi tdecls ~f:(fun n {ptype_name={txt}} ->
               value_binding ~loc
                 ~pat:(Pat.sprintf ~loc "%s" @@ Naming.trf_function self#trait_name txt)
                 ~expr:(
-                  Exp.fun_ ~loc (Pat.var ~loc "eta") @@
+                  let eta = gen_symbol ~prefix:"eta" () in 
+                  Exp.fun_ ~loc (Pat.var ~loc eta) @@
                   Exp.let_ ~loc ~rec_:false
                     [ Pat.tuple ~loc @@ List.mapi tdecls ~f:(fun i _ ->
                           if i=n then Pat.var ~loc "f"
@@ -784,12 +783,12 @@ class virtual generator initial_args tdecls = object(self: 'self)
                                Naming.init_trf_function self#trait_name txt
                              ))
                     ]
-                    Exp.(app ~loc (sprintf ~loc "f") (sprintf ~loc "eta"))
+                    Exp.(app ~loc (sprintf ~loc "f") (sprintf ~loc "%s" eta))
                 )
             )
       in
-      (* TODO: insert Recursive only if type is recursive *)
-      List.map ~f:(Str.of_vb ~loc ~rec_flag:Recursive) (intials @ knots)
+      let rec_flag = if need_rec then Recursive else Nonrecursive in 
+      List.map ~f:(Str.of_vb ~loc ~rec_flag) (intials @ knots)
 
   method fix_func_name ?for_ () =
     match for_ with

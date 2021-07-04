@@ -17,7 +17,7 @@
     ['ia -> 'a -> 'sa].
 *)
 
-type plugin_args = (Ppxlib.longident * Ppxlib.expression) list
+type plugin_args = (Ppxlib.longident * Ppxlib.expression) list 
 (** A type that stores additional arguments passed to each plugin. *)
 
 (** Base class type for all plugins.
@@ -125,6 +125,6 @@ module type MAKE =
   sig
     open AstHelpers
     val trait_name : string
-    val create : plugin_args -> Ppxlib.type_declaration list ->
+    val create : plugin_args -> bool * Ppxlib.type_declaration list ->
       (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
   end

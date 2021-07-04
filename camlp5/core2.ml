@@ -19,7 +19,7 @@ module Migr =
 open GTCommon
 
 
-let generate_str tdecls loc =
+let generate_str is_nonrec tdecls loc =
   let info = snd @@ List.hd @@ List.rev tdecls in
   let module H = Expander.Make(Camlp5Helpers) in
   (* Expander.notify "with annotations %s" (String.concat "," info); *)
@@ -34,13 +34,13 @@ let generate_str tdecls loc =
     match (List.hd caml_ast).pstr_desc with
     | Pstr_type (flg, tds) ->
        let tds = List.map Migr.copy_type_declaration tds in
-       generator_f [sis] (Recursive, tds)
+       generator_f [sis] ((if is_nonrec then Ppxlib.Nonrecursive else Recursive), tds)
     |  _ -> failwith "type declaration expected"
   in
 
   <:str_item< declare $list:out$ end >>
 
-let generate_sig tdecls loc =
+let generate_sig is_nonrec tdecls loc =
   let info = snd @@ List.hd @@ List.rev tdecls in
   (* Expander.notify "with annotations %s" (String.concat "," info); *)
   let module H = Expander.Make(Camlp5Helpers) in
@@ -57,7 +57,7 @@ let generate_sig tdecls loc =
      match (List.hd caml_ast).psig_desc with
      | Psig_type (flg, tds) ->
       let tds = List.map Migr.copy_type_declaration tds in
-       generator_f [sis] (Recursive, tds)
+       generator_f [sis] ((if is_nonrec then Ppxlib.Nonrecursive else Recursive), tds)
      | _ -> assert false
   in
 

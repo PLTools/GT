@@ -753,7 +753,7 @@ let do_typ ~loc sis plugins is_rec tdecl =
   let intf_class = Str.of_class_declarations ~loc [make_interface_class ~loc tdecl] in
   let gcata = make_gcata_str ~loc tdecl in
 
-  let plugins = List.map plugins ~f:(fun p -> p [tdecl]) in
+  let plugins = List.map plugins ~f:(fun p -> p (is_rec, [tdecl])) in
   List.concat
     [ sis
     ; [intf_class; gcata]
@@ -906,7 +906,7 @@ let do_mutual_types ~loc sis plugins tdecls =
     (List.map ~f:fst all, List.map ~f:snd all)
   in
 
-  let plugins = List.map plugins ~f:(fun p -> p tdecls) in
+  let plugins = List.map plugins ~f:(fun p -> p (true, tdecls)) in
   List.concat
     [ sis
     ; List.map classes ~f:(fun c -> Str.of_class_declarations ~loc [c])
@@ -918,7 +918,7 @@ let do_mutual_types ~loc sis plugins tdecls =
 
 (* for signatures *)
 let do_typ_sig ~loc sis plugins is_rec tdecl =
-  let plugins = List.map plugins ~f:(fun p -> p [tdecl]) in
+  let plugins = List.map plugins ~f:(fun p -> p (is_rec, [tdecl])) in
   let intf_class = make_interface_class_sig ~loc tdecl in
   let gcata = make_gcata_sig ~loc tdecl in
 
@@ -942,14 +942,13 @@ let do_mutual_types_sig ~loc sis plugins tdecls =
         ]
     ) @
   [ fix_sig ~loc tdecls ] @
-  List.concat_map plugins ~f:(fun p -> (p tdecls)#do_mutuals_sigs ~loc ~is_rec:true) @
+  List.concat_map plugins ~f:(fun p -> (p (true,tdecls))#do_mutuals_sigs ~loc ~is_rec:true) @
   (* (List.concat_map tdecls ~f:(fun tdecl ->
    *      List.concat_map plugins ~f:(fun p ->
    *          collect_plugins_sig ~loc tdecl (p tdecls))
    *    )
    * ) @ *)
-  (collect_plugins_sig ~loc tdecls (List.map plugins ~f:(fun p -> p tdecls))) @
-  []
+  (collect_plugins_sig ~loc tdecls (List.map plugins ~f:(fun p -> p (true,tdecls))))
   (* TODO: collect plugins for mutual types *)
   (* List.concat_map ~f:(do_typ_sig ~loc [] plugins true) tdecls *)
 

@@ -1,7 +1,7 @@
 (env
  (dev
   (flags
-   (:standard -warn-error -A -w -27-9))))
+   (:standard -w +27+9 -warn-error -A))))
 
 (library
  (name pa_gt)
@@ -37,7 +37,8 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
-   -I ../common
+   -I
+   ../common
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
    -o
@@ -64,7 +65,8 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
-   -I ../common
+   -I
+   ../common
    %{read-lines:../config/package-doc.cfg}
    %{deps}
    -o
@@ -72,14 +74,18 @@
 
 (rule
  (targets pp5+gt+dump.exe)
- (deps %{project_root}/config/package-doc.cfg
+ (deps
+  %{project_root}/config/package-doc.cfg
   (:cmas %{project_root}/common/GTCommon.cmxa pa_gt.cmxa))
  (action
   (run
    mkcamlp5.opt
-   -I ../common
-   -package camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base
-   -package logger,ppxlib,ocamlgraph
+   -I
+   ../common
+   -package
+   camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base
+   -package
+   logger,ppxlib,ocamlgraph
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
    -o
