@@ -5,8 +5,6 @@ and 'info expr =
   { info : 'info ; node : 'info expr_node }
 with show,gmap
 
-
-
 let e1 = {info="asdf"; node=EConst 19}
 let e2 = {info="x"; node= EAdd ({info="y";node=EConst 20}, {info="z";node=EConst 40})}
 let () =

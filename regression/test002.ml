@@ -28,8 +28,8 @@ module Expr = struct
   end
 
 let _ =
-  let rec toString () e = GT.transform(Expr.t) (new Expr.toString) () e in
-  let rec eval    s i e = GT.transform(Expr.t) (new Expr.eval   s) i e in
+  let toString () e = GT.transform(Expr.t) (new Expr.toString) () e in
+  let eval    s i e = GT.transform(Expr.t) (new Expr.eval   s) i e in
   let e = `Binop ((+), "+", `Const 1, `Var "a") in
 
   let s = toString () e in

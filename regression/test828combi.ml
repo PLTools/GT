@@ -1,4 +1,4 @@
-type t =  A of GT.int [@@deriving gt ~options:{show}]
+type t = A of GT.int [@@deriving gt ~options:{show}]
 
 let () = Format.printf "Should be an ADT:   `%s`\n%!" (GT.show t (A 5))
 

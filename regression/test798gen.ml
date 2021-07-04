@@ -14,7 +14,7 @@ type 'a list = ('a, 'a list) list_like
 [@@deriving gt ~options:{show}]
 
 let () =
-  let rec show fa xs =
+  let show fa xs =
     GT.transform list  (new show_list_t (GT.lift fa)) () xs
   in
   Printf.printf "%s\n%!" (show string_of_int (Nil));
@@ -26,7 +26,7 @@ type intlist = GT.int list
 [@@deriving gt ~options:{show}]
 
 let () =
-  let rec show xs = GT.transform intlist (new show_intlist_t) () xs in
+  let show xs = GT.transform intlist (new show_intlist_t) () xs in
   Printf.printf "%s\n%!" (show  Nil);
   Printf.printf "%s\n%!" (show  (Cons (6, Nil)));
   Printf.printf "%s\n%!" (show  (Cons (7, Cons (8, Nil))));

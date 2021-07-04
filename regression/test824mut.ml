@@ -1,6 +1,6 @@
 
 module MyIdent = struct 
-  type t = GT.string [@@deriving gt ~options:{ fmt }]
+  type nonrec t = GT.string [@@deriving gt ~options:{ fmt }]
 end 
 (* type logic_op = Conj | Disj [@@deriving gt ~options:{ fmt }]
 type op = | Plus | Minus | LT | LE | GT | GE | Eq [@@deriving gt ~options:{ fmt }] *)

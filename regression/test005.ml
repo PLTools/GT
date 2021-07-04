@@ -66,8 +66,7 @@ module ShowC = struct
   let rec showc0 () = Printf.printf "new c0!\n"; new show_c_stub2 showc0
 
   let show_c () (s: c) =
-    let rec trait () s = gcata_c (showc0 ()) () (s :> c)
-    in
+    let trait () s = gcata_c (showc0 ()) () (s :> c) in
     trait () s
 
   let _ =

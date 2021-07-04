@@ -72,7 +72,7 @@ class ['a, 'self] expr_eval fself = object
   constraint 'self = [> 'a var_expr | 'a lambda ]
 end 
 
-let rec eval3 s e = GT.transform(expr) (new expr_eval) s e
+let eval3 s e = GT.transform(expr) (new expr_eval) s e
 
 let _ =
   Printf.printf "%s\n" @@
