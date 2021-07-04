@@ -39,15 +39,16 @@ Use findlib package `GT.syntax.all` to enable extension and all built-in plugins
 
     ocamlfind opt -syntax camlp5o -package GT.syntax.all regression/test081llist.ml -dsource
 
-To preprocess only the code in this library (for example, a test) use the following shell command:
+[//]: # To preprocess only the code in this library (for example, a test) use the following shell command:
 
-    (cd _build && ../camlp5o_pp.sh pr_o.cmo ../regression/test005.ml)
+[//]: #     (cd _build && ../camlp5o_pp.sh pr_o.cmo ../regression/test005.ml)
 
 To use camlp5 (>= 7.12) syntax extension in toplevel try this:
 
     #use "topfind.camlp5"
     #camlp5o;;
-    #require "GT,GT.syntax.all";;
+    #require "GT-p5,GT.syntax.all";;
+    #load "pa_gt.cma";;
     @type t = GT.int with gmap,show;; (* for example *)
 
 ## Directory structure
