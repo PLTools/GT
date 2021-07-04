@@ -50,7 +50,7 @@ package "ppx" (
 package "ppx_all" (
   directory = "ppx_all"
   description = "PPX syntax extensionon top of ppxlib + plugins"
-  requires(ppx_driver) = "GT.common base ppxlib GT.ppx GT.syntax.compare GT.syntax.show GT.syntax.fmt GT.syntax.map GT.syntax.eq GT.syntax.compare"
+  requires(ppx_driver) = "GT.common base ppxlib GT.ppx GT.syntax.compare GT.syntax.show GT.syntax.fmt GT.syntax.map GT.syntax.eq GT.syntax.compare GT.syntax.foldl GT.syntax.foldr GT.syntax.enum"
   archive(ppx_driver,byte) = "ppx_all.cma"
   archive(ppx_driver,native) = "ppx_all.cmxa"
   plugin(ppx_driver,byte) = "ppx_all.cma"

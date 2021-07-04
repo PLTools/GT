@@ -11,26 +11,60 @@
   (:standard -w -27-9 -warn-error -A -linkall)))
 
 (library
-  (name ppx_all)
-  (public_name GT.ppx_all)
-  (kind ppx_rewriter)
-  (libraries ppx show gfmt gmap compare eq foldl foldr eval stateful)
-  (modules ppx_all)
-  (wrapped false )
-  (synopsis "PPX syntax extension on top of ppxlib + plugins")
-  (flags (:standard -linkall -w -33)))
+ (name ppx_all)
+ (public_name GT.ppx_all)
+ (kind ppx_rewriter)
+ (libraries
+  ppx
+  show
+  gfmt
+  gmap
+  compare
+  eq
+  foldl
+  foldr
+  eval
+  stateful
+  enum
+  html
+  ghash)
+ (modules ppx_all)
+ (wrapped false)
+ (synopsis "PPX syntax extension on top of ppxlib + plugins")
+ (flags
+  (:standard -linkall -w -33)))
 
 (rule
  (targets pp_gt.exe)
- (deps ../common/GTCommon.cmxa ppx.cmxa ../plugins/show.cmxa
-   ../plugins/gfmt.cmxa ../plugins/gmap.cmxa ../plugins/eval.cmxa
-   ../plugins/stateful.cmxa ../plugins/foldl.cmxa ../plugins/foldr.cmxa
-   ../plugins/compare.cmxa ../plugins/eq.cmxa ../plugins/html.cmxa
-   ../plugins/ghash.cmxa ../plugins/enum.cmxa
-   pp_gt.ml)
+ (deps
+  ../common/GTCommon.cmxa
+  ppx.cmxa
+  ../plugins/show.cmxa
+  ../plugins/gfmt.cmxa
+  ../plugins/gmap.cmxa
+  ../plugins/eval.cmxa
+  ../plugins/stateful.cmxa
+  ../plugins/foldl.cmxa
+  ../plugins/foldr.cmxa
+  ../plugins/compare.cmxa
+  ../plugins/eq.cmxa
+  ../plugins/html.cmxa
+  ../plugins/ghash.cmxa
+  ../plugins/enum.cmxa
+  pp_gt.ml)
  (action
-  (run ocamlfind ocamlopt -I ../common -package base,ppxlib,ocamlgraph %{deps} -linkall
-    -linkpkg -o %{targets})))
+  (run
+   ocamlfind
+   ocamlopt
+   -I
+   ../common
+   -package
+   base,ppxlib,ocamlgraph
+   %{deps}
+   -linkall
+   -linkpkg
+   -o
+   %{targets})))
 
 ;(executable
 ; (name pp_all)
