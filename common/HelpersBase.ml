@@ -310,7 +310,7 @@ let map_type_param_names ~f ps =
     | _ -> failwith "bad argument of map_type_param_names")
 
 let notify fmt  =
-  Printf.ksprintf (fun s ->
+  Format.kasprintf (fun s ->
       let _cmd = Printf.sprintf "notify-send \"%s\"" s in
       let _:int = Caml.Sys.command _cmd in
       ()

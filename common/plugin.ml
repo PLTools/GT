@@ -713,6 +713,44 @@ class virtual generator initial_args (is_rec,tdecls) = object(self)
           | None -> None
     else None
 
+  method guess_recursivity tdecl =
+    (* if the type references it's own name, then it could be recurisve.
+      The `nonrec` keyword can override that *)
+    let exception IsRec in
+    let expected_name = tdecl.ptype_name.txt in
+
+    let rec helper t =
+      match t.ptyp_desc with
+      | Ptyp_var _ | Ptyp_object _ | Ptyp_package _ | Ptyp_extension _
+      | Ptyp_alias _ | Ptyp_any -> ()
+      | Ptyp_poly (_,_)
+      | Ptyp_class (_,_) -> failwith "not implemented"
+      | Ptyp_tuple ts -> List.iter ts ~f:helper
+      | Ptyp_constr ({txt=Lident tname}, cargs)
+        when String.equal tname expected_name && (List.length cargs = List.length tdecl.ptype_params) ->
+          raise IsRec
+      | Ptyp_constr (_,args) -> List.iter ~f:helper args
+      | Ptyp_arrow (_,l,r) -> helper l; helper r
+      | Ptyp_variant (rows,_,_) ->
+          List.iter rows ~f:(function
+            | {prf_desc=Rinherit t} -> helper t
+            | {prf_desc=Rtag(_,_,ts)} -> List.iter ~f:helper ts)
+    in
+    try
+      let () = match tdecl.ptype_kind with
+        | Ptype_record labs ->
+          List.iter labs ~f:(fun ld -> helper ld.pld_type)
+        | Ptype_variant cds ->
+          List.iter cds ~f:(fun cd -> match cd.pcd_args with
+            | Pcstr_tuple ts -> List.iter ~f:helper ts
+            | Pcstr_record labs -> List.iter labs ~f:(fun ld -> helper ld.pld_type)
+            )
+        | Ptype_open -> ()
+        | Ptype_abstract -> Option.iter tdecl.ptype_manifest ~f:helper
+      in
+      false
+    with IsRec -> true
+
   method make_trans_functions : loc:loc -> is_rec:bool -> Str.t list
     = fun ~loc ~is_rec ->
       (* we will generate mutally recursive showers here
@@ -723,8 +761,9 @@ class virtual generator initial_args (is_rec,tdecls) = object(self)
          let show_typ1 = #5 (fix ....)
       *)
       let mutual_names = List.map self#tdecls ~f:(fun {ptype_name={txt}} -> txt) in
+      let is_mutual_pack = List.length self#tdecls > 1 in
       let intials =
-        if List.length self#tdecls > 1
+        if is_mutual_pack
         then
           List.map self#tdecls ~f:(fun tdecl ->
               value_binding ~loc
@@ -745,15 +784,16 @@ class virtual generator initial_args (is_rec,tdecls) = object(self)
         match self#tdecls with
         | [] -> (false, [])
         | [tdecl] ->
-          let (need_rec,body) = 
+          let (need_rec,body) =
             match self#is_combinatorial tdecl with 
             | Some typ ->
-              (self#is_rec, self#do_typ_gen ~loc ~mutual_decls:[tdecl] ~is_self_rec:(fun _ -> `Nonrecursive) tdecl typ)
+              ( (if self#guess_recursivity tdecl then self#is_rec else false)
+              , self#do_typ_gen ~loc ~mutual_decls:[tdecl] ~is_self_rec:(fun _ -> `Nonrecursive) tdecl typ)
             | None -> ( false
                       , self#make_trans_function_body ~loc
                           (self#make_class_name ~is_mutal:false tdecl)
                           tdecl)  
-            in
+          in
           (need_rec,[ value_binding ~loc
               ~pat:(Pat.sprintf ~loc "%s" @@
                     Naming.trf_function self#trait_name tdecl.ptype_name.txt)
@@ -787,8 +827,11 @@ class virtual generator initial_args (is_rec,tdecls) = object(self)
                 )
             )
       in
-      let rec_flag = if need_rec then Recursive else Nonrecursive in 
-      List.map ~f:(Str.of_vb ~loc ~rec_flag) (intials @ knots)
+      List.concat
+        [ List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive) intials
+        ; let rec_flag = if need_rec && not is_mutual_pack then Recursive else Nonrecursive in
+          List.map ~f:(Str.of_vb ~loc ~rec_flag) knots
+        ]
 
   method fix_func_name ?for_ () =
     match for_ with

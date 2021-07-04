@@ -10,8 +10,6 @@
    allows construction of Camlp5 parse tree
  *)
 
-(* #load "q_ast.cmo";; *)
-
 (* Camlp5 AST
    https://github.com/camlp5/camlp5/blob/master/main/mLast.mli
    Camlp5 doc
@@ -24,13 +22,13 @@ open MLast
 
 module Located = struct
   type t = Ploc.t
-  let mk ~loc lident = lident
+  let mk ~loc:_ lident = lident
 end
 type loc = Located.t
 
 let loc_from_caml camlloc =
   let open Ppxlib.Location in
-  let { loc_start; loc_end} = camlloc in
+  let { loc_start; loc_end; _} = camlloc in
   Ploc.make_loc loc_start.pos_fname loc_start.pos_lnum loc_start.pos_bol
     (loc_start.pos_bol, loc_start.pos_bol + loc_start.pos_cnum) ""
 
