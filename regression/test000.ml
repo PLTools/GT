@@ -6,7 +6,7 @@ open GT
 class ['a, 'b] tree_gmap_t f fself =
   object
     inherit ['a, 'b, _] @tree
-    method c_Node x _ n l = Node (f () n, List.map (fself ()) l)
+    method c_Node _ _ n l = Node (f () n, List.map (fself ()) l)
   end
 
 class ['a, 'b, 'extra] tree_fold_t f fself =

@@ -13,12 +13,12 @@ let gensym = let n = ref 0 in fun () -> incr n; "_" ^ string_of_int !n;;
 class ['self, 'v] var_eval = object
   inherit [(string * 'v) list, 'self, 'v] @var
   constraint 'self = [> var]
-  method c_Var s v name = try List.assoc name s with Not_found -> `Var name 
+  method c_Var s _ name = try List.assoc name s with Not_found -> `Var name 
 end
 
 @type 'a lambda = [var | `Abs of string * 'a | `App of 'a * 'a] 
 
-class ['self] lambda_eval fa fself = object
+class ['self] lambda_eval fa _fself = object
   inherit [ (string * 'self) list,  'self, 'self
           , (string * 'self) list,  'self, 'self
           ] @lambda
@@ -41,7 +41,7 @@ let rec eval1 s e = GT.transform(lambda) (new lambda_eval eval1) s e;;
 
 @type 'a var_expr = [var | `Num of int | `Add of 'a * 'a | `Mult of 'a * 'a] 
 
-class [ 'self ] var_expr_eval fa fself = object
+class [ 'self ] var_expr_eval fa _fself = object
   inherit [ (string * 'self) list, 'self, 'self
           , (string * 'self) list, 'self, 'self
           ] @var_expr

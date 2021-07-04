@@ -63,7 +63,7 @@ class interpret =
     method c_B  (y::z::s, m,    i, o, p) _ f _ = Some ((f z y)::s, m, i, o, p+1)
     method c_E   _ _                           = None
     method c_C  (      s, m,    i, o, p) _ n   = Some (n::s, m, i, o, p+1)
-    method c_J  (      s, m,    i, o, p) _ n   = Some (s, m, i, o, n)
+    method c_J  (      s, m,    i, o, _) _ n   = Some (s, m, i, o, n)
     method c_JT (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x != 0 then n else p+1)
     method c_JF (   x::s, m,    i, o, p) _ n   = Some (s, m, i, o, if x  = 0 then n else p+1)
   end

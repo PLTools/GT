@@ -15,7 +15,7 @@ let rec fix f x = f (fix f) x
 let ith m n =
   fix (fun me i -> function
       | []                 -> raise Not_found
-      | x :: tl when x = n -> i
+      | x :: _  when x = n -> i
       | _ :: tl            -> me (i+1) tl
     ) 0 m
 
