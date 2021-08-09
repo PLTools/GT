@@ -13,7 +13,7 @@ discover-tests:
 	dune build @discover-tests
 
 doc:
-	dune build @doc
+	dune build @doc $(DUNE_FLAGS)
 
 doc-sphinx:
 	echo TODO

@@ -51,11 +51,14 @@ jobs:
         run: opam install odoc pa_ppx --yes
 
       - run: opam install . --deps-only --with-test
-      - run: opam exec -- make #dune build
-      - run: opam exec -- make test # dune runtest
+      - run: opam exec -- make      DFLAGS=--profile=release
+      - run: opam exec -- make test DFLAGS=--profile=release
 
       - name: Build documentation
-        run: opam exec -- dune build @doc
+        run: opam exec -- make doc
+
+      - name: Installing using Opam
+        run: opam exec -- make install DFLAGS=--profile=release
 
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3
