@@ -5,8 +5,6 @@
 
 (executable
  (name expr)
- (public_name GT-samples.expr)
- (package GT-samples)
  (modules Expr)
  (libraries GT)
  (preprocess
@@ -17,8 +15,6 @@
 
 (executable
  (name lambdas)
- (public_name GT-samples.lambdas)
- (package GT-samples)
  (modules Lambdas)
  (libraries GT)
  (preprocess
@@ -29,8 +25,6 @@
 
 (executable
  (name nameless)
- (public_name GT-samples.nameless)
- (package GT-samples)
  (modules Nameless)
  (libraries GT)
  (preprocess
@@ -41,10 +35,9 @@
 
 (executable
  (name lists)
- (public_name GT-samples.lists)
- (package GT-samples)
  (modules Lists)
- (flags (:standard -rectypes -w -27))
+ (flags
+  (:standard -rectypes -w -27))
  (libraries GT)
  (preprocess
   (action
