@@ -13,8 +13,7 @@ let get_val loc = function
 | _       -> failwith "could not get VaVal _ (should not happen)"
 
 
-module Migr =
-  Ppxlib_ast__Versions.Convert(Ppxlib_ast__Versions.OCaml_current)(Ppxlib.Import_for_core.Js)
+module Migr = Ppxlib_ast.Selected_ast.Of_ocaml
 
 open GTCommon
 
