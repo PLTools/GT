@@ -674,15 +674,28 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                      ~mutual_decls
                      (List.map rows ~f:(fun { prf_desc } -> prf_desc))
                      (fun x -> x)
-                 | Ptyp_object (_, _) -> failwith "not implemented: object types"
-                 | Ptyp_class (_, _) -> failwith "not implemented: class types"
-                 | Ptyp_package _ -> failwith "not implemented: package types"
-                 | Ptyp_extension _ -> failwith "not implemented: extension types"
-                 | Ptyp_arrow _ -> failwith "not implemented: arrow types"
+                 | Ptyp_object (_, _) ->
+                   Location.raise_errorf ~loc:typ.ptyp_loc "not implemented: object types"
+                 | Ptyp_class (_, _) ->
+                   Location.raise_errorf ~loc:typ.ptyp_loc "not implemented: class types"
+                 | Ptyp_package _ ->
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
+                     "not implemented: package types"
+                 | Ptyp_extension _ ->
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
+                     "not implemented: extension types"
+                 | Ptyp_arrow _ ->
+                   Location.raise_errorf ~loc:typ.ptyp_loc "not implemented: arrow types"
                  | Ptyp_any ->
-                   failwith
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
                      "not implemented: wildcard types (but it should be easy to rewrite)"
-                 | Ptyp_poly (_, _) -> failwith "not implemented: existential types"
+                 | Ptyp_poly (_, _) ->
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
+                     "not implemented: existential types"
                in
                let toplevel typ =
                  match typ.ptyp_desc with
@@ -717,15 +730,28 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                           None
                           bindings
                    ]
-                 | Ptyp_object (_, _) -> failwith "not implemented: object types"
-                 | Ptyp_class (_, _) -> failwith "not implemented: class types"
-                 | Ptyp_package _ -> failwith "not implemented: package types"
-                 | Ptyp_extension _ -> failwith "not implemented: extension types"
-                 | Ptyp_arrow _ -> failwith "not implemented: arrow types"
+                 | Ptyp_object (_, _) ->
+                   Location.raise_errorf ~loc:typ.ptyp_loc "not implemented: object types"
+                 | Ptyp_class (_, _) ->
+                   Location.raise_errorf ~loc:typ.ptyp_loc "not implemented: class types"
+                 | Ptyp_package _ ->
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
+                     "not implemented: package types"
+                 | Ptyp_extension _ ->
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
+                     "not implemented: extension types"
+                 | Ptyp_arrow _ ->
+                   Location.raise_errorf ~loc:typ.ptyp_loc "not implemented: arrow types"
                  | Ptyp_any ->
-                   failwith
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
                      "not implemented: wildcard types (but it should be easy to rewrite)"
-                 | Ptyp_poly (_, _) -> failwith "not implemented: existential types"
+                 | Ptyp_poly (_, _) ->
+                   Location.raise_errorf
+                     ~loc:typ.ptyp_loc
+                     "not implemented: existential types"
                  | _ -> helper typ
                in
                toplevel typ)
@@ -1235,9 +1261,9 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       method self_arg_name cname = sprintf "_%s_%s" Naming.self_arg_name cname
 
-      (* TODO: maybe we can bubble from the botton not whole already applied  expression
-    but either 1) full expression or 2) expression not yet applied
-    to a) attribute and b) subject. That will allow to implement sprintf effectively *)
+      (* TODO: maybe we can bubble from the bottom not whole already applied  expression
+        but either 1) full expression or 2) expression not yet applied
+        to a) attribute and b) subject. That will allow to implement sprintf effectively *)
       (* TODO: decide expression of which type should be returned here *)
       (* do_type_gen will return an expression which after being applied
        * to inherited attribute and subject will return synthetized one

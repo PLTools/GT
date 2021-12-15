@@ -18,14 +18,20 @@ type config_plugin =
   | Skip
   | Use of Plugin_intf.plugin_args
 
-let registered_plugins : (string * (module Plugin_intf.MAKE)) list ref = ref []
-let get_registered_plugins () = List.map ~f:fst !registered_plugins
+type config =
+  { mutable registered_plugins : (string * (module Plugin_intf.MAKE)) list
+  ; mutable inline_callback :
+      string -> (loc:Ppxlib.Location.t -> Ppxlib.core_type -> Ppxlib.expression) -> unit
+  }
+
+let config = { registered_plugins = []; inline_callback = (fun _ _ -> ()) }
+let get_registered_plugins () = List.map ~f:fst config.registered_plugins
 
 let register_plugin name m =
-  let p = name, m in
-  registered_plugins := p :: !registered_plugins;
-  ()
+  config.registered_plugins <- (name, m) :: config.registered_plugins
 ;;
+
+let set_inline_registration f = config.inline_callback <- f
 
 module Make (AstHelpers : GTHELPERS_sig.S) = struct
   open AstHelpers
@@ -956,7 +962,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   let wrap_plugin name = function
     | Skip -> id
     | Use args ->
-      (match List.Assoc.find !registered_plugins name ~equal:String.equal with
+      (match List.Assoc.find config.registered_plugins name ~equal:String.equal with
       | Some m ->
         let module F = (val m : Plugin_intf.MAKE) in
         let module P = F (AstHelpers) in

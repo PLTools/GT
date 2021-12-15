@@ -1,11 +1,10 @@
 .PHONY: release discover-tests test promote clean celan doc
-DFLAGS=
 
 # compiler packages without tests
 all:
 	dune build -p GT,GT-p5 $(DFLAGS)
 
-release: DFLAGS := --profile=release
+release: DFLAGS += --profile=release
 release: all
 
 discover-tests:
