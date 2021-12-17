@@ -23,7 +23,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   type plugin_constructor =
     Plugin_intf.plugin_args
     -> bool * Ppxlib.type_declaration list
-    -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) Plugin_intf.typ_g
+    -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t, Pat.t) Plugin_intf.typ_g
 
   let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
     let rs =

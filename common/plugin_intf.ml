@@ -26,7 +26,7 @@ type plugin_args = (Ppxlib.longident * Ppxlib.expression) list
     OCaml AST and return pieces specific for backend.
 
 *)
-class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign] typ_g =
+class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign, 'pat] typ_g =
   object
 
     (** {1 Methods that are specific for a concrete plugin implementation } *)
@@ -109,6 +109,7 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign] typ_g =
     method virtual do_mutuals_sigs : loc:'loc -> is_rec:bool -> 'sign list
     method virtual need_inh_attr : bool
     method virtual eta_and_exp : center:'exp -> Ppxlib.type_declaration -> 'exp
+    method virtual prepare_fa_args : loc:'loc -> Ppxlib.type_declaration -> 'pat list
 
     method
         virtual make_final_trans_function_typ
@@ -122,7 +123,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
   class virtual g =
     object
-      inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t] typ_g
+      inherit [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t, Pat.t] typ_g
     end
 end
 
@@ -134,5 +135,5 @@ module type MAKE = functor (AstHelpers : GTHELPERS_sig.S) -> sig
   val create
     :  plugin_args
     -> bool * Ppxlib.type_declaration list
-    -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t) typ_g
+    -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t, Pat.t) typ_g
 end

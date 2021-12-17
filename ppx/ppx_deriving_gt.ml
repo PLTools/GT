@@ -83,23 +83,36 @@ let () =
         P.create [] (false, dummy_decl)
       in
       let extension ~loc ~path:_ typ =
+        let names = HelpersBase.vars_from_core_type typ in
         let tdecl =
           let open Ppxlib.Ast_builder.Default in
           type_declaration
             ~loc
             ~name:(Located.mk ~loc "dummy")
-            ~params:[]
+            ~params:
+              (List.map
+                 (fun s -> ptyp_var ~loc s, (Asttypes.NoVariance, Asttypes.NoInjectivity))
+                 names)
             ~cstrs:[]
             ~private_:Public
             ~manifest:(Some typ)
             ~kind:Ptype_abstract
         in
-        p#do_typ_gen
-          ~loc:(PpxHelpers.loc_from_caml loc)
-          ~mutual_decls:[]
-          ~is_self_rec:(fun _ -> `Nonrecursive)
-          tdecl
-          typ
+        let pats = p#prepare_fa_args ~loc tdecl in
+        let rhs =
+          p#do_typ_gen
+            ~loc:(PpxHelpers.loc_from_caml loc)
+            ~mutual_decls:[]
+            ~is_self_rec:(fun _ -> `Nonrecursive)
+            tdecl
+            typ
+        in
+        List.fold_right
+          (fun p acc ->
+            let open Ppxlib.Ast_builder.Default in
+            pexp_fun ~loc Nolabel None p acc)
+          pats
+          rhs
       in
       Deriving.add ~extension name |> Deriving.ignore)
 ;;

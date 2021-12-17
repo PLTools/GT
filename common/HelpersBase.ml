@@ -6,10 +6,9 @@
  *)
 
 let id x = x
-let raise_errorf ?loc fmt = Printf.ksprintf failwith fmt
 
-let not_implemented ?loc fmt =
-  Printf.ksprintf (raise_errorf ~loc "%s are not yet implemented") fmt
+let not_implemented fmt =
+  Printf.ksprintf (Ppxlib.Location.raise_errorf "%s are not yet implemented") fmt
 ;;
 
 module List = struct
@@ -48,7 +47,7 @@ module List = struct
   ;;
 end
 
-module Format = struct
+(* module Format = struct
   include Caml.Format
 
   let easy_string f x =
@@ -56,22 +55,14 @@ module Format = struct
     f str_formatter x;
     flush_str_formatter ()
   ;;
-end
+end *)
 
 open Ppxlib
 
-let string_of_core_type typ =
-  let b = Buffer.create 100 in
-  let fmt = Format.formatter_of_buffer b in
-  Pprintast.core_type fmt typ;
-  Format.pp_print_newline fmt ();
-  Buffer.contents b
-;;
-
 let compare_core_type a b =
   String.compare
-    (Format.easy_string Pprintast.core_type a)
-    (Format.easy_string Pprintast.core_type b)
+    (Format.asprintf "%a" Pprintast.core_type a)
+    (Format.asprintf "%a" Pprintast.core_type b)
 ;;
 
 let visit_typedecl
@@ -110,6 +101,28 @@ let lident_tail = function
   | Ldot (_, s) -> Lident s
   | Lapply (_, _) as l -> l
 ;;
+
+module SS = Stdlib.Set.Make (String)
+
+let vars_from_core_type =
+  let rec helper acc typ =
+    match typ.ptyp_desc with
+    | Ptyp_var s -> SS.add s acc
+    | Ptyp_tuple args | Ptyp_constr (_, args) -> List.fold_left args ~init:acc ~f:helper
+    | Ptyp_arrow (_, l, r) -> helper (helper acc l) r
+    | Ptyp_alias (t, lab) -> SS.remove lab acc
+    | Ptyp_object (_, _)
+    | Ptyp_class (_, _)
+    | Ptyp_variant (_, _, _)
+    | Ptyp_any
+    | Ptyp_poly (_, _)
+    | Ptyp_package _ | Ptyp_extension _ -> acc
+  in
+  fun root -> helper SS.empty root |> SS.elements
+;;
+
+let%test _ = vars_from_core_type [%type: 'a list] = [ "a" ]
+let%test _ = vars_from_core_type [%type: int list] = []
 
 let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
   let rec helper t =
