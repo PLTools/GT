@@ -20,18 +20,23 @@ type config_plugin =
 
 type config =
   { mutable registered_plugins : (string * (module Plugin_intf.MAKE)) list
-  ; mutable inline_callback :
-      string -> (loc:Ppxlib.Location.t -> Ppxlib.core_type -> Ppxlib.expression) -> unit
+  ; mutable inline_callback : string -> (module Plugin_intf.MAKE) -> unit
   }
 
 let config = { registered_plugins = []; inline_callback = (fun _ _ -> ()) }
 let get_registered_plugins () = List.map ~f:fst config.registered_plugins
 
 let register_plugin name m =
-  config.registered_plugins <- (name, m) :: config.registered_plugins
+  config.registered_plugins <- (name, m) :: config.registered_plugins;
+  config.inline_callback name m
 ;;
 
-let set_inline_registration f = config.inline_callback <- f
+let set_inline_registration f =
+  config.inline_callback <- f;
+  List.iter config.registered_plugins ~f:(fun (name, m) -> f name m)
+;;
+
+let register_ppx_inline_plugin _ _ = ()
 
 module Make (AstHelpers : GTHELPERS_sig.S) = struct
   open AstHelpers

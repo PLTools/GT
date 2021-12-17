@@ -41,17 +41,18 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           | Rinherit typ ->
             (match typ.ptyp_desc with
             | Ptyp_constr ({ txt; _ }, ts) ->
-              let newname = "subj" in
+              let newname = gen_symbol ~prefix:"subj" () in
               let lhs = Pat.alias ~loc (Pat.type_ ~loc txt) newname in
               case ~lhs ~rhs:(oninherit ts txt newname)
-            | _ -> failwith "this inherit field isn't supported"))
+            | _ ->
+              Location.raise_errorf ~loc:typ.ptyp_loc "this inherit field isn't supported"))
     in
     let for_labels =
       match labels with
       | None -> []
       | Some ls ->
         List.map ls ~f:(fun lab ->
-            let newname = "subj" in
+            let newname = gen_symbol ~prefix:"subj" () in
             let lhs = Pat.alias ~loc (Pat.type_ ~loc (Lident lab)) newname in
             case ~lhs ~rhs:(onlabel lab newname))
     in

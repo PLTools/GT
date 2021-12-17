@@ -30,6 +30,9 @@ clean:
 rebuild: clean
 	$(MAKE) all tests
 
+watch:
+	$(MAKE) all DFLAGS=-w
+
 install:
 	dune build @install $(DUNE_FLAGS)
 	dune install $(DUNE_FLAGS)

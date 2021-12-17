@@ -43,7 +43,9 @@ end
 val register_plugin : string -> (module Plugin_intf.MAKE) -> unit
 
 val get_registered_plugins : unit -> string list
+val set_inline_registration : (string -> (module Plugin_intf.MAKE) -> unit) -> unit
 
-val set_inline_registration
-  :  (string -> (loc:Ppxlib.Location.t -> Ppxlib.core_type -> Ppxlib.expression) -> unit)
+val register_ppx_inline_plugin
+  :  string
+  -> (loc:Ppxlib.Location.t -> Ppxlib.core_type -> Ppxlib.expression)
   -> unit

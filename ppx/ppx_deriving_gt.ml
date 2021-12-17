@@ -54,7 +54,6 @@ let sig_type_decl : (_, _) Deriving.Generator.t =
   Deriving.Generator.make
     Deriving.Args.(empty +> arg "options" r)
     (fun ~loc ~path info options ->
-      (* Expander.notify "with annotations %s" (String.concat "," info); *)
       let generator_f si =
         H.sig_type_decl_many_plugins
           ~loc
@@ -71,17 +70,38 @@ let sig_type_decl : (_, _) Deriving.Generator.t =
       generator_f [] info)
 ;;
 
-(* let str_type_ext : (_, _) Deriving.Generator.t =
-  Deriving.Generator.make Deriving.Args.(empty) (fun ~loc ~path info -> [])
-;; *)
-
 let () =
-  Expander.set_inline_registration (fun name f ->
-      let extension ~loc ~path:_ = f ~loc in
+  Expander.set_inline_registration (fun name (module M : Plugin_intf.MAKE) ->
+      let module P = M (PpxHelpers) in
+      let p =
+        let loc = Location.none in
+        let dummy_decl =
+          match [%stri type nonrec t = int] with
+          | { pstr_desc = Pstr_type (_, x) } -> x
+          | _ -> Location.raise_errorf ~loc "Should not happen %s %d" __FILE__ __LINE__
+        in
+        P.create [] (false, dummy_decl)
+      in
+      let extension ~loc ~path:_ typ =
+        let tdecl =
+          let open Ppxlib.Ast_builder.Default in
+          type_declaration
+            ~loc
+            ~name:(Located.mk ~loc "dummy")
+            ~params:[]
+            ~cstrs:[]
+            ~private_:Public
+            ~manifest:(Some typ)
+            ~kind:Ptype_abstract
+        in
+        p#do_typ_gen
+          ~loc:(PpxHelpers.loc_from_caml loc)
+          ~mutual_decls:[]
+          ~is_self_rec:(fun _ -> `Nonrecursive)
+          tdecl
+          typ
+      in
       Deriving.add ~extension name |> Deriving.ignore)
 ;;
 
-let () =
-  (*Sys.command "notify-send 'Registering deriver' gt" |> ignore;*)
-  Deriving.add ~str_type_decl ~sig_type_decl "gt" |> Deriving.ignore
-;;
+let () = Deriving.add ~str_type_decl ~sig_type_decl "gt" |> Deriving.ignore

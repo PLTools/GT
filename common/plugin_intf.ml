@@ -85,8 +85,15 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign] typ_g =
         virtual do_single
         : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration -> 'str list
 
-    (** Generate structure items a type extension. Beta feature. *)
-    (* method virtual do_typext_str: loc:'loc -> Ppxlib.type_extension -> 'str list *)
+    (** Generate transformation expression from specified core_type.  *)
+    method
+        virtual do_typ_gen
+        : loc:'loc
+          -> mutual_decls:Ppxlib.type_declaration list
+          -> is_self_rec:(Ppxlib.core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+          -> Ppxlib.type_declaration
+          -> Ppxlib.core_type
+          -> 'exp
 
     (** Generate name for transformation function. *)
     method virtual make_trans_function_name : Ppxlib.type_declaration -> string
