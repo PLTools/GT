@@ -121,8 +121,15 @@ let vars_from_core_type =
   fun root -> helper SS.empty root |> SS.elements
 ;;
 
-let%test _ = vars_from_core_type [%type: 'a list] = [ "a" ]
-let%test _ = vars_from_core_type [%type: int list] = []
+let%test _ =
+  let loc = Location.none in
+  vars_from_core_type [%type: 'a list] = [ "a" ]
+;;
+
+let%test _ =
+  let loc = Location.none in
+  vars_from_core_type [%type: int list] = []
+;;
 
 let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
   let rec helper t =
