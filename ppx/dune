@@ -34,37 +34,28 @@
  (flags
   (:standard -linkall -w -33)))
 
-(rule
- (targets pp_gt.exe)
- (deps
-  ../common/GTCommon.cmxa
-  ppx.cmxa
-  ../plugins/show.cmxa
-  ../plugins/gfmt.cmxa
-  ../plugins/gmap.cmxa
-  ../plugins/eval.cmxa
-  ../plugins/stateful.cmxa
-  ../plugins/foldl.cmxa
-  ../plugins/foldr.cmxa
-  ../plugins/compare.cmxa
-  ../plugins/eq.cmxa
-  ../plugins/html.cmxa
-  ../plugins/ghash.cmxa
-  ../plugins/enum.cmxa
-  pp_gt.ml)
- (action
-  (run
-   ocamlfind
-   ocamlopt
-   -I
-   ../common
-   -package
-   base,ppxlib,ocamlgraph
-   %{deps}
-   -linkall
-   -linkpkg
-   -o
-   %{targets})))
+(executable
+ (name pp_gt)
+ (modules pp_gt)
+ (libraries
+  base
+  ppxlib
+  GT.common
+  ppx
+  show
+  gfmt
+  gmap
+  eval
+  stateful
+  foldr
+  foldl
+  compare
+  eq
+  html
+  ghash
+  enum)
+ (flags
+  (:standard -linkall)))
 
 ;(executable
 ; (name pp_all)

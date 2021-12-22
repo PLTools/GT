@@ -12,7 +12,7 @@ let trait_class_name_for_typ ~trait name =
     (if String.equal trait "" then name else Printf.sprintf "%s_%s" trait name)
 ;;
 
-let fix_name ~plugin_name = sprintf "%s_fix"
+let fix_name ~plugin_name:_ = sprintf "%s_fix"
 
 (* 1st structure is planned to contain transformation function *)
 let typ1_for_class_arg ~plugin = sprintf "%s_t_%s_1" plugin

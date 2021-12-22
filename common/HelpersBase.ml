@@ -110,7 +110,7 @@ let vars_from_core_type =
     | Ptyp_var s -> SS.add s acc
     | Ptyp_tuple args | Ptyp_constr (_, args) -> List.fold_left args ~init:acc ~f:helper
     | Ptyp_arrow (_, l, r) -> helper (helper acc l) r
-    | Ptyp_alias (t, lab) -> SS.remove lab acc
+    | Ptyp_alias (t, lab) -> SS.remove lab (helper acc t)
     | Ptyp_object (_, _)
     | Ptyp_class (_, _)
     | Ptyp_variant (_, _, _)
@@ -289,7 +289,7 @@ let is_algebraic_tdecl tdecl =
     ~onrecord:(fun _ -> false)
     ~onvariant:(fun _ -> true)
     ~onabstract:(fun () -> false)
-    ~onmanifest:(fun typ -> false)
+    ~onmanifest:(fun _typ -> false)
 ;;
 
 let has_many_constructors_tdecl tdecl =

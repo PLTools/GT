@@ -21,6 +21,8 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
+[@@@ocaml.warning "-27"]
+
 open Pcaml
 open GTCommon
 
@@ -115,7 +117,7 @@ EXTEND
   ]];
 
   sig_item: LEVEL "top" [[
-    "@"; "type"; nonrec_=(OPT nonrec_); t=LIST1 t_decl SEP "and" -> 
+    "@"; "type"; nonrec_=(OPT nonrec_); t=LIST1 t_decl SEP "and" ->
       Core2.generate_sig (Option.is_some nonrec_) t loc
   ]];
 

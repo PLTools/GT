@@ -12,16 +12,16 @@ discover-tests:
 	dune build @discover-tests
 
 doc:
-	dune build @doc $(DUNE_FLAGS)
+	dune build @doc $(DFLAGS)
 
 doc-sphinx:
 	echo TODO
 
 test:
-	dune runtest $(DUNE_FLAGS)
+	dune runtest $(DFLAGS)
 
 promote:
-	dune promote $(DUNE_FLAGS)
+	dune promote $(DFLAGS)
 
 celan: clean
 clean:
@@ -34,9 +34,10 @@ watch:
 	$(MAKE) all DFLAGS=-w
 
 install:
-	dune build @install $(DUNE_FLAGS)
-	dune install $(DUNE_FLAGS)
+	dune build @install $(DFLAGS)
+	dune install $(DFLAGS)
 
 uninstall:
-	dune build @install $(DUNE_FLAGS)
-	dune uninstall $(DUNE_FLAGS)
+	dune build @install $(DFLAGS)
+	dune uninstall $(DFLAGS)
+

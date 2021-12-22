@@ -8,7 +8,7 @@
 open Ploc
 
 let oops loc str = Ploc.raise loc (Failure str)
-let get_val loc = function
+let get_val _loc = function
 | VaVal x -> x
 | _       -> failwith "could not get VaVal _ (should not happen)"
 
@@ -31,7 +31,7 @@ let generate_str is_nonrec tdecls loc =
     let caml_ast = Ast2pt.implem "harcoded_filename.ml" [sis] in
     let () = assert (List.length caml_ast = 1) in
     match (List.hd caml_ast).pstr_desc with
-    | Pstr_type (flg, tds) ->
+    | Pstr_type (_flg, tds) ->
        let tds = List.map Migr.copy_type_declaration tds in
        generator_f [sis] ((if is_nonrec then Ppxlib.Nonrecursive else Recursive), tds)
     |  _ -> failwith "type declaration expected"
@@ -54,7 +54,7 @@ let generate_sig is_nonrec tdecls loc =
      let caml_ast = Ast2pt.interf "harcoded_filename.mli" [sis] in
      assert (List.length caml_ast  =  1);
      match (List.hd caml_ast).psig_desc with
-     | Psig_type (flg, tds) ->
+     | Psig_type (_flg, tds) ->
       let tds = List.map Migr.copy_type_declaration tds in
        generator_f [sis] ((if is_nonrec then Ppxlib.Nonrecursive else Recursive), tds)
      | _ -> assert false

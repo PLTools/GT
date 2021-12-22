@@ -1,3 +1,8 @@
+(env
+ (_
+  (flags
+   (:standard -w -27-32+9 -warn-error -A))))
+
 (library
  (name GTCommon)
  (public_name GT.common)
@@ -8,7 +13,7 @@
  (synopsis
   "Actual code that perform codegeneration. Will used for creating new plugins")
  (flags
-  (:standard -w -27-32-9 -warn-error -A))
+  (:standard -w -32-9 -warn-error -A))
  (inline_tests)
  (preprocess
   (pps ppx_inline_test ppxlib.metaquot))

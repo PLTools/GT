@@ -16,6 +16,8 @@
    https://camlp5.github.io/doc/htmlc/ast_strict.html
 *)
 
+[@@@ocaml.warning "-27+9"]
+
 open GTCommon
 open Ploc
 open MLast

@@ -1,8 +1,3 @@
-(env
- (dev
-  (flags
-   (:standard -w -27+9 -warn-error -A))))
-
 (library
  (name pa_gt)
  (public_name GT-p5)
@@ -37,6 +32,8 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
+   -package
+   ppx_inline_test.runtime-lib
    -I
    ../common
    %{read-lines:../config/package-doc.cfg}
@@ -80,12 +77,15 @@
  (action
   (run
    mkcamlp5.opt
+   ;-verbose
    -I
    ../common
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,base
    -package
    logger,ppxlib,ocamlgraph
+   -package
+   ppx_inline_test.runtime-lib
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
    -o
@@ -131,7 +131,6 @@
  (action
   (run
    mkcamlp5
-   -verbose
    -package
    camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o,camlp5.extend,ocamlgraph
    -o
