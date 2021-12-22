@@ -118,17 +118,17 @@ let vars_from_core_type =
     | Ptyp_poly (_, _)
     | Ptyp_package _ | Ptyp_extension _ -> acc
   in
-  fun root -> helper SS.empty root |> SS.elements
+  fun root -> helper SS.empty root
 ;;
 
 let%test _ =
   let loc = Location.none in
-  vars_from_core_type [%type: 'a list] = [ "a" ]
+  [ "a" ] = (vars_from_core_type [%type: 'a list] |> SS.elements)
 ;;
 
 let%test _ =
   let loc = Location.none in
-  vars_from_core_type [%type: int list] = []
+  [] = (vars_from_core_type [%type: int list] |> SS.elements)
 ;;
 
 let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
