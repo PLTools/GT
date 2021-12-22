@@ -83,7 +83,7 @@ let () =
         P.create [] (false, dummy_decl)
       in
       let extension ~loc ~path:_ typ =
-        let names = HelpersBase.vars_from_core_type typ in
+        let names = HelpersBase.vars_from_core_type typ |> HelpersBase.SS.elements in
         let tdecl =
           let open Ppxlib.Ast_builder.Default in
           type_declaration
