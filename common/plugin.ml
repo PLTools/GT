@@ -164,44 +164,55 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         self#got_typedecl ~loc ~is_self_rec ~mutual_decls tdecl k
 
       method prepare_fa_args ~loc tdecl =
-        map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
+        map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s"), Fn.id
 
       method wrap_class_definition ~loc ~inh_params mutual_decls tdecl fields =
         let cur_name = self#cur_name tdecl in
         (* inherit class_t and prepare to put other members *)
         let mutual_decls = self#tdecls in
-        let is_mutal = List.length mutual_decls > 1 in
         Str.class_single
           ~loc
           ~params:(self#plugin_class_params_tdecl tdecl)
-          ~name:(self#make_class_name ~is_mutal tdecl)
+          ~name:(self#make_class_name ~is_mutal:(List.length mutual_decls > 1) tdecl)
           ~virt:false
           ~wrap:(fun body ->
-            (* constructor arguments are *)
-            let names =
-              (if is_mutal
-              then []
-              else [ Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt ])
-              |> (fun tl -> self#prepare_fa_args ~loc tdecl @ tl)
-              |> fun ps ->
+            (* constructor arguments here:
+              fun (mut1, ... mutN) fa fb fc ...  fself? -> body *)
+            let add_self rhs =
               match mutual_decls with
               | [] -> failwith "Should not happen"
-              | [ _ ] -> ps
+              | [ _ ] ->
+                (* If no mutual recursion, we put selfreference in the beginning *)
+                Cl.fun_ ~loc (Pat.var ~loc (self#self_arg_name tdecl.ptype_name.txt)) rhs
+              | _ -> rhs
+            in
+            let add_fas rhs =
+              let args, _ = self#prepare_fa_args ~loc tdecl in
+              Cl.fun_list ~loc args rhs
+            in
+            let add_mutuals rhs =
+              match mutual_decls with
+              | [] -> failwith "Should not happen"
+              | [ _ ] ->
+                (* If no mutual recursion, we put selfreference in the beginning *)
+                rhs
               | tdecls ->
                 (* we don't need self transformation for *)
-                Pat.alias
-                  ~loc
-                  (Pat.tuple ~loc
-                  @@ List.map self#tdecls ~f:(fun { ptype_name = { txt = name } } ->
-                         Pat.var ~loc
-                         @@
-                         if String.equal name tdecl.ptype_name.txt
-                         then self#self_arg_name name
-                         else Naming.for_ self#trait_name name))
-                  Naming.mutuals_pack
-                :: ps
+                let pat =
+                  Pat.alias
+                    ~loc
+                    (Pat.tuple ~loc
+                    @@ List.map self#tdecls ~f:(fun { ptype_name = { txt = name } } ->
+                           Pat.var ~loc
+                           @@
+                           if String.equal name tdecl.ptype_name.txt
+                           then self#self_arg_name name
+                           else Naming.for_ self#trait_name name))
+                    Naming.mutuals_pack
+                in
+                Cl.fun_ ~loc pat rhs
             in
-            Cl.fun_list ~loc names body)
+            add_mutuals (add_fas (add_self body)))
         @@ [ (let parent_name = Naming.class_name_for_typ cur_name in
               Cf.inherit_ ~loc (Cl.constr ~loc (Lident parent_name) inh_params))
            ]
@@ -1097,11 +1108,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               ~loc
               ~name:class_name
               ~wrap:(fun cl ->
+                let args, _ = self#prepare_fa_args ~loc tdecl in
                 Cl.fun_
                   ~loc
                   (* (Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt) @@ *)
                   (Pat.any ~loc)
-                @@ Cl.fun_list ~loc (self#prepare_fa_args ~loc tdecl) cl)
+                @@ Cl.fun_list ~loc args cl)
               ~params
               [ Cf.inherit_ ~loc
                 @@ Cl.apply

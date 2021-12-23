@@ -109,7 +109,10 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ctf, 'cf, 'str, 'sign, 'pat] typ_g 
     method virtual do_mutuals_sigs : loc:'loc -> is_rec:bool -> 'sign list
     method virtual need_inh_attr : bool
     method virtual eta_and_exp : center:'exp -> Ppxlib.type_declaration -> 'exp
-    method virtual prepare_fa_args : loc:'loc -> Ppxlib.type_declaration -> 'pat list
+
+    method
+        virtual prepare_fa_args
+        : loc:'loc -> Ppxlib.type_declaration -> 'pat list * ('exp -> 'exp)
 
     method
         virtual make_final_trans_function_typ

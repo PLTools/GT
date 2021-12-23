@@ -98,7 +98,7 @@ let () =
             ~manifest:(Some typ)
             ~kind:Ptype_abstract
         in
-        let pats = p#prepare_fa_args ~loc tdecl in
+        let pats, _ = p#prepare_fa_args ~loc tdecl in
         let rhs =
           p#do_typ_gen
             ~loc:(PpxHelpers.loc_from_caml loc)
