@@ -62,6 +62,8 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,ppxlib,ocamlgraph
+   -package
+   ppx_inline_test.runtime-lib
    -I
    ../common
    %{read-lines:../config/package-doc.cfg}
