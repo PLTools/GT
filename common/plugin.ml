@@ -11,10 +11,20 @@
   *)
 
 open Base
+module Format = Caml.Format
 open Ppxlib
 open Printf
 open Asttypes
 open HelpersBase
+
+let use_logging = true
+let use_logging = false
+
+let log fmt =
+  if use_logging
+  then Caml.Format.kasprintf (Caml.Format.eprintf "%s\n%!") fmt
+  else Caml.Format.ifprintf Caml.Format.std_formatter fmt
+;;
 
 module Make (AstHelpers : GTHELPERS_sig.S) = struct
   open AstHelpers
@@ -23,7 +33,17 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   type plugin_constructor =
     Plugin_intf.plugin_args
     -> bool * Ppxlib.type_declaration list
-    -> (loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t, Pat.t) Plugin_intf.typ_g
+    -> ( loc
+       , Exp.t
+       , Typ.t
+       , type_arg
+       , Cl.t
+       , Ctf.t
+       , Cf.t
+       , Str.t
+       , Sig.t
+       , Pat.t )
+       Plugin_intf.typ_g
 
   let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
     let rs =
@@ -172,8 +192,15 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               then facc
               else
                 fun rhs ->
-                Exp.let_one ~loc (Pat.any ~loc) (Exp.sprintf ~loc "f%s" name) (facc rhs))
-        )
+                Cl.let_
+                  ~loc
+                  ~flg:Nonrecursive
+                  [ value_binding
+                      ~loc
+                      ~pat:(Pat.any ~loc)
+                      ~expr:(Exp.sprintf ~loc "f%s" name)
+                  ]
+                  (facc rhs)) )
 
       method apply_fas_in_new_object ~loc tdecl =
         (* very similar to self#make_inherit_args_for_alias but the latter
@@ -201,8 +228,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               | _ -> rhs
             in
             let add_fas rhs =
-              let args, _ = self#prepare_fa_args ~loc tdecl in
-              Cl.fun_list ~loc args rhs
+              let args, silence_warns = self#prepare_fa_args ~loc tdecl in
+              Cl.fun_list ~loc args (silence_warns rhs)
             in
             let add_mutuals rhs =
               match mutual_decls with

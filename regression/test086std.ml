@@ -15,12 +15,14 @@ module T : sig
   @type 'a u3 = {aa: GT.int; bb:GT.string} with show,gmap,foldl,eq,compare,eval;;
   @type ('a,'b) arrows = ('a -> 'b) GT.list  with show,gmap,foldl,eq,compare,eval;;
 end = struct
+
   @type t2 = GT.int * GT.string with show,gmap,html,foldl,eq,compare,eval,stateful;;
 
   let () = ();;
 
   @type 'a t3 = GT.int * 'a * GT.string with show,gmap,html,foldl,eq,compare,eval,stateful;;
 
+  @type 'a t4 = GT.bytes with show;;
   let () = ();;
   @type 'a t1 = 'a with show,gmap,html,foldl,eq,compare,eval,stateful;;
 
@@ -36,11 +38,13 @@ end = struct
 
   @type 'a u2 = 'a GT.Lazy.t with show,gmap,foldl,eq,compare,eval,stateful;;
 
+
   let () = ();;
-  (* TODO: implement stateful for records *)
 
   @type 'a u3 = {aa: GT.int; bb:GT.string} with show,gmap,foldl,eq,compare,eval;;
   let () = ();;
 
   @type ('a,'b) arrows = ('a -> 'b) GT.list  with show,gmap,foldl,eq,compare,eval;;
 end
+
+(* TODO: implement stateful for records *)

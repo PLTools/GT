@@ -686,6 +686,12 @@ module Cl = struct
   let fun_ ~loc p ce = <:class_expr< fun $p$ -> $ce$ >>
   let fun_list ~loc ps ce =
     List.fold_right (fun_ ~loc) ps ce
+
+  let let_ ~loc ?(flg=Ppxlib.Nonrecursive) vbs rhs =
+    List.fold_right (fun (pat,expr) rhs ->
+      <:class_expr< let $pat$ = $expr$ in $rhs$ >>)
+      vbs rhs
+
 end
 
 

@@ -246,6 +246,7 @@ module type S = sig
     val fun_list : loc:loc -> Pat.t list -> t -> t
     val constr : loc:loc -> Longident.t -> Typ.t list -> t
     val apply : loc:loc -> t -> Exp.t list -> t
+    val let_ : loc:loc -> ?flg:Ppxlib.rec_flag -> Vb.t list -> t -> t
   end
 
   and Vb : sig

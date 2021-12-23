@@ -41,7 +41,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   class g args tdecls =
     object (self)
       inherit
-        [loc, Exp.t, Typ.t, type_arg, Ctf.t, Cf.t, Str.t, Sig.t, Pat.t] Plugin_intf.typ_g
+        [loc, Exp.t, Typ.t, type_arg, Cl.t, Ctf.t, Cf.t, Str.t, Sig.t, Pat.t] Plugin_intf
+                                                                              .typ_g
 
       inherit P.generator args tdecls
       inherit P.no_inherit_arg args tdecls

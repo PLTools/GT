@@ -20,7 +20,6 @@ module T : sig
 
   type ('a,'b) arr1 = ('a * 'b) GT.array [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 end = struct
-
   type nonrec t2 = GT.int * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
 
   type nonrec 'a t3 = GT.int * 'a * GT.string [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; stateful; html}]
@@ -37,7 +36,7 @@ end = struct
   type nonrec 'a u3 = {aa: GT.int; bb:GT.string} [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 
   type nonrec 'a r1 = 'a GT.ref [@@deriving gt ~options:{fmt; html}]
-  
+
   type nonrec ('a,'b) arr1 = ('a * 'b) GT.array [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 
 end
