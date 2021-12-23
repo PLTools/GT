@@ -131,6 +131,30 @@ let%test _ =
   [] = (vars_from_core_type [%type: int list] |> SS.elements)
 ;;
 
+let vars_from_tdecl tdecl =
+  let ans =
+    match tdecl.ptype_manifest with
+    | None -> SS.empty
+    | Some typ -> vars_from_core_type typ
+  in
+  let of_labels ls =
+    List.fold_left ~init:SS.empty ls ~f:(fun acc { pld_type } ->
+        SS.union acc (vars_from_core_type pld_type))
+  in
+  let ans2 =
+    match tdecl.ptype_kind with
+    | Ptype_open | Ptype_abstract -> SS.empty
+    | Ptype_record ls -> of_labels ls
+    | Ptype_variant cds ->
+      List.fold_left cds ~init:SS.empty ~f:(fun acc -> function
+        | { pcd_args = Pcstr_tuple ts } ->
+          List.fold_left ~init:SS.empty ts ~f:(fun acc x ->
+              SS.union acc (vars_from_core_type x))
+        | { pcd_args = Pcstr_record ls } -> SS.union acc (of_labels ls))
+  in
+  SS.union ans2 ans
+;;
+
 let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
   let rec helper t =
     (* Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t; *)

@@ -164,7 +164,21 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         self#got_typedecl ~loc ~is_self_rec ~mutual_decls tdecl k
 
       method prepare_fa_args ~loc tdecl =
-        map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s"), Fn.id
+        let used_vars = vars_from_tdecl tdecl in
+        let names = map_type_param_names tdecl.ptype_params ~f:Fn.id in
+        ( map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
+        , List.fold_left ~init:Fn.id names ~f:(fun facc name ->
+              if SS.mem name used_vars
+              then facc
+              else
+                fun rhs ->
+                Exp.let_one ~loc (Pat.any ~loc) (Exp.sprintf ~loc "f%s" name) (facc rhs))
+        )
+
+      method apply_fas_in_new_object ~loc tdecl =
+        (* very similar to self#make_inherit_args_for_alias but the latter
+         * applies `fself` by default. Need to refactor and remove this function *)
+        map_type_param_names tdecl.ptype_params ~f:(Exp.sprintf ~loc "f%s")
 
       method wrap_class_definition ~loc ~inh_params mutual_decls tdecl fields =
         let cur_name = self#cur_name tdecl in
@@ -839,11 +853,6 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           "%s%s"
           (Naming.trait_class_name_for_typ ~trait:self#plugin_name tdecl.ptype_name.txt)
           (if is_mutal then "_stub" else "")
-
-      method apply_fas_in_new_object ~loc tdecl =
-        (* very similar to self#make_inherit_args_for_alias but the latter
-         * applies `fself` by default. Need to refactor and remove this function *)
-        map_type_param_names tdecl.ptype_params ~f:(Exp.sprintf ~loc "f%s")
 
       (* only for non-recursive types *)
       method
