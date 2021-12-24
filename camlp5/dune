@@ -13,6 +13,7 @@
  (targets pp5+gt+plugins+dump.exe)
  (deps
   %{project_root}/config/package-doc.cfg
+  ;(package GT-p5) ; Error: Package GT-p5 does not exist
   (:cmas
    ../common/GTCommon.cmxa
    pa_gt.cmxa
@@ -74,6 +75,7 @@
 (rule
  (targets pp5+gt+dump.exe)
  (deps
+  ;(package GT-p5) ; Error: Package GT-p5 does not exist
   %{project_root}/config/package-doc.cfg
   (:cmas %{project_root}/common/GTCommon.cmxa pa_gt.cmxa))
  (action
@@ -101,6 +103,8 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
+   -package
+   ppx_inline_test.runtime-lib
    %{deps}
    -o
    %{targets})))
@@ -113,6 +117,8 @@
    mkcamlp5
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
+   -package
+   ppx_inline_test.runtime-lib
    %{deps}
    -o
    %{targets})))
@@ -124,6 +130,8 @@
    mkcamlp5.opt
    -package
    camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations
+   -package
+   ppx_inline_test.runtime-lib
    pr_dump.cmx
    -o
    %{targets})))
@@ -135,5 +143,7 @@
    mkcamlp5
    -package
    camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o,camlp5.extend,ocamlgraph
+   -package
+   ppx_inline_test.runtime-lib
    -o
    %{targets})))
