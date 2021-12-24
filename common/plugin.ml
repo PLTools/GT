@@ -183,7 +183,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         in
         self#got_typedecl ~loc ~is_self_rec ~mutual_decls tdecl k
 
-      method prepare_fa_args ~loc tdecl =
+      method prepare_fa_args ~loc make_let tdecl =
         let used_vars = vars_from_tdecl tdecl in
         let names = map_type_param_names tdecl.ptype_params ~f:Fn.id in
         ( map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
@@ -192,14 +192,11 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               then facc
               else
                 fun rhs ->
-                Cl.let_
+                make_let
                   ~loc
                   ~flg:Nonrecursive
-                  [ value_binding
-                      ~loc
-                      ~pat:(Pat.any ~loc)
-                      ~expr:(Exp.sprintf ~loc "f%s" name)
-                  ]
+                  ~pat:(Pat.any ~loc)
+                  ~expr:(Exp.sprintf ~loc "f%s" name)
                   (facc rhs)) )
 
       method apply_fas_in_new_object ~loc tdecl =
@@ -228,7 +225,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               | _ -> rhs
             in
             let add_fas rhs =
-              let args, silence_warns = self#prepare_fa_args ~loc tdecl in
+              let args, silence_warns =
+                self#prepare_fa_args
+                  ~loc
+                  (fun ~loc ~flg:_ ~pat ~expr ->
+                    Cl.let_ ~loc [ value_binding ~loc ~pat ~expr ])
+                  tdecl
+              in
               Cl.fun_list ~loc args (silence_warns rhs)
             in
             let add_mutuals rhs =
@@ -1003,11 +1006,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                       (Pat.sprintf ~loc "%s"
                       @@ Naming.trf_function self#trait_name tdecl.ptype_name.txt)
                     ~expr:
-                      (Exp.fun_list
-                         ~loc
-                         (map_type_param_names tdecl.ptype_params ~f:(fun txt ->
-                              Pat.sprintf ~loc "f%s" txt))
-                         body)
+                      (let pats, silence_warn =
+                         self#prepare_fa_args
+                           ~loc
+                           (fun ~loc ~flg ~pat ~expr rhs ->
+                             Exp.let_ ~loc [ pat, expr ] rhs)
+                           tdecl
+                       in
+                       Exp.fun_list ~loc pats (silence_warn body))
                 ] )
             | tdecls ->
               ( true
@@ -1144,7 +1150,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               ~loc
               ~name:class_name
               ~wrap:(fun cl ->
-                let args, _ = self#prepare_fa_args ~loc tdecl in
+                let args, _ =
+                  self#prepare_fa_args
+                    ~loc
+                    (fun ~loc ~flg:_ ~pat ~expr ->
+                      Cl.let_ ~loc [ value_binding ~loc ~pat ~expr ])
+                    tdecl
+                in
                 Cl.fun_
                   ~loc
                   (* (Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt) @@ *)

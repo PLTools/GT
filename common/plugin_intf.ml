@@ -112,7 +112,11 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ce, 'ctf, 'cf, 'str, 'sign, 'pat] t
 
     method
         virtual prepare_fa_args
-        : loc:'loc -> Ppxlib.type_declaration -> 'pat list * ('ce -> 'ce)
+        : 'a.
+          loc:'loc
+          -> (loc:'loc -> flg:Ppxlib.rec_flag -> pat:'pat -> expr:'exp -> 'a -> 'a)
+          -> Ppxlib.type_declaration
+          -> 'pat list * ('a -> 'a)
 
     method
         virtual make_final_trans_function_typ

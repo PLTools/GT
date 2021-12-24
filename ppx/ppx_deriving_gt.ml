@@ -98,7 +98,6 @@ let () =
             ~manifest:(Some typ)
             ~kind:Ptype_abstract
         in
-        let pats, _ = p#prepare_fa_args ~loc tdecl in
         let rhs =
           p#do_typ_gen
             ~loc:(PpxHelpers.loc_from_caml loc)
@@ -107,12 +106,15 @@ let () =
             tdecl
             typ
         in
-        List.fold_right
-          (fun p acc ->
-            let open Ppxlib.Ast_builder.Default in
-            pexp_fun ~loc Nolabel None p acc)
-          pats
-          rhs
+        let open Ppxlib.Ast_builder.Default in
+        let pats, silence_warns =
+          p#prepare_fa_args
+            ~loc
+            (fun ~loc ~flg ~pat ~expr ->
+              pexp_let ~loc flg [ value_binding ~loc ~pat ~expr ])
+            tdecl
+        in
+        List.fold_right (pexp_fun ~loc Nolabel None) pats (silence_warns rhs)
       in
       Deriving.add ~extension name |> Deriving.ignore)
 ;;
