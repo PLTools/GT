@@ -17,7 +17,7 @@ end
  *   and class_declaration = GT.string class_infos
  *   with fmt
  * end
- * 
+ *
  * (\*
  * type ('a, 'b) a = B of ('a, 'b) b | D of 'a (\* | F of ('a, 'b) a *\)
  * and  ('a, 'b) b = A of ('a * 'a, 'b) a | C of 'a * 'b | E
@@ -32,3 +32,11 @@ end
  *   and 'a class_infos = core_type list
  *     with fmt
  * end *)
+
+(*
+module X = struct
+  @type a = GT.int GT.list
+  and b = B of a
+  with show
+end
+*)
