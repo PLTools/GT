@@ -247,11 +247,16 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                     ~loc
                     (Pat.tuple ~loc
                     @@ List.map self#tdecls ~f:(fun { ptype_name = { txt = name } } ->
-                           Pat.var ~loc
-                           @@
+                           (* if this type is currently processed typedecl, we use default identifier
+                            if this type doesn't use tdecl currently being processd: use wildcard *)
+                           (* TODO: if in some cases (like `type heap = t`) the self-transformation of heap
+                            is not required because we simply inherit class for t
+                            *)
                            if String.equal name tdecl.ptype_name.txt
-                           then self#self_arg_name name
-                           else Naming.for_ self#trait_name name))
+                           then Pat.var ~loc (self#self_arg_name name)
+                           else if is_type_used_in ~tdecl (Lident name)
+                           then Pat.var ~loc (Naming.for_ self#trait_name name)
+                           else Pat.any ~loc))
                     Naming.mutuals_pack
                 in
                 Cl.fun_ ~loc pat rhs

@@ -47,16 +47,6 @@ module List = struct
   ;;
 end
 
-(* module Format = struct
-  include Caml.Format
-
-  let easy_string f x =
-    let (_ : string) = flush_str_formatter () in
-    f str_formatter x;
-    flush_str_formatter ()
-  ;;
-end *)
-
 open Ppxlib
 
 let compare_core_type a b =
@@ -181,15 +171,48 @@ let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
       { t with ptyp_desc = Ptyp_variant (rows, flg, opt) }
     | _ -> failwith "not implemented"
   in
-  let ans = helper t in
-  (* Format.printf "helper returned `%a`\n%!" Pprintast.core_type ans; *)
-  ans
+  helper t
 ;;
 
 let list_first_some ~f xs =
   List.fold_left xs ~init:None ~f:(function
       | None -> f
       | Some ans -> fun _ -> Some ans)
+;;
+
+let is_type_used_in ~tdecl lident =
+  let exception Found in
+  let rec helper t =
+    match t.ptyp_desc with
+    | Ptyp_constr ({ txt }, _) when lident = txt -> raise Found
+    | Ptyp_object _ -> ()
+    | Ptyp_any | Ptyp_var _ | Ptyp_class _ | Ptyp_package _ | Ptyp_extension _ -> ()
+    | Ptyp_variant (rfs, _, _) ->
+      List.iter rfs ~f:(function
+          | { prf_desc = Rtag (_, _, xs) } -> List.iter xs ~f:helper
+          | { prf_desc = Rinherit t } -> helper t)
+    | Ptyp_poly (_, t) | Ptyp_alias (t, _) -> helper t
+    | Ptyp_tuple args | Ptyp_constr (_, args) -> List.iter args ~f:helper
+    | Ptyp_arrow (_, l, r) ->
+      helper l;
+      helper r
+  in
+  let onrecord = List.iter ~f:(fun { pld_type = t } -> helper t) in
+  try
+    visit_typedecl
+      tdecl
+      ~loc:()
+      ~onopen:(fun () -> ())
+      ~onabstract:(fun _ -> ())
+      ~onmanifest:helper
+      ~onvariant:
+        (List.iter ~f:(function
+            | { pcd_args = Pcstr_tuple ls } -> List.iter ~f:helper ls
+            | { pcd_args = Pcstr_record ls } -> onrecord ls))
+      ~onrecord;
+    false
+  with
+  | Found -> true
 ;;
 
 let maybe_specialiaze ~what where =
@@ -413,4 +436,5 @@ let string_after_a n = Base.Char.(to_int 'a' |> ( + ) n |> of_int_exn |> to_stri
 
 external hash_variant : string -> int = "caml_gt_hash_variant"
 
+(* TODO: Don't use and remove this function *)
 let failwiths fmt = Format.kasprintf failwith fmt
