@@ -102,9 +102,9 @@
   (run
    mkcamlp5.opt
    -package
-   camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
-   -package
    ppx_inline_test.runtime-lib
+   -package
+   camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
    %{deps}
    -o
    %{targets})))
@@ -115,6 +115,8 @@
  (action
   (run
    mkcamlp5
+   -package
+   ppx_inline_test.runtime-lib
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,base,logger,GT.common,ocamlgraph
    -package
