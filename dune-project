@@ -28,7 +28,7 @@ the decision opposite to the one used in `visitors`.")
  (version 0.4.2)
  (depends
   dune
-  ppxlib
+  (ppxlib (<= "0.24.0"))
   ocamlfind
   ocamlgraph
   logger-p5
