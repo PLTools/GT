@@ -25,6 +25,7 @@
  (libraries HTML)
  (synopsis "Generic transformers for algebraic types")
  (preprocessor_deps
+  ;(package GT-p5)
   (file %{project_root}/src/macro.m4)
   (file %{project_root}/camlp5/pp5+gt+dump.exe))
  (preprocess
@@ -38,9 +39,9 @@
  (flags
   (:standard -w -27-33)))
 
-(library
- (name syntax_p5)
- (public_name GT.syntax)
- (wrapped false)
- (modules)
- (libraries GT-p5))
+; (library
+;  (name syntax_p5)
+;  (public_name GT.syntax)
+;  (wrapped false)
+;  (modules)
+;  (libraries GT-p5))

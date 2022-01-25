@@ -14,8 +14,8 @@ jobs:
       matrix:
         os:
           - ubuntu-20.04
-        ocaml-version:
-          - 4.10.1
+        ocaml-compiler:
+          - ocaml-base-compiler.4.12.1
 
     env:
       GT_WITH_DOCS: yes
@@ -40,25 +40,30 @@ jobs:
           key: ${{ steps.cache-key.outputs.date }}
 
       - name: Use OCaml ${{ matrix.ocaml-version }}
-        uses: avsm/setup-ocaml@v1
+        uses: avsm/setup-ocaml@v2
         with:
-          ocaml-version: ${{ matrix.ocaml-version }}
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
-      - run: opam pin add GT.dev . --no-action
-      - run: opam depext GT.dev --yes --with-test
+      #- run: opam pin add GT . --no-action
+      - run: opam depext --yes --with-test
 
       - name: Install dependecies for documentation
         run: opam install odoc pa_ppx --yes
 
       - run: opam install . --deps-only --with-test
-      - run: opam exec -- make      DFLAGS=--profile=release
-      - run: opam exec -- make test DFLAGS=--profile=release
+      - run: opam exec -- dune build  --profile=release
+      - run: opam exec -- dune test   --profile=release
 
       - name: Build documentation
-        run: opam exec -- make doc
+        run: opam exec -- dune build -p GT @doc
 
       - name: Installing using Opam
-        run: opam exec -- make install DFLAGS=--profile=release
+        run: |
+          opam exec -- dune build @install
+          opam exec -- dune install
+
+      - name: List files
+        run: opam show --list-files GT
 
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3

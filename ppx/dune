@@ -2,7 +2,7 @@
  (name ppx)
  (public_name GT.ppx)
  (kind ppx_rewriter)
- (libraries base ppxlib GTCommon)
+ (libraries base ppxlib GT.common)
  (modules Ppx_deriving_gt PpxHelpers)
  (synopsis "PPX syntax extension on top of ppxlib")
  (preprocess

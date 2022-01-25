@@ -2,7 +2,7 @@
 
 # compiler packages without tests
 all:
-	dune build -p GT,GT-p5 $(DFLAGS)
+	dune build $(DFLAGS)
 
 release: DFLAGS += --profile=release
 release: all
@@ -40,4 +40,3 @@ install:
 uninstall:
 	dune build @install $(DFLAGS)
 	dune uninstall $(DFLAGS)
-

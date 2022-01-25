@@ -1,6 +1,6 @@
 (library
  (name pa_gt)
- (public_name GT-p5)
+ (public_name GT.syntax)
  (modules Camlp5Helpers extension core2)
  (libraries camlp5 GT.common)
  (preprocess
@@ -13,7 +13,7 @@
  (targets pp5+gt+plugins+dump.exe)
  (deps
   %{project_root}/config/package-doc.cfg
-  ;(package GT-p5) ; Error: Package GT-p5 does not exist
+  (package GT) ; Error: Package GT-p5 does not exist
   (:cmas
    ../common/GTCommon.cmxa
    pa_gt.cmxa
@@ -75,7 +75,6 @@
 (rule
  (targets pp5+gt+dump.exe)
  (deps
-  ;(package GT-p5) ; Error: Package GT-p5 does not exist
   %{project_root}/config/package-doc.cfg
   (:cmas %{project_root}/common/GTCommon.cmxa pa_gt.cmxa))
  (action

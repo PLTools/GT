@@ -13,11 +13,11 @@
  (action
   (run ./discover.exe -doc-flags)))
 
-(rule
- (targets dune.tests regression.t)
- (alias discover-tests)
- ;(deps tests.dune.tpl (source_tree ../regression))
- (mode
-  (promote-into ../regression))
- (action
-  (run ./discover.exe -tests -tests-dir %{project_root}/regression)))
+; (rule
+;  (targets dune.tests regression.t)
+;  (alias discover-tests)
+;  ;(deps tests.dune.tpl (source_tree ../regression))
+;  (mode
+;   (promote-into ../regression))
+;  (action
+;   (run ./discover.exe -tests -tests-dir %{project_root}/regression)))

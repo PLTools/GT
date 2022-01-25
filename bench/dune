@@ -7,13 +7,15 @@
 (executable
  (name bench1)
  (modules bench1)
- ; (preprocess
- ; (pps ppx_sexp_conv))
+ (public_name GT-bench.bench1)
+ (package GT-bench)
  (libraries base benchmark))
 
 (executable
  (name bench2)
  (modules bench2)
+ (public_name GT-bench.bench2)
+ (package GT-bench)
  (preprocess
   (pps ppx_sexp_conv))
  (libraries base benchmark))

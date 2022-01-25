@@ -19,3 +19,12 @@
 
 ;(cram (deps regression/camlp5-tests))
 ;(cram (deps regression/ppx-tests))
+
+; (alias
+;  (name default)
+;  (deps
+;   (package GTmain)
+;   (package GT-p5)
+;   (package GT.syntax)
+;   (package GT.ppx)
+;   (package GT)))
