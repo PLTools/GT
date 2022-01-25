@@ -4,7 +4,7 @@
 
 (cram enable)
 
-;(name GT)
+(name GT)
 
 (package
  (name GT)
