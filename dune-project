@@ -7,6 +7,9 @@
 (name GT)
 
 (package
+ (name GT-p5))
+
+(package
  (name GT)
  (synopsis "Generic programming with extensible transformations")
  (description

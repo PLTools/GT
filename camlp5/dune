@@ -76,7 +76,8 @@
  (targets pp5+gt+dump.exe)
  (deps
   %{project_root}/config/package-doc.cfg
-  (:cmas %{project_root}/common/GTCommon.cmxa pa_gt.cmxa))
+  (:cmas %{project_root}/common/GTCommon.cmxa pa_gt.cmxa)
+  %{project_root}/common/dllGTCommon_stubs.so)
  (action
   (run
    mkcamlp5.opt

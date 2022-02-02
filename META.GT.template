@@ -1,5 +1,5 @@
 # DISABLED DUNE_GEN
-version = "0.4.2"
+version = "0.5"
 requires = "GT.HTML base"
 archive(byte) = "GT.cma"
 archive(native) = "GT.cmxa"
@@ -65,11 +65,13 @@ package "ppx_all" (
 package "syntax" (
   directory = "syntax"
   description = "Various GT.syntax.* all together"
-  requires = "GT-p5"
-  archive(byte) = "syntax_p5.cma"
-  archive(native) = "syntax_p5.cmxa"
-  plugin(byte) = "syntax_p5.cma"
-  plugin(native) = "syntax_p5.cmxs"
+
+  requires = "GT.common"
+  archive(byte) = "pa_gt.cma"
+  archive(native) = "pa_gt.cmxa"
+  plugin(byte) = "pa_gt.cma"
+  plugin(native) = "pa_gt.cmxs"
+
   package "all" (
     directory = "all"
     description = ""
