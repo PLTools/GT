@@ -22,7 +22,7 @@
  (depends
   dune
   (ppxlib
-   (<= "0.24.0"))
+   (<= "0.25.0"))
   ocamlfind
   ocamlgraph
   logger-p5
