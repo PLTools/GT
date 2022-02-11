@@ -5,19 +5,13 @@
 (cram enable)
 
 (name GT)
-(source (github JetBrains-Research/GT))
 
-; (package
-;  (name GT-p5)
-;  (authors "https://github.com/Kakadu")
-;  (homepage "https://github.com/JetBrains-Research/GT")
-;  (bug_reports "https://github.com/JetBrains-Research/GT/issues")
-;  (synopsis "Transitional package")
-;  (maintainers "Kakadu@pm.me"))
+(source (github JetBrains-Research/GT))
 
 (package
  (name GT)
  (synopsis "Generic programming with extensible transformations")
+ (license LGPL-2.1)
  (description
   "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from Fran\195\167ois Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.")
  (authors "https://github.com/dboulytchev" "https://github.com/Kakadu")

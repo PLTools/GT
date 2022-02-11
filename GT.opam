@@ -15,6 +15,7 @@ design decision and in many cases we decided to implement
 the decision opposite to the one used in `visitors`."""
 maintainer: ["Kakadu@pm.me"]
 authors: ["https://github.com/dboulytchev" "https://github.com/Kakadu"]
+license: "LGPL-2.1"
 homepage: "https://github.com/JetBrains-Research/GT"
 bug-reports: "https://github.com/JetBrains-Research/GT/issues"
 depends: [
