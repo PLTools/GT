@@ -3,6 +3,8 @@ opam-version: "2.0"
 version: "0.1"
 synopsis: "Some benchmarks. Should not be installed"
 maintainer: ["Kakadu@pm.me"]
+homepage: "https://github.com/JetBrains-Research/GT"
+bug-reports: "https://github.com/JetBrains-Research/GT/issues"
 depends: [
   "dune" {>= "2.8"}
   "benchmark"
@@ -22,3 +24,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
+dev-repo: "git+https://github.com/JetBrains-Research/GT.git"

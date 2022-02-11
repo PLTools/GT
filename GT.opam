@@ -44,3 +44,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
+dev-repo: "git+https://github.com/JetBrains-Research/GT.git"

@@ -5,6 +5,7 @@
 (cram enable)
 
 (name GT)
+(source (github JetBrains-Research/GT))
 
 ; (package
 ;  (name GT-p5)
