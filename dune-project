@@ -36,7 +36,7 @@
   (ocaml-migrate-parsetree
    (>= "2.1.0"))
   (camlp5
-   (>= "8.00.01"))
+   (>= "8.00.02"))
   (conf-m4 :build)
   base))
 
