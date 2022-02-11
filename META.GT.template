@@ -66,11 +66,18 @@ package "syntax" (
   directory = "syntax"
   description = "Various GT.syntax.* all together"
 
-  requires = "GT.common"
+  requires = "GT.common camlp5.pa_o"
   archive(byte) = "pa_gt.cma"
   archive(native) = "pa_gt.cmxa"
   plugin(byte) = "pa_gt.cma"
   plugin(native) = "pa_gt.cmxs"
+
+  archive(syntax,preprocessor,toplevel) = "pa_gt.cma"
+
+  archive(syntax,preprocessor,camlp5o) = "pa_gt.cma"
+  archive(syntax,preprocessor,byte) = "pa_gt.cma"
+  plugin(syntax,preprocessor,byte) = "pa_gt.cma"
+  plugin(syntax,preprocessor,native) = "pa_gt.cmxs"
 
   package "all" (
     directory = "all"

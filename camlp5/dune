@@ -9,6 +9,12 @@
  (flags
   (:standard -warn-error -A -rectypes)))
 
+; (library
+;  (name syntax_p5)
+;  (public_name GT-p5.syntax)
+;  (modules)
+;  (libraries pa_gt))
+
 (rule
  (targets pp5+gt+plugins+dump.exe)
  (deps

@@ -6,8 +6,13 @@
 
 (name GT)
 
-(package
- (name GT-p5))
+; (package
+;  (name GT-p5)
+;  (authors "https://github.com/Kakadu")
+;  (homepage "https://github.com/JetBrains-Research/GT")
+;  (bug_reports "https://github.com/JetBrains-Research/GT/issues")
+;  (synopsis "Transitional package")
+;  (maintainers "Kakadu@pm.me"))
 
 (package
  (name GT)
@@ -38,4 +43,5 @@
  (name GT-bench)
  (synopsis "Some benchmarks. Should not be installed")
  (version 0.1)
+ (maintainers "Kakadu@pm.me")
  (depends dune benchmark))
