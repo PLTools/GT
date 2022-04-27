@@ -20,7 +20,7 @@ homepage: "https://github.com/JetBrains-Research/GT"
 bug-reports: "https://github.com/JetBrains-Research/GT/issues"
 depends: [
   "dune" {>= "2.8"}
-  "ppxlib" {<= "0.25.0"}
+  "ppxlib" {<= "0.26.0"}
   "ocamlfind"
   "ocamlgraph"
   "logger-p5"
