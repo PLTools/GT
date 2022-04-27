@@ -1,5 +1,5 @@
 (**************************************************************************
- *  Copyright (C) 2012-2015
+ *  Copyright (C) 2012-2022
  *  Dmitri Boulytchev (dboulytchev@math.spbu.ru), St.Petersburg State University
  *  Universitetskii pr., 28, St.Petersburg, 198504, RUSSIA
  *
@@ -21,17 +21,17 @@
  *  (enclosed in the file COPYING).
  **************************************************************************)
 
-(** Implementation of transformation for standart types *)
+(** Implementation of transformation for standard types *)
 
 open Printf
 
 module Format = struct
   include Format
-  let pp_print_unit  fmt () = pp_print_string fmt "()"
-  let pp_print_int32 fmt n  = Format.pp_print_string fmt @@ Int32.format "%d" n
-  let pp_print_int64 fmt n  = Format.pp_print_string fmt @@ Int64.format "%d" n
-  let pp_print_nativeint fmt n = Format.pp_print_string fmt @@ Nativeint.format "%d" n
-  let pp_print_string fmt s = fprintf fmt "\"%s\"" s
+  let pp_print_unit  ppf () = pp_print_string ppf "()"
+  let pp_print_int32 ppf n  = fprintf ppf "%ld" n
+  let pp_print_int64 ppf n  = fprintf ppf "%Ld" n
+  let pp_print_nativeint ppf n  = fprintf ppf "%nd" n
+  let pp_print_string fmt s = fprintf fmt "%S" s
 end
 
 type ('a, 'b, 'c) t = {gcata : 'a; plugins : 'b; fix: 'c }
