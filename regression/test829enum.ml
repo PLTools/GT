@@ -1,4 +1,4 @@
-type t =  A | B | C of int [@@deriving gt ~options:{enum}]
+type t =  A | B | C of int [@@deriving gt ~plugins:{enum}]
 
 let () = Format.printf "%d %d %d\n%!" (GT.enum t A) (GT.enum t B) (GT.enum t (C 1))
 
