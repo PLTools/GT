@@ -1,5 +1,4 @@
 open Ppxlib
-open Base
 open GTCommon
 open HelpersBase
 open Ppxlib.Ast_builder.Default
@@ -289,7 +288,7 @@ module Typ = struct
   ;;
 
   let to_type_arg x = Some x
-  let to_type_arg_exn = Fn.id
+  let to_type_arg_exn = Fun.id
 end
 [@@warning "-32"]
 
@@ -434,7 +433,7 @@ module Str = struct
       [ Ast_builder.Default.type_declaration
           ~loc
           ~name:(Located.mk ~loc name)
-          ~params:(List.init params_count ~f:(fun _ -> ptyp_any ~loc) |> invariantize)
+          ~params:(List.init ~len:params_count ~f:(fun _ -> ptyp_any ~loc) |> invariantize)
           ~cstrs:[]
           ~private_:Public
           ~manifest:None
@@ -557,7 +556,7 @@ module Sig = struct
       [ Ast_builder.Default.type_declaration
           ~loc
           ~name:(Located.mk ~loc name)
-          ~params:(List.init params_count ~f:(fun _ -> ptyp_any ~loc) |> invariantize)
+          ~params:(List.init ~len:params_count ~f:(fun _ -> ptyp_any ~loc) |> invariantize)
           ~cstrs:[]
           ~private_:Public
           ~manifest:None

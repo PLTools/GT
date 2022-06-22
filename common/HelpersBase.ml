@@ -11,8 +11,39 @@ let not_implemented fmt =
   Printf.ksprintf (Ppxlib.Location.raise_errorf "%s are not yet implemented") fmt
 ;;
 
+module Option = struct
+  include Stdppx.Option
+
+  let some x = Some x
+
+  let is_none = function
+    | None -> true
+    | Some _ -> false
+  ;;
+
+  let value_map ~default ~f = function
+    | None -> default
+    | Some x -> f x
+  ;;
+end
+
+module Char = struct
+  let is_uppercase char =
+    let c = Char.code char in
+    Char.code 'A' <= c && c <= Char.code 'Z'
+  ;;
+
+  let is_alpha char =
+    let c = Char.code char in
+    (Char.code 'A' <= c && c <= Char.code 'Z')
+    || (Char.code 'a' <= c && c <= Char.code 'z')
+  ;;
+
+  include Stdppx.Char
+end
+
 module List = struct
-  include Base.List
+  include Stdppx.List
 
   let split3 xs =
     List.fold_right
@@ -31,6 +62,10 @@ module List = struct
       []
   ;;
 
+  let hd_exn = hd
+  let tl_exn = tl
+  let fold2_exn = Stdppx.List.fold_left2
+  let map2_exn = Stdppx.List.map2
   let last_exn xs = List.hd @@ List.rev xs
   let pp ~f xs = Printf.sprintf "[ %s ]" (String.concat "; " @@ List.map f xs)
 
@@ -44,6 +79,46 @@ module List = struct
   let empty = function
     | [] -> true
     | _ -> false
+  ;;
+
+  let return x = [ x ]
+  let zip_exn = combine
+
+  let rec map3_exn xs ys zs ~f =
+    match xs, ys, zs with
+    | [], [], [] -> []
+    | x :: xs, y :: ys, z :: zs -> f x y z :: map3_exn ~f xs ys zs
+    | _ -> failwith "Bad argument: List.map3_exn"
+  ;;
+
+  module Assoc = struct
+    let find_exn ~equal xs key =
+      let _key, v = Stdlib.List.find (fun (k, _) -> equal k key) xs in
+      v
+    ;;
+
+    let find ~equal xs key =
+      try
+        let _key, v = Stdlib.List.find (fun (k, _) -> equal k key) xs in
+        Some v
+      with
+      | Not_found -> None
+    ;;
+  end
+
+  let find xs ~f =
+    try Some (List.find f xs) with
+    | Not_found -> None
+  ;;
+
+  let remove_consecutive_duplicates ~equal =
+    let rec helper = function
+      | [] -> []
+      | [ x ] -> [ x ]
+      | x :: y :: tl when equal x y -> helper (x :: tl)
+      | x :: tl -> x :: helper tl
+    in
+    helper
   ;;
 end
 
@@ -231,7 +306,7 @@ let maybe_specialiaze ~what where =
     | Ptyp_constr ({ txt = Lident s }, args) when String.equal s what.ptype_name.txt ->
       (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
       Some
-        (List.map2_exn what.ptype_params args ~f:(fun (param, _) typ ->
+        (List.map2 what.ptype_params args ~f:(fun (param, _) typ ->
              match param.ptyp_desc with
              | Ptyp_var s -> s, typ
              | _ -> failwith "should not happen"))
@@ -385,7 +460,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
                 (ppat_tuple ~loc
                 @@ List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s)) names)
           in
-          case ~guard:None ~lhs ~rhs:(onrow lab @@ List.zip_exn names args)
+          case ~guard:None ~lhs ~rhs:(onrow lab @@ List.combine names args)
         | Rinherit typ ->
           (match typ.ptyp_desc with
           | Ptyp_constr ({ txt; loc }, ts) ->

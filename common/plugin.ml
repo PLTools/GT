@@ -10,9 +10,9 @@
     See {!Plugin_intf} for complete description of all valuable methods
   *)
 
-open Base
 module Format = Caml.Format
 open Ppxlib
+open Stdppx
 open Printf
 open Asttypes
 open HelpersBase
@@ -57,7 +57,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             in
             let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
             let lhs = Pat.variant ~loc lab.txt @@ List.map ~f:(Pat.var ~loc) names in
-            case ~lhs ~rhs:(onrow lab @@ List.zip_exn names args)
+            case ~lhs ~rhs:(onrow lab @@ List.combine names args)
           | Rinherit typ ->
             (match typ.ptyp_desc with
             | Ptyp_constr ({ txt; _ }, ts) ->
@@ -517,7 +517,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                        ~virt:false
                        (Naming.meth_name_for_constructor
                           []
-                          (String.uppercase tdecl.ptype_name.txt))
+                          (String.uppercase_ascii tdecl.ptype_name.txt))
                        (Typ.chain_arrow ~loc new_ts)
                    ]
               | Ptyp_var _ ->
@@ -526,7 +526,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                 @@ [ on_constructor
                      @@ Ppxlib.Ast_builder.Default.constructor_declaration
                           ~loc:typ.ptyp_loc
-                          ~name:(Located.map String.uppercase tdecl.ptype_name)
+                          ~name:(Located.map String.uppercase_ascii tdecl.ptype_name)
                           ~args:(Pcstr_tuple [])
                           ~res:None
                    ]
@@ -563,7 +563,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           [ (let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams in
              let args =
                (match cid.txt with
-               | Lident s when List.mem mutal_names s ~equal:String.equal ->
+               | Lident s when List.mem ~set:mutal_names s ->
                  (* Only Lident because we ignore types with same name but from another module *)
                  [ Exp.sprintf ~loc "%s" Naming.mutuals_pack ]
                | _ ->
@@ -573,7 +573,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                @ args
              in
              match cid.txt with
-             | Lident s when List.mem mutal_names s ~equal:String.equal ->
+             | Lident s when List.mem ~set:mutal_names s ->
                Cf.inherit_ ~loc
                @@ Cl.apply
                     ~loc
@@ -766,7 +766,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                        ~loc
                        (Naming.meth_name_for_constructor
                           []
-                          (String.uppercase tdecl.ptype_name.txt))
+                          (String.uppercase_ascii tdecl.ptype_name.txt))
                      @@ self#do_typ_gen ~loc ~mutual_decls ~is_self_rec tdecl typ
                    ]
                  | Ptyp_tuple ts ->
@@ -779,7 +779,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                        ~loc
                        (Naming.meth_name_for_constructor
                           typ.ptyp_attributes
-                          (String.uppercase tdecl.ptype_name.txt))
+                          (String.uppercase_ascii tdecl.ptype_name.txt))
                      @@ Exp.fun_ ~loc inhp
                      @@ Exp.fun_ ~loc (Pat.tuple ~loc @@ bind_pats)
                      @@ self#on_tuple_constr
@@ -1414,7 +1414,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             | `Nonrecursive ->
               (* it is not a recursion but it can be a mutual recursion *)
               (match txt with
-              | Lident s when List.mem mutual_names s ~equal:String.equal ->
+              | Lident s when List.mem ~set:mutual_names s ->
                 (* we should use local trf object *)
                 let args =
                   List.map
@@ -1602,7 +1602,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             -> label_declaration list
             -> Exp.t =
         fun ~loc ~is_self_rec ~mutual_decls ~inhe _ _ _ ->
-          failwithf "handling record constructors in plugin `%s`" self#plugin_name ()
+          failwiths "handling record constructors in plugin `%s`" self#plugin_name ()
 
       method wrap_tr_function_str ~loc (tdecl : type_declaration) make_gcata_of_class =
         (* [%expr fun the_init subj -> GT.fix0 (fun self -> [%e body]) the_init subj] *)

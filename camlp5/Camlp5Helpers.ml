@@ -139,7 +139,7 @@ module Exp = struct
   let ident ~loc s =
     assert (String.length s <> 0);
     match s with
-    | "[]" | "::" | _ when Base.Char.is_alpha s.[0] && capitalized s -> <:expr< $uid:s$ >>
+    | "[]" | "::" | _ when HelpersBase.Char.is_alpha s.[0] && capitalized s -> <:expr< $uid:s$ >>
     | _ -> <:expr< $lid:s$ >>
 
   let unit ~loc =  <:expr< () >>

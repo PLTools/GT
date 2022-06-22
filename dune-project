@@ -6,7 +6,8 @@
 
 (name GT)
 
-(source (github JetBrains-Research/GT))
+(source
+ (github JetBrains-Research/GT))
 
 (package
  (name GT)
@@ -32,7 +33,8 @@
   (camlp5
    (>= "8.00.02"))
   (conf-m4 :build)
-  base))
+  ;
+  ))
 
 (package
  (name GT-bench)
