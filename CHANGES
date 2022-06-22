@@ -1,5 +1,7 @@
 # Ureleased
 
+- Replace dependecy on base by a dependecy on Ppxlib.stdppx
+
 ## Changed
 
 - Add forgotten `html` plugin to `GT.ppx_all` findlib package
