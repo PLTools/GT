@@ -1,8 +1,8 @@
 changequote([[,]])
 
 define(GENERIFY, [[
-type proto$1 = $1
-type $1 = proto$1
+(** @canonical Stdlib.$1 *)
+type nonrec $1 = $1
 
 class virtual ['inh, 'self, 'syn] $1_t =
   object
