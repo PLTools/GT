@@ -1,3 +1,10 @@
+(*
+ * Generic transformers (GT): `gmap` plugin.
+ * Copyright (C) 2017-2022
+ *   Dmitrii Kosarev a.k.a. Kakadu
+ * St.Petersburg University, JetBrains Research
+ *)
+
 (** {i Gmap} plugin (functor).
 
     For type declaration [type ('a,'b,...) typ = ...] it will create a transformation
@@ -8,14 +15,6 @@
     Inherited attributes' type (both default and for type parameters) is [unit].
 *)
 
-(*
- * Generic transformers (GT): `gmap` plugin.
- * Copyright (C) 2017-2019
- *   Dmitrii Kosarev a.k.a. Kakadu
- * St.Petersburg University, JetBrains Research
- *)
-
-open Base
 open Ppxlib
 open Printf
 open GTCommon
@@ -45,7 +44,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
     in
     let blownup_params =
       List.concat_map param_names ~f:(fun s1 ->
-          [ named_type_arg ~loc s1; named_type_arg ~loc @@ assoc s1 ])
+        [ named_type_arg ~loc s1; named_type_arg ~loc @@ assoc s1 ])
     in
     param_names, rez_names, assoc, blownup_params
   ;;
@@ -75,9 +74,9 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           =
         let typs2 =
           List.map typs ~f:(fun typ ->
-              map_core_type typ ~onvar:(fun s ->
-                  let open Ppxlib.Ast_builder.Default in
-                  Option.some @@ ptyp_var ~loc:typ.ptyp_loc (param_name_mangler s)))
+            map_core_type typ ~onvar:(fun s ->
+              let open Ppxlib.Ast_builder.Default in
+              Option.some @@ ptyp_var ~loc:typ.ptyp_loc (param_name_mangler s)))
         in
         let blownup_params =
           List.concat @@ List.map2_exn ~f:(fun a b -> [ a; b ]) typs typs2
@@ -92,7 +91,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let on_abstract () =
           Typ.constr ~loc (Lident tdecl.ptype_name.txt)
           @@ map_type_param_names tdecl.ptype_params ~f:(fun s ->
-                 Typ.var ~loc @@ mangler s)
+               Typ.var ~loc @@ mangler s)
         in
         visit_typedecl
           ~loc
@@ -113,24 +112,22 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                 in
                 Typ.variant ~loc ~is_open:true
                 @@ List.map rf ~f:(fun rf ->
-                       match rf.prf_desc with
-                       | Rtag (name, has_empty, ts) ->
-                         let open Ast_builder.Default in
-                         let on_t t =
-                           map_core_type
-                             ~onvar
-                             ~onconstr:(fun name ts ->
-                               match name with
-                               | Lident s when String.equal s tdecl.ptype_name.txt ->
-                                 Option.some @@ ptyp_var ~loc:tdecl.ptype_loc param
-                               | _ -> None)
-                             t
-                         in
-                         { rf with
-                           prf_desc = Rtag (name, has_empty, List.map ts ~f:on_t)
-                         }
-                       | Rinherit typ ->
-                         { rf with prf_desc = Rinherit (map_core_type typ ~onvar) })
+                     match rf.prf_desc with
+                     | Rtag (name, has_empty, ts) ->
+                       let open Ast_builder.Default in
+                       let on_t t =
+                         map_core_type
+                           ~onvar
+                           ~onconstr:(fun name ts ->
+                             match name with
+                             | Lident s when String.equal s tdecl.ptype_name.txt ->
+                               Option.some @@ ptyp_var ~loc:tdecl.ptype_loc param
+                             | _ -> None)
+                           t
+                       in
+                       { rf with prf_desc = Rtag (name, has_empty, List.map ts ~f:on_t) }
+                     | Rinherit typ ->
+                       { rf with prf_desc = Rinherit (map_core_type typ ~onvar) })
               | _ -> failwith "should not happen"))
 
       method! extra_class_sig_members tdecl =
@@ -156,11 +153,11 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
         let ctuple =
           List.map ts ~f:(fun (name, typ) ->
-              self#app_transformation_expr
-                ~loc
-                (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
-                inhe
-                (Exp.ident ~loc name))
+            self#app_transformation_expr
+              ~loc
+              (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+              inhe
+              (Exp.ident ~loc name))
         in
         match constr_info with
         | Some (`Normal s) -> Exp.construct ~loc (lident s) ctuple
@@ -171,7 +168,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let pat =
           Pat.record ~loc
           @@ List.map labs ~f:(fun l ->
-                 Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+               Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         in
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         [ Cf.method_concrete ~loc methname
@@ -179,23 +176,23 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           @@ Exp.fun_ ~loc pat
           @@ Exp.record ~loc
           @@ List.map labs ~f:(fun { pld_name; pld_type } ->
-                 ( lident pld_name.txt
-                 , self#app_transformation_expr
-                     ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
-                     (Exp.unit ~loc)
-                     (Exp.ident ~loc pld_name.txt) ))
+               ( lident pld_name.txt
+               , self#app_transformation_expr
+                   ~loc
+                   (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
+                   (Exp.unit ~loc)
+                   (Exp.ident ~loc pld_name.txt) ))
         ]
 
       method! on_record_constr
-          ~loc
-          ~is_self_rec
-          ~mutual_decls
-          ~inhe
-          tdecl
-          info
-          bindings
-          labs =
+        ~loc
+        ~is_self_rec
+        ~mutual_decls
+        ~inhe
+        tdecl
+        info
+        bindings
+        labs =
         assert (Int.(List.length labs > 0));
         let is_poly, cname =
           match info with
@@ -206,12 +203,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         (if is_poly then Exp.variant ~loc cname else Exp.construct ~loc (lident cname))
           [ Exp.record ~loc
             @@ List.map bindings ~f:(fun (s, labname, typ) ->
-                   ( lident labname
-                   , self#app_transformation_expr
-                       ~loc
-                       (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
-                       inhe
-                       (Exp.ident ~loc s) ))
+                 ( lident labname
+                 , self#app_transformation_expr
+                     ~loc
+                     (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                     inhe
+                     (Exp.ident ~loc s) ))
           ]
 
       method! make_inh ~loc = Pat.unit ~loc, Exp.unit ~loc

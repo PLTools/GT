@@ -1,6 +1,6 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2019
+ * Copyright (C) 2016-2022
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -19,7 +19,6 @@
     See also: {!Fmt} plugin.
   *)
 
-open Base
 open Ppxlib
 open Printf
 open GTCommon
@@ -84,7 +83,9 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               Exp.(
                 app ~loc (of_longident ~loc (Ldot (Lident "Printf", "sprintf")))
                 @@
-                let fmt = String.concat ~sep:", " @@ List.map names ~f:(fun _ -> "%s") in
+                let fmt =
+                  StringLabels.concat ~sep:", " @@ List.map names ~f:(fun _ -> "%s")
+                in
                 Exp.string_const ~loc
                 @@ Printf.sprintf
                      "%s%s(%s)"
@@ -93,15 +94,15 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                      fmt)
 
       method! on_record_constr
-          ~loc
-          ~is_self_rec
-          ~mutual_decls
-          ~inhe
-          tdecl
-          info
-          bindings
-          labs =
-        assert (Int.(List.length labs > 0));
+        ~loc
+        ~is_self_rec
+        ~mutual_decls
+        ~inhe
+        tdecl
+        info
+        bindings
+        labs =
+        assert (List.length labs > 0);
         let constr_name =
           match info with
           | `Poly s -> sprintf "`%s" s
@@ -124,7 +125,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                 app ~loc (of_longident ~loc (Ldot (Lident "Printf", "sprintf")))
                 @@
                 let fmt =
-                  String.concat ~sep:", "
+                  StringLabels.concat ~sep:", "
                   @@ List.map bindings ~f:(fun (_, lab, _) -> Printf.sprintf "%s=%%s" lab)
                 in
                 Exp.string_const ~loc @@ Printf.sprintf "%s {%s}" constr_name fmt)
@@ -133,11 +134,11 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let pat =
           Pat.record ~loc
           @@ List.map labs ~f:(fun l ->
-                 Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+               Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         in
         let fmt =
           List.fold_left labs ~init:"" ~f:(fun acc x ->
-              sprintf "%s %s=%%s;" acc x.pld_name.txt)
+            sprintf "%s %s=%%s;" acc x.pld_name.txt)
         in
         [ Cf.method_concrete ~loc (Naming.meth_name_for_record tdecl)
           @@ Exp.fun_ ~loc (Pat.unit ~loc)
@@ -159,12 +160,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       method treat_type_specially t =
         Option.map ~f:(fun _ ->
-            let loc = loc_from_caml t.ptyp_loc in
-            Exp.fun_ ~loc (Pat.unit ~loc)
-            @@ Exp.fun_ ~loc (Pat.any ~loc)
-            @@ Exp.string_const ~loc "\"<opaque>\"")
+          let loc = loc_from_caml t.ptyp_loc in
+          Exp.fun_ ~loc (Pat.unit ~loc)
+          @@ Exp.fun_ ~loc (Pat.any ~loc)
+          @@ Exp.string_const ~loc "\"<opaque>\"")
         @@ List.find t.ptyp_attributes ~f:(fun { attr_name = { txt } } ->
-               String.equal txt "opaque")
+             String.equal txt "opaque")
 
       method! make_inh ~loc = Pat.unit ~loc, Exp.unit ~loc
     end

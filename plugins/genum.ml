@@ -1,6 +1,6 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2021
+ * Copyright (C) 2016-2022
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -20,7 +20,6 @@
     See also: {!Compare} plugin.
   *)
 
-open Base
 open Ppxlib
 open GTCommon
 open HelpersBase
@@ -63,17 +62,17 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         | Ptype_record _, _ -> Exp.int_const ~loc default_index
         | Ptype_abstract, Some (`Poly s) ->
           (match tdecl.ptype_manifest with
-          | Some { ptyp_desc = Ptyp_variant (rows, _, labs) } ->
-            (try
-               (* Format.printf "There are %d rows\n%!" (List.length rows); *)
-               List.iteri rows ~f:(fun i -> function
-                 | { prf_desc = Rtag ({ txt }, _, _) } when Stdlib.(txt = s) ->
-                   raise (Found (HelpersBase.hash_variant s))
-                 | _ -> ());
-               failwiths "Plugin passed a constructor `%s` that isn't present" s
-             with
-            | Found i -> Exp.int_const ~loc i)
-          | _ -> assert false)
+           | Some { ptyp_desc = Ptyp_variant (rows, _, labs) } ->
+             (try
+                (* Format.printf "There are %d rows\n%!" (List.length rows); *)
+                List.iteri rows ~f:(fun i -> function
+                  | { prf_desc = Rtag ({ txt }, _, _) } when Stdlib.(txt = s) ->
+                    raise (Found (HelpersBase.hash_variant s))
+                  | _ -> ());
+                failwiths "Plugin passed a constructor `%s` that isn't present" s
+              with
+              | Found i -> Exp.int_const ~loc i)
+           | _ -> assert false)
         | _, None | Ptype_abstract, Some (`Normal _) | Ptype_variant _, Some (`Poly _) ->
           failwith "should not happen?"
         | Ptype_variant cds, Some (`Normal s) ->
@@ -83,21 +82,21 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                | _ -> ());
              failwiths "Plugin passed a constructor `%s` that isn't present" s
            with
-          | Found i -> Exp.int_const ~loc i)
+           | Found i -> Exp.int_const ~loc i)
 
       (* Adapted to generate only single method per constructor definition *)
       method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info _ts =
         self#find_right_one ~loc constr_info tdecl
 
       method! on_record_constr
-          ~loc
-          ~is_self_rec
-          ~mutual_decls
-          ~inhe
-          tdecl
-          constr_info
-          bindings
-          labs =
+        ~loc
+        ~is_self_rec
+        ~mutual_decls
+        ~inhe
+        tdecl
+        constr_info
+        bindings
+        labs =
         assert (Int.(List.length labs > 0));
         self#find_right_one ~loc (Some constr_info) tdecl
 

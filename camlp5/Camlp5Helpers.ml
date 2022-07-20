@@ -1,6 +1,6 @@
 (*
  * Generic Transformers: Camlp5 syntax extension.
- * Copyright (C) 2016-2021
+ * Copyright (C) 2016-2022
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -751,7 +751,7 @@ let prepare_param_triples ~loc ~extra
   ps @ [ default_inh; extra; default_syn ]
 
 let typ_vars_of_typ t =
-  let open Base in
+  let open Stdppx in
   let rec helper acc = function
     | <:ctyp< $longid:_$ . $lid:_$ >>  -> acc
     | <:ctyp< $t1$ as $t2$ >> -> helper acc t1 (* ??? *)
@@ -764,16 +764,17 @@ let typ_vars_of_typ t =
     | <:ctyp< $t1$ == private $t2$ >>
     | <:ctyp< $t1$ ==  $t2$        >> -> helper (helper acc t1) t2
     | <:ctyp< < $list:lst$ $flag:b$ > >> ->
-      List.fold ~init:acc ~f:(fun acc (_,t, _) -> helper acc t) lst
+      ListLabels.fold_left ~init:acc ~f:(fun acc (_,t, _) -> helper acc t) lst
     | <:ctyp< ?$s$: $t$     >> -> helper acc t
     | <:ctyp< (module $mt$) >> -> acc
     | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented"
     | <:ctyp< '$s$ >> -> s :: acc
     | <:ctyp< { $list:llsbt$ } >>  ->
-      List.fold ~init:acc ~f:(fun acc (_,_,_,t, _) -> helper acc t) llsbt
+      ListLabels.fold_left ~init:acc ~f:(fun acc (_,_,_,t, _) -> helper acc t) llsbt
     | <:ctyp< [ $list:llslt$ ] >> -> failwith "sum"
-    | <:ctyp< ( $list:lt$ )    >> -> List.fold ~init:acc ~f:helper lt
+    | <:ctyp< ( $list:lt$ )    >> -> ListLabels.fold_left ~init:acc ~f:helper lt
     | <:ctyp< [ = $list:lpv$ ] >>  -> failwith "polyvariant"
     | _ -> acc (* This could be wrong *)
   in
-  List.dedup_and_sort ~compare:String.compare @@ helper [] t
+
+  Base.List.dedup_and_sort ~compare:String.compare @@ helper [] t

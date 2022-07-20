@@ -1,6 +1,6 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2019
+ * Copyright (C) 2016-2022
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -20,7 +20,6 @@
     Synthesized attributes' type (both default and for type parameters) is [HTML.er].
 *)
 
-open Base
 open Ppxlib
 open Printf
 open GTCommon
@@ -115,21 +114,21 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
              ; H.ul
                  ~loc
                  (List.map ts ~f:(fun (name, typ) ->
-                      H.li
-                        ~loc
-                        [ self#app_transformation_expr
-                            ~loc
-                            (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
-                            (Exp.unit ~loc)
-                            (Exp.ident ~loc name)
-                        ]))
+                    H.li
+                      ~loc
+                      [ self#app_transformation_expr
+                          ~loc
+                          (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                          (Exp.unit ~loc)
+                          (Exp.ident ~loc name)
+                      ]))
              ]
 
       method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
         let pat =
           Pat.record ~loc
           @@ List.map labs ~f:(fun l ->
-                 Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+               Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         in
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         [ (Cf.method_concrete ~loc methname
@@ -138,29 +137,29 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           @@
           let ds =
             List.map labs ~f:(fun { pld_name; pld_type } ->
-                H.li
-                  ~loc
-                  [ H.pcdata ~loc pld_name.txt
-                  ; self#app_transformation_expr
-                      ~loc
-                      (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
-                      (Exp.unit ~loc)
-                      (Exp.ident ~loc pld_name.txt)
-                  ])
+              H.li
+                ~loc
+                [ H.pcdata ~loc pld_name.txt
+                ; self#app_transformation_expr
+                    ~loc
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
+                    (Exp.unit ~loc)
+                    (Exp.ident ~loc pld_name.txt)
+                ])
           in
           H.ul ~loc @@ (H.pcdata ~loc tdecl.ptype_name.txt :: ds))
         ]
 
       method! on_record_constr
-          : loc:loc
-            -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
-            -> mutual_decls:type_declaration list
-            -> inhe:Exp.t
-            -> _
-            -> [ `Normal of string | `Poly of string ]
-            -> (string * _ * core_type) list
-            -> label_declaration list
-            -> Exp.t =
+        : loc:loc
+          -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+          -> mutual_decls:type_declaration list
+          -> inhe:Exp.t
+          -> _
+          -> [ `Normal of string | `Poly of string ]
+          -> (string * _ * core_type) list
+          -> label_declaration list
+          -> Exp.t =
         fun ~loc ~is_self_rec ~mutual_decls ~inhe tdecl info bindings labs ->
           let constr_name =
             match info with
@@ -171,15 +170,15 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           ul ~loc
           @@ [ pcdata ~loc constr_name ]
           @ List.map bindings ~f:(fun (pname, lname, typ) ->
-                H.li
-                  ~loc
-                  [ H.pcdata ~loc lname
-                  ; self#app_transformation_expr
-                      ~loc
-                      (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
-                      (Exp.unit ~loc)
-                      (Exp.ident ~loc pname)
-                  ])
+              H.li
+                ~loc
+                [ H.pcdata ~loc lname
+                ; self#app_transformation_expr
+                    ~loc
+                    (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ)
+                    (Exp.unit ~loc)
+                    (Exp.ident ~loc pname)
+                ])
 
       method! make_inh ~loc = Pat.unit ~loc, Exp.unit ~loc
     end

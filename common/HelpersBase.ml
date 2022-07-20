@@ -225,7 +225,7 @@ let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
     (* Format.printf "map_core_type,helper `%a`\n%!" Pprintast.core_type t; *)
     match t.ptyp_desc with
     | Ptyp_any -> t
-    | Ptyp_var name -> Base.Option.value (onvar name) ~default:t
+    | Ptyp_var name -> Option.value (onvar name) ~default:t
     | Ptyp_constr (name, args) ->
       (match onconstr name.txt args with
       | None -> { t with ptyp_desc = Ptyp_constr (name, List.map ~f:helper args) }
@@ -421,7 +421,7 @@ let has_many_constructors_tdecl tdecl =
     tdecl
     ~onopen:(fun () -> false)
     ~onrecord:(fun _ -> false)
-    ~onvariant:(fun cs -> Base.Int.( > ) (List.length cs) 1)
+    ~onvariant:(fun cs -> Stdppx.Int.( > ) (List.length cs) 1)
     ~onabstract:(fun () -> false)
     ~onmanifest:(fun typ ->
       match typ.ptyp_desc with
@@ -507,7 +507,9 @@ let notify fmt =
     fmt
 ;;
 
-let string_after_a n = Base.Char.(to_int 'a' |> ( + ) n |> of_int_exn |> to_string)
+
+
+let string_after_a n = int_of_char 'a' |> ( + ) n |> char_of_int |> String.make 1
 
 external hash_variant : string -> int = "caml_gt_hash_variant"
 

@@ -1,6 +1,6 @@
 (*
  * Generic Transformers: `format` plugin.
- * Copyright (C) 2016-2020
+ * Copyright (C) 2016-2022
  *   Dmitrii Kosarev a.k.a Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -17,8 +17,8 @@
     Synthesized attributes' type (both default and for type parameters) is [unit].
 *)
 
-open Base
 open Ppxlib
+open Stdppx
 open Printf
 open GTCommon
 open HelpersBase
@@ -87,12 +87,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let pat =
           Pat.record ~loc
           @@ List.map labs ~f:(fun l ->
-                 Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+               Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         in
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         let fmt =
           List.fold_left labs ~init:"" ~f:(fun acc x ->
-              sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc x.pld_name.txt)
+            sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc x.pld_name.txt)
         in
         let fmt_name = gen_symbol ~prefix:"fmt" () in
         [ Cf.method_concrete ~loc methname
@@ -114,14 +114,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         ]
 
       method! on_record_constr
-          ~loc
-          ~is_self_rec
-          ~mutual_decls
-          ~inhe
-          tdecl
-          info
-          bindings
-          labs =
+        ~loc
+        ~is_self_rec
+        ~mutual_decls
+        ~inhe
+        tdecl
+        info
+        bindings
+        labs =
         let cname =
           match info with
           | `Normal s -> s
@@ -129,7 +129,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         in
         let fmt =
           List.fold_left labs ~init:"" ~f:(fun acc l ->
-              sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc l.pld_name.txt)
+            sprintf "%s@,@ @,@[%s@,=@,%%a;@]" acc l.pld_name.txt)
         in
         List.fold_left
           bindings

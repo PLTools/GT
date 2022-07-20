@@ -1,4 +1,4 @@
-open Base
+open Stdppx
 open Printf
 
 let meth_of_constr = sprintf "c_%s"
@@ -36,7 +36,7 @@ let meth_name_for_record tdecl = sprintf "do_%s" tdecl.ptype_name.txt
 
 let fix_result_record trait tdecls =
   assert (List.length tdecls > 0);
-  let name = (List.hd_exn tdecls).ptype_name.txt in
+  let name = (List.hd tdecls).ptype_name.txt in
   String.concat ~sep:"_" [ trait; "fix"; name ]
 ;;
 
@@ -48,7 +48,7 @@ let init_trf_function trait s = trf_function trait s ^ "_0"
 let make_fix_name tdecls =
   (* Let's use only first type for fix function definition *)
   assert (List.length tdecls > 0);
-  let name = (List.hd_exn tdecls).ptype_name.txt in
+  let name = (List.hd tdecls).ptype_name.txt in
   String.concat ~sep:"_" [ "fix"; name ]
 ;;
 
@@ -63,12 +63,12 @@ let mut_arg_name ~plugin = sprintf "for_%s_%s" plugin
  *   sprintf "%s_%s_stub" plugin_name tdecl.ptype_name.txt *)
 
 let fix_result tdecl = sprintf "fix_result_%s" tdecl.ptype_name.txt
-let cname_index typname = String.capitalize typname
+let cname_index typname = String.capitalize_ascii typname
 let mutuals_pack = "_mutuals_pack"
 
 let hack_index_name tdecls s =
   assert (List.length tdecls > 0);
-  sprintf "%s_%s" s (List.hd_exn tdecls).ptype_name.txt
+  sprintf "%s_%s" s (List.hd tdecls).ptype_name.txt
 ;;
 
 let fix_func_name ?for_ trait =
@@ -79,7 +79,7 @@ let fix_func_name ?for_ trait =
 
 let fix_func_name_tdecls trait tdecls =
   assert (List.length tdecls > 0);
-  fix_func_name ~for_:(List.hd_exn tdecls).ptype_name.txt trait
+  fix_func_name ~for_:(List.hd tdecls).ptype_name.txt trait
 ;;
 
 let for_ trait s = sprintf "%s_%s" trait s

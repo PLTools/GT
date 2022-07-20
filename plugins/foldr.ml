@@ -1,6 +1,6 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2019
+ * Copyright (C) 2016-2022
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -19,39 +19,32 @@
      's -> ('a,'b,...) typ -> 's ]
 *)
 
-open Base
 open Ppxlib
 open GTCommon
 
 let trait_name = "foldr"
 
-module Make(AstHelpers : GTHELPERS_sig.S) = struct
-open AstHelpers
-module Foldl = Foldl.Make(AstHelpers)
+module Make (AstHelpers : GTHELPERS_sig.S) = struct
+  open AstHelpers
+  module Foldl = Foldl.Make (AstHelpers)
 
-let trait_name =  trait_name
+  let trait_name = trait_name
 
-class g initial_args tdecls = object(self: 'self)
-  inherit Foldl.g initial_args tdecls
+  class g initial_args tdecls =
+    object (self : 'self)
+      inherit Foldl.g initial_args tdecls
+      method trait_name = trait_name
 
-  method trait_name = trait_name
+      method join_args ~loc do_typ ~init (xs : (string * core_type) list) =
+        ListLabels.fold_left
+          ~f:(fun acc (name, typ) ->
+            Exp.app_list ~loc (do_typ typ) [ acc; Exp.sprintf ~loc "%s" name ])
+          ~init
+          (List.rev xs)
+    end
 
-  method join_args ~loc do_typ ~init (xs: (string * core_type) list) =
-    List.fold_left ~f:(fun acc (name,typ) ->
-        Exp.app_list ~loc
-          (do_typ typ)
-          [ acc; Exp.sprintf ~loc "%s" name]
-        )
-        ~init
-        (List.rev xs)
-
+  let create = (new g :> Foldl.P.plugin_constructor)
 end
 
-let create = (new g :> Foldl.P.plugin_constructor)
-
-end
-
-let register () =
-  Expander.register_plugin trait_name (module Make: Plugin_intf.MAKE)
-
+let register () = Expander.register_plugin trait_name (module Make : Plugin_intf.MAKE)
 let () = register ()
