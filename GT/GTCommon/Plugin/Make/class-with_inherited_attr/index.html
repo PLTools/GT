@@ -27,10 +27,10 @@
                          ; apply_fas_in_new_object : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
+                           <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> list</span>
                          ; class_constructor_sig : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>?a_stub:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>?a_stub:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; compose_apply_transformations : 
@@ -39,12 +39,12 @@
                            <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a>
-                         ; cur_name : <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span> <span class="xref-unresolved">Base</span>.String.t
+                         ; cur_name : <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span> string
                          ; do_mutuals : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_rec:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span><a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> list</span>
                          ; do_mutuals_sigs : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_rec:bool <span class="arrow">&#45;&gt;</span></span>
@@ -102,41 +102,35 @@
                            <span>?fix_self_app:
                              <span>( <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <span class="arrow">&#45;&gt;</span></span> <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> )</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span>( <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                              <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                              <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> )</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span><span class="xref-unresolved">Ppxlib</span>.longident <span class="xref-unresolved">Ppxlib</span>.Asttypes.loc</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span><span class="xref-unresolved">Ppxlib</span>.core_type <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
-                             <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> <span class="arrow">&#45;&gt;</span></span> <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> )</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span>
                          ; got_polyvar : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_self_rec:
                              <span>( <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                                <span>[ `Nonrecursive <span>| `Nonregular</span> <span>| `Regular</span> ]</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span>mutual_decls:
-                             <span><span class="xref-unresolved">Ppxlib</span>.type_declaration
-                               <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <span><span>( <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                              <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                              <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.row_field_desc <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
-                             <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.row_field_desc list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> <span class="arrow">&#45;&gt;</span></span> <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> )</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span>
                          ; got_typedecl : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_self_rec:
                              <span>( <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                                <span>[ `Nonrecursive <span>| `Nonregular</span> <span>| `Regular</span> ]</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span>mutual_decls:
-                             <span><span class="xref-unresolved">Ppxlib</span>.type_declaration
-                               <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base__List</span>.t</span> <span class="arrow">&#45;&gt;</span></span> <a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> )</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> <span class="arrow">&#45;&gt;</span></span> <a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> )</span> <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a>
                          ; guess_recursivity : <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span> bool
                          ; inh_of_main : 
@@ -146,12 +140,12 @@
                          ; inh_of_param : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span class="xref-unresolved">Base</span>.string <span class="arrow">&#45;&gt;</span></span>
+                           <span>string <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; is_combinatorial : 
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.core_type option</span>
-                         ; is_rec : <span class="xref-unresolved">Base</span>.bool
+                         ; is_rec : bool
                          ; long_trans_function_typ : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
@@ -164,19 +158,19 @@
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; make_class : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>is_rec:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>is_rec:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a>
                          ; make_class_name : 
-                           <span>?is_mutal:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>?is_mutal:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span class="xref-unresolved">Base</span>.string
+                           string
                          ; make_class_sig : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>?a_stub:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
-                           <span>is_rec:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>?a_stub:bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>is_rec:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Sig/index.html#type-t">AstHelpers.Sig.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
+                           <span><a href="../argument-1-AstHelpers/Sig/index.html#type-t">AstHelpers.Sig.t</a> list</span>
                          ; make_final_trans_function_typ : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
@@ -195,18 +189,18 @@
                              <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> )</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span><span class="xref-unresolved">Ppxlib</span>.longident <span class="xref-unresolved">Ppxlib</span>.Asttypes.loc</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span><span class="xref-unresolved">Ppxlib</span>.core_type <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
+                           <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> list</span>
                          ; make_shortend_class : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> list</span>
                          ; make_shortend_class_sig : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Sig/index.html#type-t">AstHelpers.Sig.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
+                           <span><a href="../argument-1-AstHelpers/Sig/index.html#type-t">AstHelpers.Sig.t</a> list</span>
                          ; make_trans_function_body : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>?rec_typenames:<span><span class="xref-unresolved">Base</span>.string <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span class="xref-unresolved">Base</span>.string <span class="arrow">&#45;&gt;</span></span>
+                           <span>?rec_typenames:<span>string list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>string <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a>
                          ; make_trans_function_name : 
@@ -218,18 +212,18 @@
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; make_trans_functions : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>is_rec:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span>is_rec:bool <span class="arrow">&#45;&gt;</span></span>
+                           <span><a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a> list</span>
                          ; make_trans_functions_sig : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>is_rec:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>is_rec:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Sig/index.html#type-t">AstHelpers.Sig.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span><a href="../argument-1-AstHelpers/Sig/index.html#type-t">AstHelpers.Sig.t</a> list</span>
                          ; make_typ_of_class_argument : 
                            'a. <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <span><span>( <span><a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span class="xref-unresolved">Base</span>.string <span class="arrow">&#45;&gt;</span></span>
+                           <span>string <span class="arrow">&#45;&gt;</span></span>
                            <span><span>( <span><span>( <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span> )</span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span> )</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span>
                            <span class="type-var">'a</span>
@@ -240,58 +234,52 @@
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; make_typ_of_self_trf : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>?in_class:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>?in_class:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
-                         ; need_inh_attr : <span class="xref-unresolved">Base</span>.bool
+                         ; need_inh_attr : bool
                          ; on_record_constr : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_self_rec:
                              <span>( <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                                <span>[ `Nonrecursive <span>| `Nonregular</span> <span>| `Regular</span> ]</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span>inhe:<a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span>[ <span>`Normal of <span class="xref-unresolved">Base</span>.string</span> <span><span>| `Poly</span> of <span class="xref-unresolved">Base</span>.string</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span>(<span class="xref-unresolved">Base</span>.string * <span class="xref-unresolved">Base</span>.string * <span class="xref-unresolved">Ppxlib</span>.core_type)</span>
-                             <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.label_declaration <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span>[ <span>`Normal of string</span> <span><span>| `Poly</span> of string</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><span>(string * string * <span class="xref-unresolved">Ppxlib</span>.core_type)</span> list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.label_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a>
                          ; on_record_declaration : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_self_rec:
                              <span>( <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                                <span>[ `Nonrecursive <span>| `Nonregular</span> <span>| `Regular</span> ]</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.label_declaration <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.label_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span>
                          ; on_tuple_constr : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_self_rec:
                              <span>( <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                                <span>[ `Nonrecursive <span>| `Nonregular</span> <span>| `Regular</span> ]</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span>inhe:<a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span>[ <span>`Normal of <span class="xref-unresolved">Base</span>.string</span> <span><span>| `Poly</span> of <span class="xref-unresolved">Base</span>.string</span> ]</span>
-                             <span class="xref-unresolved">Base</span>.option</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span>(<span class="xref-unresolved">Base</span>.string * <span class="xref-unresolved">Ppxlib</span>.core_type)</span> <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><span>[ <span>`Normal of string</span> <span><span>| `Poly</span> of <span class="xref-unresolved">Ppxlib</span>.label</span> ]</span> option</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><span>(string * <span class="xref-unresolved">Ppxlib</span>.core_type)</span> list</span> <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a>
                          ; on_variant : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span>mutual_decls:
-                             <span><span class="xref-unresolved">Ppxlib</span>.type_declaration
-                               <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+                           <span>mutual_decls:<span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span>is_self_rec:
                              <span>( <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                                <span>[ `Nonrecursive <span>| `Nonregular</span> <span>| `Regular</span> ]</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.constructor_declaration
-                             <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-                             <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> )</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base</span>.list</span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.constructor_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span>( <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> <span class="arrow">&#45;&gt;</span></span> <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> )</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span>
                          ; plugin_class_params : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span><span class="xref-unresolved">Ppxlib</span>.core_type list</span> <span class="arrow">&#45;&gt;</span></span>
@@ -299,8 +287,8 @@
                            <span><a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a> list</span>
                          ; plugin_class_params_tdecl : 
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><a href="../argument-1-AstHelpers/index.html#type-type_arg">AstHelpers.type_arg</a> <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
-                         ; plugin_name : <span class="xref-unresolved">Base</span>.String.t
+                           <span><a href="../argument-1-AstHelpers/index.html#type-type_arg">AstHelpers.type_arg</a> list</span>
+                         ; plugin_name : string
                          ; prepare_fa_args : 
                            'a. <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span><span>( <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
@@ -319,15 +307,14 @@
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; syn_of_main : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span>?in_class:<span class="xref-unresolved">Base</span>.bool <span class="arrow">&#45;&gt;</span></span>
+                           <span>?in_class:bool <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
                          ; syn_of_param : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span class="xref-unresolved">Base</span>.string <span class="arrow">&#45;&gt;</span></span>
+                           <span>string <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a>
-                         ; tdecls : 
-                           <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span>
+                         ; tdecls : <span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span>
                          ; trait_name : string
                          ; treat_type_specially : 
                            <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
@@ -338,9 +325,9 @@
                          ; wrap_class_definition : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
                            <span>inh_params:<span><a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a> list</span> <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration <a href="../../../HelpersBase/List/index.html#type-t">GTCommon.HelpersBase.List.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><span class="xref-unresolved">Ppxlib</span>.type_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
                            <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
-                           <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> <span class="xref-unresolved">Base__List</span>.t</span> <span class="arrow">&#45;&gt;</span></span>
+                           <span><span><a href="../argument-1-AstHelpers/Cf/index.html#type-t">AstHelpers.Cf.t</a> list</span> <span class="arrow">&#45;&gt;</span></span>
                            <a href="../argument-1-AstHelpers/Str/index.html#type-t">AstHelpers.Str.t</a>
                          ; wrap_tr_function_str : 
                            <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
@@ -350,11 +337,11 @@
                          ; wrap_tr_function_typ : 
                            <span><span class="xref-unresolved">Ppxlib</span>.core_type <span class="arrow">&#45;&gt;</span></span>
                            <span class="xref-unresolved">Ppxlib</span>.core_type.. &gt;</span> <span class="arrow">&#45;&gt;</span></span>
-  <span class="xref-unresolved">Base</span>.bool</span></code></div></div><div class="odoc-spec"><div class="spec method" id="method-make_typ_of_class_argument" class="anchored"><a href="#method-make_typ_of_class_argument" class="anchor"></a><code><span><span class="keyword">method</span> make_typ_of_class_argument : <span><span class="type-var">'b</span> <span class="arrow">&#45;&gt;</span></span>
+  bool</span></code></div></div><div class="odoc-spec"><div class="spec method" id="method-make_typ_of_class_argument" class="anchored"><a href="#method-make_typ_of_class_argument" class="anchor"></a><code><span><span class="keyword">method</span> make_typ_of_class_argument : <span><span class="type-var">'b</span> <span class="arrow">&#45;&gt;</span></span>
   'a. <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
   <span><span>( <span><a href="../argument-1-AstHelpers/Typ/index.html#type-t">AstHelpers.Typ.t</a> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span> )</span> <span class="arrow">&#45;&gt;</span></span>
-  <span><span class="xref-unresolved">Base</span>.string <span class="arrow">&#45;&gt;</span></span>
+  <span>string <span class="arrow">&#45;&gt;</span></span>
   <span><span>( <span><span>( <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span> )</span> <span class="arrow">&#45;&gt;</span></span> <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span> )</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="type-var">'a</span> <span class="arrow">&#45;&gt;</span></span>
   <span class="type-var">'a</span></span></code></div></div><div class="odoc-spec"><div class="spec method" id="method-make_RHS_typ_of_transformation" class="anchored"><a href="#method-make_RHS_typ_of_transformation" class="anchor"></a><code><span><span class="keyword">method</span> make_RHS_typ_of_transformation : <span><span class="type-var">'b</span> <span class="arrow">&#45;&gt;</span></span>
@@ -380,8 +367,8 @@
   <span><a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a> <span class="arrow">&#45;&gt;</span></span>
   <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a></span></code></div></div><div class="odoc-spec"><div class="spec method" id="method-make_trans_function_body" class="anchored"><a href="#method-make_trans_function_body" class="anchor"></a><code><span><span class="keyword">method</span> make_trans_function_body : <span><span class="type-var">'b</span> <span class="arrow">&#45;&gt;</span></span>
   <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
-  <span>?rec_typenames:<span><span class="xref-unresolved">Base</span>.string <span class="xref-unresolved">Base</span>.list</span> <span class="arrow">&#45;&gt;</span></span>
-  <span><span class="xref-unresolved">Base</span>.string <span class="arrow">&#45;&gt;</span></span>
+  <span>?rec_typenames:<span>string list</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>string <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib</span>.type_declaration <span class="arrow">&#45;&gt;</span></span>
   <a href="../argument-1-AstHelpers/Exp/index.html#type-t">AstHelpers.Exp.t</a></span></code></div></div><div class="odoc-spec"><div class="spec method" id="method-app_extra_unit" class="anchored"><a href="#method-app_extra_unit" class="anchor"></a><code><span><span class="keyword">method</span> app_extra_unit : <span><span class="type-var">'b</span> <span class="arrow">&#45;&gt;</span></span>
   <span>loc:<a href="../argument-1-AstHelpers/index.html#type-loc">AstHelpers.loc</a> <span class="arrow">&#45;&gt;</span></span>
