@@ -133,7 +133,7 @@ let _ =
   Printf.printf "%s\n" (GT.transform(expr) new show''' () y);
   Printf.printf "%s\n" (GT.transform(expr) new show''' () z);
   Printf.printf "%s\n" (GT.transform(expr) new show'''' () z);
-  Printf.printf "%d\n" (eval (function "a" -> 1 | "b" -> 2) x);
+  Printf.printf "%d\n" (eval (function "a" -> 1 | "b" -> 2 | _ -> assert false) x);
   Printf.printf "%s\n" (GT.transform(expr) new show''' () (simplify y));
   Printf.printf "%s\n" (GT.transform(expr) new show''' () (simplify z));
   Printf.printf "%s\n" (GT.transform(expr) new show'''' () (simplify t));
