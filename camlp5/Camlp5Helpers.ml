@@ -752,7 +752,9 @@ let prepare_param_triples ~loc ~extra
 
 let typ_vars_of_typ t =
   let open Stdppx in
-  let rec helper acc = function
+  let module SS = Set.Make(String) in
+  let rec helper (acc: SS.t) = function
+    | <:ctyp< '$s$ >> -> SS.add s acc
     | <:ctyp< $longid:_$ . $lid:_$ >>  -> acc
     | <:ctyp< $t1$ as $t2$ >> -> helper acc t1 (* ??? *)
     | <:ctyp< _ >>            -> acc
@@ -768,7 +770,6 @@ let typ_vars_of_typ t =
     | <:ctyp< ?$s$: $t$     >> -> helper acc t
     | <:ctyp< (module $mt$) >> -> acc
     | <:ctyp< ! $list:ls$ . $t$ >> -> failwith "not implemented"
-    | <:ctyp< '$s$ >> -> s :: acc
     | <:ctyp< { $list:llsbt$ } >>  ->
       ListLabels.fold_left ~init:acc ~f:(fun acc (_,_,_,t, _) -> helper acc t) llsbt
     | <:ctyp< [ $list:llslt$ ] >> -> failwith "sum"
@@ -776,5 +777,4 @@ let typ_vars_of_typ t =
     | <:ctyp< [ = $list:lpv$ ] >>  -> failwith "polyvariant"
     | _ -> acc (* This could be wrong *)
   in
-
-  Base.List.dedup_and_sort ~compare:String.compare @@ helper [] t
+  List.of_seq @@ SS.to_seq @@ helper SS.empty t

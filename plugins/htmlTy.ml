@@ -23,7 +23,6 @@
  *)
 
 (* NOT IMPELEMENTED YET *)
-open Base
 open Ppxlib
 open HelpersBase
 open Printf

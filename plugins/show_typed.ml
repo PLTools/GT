@@ -8,7 +8,6 @@
 (** Not in this release :)
   *)
 
-open Base
 open HelpersBase
 open Ppxlib
 open Printf

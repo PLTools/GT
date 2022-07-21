@@ -97,7 +97,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         constr_info
         bindings
         labs =
-        assert (Int.(List.length labs > 0));
+        assert (List.length labs > 0);
         self#find_right_one ~loc (Some constr_info) tdecl
 
       method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =

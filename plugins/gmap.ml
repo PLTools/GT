@@ -193,7 +193,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         info
         bindings
         labs =
-        assert (Int.(List.length labs > 0));
+        assert (List.length labs > 0);
         let is_poly, cname =
           match info with
           | `Normal s -> false, s

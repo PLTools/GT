@@ -103,7 +103,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         _info
         bindings
         labs =
-        assert (Int.(List.length labs > 0));
+        assert (List.length labs > 0);
         Exp.fun_list
           ~loc
           (List.map bindings ~f:(fun (s, _, _) -> Pat.sprintf ~loc "%s" s))
