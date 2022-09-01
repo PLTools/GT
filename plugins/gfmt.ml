@@ -62,16 +62,18 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       (* Adapted to generate only single method per constructor definition *)
       method on_tuple_constr ~loc ~is_self_rec ~mutual_decls ~inhe tdecl constr_info ts =
         let constr_name =
-          match constr_info with
-          | Some (`Poly s) -> sprintf "`%s " s
-          | Some (`Normal s) -> sprintf "%s " s
-          | None -> ""
+          match constr_info, ts with
+          | Some (`Poly s), [] -> sprintf "`%s" s
+          | Some (`Poly s), _ -> sprintf "`%s " s
+          | Some (`Normal s), [] -> sprintf "%s" s
+          | Some (`Normal s), _ -> sprintf "%s " s
+          | None, _ -> ""
         in
-        let fmt = List.map ts ~f:(fun _ -> "%a") |> String.concat ~sep:",@,@ " in
-        let fmt = sprintf "%s@[(@,%s@,)@]" constr_name fmt in
         if List.length ts = 0
         then app_format_fprintf ~loc inhe @@ Exp.string_const ~loc constr_name
-        else
+        else (
+          let fmt = List.map ts ~f:(fun _ -> "%a") |> String.concat ~sep:",@,@ " in
+          let fmt = sprintf "%s@[(@,%s@,)@]" constr_name fmt in
           List.fold_left
             ts
             ~f:(fun acc (name, typ) ->
@@ -81,7 +83,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                 [ self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl typ
                 ; Exp.ident ~loc name
                 ])
-            ~init:(app_format_fprintf ~loc inhe @@ Exp.string_const ~loc fmt)
+            ~init:(app_format_fprintf ~loc inhe @@ Exp.string_const ~loc fmt))
 
       method on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
         let pat =

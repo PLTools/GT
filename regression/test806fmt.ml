@@ -1,3 +1,5 @@
+open Format
+
 type t = {a : GT.int; b: GT.string} [@@deriving gt ~options:{fmt}]
 type t2 =
   | QQQ of GT.string
@@ -6,7 +8,6 @@ type t2 =
 
 
 let () =
-  let open Format in
   pp_set_margin std_formatter 12;
   fprintf std_formatter "%a\n"  t.GT.plugins#fmt {a=1; b="x"};
   (* fprintf std_formatter "%a\n" t2.GT.plugins#fmt (RRR {asdf=20}); *)
@@ -17,6 +18,12 @@ let () =
     [1.; 2.; 3.; 4.];
   ()
 
-type t3 = Foo of {xxx: GT.int; yyy: GT.int}
+type t3 = Foo of { xxx: GT.int; yyy: GT.int}
         | Boo of GT.int * GT.int
 [@@deriving gt ~options:{fmt; compare}]
+
+
+type t4 = A | B | C [@@deriving gt ~options:{fmt}]
+
+let () =
+  printf "%a\n" (pp_print_list [%fmt: t4 GT.option]) [ Some A; Some B; None; Some C]
