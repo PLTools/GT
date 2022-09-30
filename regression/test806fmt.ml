@@ -1,11 +1,11 @@
 open Format
 
 type t = {a : GT.int; b: GT.string} [@@deriving gt ~options:{fmt}]
-type t2 =
-  | QQQ of GT.string
-  | LLL of GT.int GT.list
- [@@deriving gt ~options:{fmt}]
 
+type t2 =
+  | QQQ of GT.string (** An example doc-comment *)
+  | LLL of GT.int GT.list
+  [@@deriving gt ~options:{fmt}]
 
 let () =
   pp_set_margin std_formatter 12;

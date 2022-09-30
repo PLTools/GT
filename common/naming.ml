@@ -91,9 +91,14 @@ let meth_name_for_constructor attrs default_name =
   in
   let cond attr =
     (* Stdlib.Sys.command "notify-send 'hecking an attribute of constructor' " |> ignore; *)
-    Deriving.Args.parse good_attr Ppxlib.Location.none attr (fun s ->
+    Deriving.Args.parse
+      good_attr
+      attr.attr_loc
+      attr
+      (fun s ->
         (* let _ = Stdlib.Sys.command (Printf.sprintf "notify-send 'found %s'" s) in *)
         Some s)
+      ~on_error:(fun () -> None)
   in
   List.find_map attrs ~f:cond |> Option.value ~default:default_name |> meth_of_constr
 ;;
