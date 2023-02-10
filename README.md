@@ -393,6 +393,7 @@ Improvements:
 
 ## References
 
-- Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers](![](http://oops.math.spbu.ru/db/generics-tfp-2014.pdf)) // A talk at the International Symposium on Trends in Functional Programming, 2014.
-- Dmitry Boulytchev. [Code Reuse with Transformation Objects](http://oops.math.spbu.ru/db/transformation-objects.pdf) // unpublished.
-- Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](http://oops.math.spbu.ru/db/ldta-2011-ocaml.pdf) // submitted to the Science of Computer Programming.
+- Dmitry Kosarev, Dmitry Boulytchev. [Generic Programming with Combinators and Objects](https://arxiv.org/pdf/2106.01250.pdf) // submitted to ML workshop 2018
+- Dmitry Boulytchev. [Code Reuse with Object-Encoded Transformers](https://oops.math.spbu.ru/papers/transformation-objects-talk.pdf) // A talk at the International Symposium on Trends in Functional Programming, 2014.
+- Dmitry Boulytchev. [Code Reuse with Transformation Objects](https://arxiv.org/pdf/1802.01930.pdf) // unpublished.
+- Dmitry Boulytchev. [Combinators and Type-Driven Transformers in Objective Caml](https://www.sciencedirect.com/science/article/pii/S0167642315001422) // submitted to the Science of Computer Programming.
