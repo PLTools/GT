@@ -209,6 +209,9 @@ module type Element =
 
   end
 
+[@@@ocaml.warning "-67"]
+(* TODO(Kakadu): Not sure if a warning 67 should be properly fixed. Legacy code anyway. *)
+
 (** Functor to provide list to HTML generation. *)
 module List (T : Element) : Element with type t = T.t list
 

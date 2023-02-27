@@ -133,6 +133,9 @@ module type Concat =
 
   end
 
+[@@@ocaml.warning "-67"]
+(* TODO(Kakadu): Not sure if a warning 67 should be properly fixed. Legacy code anyway. *)
+
 (** Viewing lists of {!Viewable} types with explicit concatenation function. *)
 module ListC (C : Concat) (X : Viewable) : Viewable with type t = X.t list
 
