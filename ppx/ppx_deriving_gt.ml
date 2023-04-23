@@ -40,10 +40,10 @@ let str_type_decl : (_, _) Deriving.Generator.t =
         ~loc
         []
         (match cfg with
-        | None -> []
-        | Some xs ->
-          List.map
-            (function
+         | None -> []
+         | Some xs ->
+           List.map
+             (function
               | Lident name, e ->
                 let extra =
                   match e.pexp_desc with
@@ -53,7 +53,7 @@ let str_type_decl : (_, _) Deriving.Generator.t =
                 in
                 name, Expander.Use extra
               | _ -> Location.raise_errorf ~loc "only lowercase identifiers are allowed")
-            xs)
+             xs)
         info)
 ;;
 
@@ -66,64 +66,64 @@ let sig_type_decl : (_, _) Deriving.Generator.t =
           ~loc
           si
           (match options with
-          | None -> []
-          | Some xs ->
-            List.map
-              (function
+           | None -> []
+           | Some xs ->
+             List.map
+               (function
                 | Lident name, e -> name, Expander.Use []
                 | _ -> Location.raise_errorf ~loc "only lowercase identifiers are allowed")
-              xs)
+               xs)
       in
       generator_f [] info)
 ;;
 
 let () =
   Expander.set_inline_registration (fun name (module M : Plugin_intf.MAKE) ->
-      let module P = M (PpxHelpers) in
-      let p =
-        let loc = Location.none in
-        let dummy_decl =
-          match [%stri type nonrec t = int] with
-          | { pstr_desc = Pstr_type (_, x) } -> x
-          | _ -> Location.raise_errorf ~loc "Should not happen %s %d" __FILE__ __LINE__
-        in
-        P.create [] (false, dummy_decl)
+    let module P = M (PpxHelpers) in
+    let p =
+      let loc = Location.none in
+      let dummy_decl =
+        match [%stri type nonrec t = int] with
+        | { pstr_desc = Pstr_type (_, x) } -> x
+        | _ -> Location.raise_errorf ~loc "Should not happen %s %d" __FILE__ __LINE__
       in
-      let extension ~loc ~path:_ typ =
-        let names = HelpersBase.vars_from_core_type typ |> HelpersBase.SS.elements in
-        let tdecl =
-          let open Ppxlib.Ast_builder.Default in
-          type_declaration
-            ~loc
-            ~name:(Located.mk ~loc "dummy")
-            ~params:
-              (List.map
-                 (fun s -> ptyp_var ~loc s, (Asttypes.NoVariance, Asttypes.NoInjectivity))
-                 names)
-            ~cstrs:[]
-            ~private_:Public
-            ~manifest:(Some typ)
-            ~kind:Ptype_abstract
-        in
-        let rhs =
-          p#do_typ_gen
-            ~loc:(PpxHelpers.loc_from_caml loc)
-            ~mutual_decls:[]
-            ~is_self_rec:(fun _ -> `Nonrecursive)
-            tdecl
-            typ
-        in
+      P.create [] (false, dummy_decl)
+    in
+    let extension ~loc ~path:_ typ =
+      let names = HelpersBase.vars_from_core_type typ |> HelpersBase.SS.elements in
+      let tdecl =
         let open Ppxlib.Ast_builder.Default in
-        let pats, silence_warns =
-          p#prepare_fa_args
-            ~loc
-            (fun ~loc ~flg ~pat ~expr ->
-              pexp_let ~loc flg [ value_binding ~loc ~pat ~expr ])
-            tdecl
-        in
-        List.fold_right (pexp_fun ~loc Nolabel None) pats (silence_warns rhs)
+        type_declaration
+          ~loc
+          ~name:(Located.mk ~loc "dummy")
+          ~params:
+            (List.map
+               (fun s -> ptyp_var ~loc s, (Asttypes.NoVariance, Asttypes.NoInjectivity))
+               names)
+          ~cstrs:[]
+          ~private_:Public
+          ~manifest:(Some typ)
+          ~kind:Ptype_abstract
       in
-      Deriving.add ~extension name |> Deriving.ignore)
+      let rhs =
+        p#do_typ_gen
+          ~loc:(PpxHelpers.loc_from_caml loc)
+          ~mutual_decls:[]
+          ~is_self_rec:(fun _ -> `Nonrecursive)
+          tdecl
+          typ
+      in
+      let open Ppxlib.Ast_builder.Default in
+      let pats, silence_warns =
+        p#prepare_fa_args
+          ~loc
+          (fun ~loc ~flg ~pat ~expr ->
+            pexp_let ~loc flg [ value_binding ~loc ~pat ~expr ])
+          tdecl
+      in
+      List.fold_right (pexp_fun ~loc Nolabel None) pats (silence_warns rhs)
+    in
+    Deriving.add ~extension name |> Deriving.ignore)
 ;;
 
 let () = Deriving.add ~str_type_decl ~sig_type_decl "gt" |> Deriving.ignore

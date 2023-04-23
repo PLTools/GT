@@ -50,14 +50,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method inh_of_param ~loc tdecl _name = Typ.var ~loc "env"
 
       method! make_typ_of_class_argument
-          : 'a.
-            loc:loc
-            -> type_declaration
-            -> (Typ.t -> 'a -> 'a)
-            -> string
-            -> (('a -> 'a) -> 'a -> 'a)
-            -> 'a
-            -> 'a =
+        : 'a.
+          loc:loc
+          -> type_declaration
+          -> (Typ.t -> 'a -> 'a)
+          -> string
+          -> (('a -> 'a) -> 'a -> 'a)
+          -> 'a
+          -> 'a =
         fun ~loc tdecl chain name k ->
           let subj_t = Typ.var ~loc name in
           let syn_t = self#syn_of_param ~loc name in
@@ -112,7 +112,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let pat =
           Pat.record ~loc
           @@ List.map labs ~f:(fun l ->
-                 Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+               Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         in
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         [ Cf.method_concrete ~loc methname
@@ -120,12 +120,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           @@ Exp.fun_ ~loc pat
           @@ Exp.record ~loc
           @@ List.map labs ~f:(fun { pld_name; pld_type } ->
-                 ( lident pld_name.txt
-                 , self#app_transformation_expr
-                     ~loc
-                     (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
-                     (Exp.ident ~loc "env")
-                     (Exp.ident ~loc pld_name.txt) ))
+               ( lident pld_name.txt
+               , self#app_transformation_expr
+                   ~loc
+                   (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
+                   (Exp.ident ~loc "env")
+                   (Exp.ident ~loc pld_name.txt) ))
         ]
     end
 

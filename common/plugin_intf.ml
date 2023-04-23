@@ -42,9 +42,8 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ce, 'ctf, 'cf, 'str, 'sign, 'pat] t
     method virtual inh_of_main : loc:'loc -> Ppxlib.type_declaration -> 'typ
 
     (** Synthesized attribute for whole type declaration. Is is defined by plugin kind. *)
-    method
-        virtual syn_of_main
-        : loc:'loc -> ?in_class:bool -> Ppxlib.type_declaration -> 'typ
+    method virtual syn_of_main
+      : loc:'loc -> ?in_class:bool -> Ppxlib.type_declaration -> 'typ
 
     (** [syn_of_param ~loc name] constructs synthethized attribute for type paramter [name]. *)
     method virtual syn_of_param : loc:'loc -> string -> 'typ
@@ -54,15 +53,13 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ce, 'ctf, 'cf, 'str, 'sign, 'pat] t
 
     (** The parameters that the plugin class will have in its definition.
     * Add ['extra] manually if needed. *)
-    method
-        virtual plugin_class_params
-        : loc:'loc -> Ppxlib.core_type list -> typname:string -> 'typ list
+    method virtual plugin_class_params
+      : loc:'loc -> Ppxlib.core_type list -> typname:string -> 'typ list
 
     (** Arguments of inherit class field that will be generated using the types
       applied in the RHS of type definition. *)
-    method
-        virtual alias_inherit_type_params
-        : loc:'loc -> Ppxlib.type_declaration -> Ppxlib.core_type list -> 'typ list
+    method virtual alias_inherit_type_params
+      : loc:'loc -> Ppxlib.type_declaration -> Ppxlib.core_type list -> 'typ list
 
     (* These methods will be implemented in plugin.ml *)
 
@@ -76,24 +73,21 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ce, 'ctf, 'cf, 'str, 'sign, 'pat] t
     (** {1 Methods that are specific for all plugins and unlikely will need to be override } *)
 
     (** Generate signature items for single type definition. *)
-    method
-        virtual do_single_sig
-        : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration -> 'sign list
+    method virtual do_single_sig
+      : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration -> 'sign list
 
     (** Generate structure items for single type definition. *)
-    method
-        virtual do_single
-        : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration -> 'str list
+    method virtual do_single
+      : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration -> 'str list
 
     (** Generate transformation expression from specified core_type.  *)
-    method
-        virtual do_typ_gen
-        : loc:'loc
-          -> mutual_decls:Ppxlib.type_declaration list
-          -> is_self_rec:(Ppxlib.core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
-          -> Ppxlib.type_declaration
-          -> Ppxlib.core_type
-          -> 'exp
+    method virtual do_typ_gen
+      : loc:'loc
+        -> mutual_decls:Ppxlib.type_declaration list
+        -> is_self_rec:(Ppxlib.core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+        -> Ppxlib.type_declaration
+        -> Ppxlib.core_type
+        -> 'exp
 
     (** Generate name for transformation function. *)
     method virtual make_trans_function_name : Ppxlib.type_declaration -> string
@@ -102,25 +96,22 @@ class virtual ['loc, 'exp, 'typ, 'type_arg, 'ce, 'ctf, 'cf, 'str, 'sign, 'pat] t
     method virtual make_trans_function_typ : loc:'loc -> Ppxlib.type_declaration -> 'typ
 
     (** Generate structure items for mutally recursive type declarations. *)
-    method
-        virtual do_mutuals
-        : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration list -> 'str list
+    method virtual do_mutuals
+      : loc:'loc -> is_rec:bool -> Ppxlib.type_declaration list -> 'str list
 
     method virtual do_mutuals_sigs : loc:'loc -> is_rec:bool -> 'sign list
     method virtual need_inh_attr : bool
     method virtual eta_and_exp : center:'exp -> Ppxlib.type_declaration -> 'exp
 
-    method
-        virtual prepare_fa_args
-        : 'a.
-          loc:'loc
-          -> (loc:'loc -> flg:Ppxlib.rec_flag -> pat:'pat -> expr:'exp -> 'a -> 'a)
-          -> Ppxlib.type_declaration
-          -> 'pat list * ('a -> 'a)
+    method virtual prepare_fa_args
+      : 'a.
+        loc:'loc
+        -> (loc:'loc -> flg:Ppxlib.rec_flag -> pat:'pat -> expr:'exp -> 'a -> 'a)
+        -> Ppxlib.type_declaration
+        -> 'pat list * ('a -> 'a)
 
-    method
-        virtual make_final_trans_function_typ
-        : loc:'loc -> Ppxlib.type_declaration -> 'typ
+    method virtual make_final_trans_function_typ
+      : loc:'loc -> Ppxlib.type_declaration -> 'typ
   end
 
 (** Functor that takes AST construction functions for a specific backend and

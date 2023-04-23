@@ -48,33 +48,33 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
     let rs =
       List.map rows ~f:(function
-          | Rtag (lab, _, args) ->
-            let args =
-              match args with
-              | [ t ] -> unfold_tuple t
-              | [] -> []
-              | _ -> failwith "we don't support conjunction types"
-            in
-            let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-            let lhs = Pat.variant ~loc lab.txt @@ List.map ~f:(Pat.var ~loc) names in
-            case ~lhs ~rhs:(onrow lab @@ List.combine names args)
-          | Rinherit typ ->
-            (match typ.ptyp_desc with
-            | Ptyp_constr ({ txt; _ }, ts) ->
-              let newname = gen_symbol ~prefix:"subj" () in
-              let lhs = Pat.alias ~loc (Pat.type_ ~loc txt) newname in
-              case ~lhs ~rhs:(oninherit ts txt newname)
-            | _ ->
-              Location.raise_errorf ~loc:typ.ptyp_loc "this inherit field isn't supported"))
+        | Rtag (lab, _, args) ->
+          let args =
+            match args with
+            | [ t ] -> unfold_tuple t
+            | [] -> []
+            | _ -> failwith "we don't support conjunction types"
+          in
+          let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
+          let lhs = Pat.variant ~loc lab.txt @@ List.map ~f:(Pat.var ~loc) names in
+          case ~lhs ~rhs:(onrow lab @@ List.combine names args)
+        | Rinherit typ ->
+          (match typ.ptyp_desc with
+           | Ptyp_constr ({ txt; _ }, ts) ->
+             let newname = gen_symbol ~prefix:"subj" () in
+             let lhs = Pat.alias ~loc (Pat.type_ ~loc txt) newname in
+             case ~lhs ~rhs:(oninherit ts txt newname)
+           | _ ->
+             Location.raise_errorf ~loc:typ.ptyp_loc "this inherit field isn't supported"))
     in
     let for_labels =
       match labels with
       | None -> []
       | Some ls ->
         List.map ls ~f:(fun lab ->
-            let newname = gen_symbol ~prefix:"subj" () in
-            let lhs = Pat.alias ~loc (Pat.type_ ~loc (Lident lab)) newname in
-            case ~lhs ~rhs:(onlabel lab newname))
+          let newname = gen_symbol ~prefix:"subj" () in
+          let lhs = Pat.alias ~loc (Pat.type_ ~loc (Lident lab)) newname in
+          case ~lhs ~rhs:(onlabel lab newname))
     in
     Exp.match_ ~loc what (rs @ for_labels)
   ;;
@@ -98,10 +98,10 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           | Caml.Scanf.Scan_failure _ -> None
         in
         List.fold_left initial_args ~init:[] ~f:(fun acc (lident, expr) ->
-            match lident with
-            | Lident s ->
-              Option.value_map (check_name s) ~default:acc ~f:(fun n -> (n, expr) :: acc)
-            | _ -> acc)
+          match lident with
+          | Lident s ->
+            Option.value_map (check_name s) ~default:acc ~f:(fun n -> (n, expr) :: acc)
+          | _ -> acc)
 
       method extra_class_sig_members tdecl =
         let loc = loc_from_caml tdecl.ptype_loc in
@@ -136,7 +136,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let cur_name = self#cur_name tdecl in
         let mutual_decls =
           List.filter self#tdecls ~f:(fun { ptype_name = { txt } } ->
-              String.( <> ) txt tdecl.ptype_name.txt)
+            String.( <> ) txt tdecl.ptype_name.txt)
         in
         let k fields =
           let inh_params =
@@ -172,12 +172,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                  tdecl.ptype_params
                  ~init:`Regular
                  ~f:(fun acc inst_par (formal_par, _) ->
-                   match inst_par.ptyp_desc, formal_par.ptyp_desc with
-                   | Ptyp_var s1, Ptyp_var s2 when String.equal s1 s2 -> wrap acc `Regular
-                   | _, Ptyp_var _ -> `Nonregular
-                   | _, Ptyp_any -> `Nonregular (* TODO: think again about this *)
-                   | _ when 0 = compare_core_type inst_par formal_par -> wrap acc `Regular
-                   | _ -> `Nonregular)
+                 match inst_par.ptyp_desc, formal_par.ptyp_desc with
+                 | Ptyp_var s1, Ptyp_var s2 when String.equal s1 s2 -> wrap acc `Regular
+                 | _, Ptyp_var _ -> `Nonregular
+                 | _, Ptyp_any -> `Nonregular (* TODO: think again about this *)
+                 | _ when 0 = compare_core_type inst_par formal_par -> wrap acc `Regular
+                 | _ -> `Nonregular)
                 :> [ `Regular | `Nonregular | `Nonrecursive ])
             | _ -> `Nonrecursive)
         in
@@ -188,16 +188,16 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let names = map_type_param_names tdecl.ptype_params ~f:Fn.id in
         ( map_type_param_names tdecl.ptype_params ~f:(Pat.sprintf ~loc "f%s")
         , List.fold_left ~init:Fn.id names ~f:(fun facc name ->
-              if SS.mem name used_vars
-              then facc
-              else
-                fun rhs ->
-                make_let
-                  ~loc
-                  ~flg:Nonrecursive
-                  ~pat:(Pat.any ~loc)
-                  ~expr:(Exp.sprintf ~loc "f%s" name)
-                  (facc rhs)) )
+            if SS.mem name used_vars
+            then facc
+            else
+              fun rhs ->
+              make_let
+                ~loc
+                ~flg:Nonrecursive
+                ~pat:(Pat.any ~loc)
+                ~expr:(Exp.sprintf ~loc "f%s" name)
+                (facc rhs)) )
 
       method apply_fas_in_new_object ~loc tdecl =
         (* very similar to self#make_inherit_args_for_alias but the latter
@@ -247,16 +247,16 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                     ~loc
                     (Pat.tuple ~loc
                     @@ List.map self#tdecls ~f:(fun { ptype_name = { txt = name } } ->
-                           (* if this type is currently processed typedecl, we use default identifier
+                         (* if this type is currently processed typedecl, we use default identifier
                             if this type doesn't use tdecl currently being processd: use wildcard *)
-                           (* TODO: if in some cases (like `type heap = t`) the self-transformation of heap
+                         (* TODO: if in some cases (like `type heap = t`) the self-transformation of heap
                             is not required because we simply inherit class for t
                             *)
-                           if String.equal name tdecl.ptype_name.txt
-                           then Pat.var ~loc (self#self_arg_name name)
-                           else if is_type_used_in ~tdecl (Lident name)
-                           then Pat.var ~loc (Naming.for_ self#trait_name name)
-                           else Pat.any ~loc))
+                         if String.equal name tdecl.ptype_name.txt
+                         then Pat.var ~loc (self#self_arg_name name)
+                         else if is_type_used_in ~tdecl (Lident name)
+                         then Pat.var ~loc (Naming.for_ self#trait_name name)
+                         else Pat.any ~loc))
                     Naming.mutuals_pack
                 in
                 Cl.fun_ ~loc pat rhs
@@ -268,16 +268,15 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         @ self#extra_class_str_members tdecl
         @ fields
 
-      method
-          virtual make_typ_of_class_argument
-          : 'a.
-            loc:loc
-            -> type_declaration
-            -> (Typ.t -> 'a -> 'a)
-            -> string
-            -> (('a -> 'a) -> 'a -> 'a)
-            -> 'a
-            -> 'a
+      method virtual make_typ_of_class_argument
+        : 'a.
+          loc:loc
+          -> type_declaration
+          -> (Typ.t -> 'a -> 'a)
+          -> string
+          -> (('a -> 'a) -> 'a -> 'a)
+          -> 'a
+          -> 'a
 
       (* next method should be synchronized with prepare_fa_args *)
       (* method prepare_fa_arg_types ~loc tdecl =
@@ -321,7 +320,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               ~loc
               (Typ.tuple ~loc
               @@ List.map self#tdecls ~f:(fun tdecl ->
-                     self#long_trans_function_typ ~loc tdecl (* TODO: rename *)))
+                   self#long_trans_function_typ ~loc tdecl (* TODO: rename *)))
               tl
         in
         ans
@@ -364,7 +363,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                     ~loc
                     (Typ.tuple ~loc
                     @@ List.map self#tdecls ~f:(fun tdecl ->
-                           self#long_trans_function_typ ~loc tdecl (* TODO: rename *)))
+                         self#long_trans_function_typ ~loc tdecl (* TODO: rename *)))
                     tl)
               (self#extra_class_sig_members tdecl @ fields)
           ]
@@ -407,8 +406,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           ~onvariant:(fun cds ->
             k
             @@ List.map cds ~f:(fun cd ->
-                   on_constructor cd
-                   (* cd.pcd_args
+                 on_constructor cd
+                 (* cd.pcd_args
               (Ast_builder.Default.Located.map
                 (Naming.meth_name_for_constructor cd.pcd_attributes) cd.pcd_name) *)))
           ~onmanifest:(fun typ ->
@@ -424,13 +423,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               | Ptyp_alias (t, aname) ->
                 let loc = t.ptyp_loc in
                 map_core_type t ~onvar:(fun as_ ->
-                    let open Ppxlib.Ast_builder.Default in
-                    if String.equal as_ aname
-                    then
-                      Option.some
-                      @@ ptyp_constr ~loc (Located.lident ~loc tdecl.ptype_name.txt)
-                      @@ List.map tdecl.ptype_params ~f:(fun (t, _) -> t)
-                    else Option.some @@ ptyp_var ~loc as_)
+                  let open Ppxlib.Ast_builder.Default in
+                  if String.equal as_ aname
+                  then
+                    Option.some
+                    @@ ptyp_constr ~loc (Located.lident ~loc tdecl.ptype_name.txt)
+                    @@ List.map tdecl.ptype_params ~f:(fun (t, _) -> t)
+                  else Option.some @@ ptyp_var ~loc as_)
                 |> helper
               | Ptyp_constr (cid, params) ->
                 (* there for type 'a list = ('a,'a list) alist
@@ -452,51 +451,49 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               | Ptyp_variant (rows, _, _) ->
                 let rr =
                   List.map rows ~f:(fun rf ->
-                      match rf.prf_desc with
-                      | Rinherit typ ->
-                        with_constr_typ
-                          typ
-                          ~ok:(fun cid params ->
-                            Ctf.inherit_ ~loc
-                            @@ Cty.constr
-                                 ~loc
-                                 (map_longident
-                                    cid.txt
-                                    ~f:
-                                      (Naming.trait_class_name_for_typ
-                                         ~trait:self#plugin_name))
-                                 (self#final_typ_params_for_alias ~loc tdecl params))
-                          ~fail:(fun () -> assert false)
-                      | Rtag (lab, _, typs) ->
-                        Ctf.method_ ~loc (sprintf "c_%s" lab.txt) ~virt:false
-                        @@
-                        (match typs with
-                        | [] ->
-                          Typ.(
-                            chain_arrow
-                              ~loc
-                              [ self#inh_of_main ~loc tdecl
+                    match rf.prf_desc with
+                    | Rinherit typ ->
+                      with_constr_typ
+                        typ
+                        ~ok:(fun cid params ->
+                          Ctf.inherit_ ~loc
+                          @@ Cty.constr
+                               ~loc
+                               (map_longident
+                                  cid.txt
+                                  ~f:
+                                    (Naming.trait_class_name_for_typ
+                                       ~trait:self#plugin_name))
+                               (self#final_typ_params_for_alias ~loc tdecl params))
+                        ~fail:(fun () -> assert false)
+                    | Rtag (lab, _, typs) ->
+                      Ctf.method_ ~loc (sprintf "c_%s" lab.txt) ~virt:false
+                      @@
+                      (match typs with
+                       | [] ->
+                         Typ.(
+                           chain_arrow
+                             ~loc
+                             [ self#inh_of_main ~loc tdecl
+                             ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
+                             ; self#syn_of_main ~loc ~in_class:true tdecl
+                             ])
+                       | [ t ] ->
+                         Typ.(
+                           chain_arrow ~loc
+                           @@ [ self#inh_of_main ~loc tdecl
                               ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
-                              ; self#syn_of_main ~loc ~in_class:true tdecl
-                              ])
-                        | [ t ] ->
-                          Typ.(
-                            chain_arrow ~loc
-                            @@ [ self#inh_of_main ~loc tdecl
-                               ; var ~loc
-                                 @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
-                               ]
-                            @ (List.map ~f:Typ.from_caml @@ unfold_tuple t)
-                            @ [ self#syn_of_main ~loc ~in_class:true tdecl ])
-                        | typs ->
-                          Typ.(
-                            chain_arrow ~loc
-                            @@ [ self#inh_of_main ~loc tdecl
-                               ; var ~loc
-                                 @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
-                               ]
-                            @ List.map ~f:Typ.from_caml typs
-                            @ [ self#syn_of_main ~loc ~in_class:true tdecl ])))
+                              ]
+                           @ (List.map ~f:Typ.from_caml @@ unfold_tuple t)
+                           @ [ self#syn_of_main ~loc ~in_class:true tdecl ])
+                       | typs ->
+                         Typ.(
+                           chain_arrow ~loc
+                           @@ [ self#inh_of_main ~loc tdecl
+                              ; var ~loc @@ Printf.sprintf "extra_%s" tdecl.ptype_name.txt
+                              ]
+                           @ List.map ~f:Typ.from_caml typs
+                           @ [ self#syn_of_main ~loc ~in_class:true tdecl ])))
                 in
                 k @@ rr
               | _ -> assert false
@@ -537,10 +534,10 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method make_inherit_args_for_alias ~loc ~is_self_rec tdecl do_typ cid cparams =
         let args =
           List.mapi cparams ~f:(fun i t ->
-              (* Stdio.printf "checking for arg with index (%d+1)\n%!" i; *)
-              match List.Assoc.find reinterpreted_args ~equal:Int.equal (i + 1) with
-              | Some e -> Exp.from_caml e
-              | None -> do_typ ~loc t)
+            (* Stdio.printf "checking for arg with index (%d+1)\n%!" i; *)
+            match List.Assoc.find reinterpreted_args ~equal:Int.equal (i + 1) with
+            | Some e -> Exp.from_caml e
+            | None -> do_typ ~loc t)
         in
         (* for typ aliases we can cheat because first argument of constructor of type
                on rhs is self transformer function *)
@@ -548,28 +545,28 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       (* When we got declaration of type alias via type application *)
       method got_constr
-          ~loc
-          ~is_self_rec
-          ?(fix_self_app = id)
-          tdecl
-          mutual_decls
-          do_typ
-          cid
-          cparams
-          k =
+        ~loc
+        ~is_self_rec
+        ?(fix_self_app = id)
+        tdecl
+        mutual_decls
+        do_typ
+        cid
+        cparams
+        k =
         (* It seems that we can't filter mutal decls because we need to preserve an order *)
         let mutal_names = List.map mutual_decls ~f:(fun t -> t.ptype_name.txt) in
         let ans args : Cf.t list =
           [ (let typ_params = self#final_typ_params_for_alias ~loc tdecl cparams in
              let args =
                (match cid.txt with
-               | Lident s when List.mem ~set:mutal_names s ->
-                 (* Only Lident because we ignore types with same name but from another module *)
-                 [ Exp.sprintf ~loc "%s" Naming.mutuals_pack ]
-               | _ ->
-                 []
-                 (* [Exp.of_longident ~loc @@
-                  *  map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt] *))
+                | Lident s when List.mem ~set:mutal_names s ->
+                  (* Only Lident because we ignore types with same name but from another module *)
+                  [ Exp.sprintf ~loc "%s" Naming.mutuals_pack ]
+                | _ ->
+                  []
+                  (* [Exp.of_longident ~loc @@
+                   *  map_longident ~f:(fun for_ -> self#fix_func_name ~for_ ()) cid.txt] *))
                @ args
              in
              match cid.txt with
@@ -589,7 +586,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                     (Cl.constr
                        ~loc
                        (map_longident cid.txt ~f:(fun s ->
-                            Naming.trait_class_name_for_typ ~trait:self#plugin_name s))
+                          Naming.trait_class_name_for_typ ~trait:self#plugin_name s))
                        typ_params)
                     args)
           ]
@@ -606,84 +603,84 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       method got_polyvar ~loc ~is_self_rec ~mutual_decls tdecl do_typ rows k =
         List.concat_map rows ~f:(function
-            | Rinherit typ ->
-              with_constr_typ
-                typ
-                ~fail:(fun () -> failwith "type is not a constructor")
-                ~ok:(fun cid params ->
-                  (* Hypothesis: it's almost a type alias *)
-                  self#got_constr
-                    ~loc
-                    ~is_self_rec
-                    tdecl
-                    mutual_decls
-                    do_typ
-                    cid
-                    params
-                    k
-                    ~fix_self_app:(fun eself ->
-                      self#abstract_trf ~loc (fun einh esubj ->
-                          match typ.ptyp_desc with
-                          | Ptyp_constr ({ txt }, _) ->
-                            (* TODO: refactoring. we inented special function for this *)
-                            Exp.match_
-                              ~loc
-                              esubj
-                              [ case
-                                  ~lhs:(Pat.alias ~loc (Pat.type_ ~loc txt) "subj")
-                                  ~rhs:
-                                    (self#app_transformation_expr
-                                       ~loc
-                                       eself
-                                       einh
-                                       (Exp.ident ~loc "subj"))
-                              ]
-                          | _ -> failwith "should not happen")))
-            (* TODO: Do something with copy paste. *)
-            (* tag by default have 1 argument which is a tuple instead of many arguments *)
-            | Rtag (constr_name, _, []) ->
-              k
-                [ (let inhp, inhe = self#make_inh ~loc in
-                   Cf.method_concrete
-                     ~loc
-                     (Naming.meth_name_for_constructor [] constr_name.txt)
-                   @@ Exp.fun_ ~loc inhp
-                   @@ Exp.fun_ ~loc (Pat.any ~loc)
-                   @@ self#on_tuple_constr
+          | Rinherit typ ->
+            with_constr_typ
+              typ
+              ~fail:(fun () -> failwith "type is not a constructor")
+              ~ok:(fun cid params ->
+                (* Hypothesis: it's almost a type alias *)
+                self#got_constr
+                  ~loc
+                  ~is_self_rec
+                  tdecl
+                  mutual_decls
+                  do_typ
+                  cid
+                  params
+                  k
+                  ~fix_self_app:(fun eself ->
+                  self#abstract_trf ~loc (fun einh esubj ->
+                    match typ.ptyp_desc with
+                    | Ptyp_constr ({ txt }, _) ->
+                      (* TODO: refactoring. we inented special function for this *)
+                      Exp.match_
                         ~loc
-                        ~is_self_rec
-                        ~mutual_decls
-                        ~inhe
-                        tdecl
-                        (Option.some @@ `Poly constr_name.txt)
-                        [])
-                ]
-            | Rtag (constr_name, _, [ arg ]) ->
-              k
-                [ (let inhp, inhe = self#make_inh ~loc in
-                   let bindings =
-                     List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts)
-                   in
-                   Cf.method_concrete
-                     ~loc
-                     (Naming.meth_name_for_constructor [] constr_name.txt)
-                   @@ Exp.fun_ ~loc inhp
-                   @@ Exp.fun_ ~loc (Pat.any ~loc)
-                   @@ Exp.fun_list
-                        ~loc
-                        (List.map bindings ~f:(fun (s, _) -> Pat.var ~loc s))
-                   @@ self#on_tuple_constr
-                        ~loc
-                        ~is_self_rec
-                        ~mutual_decls
-                        ~inhe
-                        tdecl
-                        (Option.some @@ `Poly constr_name.txt)
-                        bindings)
-                ]
-            | Rtag (constr_name, _, args) ->
-              (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
-              failwith "conjunction types are not supported but")
+                        esubj
+                        [ case
+                            ~lhs:(Pat.alias ~loc (Pat.type_ ~loc txt) "subj")
+                            ~rhs:
+                              (self#app_transformation_expr
+                                 ~loc
+                                 eself
+                                 einh
+                                 (Exp.ident ~loc "subj"))
+                        ]
+                    | _ -> failwith "should not happen")))
+          (* TODO: Do something with copy paste. *)
+          (* tag by default have 1 argument which is a tuple instead of many arguments *)
+          | Rtag (constr_name, _, []) ->
+            k
+              [ (let inhp, inhe = self#make_inh ~loc in
+                 Cf.method_concrete
+                   ~loc
+                   (Naming.meth_name_for_constructor [] constr_name.txt)
+                 @@ Exp.fun_ ~loc inhp
+                 @@ Exp.fun_ ~loc (Pat.any ~loc)
+                 @@ self#on_tuple_constr
+                      ~loc
+                      ~is_self_rec
+                      ~mutual_decls
+                      ~inhe
+                      tdecl
+                      (Option.some @@ `Poly constr_name.txt)
+                      [])
+              ]
+          | Rtag (constr_name, _, [ arg ]) ->
+            k
+              [ (let inhp, inhe = self#make_inh ~loc in
+                 let bindings =
+                   List.map (unfold_tuple arg) ~f:(fun ts -> gen_symbol (), ts)
+                 in
+                 Cf.method_concrete
+                   ~loc
+                   (Naming.meth_name_for_constructor [] constr_name.txt)
+                 @@ Exp.fun_ ~loc inhp
+                 @@ Exp.fun_ ~loc (Pat.any ~loc)
+                 @@ Exp.fun_list
+                      ~loc
+                      (List.map bindings ~f:(fun (s, _) -> Pat.var ~loc s))
+                 @@ self#on_tuple_constr
+                      ~loc
+                      ~is_self_rec
+                      ~mutual_decls
+                      ~inhe
+                      tdecl
+                      (Option.some @@ `Poly constr_name.txt)
+                      bindings)
+              ]
+          | Rtag (constr_name, _, args) ->
+            (* Hypothesis: it's almost the same as constructor with a tuple of types  *)
+            failwith "conjunction types are not supported but")
 
       method got_typedecl ~loc ~is_self_rec ~mutual_decls tdecl (k : Cf.t list -> _) =
         k
@@ -704,14 +701,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                    let open Ppxlib.Ast_builder.Default in
                    let loc = tdecl.ptype_loc in
                    map_core_type t ~onvar:(fun as_ ->
-                       if String.equal as_ aname
-                       then
-                         Option.some
-                         @@ ptyp_constr
-                              ~loc:t.ptyp_loc
-                              (Located.lident ~loc tdecl.ptype_name.txt)
-                              (List.map tdecl.ptype_params ~f:fst)
-                       else Option.some @@ ptyp_var ~loc as_)
+                     if String.equal as_ aname
+                     then
+                       Option.some
+                       @@ ptyp_constr
+                            ~loc:t.ptyp_loc
+                            (Located.lident ~loc tdecl.ptype_name.txt)
+                            (List.map tdecl.ptype_params ~f:fst)
+                     else Option.some @@ ptyp_var ~loc as_)
                    |> helper
                  | Ptyp_constr (cid, params) ->
                    self#got_constr
@@ -821,14 +818,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
              ~onrecord:(self#on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl)
              ~onopen:(fun () -> [])
 
-      method
-          virtual on_record_declaration
-          : loc:loc
-            -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
-            -> mutual_decls:type_declaration list
-            -> type_declaration
-            -> label_declaration list
-            -> Cf.t list
+      method virtual on_record_declaration
+        : loc:loc
+          -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+          -> mutual_decls:type_declaration list
+          -> type_declaration
+          -> label_declaration list
+          -> Cf.t list
 
       method make_typ_of_mutal_trf ~loc mutal_tdecl (k : Typ.t -> _) : Typ.t =
         let subj_t = Typ.use_tdecl mutal_tdecl in
@@ -860,7 +856,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           ~init:id
           ~f:(fun acc name ->
             self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name (fun f arg ->
-                acc @@ f arg))
+              acc @@ f arg))
           type_
 
       method make_trans_function_name tdecl =
@@ -872,7 +868,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       (* generate obly for this type *)
       method make_trans_functions_sig
-          : loc:loc -> is_rec:bool -> type_declaration -> Sig.t list =
+        : loc:loc -> is_rec:bool -> type_declaration -> Sig.t list =
         fun ~loc ~is_rec tdecl ->
           (* we skip initial functions in the interface *)
           List.concat
@@ -890,9 +886,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           (if is_mutal then "_stub" else "")
 
       (* only for non-recursive types *)
-      method
-          virtual make_trans_function_body
-          : loc:loc -> ?rec_typenames:string list -> string -> type_declaration -> Exp.t
+      method virtual make_trans_function_body
+        : loc:loc -> ?rec_typenames:string list -> string -> type_declaration -> Exp.t
 
       method is_combinatorial tdecl =
         (* We are allowed to use combinatorial interface for types which are type abbreviations *)
@@ -933,8 +928,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             helper r
           | Ptyp_variant (rows, _, _) ->
             List.iter rows ~f:(function
-                | { prf_desc = Rinherit t } -> helper t
-                | { prf_desc = Rtag (_, _, ts) } -> List.iter ~f:helper ts)
+              | { prf_desc = Rinherit t } -> helper t
+              | { prf_desc = Rtag (_, _, ts) } -> List.iter ~f:helper ts)
         in
         try
           let () =
@@ -942,9 +937,9 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             | Ptype_record labs -> List.iter labs ~f:(fun ld -> helper ld.pld_type)
             | Ptype_variant cds ->
               List.iter cds ~f:(fun cd ->
-                  match cd.pcd_args with
-                  | Pcstr_tuple ts -> List.iter ~f:helper ts
-                  | Pcstr_record labs -> List.iter labs ~f:(fun ld -> helper ld.pld_type))
+                match cd.pcd_args with
+                | Pcstr_tuple ts -> List.iter ~f:helper ts
+                | Pcstr_record labs -> List.iter labs ~f:(fun ld -> helper ld.pld_type))
             | Ptype_open -> ()
             | Ptype_abstract -> Option.iter tdecl.ptype_manifest ~f:helper
           in
@@ -969,18 +964,18 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             if is_mutual_pack
             then
               List.map self#tdecls ~f:(fun tdecl ->
-                  value_binding
-                    ~loc
-                    ~pat:
-                      (Pat.sprintf ~loc "%s"
-                      @@ Naming.init_trf_function self#trait_name tdecl.ptype_name.txt)
-                    ~expr:
-                      (let class_name =
-                         self#make_class_name
-                           ~is_mutal:(not (List.is_empty mutual_names))
-                           tdecl
-                       in
-                       Exp.new_ ~loc (Lident class_name)))
+                value_binding
+                  ~loc
+                  ~pat:
+                    (Pat.sprintf ~loc "%s"
+                    @@ Naming.init_trf_function self#trait_name tdecl.ptype_name.txt)
+                  ~expr:
+                    (let class_name =
+                       self#make_class_name
+                         ~is_mutal:(not (List.is_empty mutual_names))
+                         tdecl
+                     in
+                     Exp.new_ ~loc (Lident class_name)))
             else []
           in
           let need_rec, knots =
@@ -1023,29 +1018,26 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             | tdecls ->
               ( true
               , List.mapi tdecls ~f:(fun n { ptype_name = { txt } } ->
-                    value_binding
-                      ~loc
-                      ~pat:
-                        (Pat.sprintf ~loc "%s" @@ Naming.trf_function self#trait_name txt)
-                      ~expr:
-                        (let eta = gen_symbol ~prefix:"eta" () in
-                         Exp.fun_ ~loc (Pat.var ~loc eta)
-                         @@ Exp.let_
-                              ~loc
-                              ~rec_:false
-                              [ ( Pat.tuple ~loc
-                                  @@ List.mapi tdecls ~f:(fun i _ ->
-                                         if i = n then Pat.var ~loc "f" else Pat.any ~loc)
-                                , Exp.app_list
-                                    ~loc
-                                    (Exp.ident ~loc @@ Naming.make_fix_name tdecls)
-                                    (List.map tdecls ~f:(fun { ptype_name = { txt } } ->
-                                         Exp.sprintf ~loc "%s"
-                                         @@ Naming.init_trf_function self#trait_name txt))
-                                )
-                              ]
-                              Exp.(app ~loc (sprintf ~loc "f") (sprintf ~loc "%s" eta))))
-              )
+                  value_binding
+                    ~loc
+                    ~pat:(Pat.sprintf ~loc "%s" @@ Naming.trf_function self#trait_name txt)
+                    ~expr:
+                      (let eta = gen_symbol ~prefix:"eta" () in
+                       Exp.fun_ ~loc (Pat.var ~loc eta)
+                       @@ Exp.let_
+                            ~loc
+                            ~rec_:false
+                            [ ( Pat.tuple ~loc
+                                @@ List.mapi tdecls ~f:(fun i _ ->
+                                     if i = n then Pat.var ~loc "f" else Pat.any ~loc)
+                              , Exp.app_list
+                                  ~loc
+                                  (Exp.ident ~loc @@ Naming.make_fix_name tdecls)
+                                  (List.map tdecls ~f:(fun { ptype_name = { txt } } ->
+                                     Exp.sprintf ~loc "%s"
+                                     @@ Naming.init_trf_function self#trait_name txt)) )
+                            ]
+                            Exp.(app ~loc (sprintf ~loc "f") (sprintf ~loc "%s" eta)))) )
           in
           List.concat
             [ List.map ~f:(Str.of_vb ~loc ~rec_flag:Nonrecursive) intials
@@ -1082,13 +1074,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method do_mutuals_sigs ~loc ~is_rec =
         List.concat
           [ List.concat_map self#tdecls ~f:(fun tdecl ->
-                List.concat
-                  [ self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
-                  ; self#make_class_sig ~loc ~is_rec tdecl
-                  ])
+              List.concat
+                [ self#make_class_sig ~loc ~is_rec ~a_stub:true tdecl
+                ; self#make_class_sig ~loc ~is_rec tdecl
+                ])
           ; List.concat_map self#tdecls ~f:(fun tdecl ->
-                (* Need to fix drawing a signature by specializing for show|gmap case *)
-                self#make_trans_functions_sig ~loc ~is_rec tdecl)
+              (* Need to fix drawing a signature by specializing for show|gmap case *)
+              self#make_trans_functions_sig ~loc ~is_rec tdecl)
           ]
 
       method do_mutuals ~loc ~is_rec tdecls : Str.t list =
@@ -1103,8 +1095,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method simple_trf_funcs ~loc tdecl : Typ.t -> Typ.t =
         let names = map_type_param_names tdecl.ptype_params ~f:id in
         List.fold_left names ~init:id ~f:(fun acc name ->
-            self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name (fun f arg ->
-                acc @@ f arg))
+          self#make_typ_of_class_argument ~loc tdecl (Typ.arrow ~loc) name (fun f arg ->
+            acc @@ f arg))
 
       method plugin_class_params_tdecl tdecl =
         let params_typs =
@@ -1118,133 +1110,131 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       method make_shortend_class_sig ~loc =
         List.map self#tdecls ~f:(fun tdecl ->
-            let typname = tdecl.ptype_name.txt in
-            let class_name =
-              Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
-            in
-            let params = self#plugin_class_params_tdecl tdecl in
-            let stub_name = "asdf" in
-            Sig.class_
-              ~loc
-              ~name:class_name
-              ~params
-              [ Ctf.inherit_ ~loc
-                @@ Cty.arrow
-                     ~loc
-                     (Typ.unit ~loc)
-                     (Cty.constr ~loc (Lident stub_name)
-                     @@ List.map ~f:(Typ.of_type_arg ~loc) params)
-              ])
+          let typname = tdecl.ptype_name.txt in
+          let class_name =
+            Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
+          in
+          let params = self#plugin_class_params_tdecl tdecl in
+          let stub_name = "asdf" in
+          Sig.class_
+            ~loc
+            ~name:class_name
+            ~params
+            [ Ctf.inherit_ ~loc
+              @@ Cty.arrow
+                   ~loc
+                   (Typ.unit ~loc)
+                   (Cty.constr ~loc (Lident stub_name)
+                   @@ List.map ~f:(Typ.of_type_arg ~loc) params)
+            ])
 
       (* shortened class only used for mutally recursive declarations *)
       method make_shortend_class ~loc tdecls =
         List.map tdecls ~f:(fun tdecl ->
-            let typname = tdecl.ptype_name.txt in
-            let class_name =
-              Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
-            in
-            let stub_name = Naming.stub_class_name ~plugin:self#plugin_name tdecl in
-            (* maybe it should be called proto *)
-            let mut_funcs =
-              Exp.tuple ~loc
-              @@ List.map tdecls ~f:(fun { ptype_name = { txt } } ->
-                     Exp.ident ~loc @@ Naming.trf_function self#plugin_name txt)
-            in
-            let params = self#plugin_class_params_tdecl tdecl in
-            Str.class_single
-              ~loc
-              ~name:class_name
-              ~wrap:(fun cl ->
-                let args, _ =
-                  self#prepare_fa_args
-                    ~loc
-                    (fun ~loc ~flg:_ ~pat ~expr ->
-                      Cl.let_ ~loc [ value_binding ~loc ~pat ~expr ])
-                    tdecl
-                in
-                Cl.fun_
+          let typname = tdecl.ptype_name.txt in
+          let class_name =
+            Naming.trait_class_name_for_typ ~trait:self#plugin_name typname
+          in
+          let stub_name = Naming.stub_class_name ~plugin:self#plugin_name tdecl in
+          (* maybe it should be called proto *)
+          let mut_funcs =
+            Exp.tuple ~loc
+            @@ List.map tdecls ~f:(fun { ptype_name = { txt } } ->
+                 Exp.ident ~loc @@ Naming.trf_function self#plugin_name txt)
+          in
+          let params = self#plugin_class_params_tdecl tdecl in
+          Str.class_single
+            ~loc
+            ~name:class_name
+            ~wrap:(fun cl ->
+              let args, _ =
+                self#prepare_fa_args
                   ~loc
-                  (* (Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt) @@ *)
-                  (Pat.any ~loc)
-                @@ Cl.fun_list ~loc args cl)
-              ~params
-              [ Cf.inherit_ ~loc
-                @@ Cl.apply
-                     ~loc
-                     (Cl.constr ~loc (Lident stub_name)
-                     @@ List.map ~f:(Typ.of_type_arg ~loc) params)
-                     (mut_funcs :: self#apply_fas_in_new_object ~loc tdecl)
-              ])
+                  (fun ~loc ~flg:_ ~pat ~expr ->
+                    Cl.let_ ~loc [ value_binding ~loc ~pat ~expr ])
+                  tdecl
+              in
+              Cl.fun_
+                ~loc
+                (* (Pat.var ~loc @@ self#self_arg_name tdecl.ptype_name.txt) @@ *)
+                (Pat.any ~loc)
+              @@ Cl.fun_list ~loc args cl)
+            ~params
+            [ Cf.inherit_ ~loc
+              @@ Cl.apply
+                   ~loc
+                   (Cl.constr ~loc (Lident stub_name)
+                   @@ List.map ~f:(Typ.of_type_arg ~loc) params)
+                   (mut_funcs :: self#apply_fas_in_new_object ~loc tdecl)
+            ])
 
-      method
-          virtual on_record_constr
-          : loc:loc
-            -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
-            -> mutual_decls:type_declaration list
-            -> inhe:Exp.t
-            -> type_declaration
-            -> [ `Normal of string | `Poly of string ]
-            -> (* pattern variable, label name, typ of label *)
-               (* TODO: Replace next to arguments by single of type (string * label_declaration) list *)
-               (string * string * core_type) list
-            -> label_declaration list
-            -> Exp.t
+      method virtual on_record_constr
+        : loc:loc
+          -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+          -> mutual_decls:type_declaration list
+          -> inhe:Exp.t
+          -> type_declaration
+          -> [ `Normal of string | `Poly of string ]
+          -> (* pattern variable, label name, typ of label *)
+             (* TODO: Replace next to arguments by single of type (string * label_declaration) list *)
+             (string * string * core_type) list
+          -> label_declaration list
+          -> Exp.t
 
-      method
-          virtual on_tuple_constr
-          : loc:loc
-            -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
-            -> mutual_decls:type_declaration list
-            -> inhe:Exp.t
-            -> type_declaration
-            -> [ `Normal of string | `Poly of string ] option
-            -> (string * core_type) list
-            -> Exp.t
+      method virtual on_tuple_constr
+        : loc:loc
+          -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+          -> mutual_decls:type_declaration list
+          -> inhe:Exp.t
+          -> type_declaration
+          -> [ `Normal of string | `Poly of string ] option
+          -> (string * core_type) list
+          -> Exp.t
 
       method on_variant ~loc tdecl ~mutual_decls ~is_self_rec cds k =
         k
         @@ List.map cds ~f:(fun cd ->
-               let good_constr_name =
-                 Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt
+             let good_constr_name =
+               Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt
+             in
+             match cd.pcd_args with
+             | Pcstr_tuple ts ->
+               let loc = loc_from_caml cd.pcd_loc in
+               let inhp, inhe = self#make_inh ~loc in
+               let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
+               let bind_pats = List.map bindings ~f:(fun (s, _) -> Pat.var ~loc s) in
+               Cf.method_concrete ~loc good_constr_name
+               @@ Exp.fun_ ~loc inhp
+               @@ Exp.fun_ ~loc (Pat.any ~loc)
+               @@ Exp.fun_list ~loc bind_pats
+               @@ self#on_tuple_constr
+                    ~loc
+                    ~mutual_decls
+                    ~is_self_rec
+                    ~inhe
+                    tdecl
+                    (Option.some @@ `Normal cd.pcd_name.txt)
+                    bindings
+             | Pcstr_record ls ->
+               let loc = loc_from_caml cd.pcd_loc in
+               let inhp, inhe = self#make_inh ~loc in
+               let bindings =
+                 List.map ls ~f:(fun l -> gen_symbol (), l.pld_name.txt, l.pld_type)
                in
-               match cd.pcd_args with
-               | Pcstr_tuple ts ->
-                 let loc = loc_from_caml cd.pcd_loc in
-                 let inhp, inhe = self#make_inh ~loc in
-                 let bindings = List.map ts ~f:(fun ts -> gen_symbol (), ts) in
-                 let bind_pats = List.map bindings ~f:(fun (s, _) -> Pat.var ~loc s) in
-                 Cf.method_concrete ~loc good_constr_name
-                 @@ Exp.fun_ ~loc inhp
-                 @@ Exp.fun_ ~loc (Pat.any ~loc)
-                 @@ Exp.fun_list ~loc bind_pats
-                 @@ self#on_tuple_constr
-                      ~loc
-                      ~mutual_decls
-                      ~is_self_rec
-                      ~inhe
-                      tdecl
-                      (Option.some @@ `Normal cd.pcd_name.txt)
-                      bindings
-               | Pcstr_record ls ->
-                 let loc = loc_from_caml cd.pcd_loc in
-                 let inhp, inhe = self#make_inh ~loc in
-                 let bindings =
-                   List.map ls ~f:(fun l -> gen_symbol (), l.pld_name.txt, l.pld_type)
-                 in
-                 let bind_pats = List.map bindings ~f:(fun (s, _, _) -> Pat.var ~loc s) in
-                 Cf.method_concrete ~loc good_constr_name
-                 @@ Exp.fun_ ~loc inhp
-                 @@ Exp.fun_ ~loc (Pat.any ~loc)
-                 @@ Exp.fun_list ~loc bind_pats
-                 @@ self#on_record_constr
-                      ~loc
-                      ~mutual_decls
-                      ~is_self_rec
-                      ~inhe
-                      tdecl
-                      (`Normal cd.pcd_name.txt)
-                      bindings
-                      ls)
+               let bind_pats = List.map bindings ~f:(fun (s, _, _) -> Pat.var ~loc s) in
+               Cf.method_concrete ~loc good_constr_name
+               @@ Exp.fun_ ~loc inhp
+               @@ Exp.fun_ ~loc (Pat.any ~loc)
+               @@ Exp.fun_list ~loc bind_pats
+               @@ self#on_record_constr
+                    ~loc
+                    ~mutual_decls
+                    ~is_self_rec
+                    ~inhe
+                    tdecl
+                    (`Normal cd.pcd_name.txt)
+                    bindings
+                    ls)
 
       (* should be overriden in show_typed *)
       method generate_for_variable ~loc varname = Exp.sprintf ~loc "f%s" varname
@@ -1255,19 +1245,19 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let fs = map_type_param_names tdecl.ptype_params ~f:(sprintf "f%s") in
         let ans =
           List.fold_left fs ~init:center ~f:(fun acc name ->
-              Exp.app
-                ~loc
-                acc
-                (Exp.app
-                   ~loc
-                   (Exp.of_longident ~loc (Ldot (Lident "GT", "lift")))
-                   (Exp.ident ~loc name)))
+            Exp.app
+              ~loc
+              acc
+              (Exp.app
+                 ~loc
+                 (Exp.of_longident ~loc (Ldot (Lident "GT", "lift")))
+                 (Exp.ident ~loc name)))
         in
         (* extra unit instead of inherited attribute *)
         let ans = Exp.app_list ~loc ans [ Exp.unit ~loc; Exp.ident ~loc "subj" ] in
         let ans = Exp.fun_ ~loc (Pat.var ~loc "subj") ans in
         List.fold_right fs ~init:ans ~f:(fun name acc ->
-            Exp.fun_ ~loc (Pat.var ~loc name) acc)
+          Exp.fun_ ~loc (Pat.var ~loc name) acc)
 
       (* method do_typext_str ~loc ({ptyext_path } as extension) =
        *   let clas =
@@ -1338,27 +1328,25 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let mutual_names = List.map mutual_decls ~f:(fun t -> t.ptype_name.txt) in
         let on_constr params helper typname =
           self#abstract_trf ~loc (fun einh esubj ->
-              self#fancy_app
-                ~loc
-                (List.fold_left
-                   params
-                   ~init:
-                     Exp.(
-                       app
-                         ~loc
-                         (access ~loc "GT" self#plugin_name)
-                         (access ~loc "GT" typname))
-                   ~f:(fun left typ ->
-                     (* TODO: copy-paste with polyvariants *)
-                     let arg = helper ~loc typ in
-                     let arg =
-                       if self#need_inh_attr
-                       then arg
-                       else Exp.app ~loc arg (Exp.unit ~loc)
-                     in
-                     self#compose_apply_transformations ~loc ~left arg typ))
-                einh
-                esubj)
+            self#fancy_app
+              ~loc
+              (List.fold_left
+                 params
+                 ~init:
+                   Exp.(
+                     app
+                       ~loc
+                       (access ~loc "GT" self#plugin_name)
+                       (access ~loc "GT" typname))
+                 ~f:(fun left typ ->
+                   (* TODO: copy-paste with polyvariants *)
+                   let arg = helper ~loc typ in
+                   let arg =
+                     if self#need_inh_attr then arg else Exp.app ~loc arg (Exp.unit ~loc)
+                   in
+                   self#compose_apply_transformations ~loc ~left arg typ))
+              einh
+              esubj)
         in
         let rec helper ~loc t =
           match t.ptyp_desc with
@@ -1400,45 +1388,45 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           ) *)
           | Ptyp_constr ({ txt }, params) ->
             (match is_self_rec t with
-            | `Regular ->
-              let cname =
-                let helper = function
-                  | Lident s -> s
-                  | Ldot (_, s) -> s
-                  | _ -> assert false
-                in
-                helper txt
-              in
-              Exp.ident ~loc (self#self_arg_name cname)
-            | `Nonregular -> failwith "non-regular types are not supported"
-            | `Nonrecursive ->
-              (* it is not a recursion but it can be a mutual recursion *)
-              (match txt with
-              | Lident s when List.mem ~set:mutual_names s ->
-                (* we should use local trf object *)
-                let args =
-                  List.map
-                    params
-                    ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl)
-                in
-                Exp.(app_list ~loc (ident ~loc @@ Naming.for_ self#trait_name s) args)
-              | _ ->
-                let init =
-                  Exp.(
-                    app ~loc (access ~loc "GT" self#plugin_name) (of_longident ~loc txt))
-                in
-                self#abstract_trf ~loc (fun einh esubj ->
+             | `Regular ->
+               let cname =
+                 let helper = function
+                   | Lident s -> s
+                   | Ldot (_, s) -> s
+                   | _ -> assert false
+                 in
+                 helper txt
+               in
+               Exp.ident ~loc (self#self_arg_name cname)
+             | `Nonregular -> failwith "non-regular types are not supported"
+             | `Nonrecursive ->
+               (* it is not a recursion but it can be a mutual recursion *)
+               (match txt with
+                | Lident s when List.mem ~set:mutual_names s ->
+                  (* we should use local trf object *)
+                  let args =
+                    List.map
+                      params
+                      ~f:(self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl)
+                  in
+                  Exp.(app_list ~loc (ident ~loc @@ Naming.for_ self#trait_name s) args)
+                | _ ->
+                  let init =
+                    Exp.(
+                      app ~loc (access ~loc "GT" self#plugin_name) (of_longident ~loc txt))
+                  in
+                  self#abstract_trf ~loc (fun einh esubj ->
                     self#fancy_app
                       ~loc
                       (List.fold_left params ~init ~f:(fun left typ ->
-                           (* TODO: copy-paste with constructors  *)
-                           let arg = helper ~loc typ in
-                           let arg =
-                             if self#need_inh_attr
-                             then arg
-                             else Exp.app ~loc arg (Exp.unit ~loc)
-                           in
-                           self#compose_apply_transformations ~loc ~left arg typ))
+                         (* TODO: copy-paste with constructors  *)
+                         let arg = helper ~loc typ in
+                         let arg =
+                           if self#need_inh_attr
+                           then arg
+                           else Exp.app ~loc arg (Exp.unit ~loc)
+                         in
+                         self#compose_apply_transformations ~loc ~left arg typ))
                       einh
                       esubj)))
           | Ptyp_variant (rows, _, maybe_labels) ->
@@ -1453,10 +1441,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                        (Exp.access ~loc "GT" self#plugin_name)
                        (of_longident ~loc cident))
                    (List.map typs ~f:(fun typ ->
-                        let arg = helper ~loc typ in
-                        if self#need_inh_attr
-                        then arg
-                        else Exp.app ~loc arg (Exp.unit ~loc))))
+                      let arg = helper ~loc typ in
+                      if self#need_inh_attr then arg else Exp.app ~loc arg (Exp.unit ~loc))))
                 einh
                 (Exp.ident ~loc varname)
             in
@@ -1479,14 +1465,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               (* List.map bindings ~f:(fun (s,_) -> Exp.ident ~loc s) *)
             in
             self#abstract_trf ~loc (fun einh esubj ->
-                prepare_patt_match_poly
-                  ~loc
-                  esubj
-                  (List.map rows ~f:(fun { prf_desc } -> prf_desc))
-                  maybe_labels
-                  ~onrow:(onrow ~inhe:einh)
-                  ~onlabel:(fun _ _ -> Exp.assert_false ~loc)
-                  ~oninherit:(oninherit ~loc einh esubj))
+              prepare_patt_match_poly
+                ~loc
+                esubj
+                (List.map rows ~f:(fun { prf_desc } -> prf_desc))
+                maybe_labels
+                ~onrow:(onrow ~inhe:einh)
+                ~onlabel:(fun _ _ -> Exp.assert_false ~loc)
+                ~oninherit:(oninherit ~loc einh esubj))
           | _ -> failwith "unsupported case in do_typ_gen"
         in
         match self#treat_type_specially t with
@@ -1505,19 +1491,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method virtual fancy_app : loc:loc -> Exp.t -> Exp.t -> Exp.t -> Exp.t
       method virtual app_gcata : loc:loc -> Exp.t -> Exp.t
 
-      method
-          virtual make_typ_of_self_trf
-          : loc:loc -> ?in_class:bool -> type_declaration -> Typ.t
+      method virtual make_typ_of_self_trf
+        : loc:loc -> ?in_class:bool -> type_declaration -> Typ.t
 
       (* method virtual inh_of_main : loc:loc -> Ppxlib.type_declaration -> Typ.t *)
 
-      method
-          virtual make_RHS_typ_of_transformation
-          : loc:AstHelpers.loc
-            -> ?subj_t:Typ.t
-            -> ?syn_t:Typ.t
-            -> type_declaration
-            -> Typ.t
+      method virtual make_RHS_typ_of_transformation
+        : loc:AstHelpers.loc -> ?subj_t:Typ.t -> ?syn_t:Typ.t -> type_declaration -> Typ.t
 
       method compose_apply_transformations ~loc ~left right typ : Exp.t =
         Exp.app ~loc left right
@@ -1537,9 +1517,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       inherit generator args _tdecls
       method virtual plugin_name : string
 
-      method
-          virtual syn_of_main
-          : loc:loc -> ?in_class:bool -> Ppxlib.type_declaration -> Typ.t
+      method virtual syn_of_main
+        : loc:loc -> ?in_class:bool -> Ppxlib.type_declaration -> Typ.t
 
       method virtual inh_of_main : loc:loc -> Ppxlib.type_declaration -> Typ.t
       method virtual syn_of_param : loc:loc -> string -> Typ.t
@@ -1570,14 +1549,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
        *     k @@ (fun arg -> chain (Typ.arrow ~loc subj_t syn_t) arg) *)
 
       method make_typ_of_class_argument
-          : 'a.
-            loc:loc
-            -> type_declaration
-            -> (Typ.t -> 'a -> 'a)
-            -> string
-            -> (('a -> 'a) -> 'a -> 'a)
-            -> 'a
-            -> 'a =
+        : 'a.
+          loc:loc
+          -> type_declaration
+          -> (Typ.t -> 'a -> 'a)
+          -> string
+          -> (('a -> 'a) -> 'a -> 'a)
+          -> 'a
+          -> 'a =
         fun ~loc tdecl chain name k ->
           let inh_t = self#inh_of_param ~loc tdecl name in
           let subj_t = Typ.var ~loc name in
@@ -1592,15 +1571,15 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       method app_gcata ~loc egcata = Exp.app ~loc egcata (Exp.unit ~loc)
 
       method on_record_constr
-          : loc:loc
-            -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
-            -> mutual_decls:type_declaration list
-            -> inhe:Exp.t
-            -> type_declaration
-            -> [ `Normal of string | `Poly of string ]
-            -> (string * string * core_type) list
-            -> label_declaration list
-            -> Exp.t =
+        : loc:loc
+          -> is_self_rec:(core_type -> [ `Nonrecursive | `Nonregular | `Regular ])
+          -> mutual_decls:type_declaration list
+          -> inhe:Exp.t
+          -> type_declaration
+          -> [ `Normal of string | `Poly of string ]
+          -> (string * string * core_type) list
+          -> label_declaration list
+          -> Exp.t =
         fun ~loc ~is_self_rec ~mutual_decls ~inhe _ _ _ ->
           failwiths "handling record constructors in plugin `%s`" self#plugin_name ()
 
@@ -1635,14 +1614,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
        * *)
 
       method! make_typ_of_class_argument
-          : 'a.
-            loc:loc
-            -> type_declaration
-            -> (Typ.t -> 'a -> 'a)
-            -> string
-            -> (('a -> 'a) -> 'a -> 'a)
-            -> 'a
-            -> 'a =
+        : 'a.
+          loc:loc
+          -> type_declaration
+          -> (Typ.t -> 'a -> 'a)
+          -> string
+          -> (('a -> 'a) -> 'a -> 'a)
+          -> 'a
+          -> 'a =
         fun ~loc tdecl chain name k ->
           let inh_t = self#inh_of_param ~loc tdecl name in
           let subj_t = Typ.var ~loc name in
@@ -1717,8 +1696,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           (Exp.app_list ~loc (Exp.new_ ~loc @@ Lident class_name)
           (* ((Exp.sprintf ~loc "%s" "call")) :: *)
           @@ List.map rec_typenames ~f:(fun name ->
-                 Exp.fun_ ~loc (Pat.unit ~loc)
-                 @@ Exp.sprintf ~loc "%s_%s" self#plugin_name name)
+               Exp.fun_ ~loc (Pat.unit ~loc)
+               @@ Exp.sprintf ~loc "%s_%s" self#plugin_name name)
           @ self#apply_fas_in_new_object ~loc tdecl)
 
       method fancy_app ~loc trf (inh : Exp.t) subj = Exp.app ~loc trf subj
@@ -1744,12 +1723,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let type_ = Typ.arrow ~loc (Typ.ident ~loc "unit") type_ in
         let names = map_type_param_names tdecl.ptype_params ~f:id in
         List.fold_right names ~init:type_ ~f:(fun name acc ->
-            let for_arg =
-              Typ.(
-                arrow ~loc (ident ~loc "unit")
-                @@ arrow ~loc (var ~loc name) (self#syn_of_param ~loc name))
-            in
-            Typ.arrow ~loc for_arg acc)
+          let for_arg =
+            Typ.(
+              arrow ~loc (ident ~loc "unit")
+              @@ arrow ~loc (var ~loc name) (self#syn_of_param ~loc name))
+          in
+          Typ.arrow ~loc for_arg acc)
 
       (* (\* val name: <fa> -> <fb> -> ... -> <fz> -> <_not_ this>
        *  *   fot a type ('a,'b,....'z) being generated

@@ -131,7 +131,7 @@ module Exp = struct
     then e
     else
       List.fold_right args ~init:e ~f:(fun (l, opt) ->
-          pexp_fun ~loc (Optional l) (Some opt) (Pat.var ~loc l))
+        pexp_fun ~loc (Optional l) (Some opt) (Pat.var ~loc l))
   ;;
 
   let fun_list ~loc args e =
@@ -249,7 +249,7 @@ module Typ = struct
     ptyp_object
       ~loc
       (List.map xs ~f:(fun (l, r) ->
-           { pof_desc = Otag (Located.mk ~loc l, r); pof_loc = loc; pof_attributes = [] }))
+         { pof_desc = Otag (Located.mk ~loc l, r); pof_loc = loc; pof_attributes = [] }))
       flg
   ;;
 
@@ -268,7 +268,7 @@ module Typ = struct
     | xs ->
       let revxs = List.rev xs in
       List.fold_left (List.tl_exn revxs) ~init:(List.hd_exn revxs) ~f:(fun acc t ->
-          arrow ~loc t acc)
+        arrow ~loc t acc)
   ;;
 
   let variant ~loc ?(is_open = false) fields =
@@ -319,21 +319,21 @@ let type_declaration ~loc ~name ~params ~manifest ~kind =
     ~manifest
     ~kind:
       (match kind with
-      | Ptype_abstract -> Parsetree.Ptype_abstract
-      | Ptype_record ls -> Parsetree.Ptype_record ls)
+       | Ptype_abstract -> Parsetree.Ptype_abstract
+       | Ptype_record ls -> Parsetree.Ptype_record ls)
 ;;
 
 module Str = struct
   type t = structure_item
 
   let single_class
-      ~loc
-      ?(virt = Asttypes.Virtual)
-      ?(pat = [%pat? _])
-      ?(wrap = fun x -> x)
-      ~name
-      ~params
-      body
+    ~loc
+    ?(virt = Asttypes.Virtual)
+    ?(pat = [%pat? _])
+    ?(wrap = fun x -> x)
+    ~name
+    ~params
+    body
     =
     pstr_class
       [ Ast_helper.Ci.mk ~virt ~params (Located.mk ~loc name)
@@ -402,8 +402,8 @@ module Str = struct
            ~name:(Located.mk ~loc name)
            ~params:
              (List.map params ~f:(function
-                 | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
-                 | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
+               | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
+               | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
            ~cstrs:[]
            ~kind:Ptype_abstract
            ~private_:Public
@@ -424,7 +424,7 @@ module Str = struct
   ;;
 
   let simple_gadt
-      : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t
+    : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t
     =
    fun ~loc ~name ~params_count xs ->
     pstr_type
@@ -440,11 +440,11 @@ module Str = struct
           ~kind:
             (Ptype_variant
                (List.map xs ~f:(fun (name, typ) ->
-                    constructor_declaration
-                      ~loc
-                      ~name:(Located.mk ~loc name)
-                      ~args:(Pcstr_tuple [])
-                      ~res:(Some typ))))
+                  constructor_declaration
+                    ~loc
+                    ~name:(Located.mk ~loc name)
+                    ~args:(Pcstr_tuple [])
+                    ~res:(Some typ))))
       ]
  ;;
 
@@ -525,8 +525,8 @@ module Sig = struct
            ~name:(Located.mk ~loc name)
            ~params:
              (List.map params ~f:(function
-                 | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
-                 | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
+               | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
+               | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
            ~cstrs:[]
            ~kind:Ptype_abstract
            ~private_:Public
@@ -547,7 +547,7 @@ module Sig = struct
   ;;
 
   let simple_gadt
-      : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t
+    : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t
     =
    fun ~loc ~name ~params_count xs ->
     psig_type
@@ -563,11 +563,11 @@ module Sig = struct
           ~kind:
             (Ptype_variant
                (List.map xs ~f:(fun (name, typ) ->
-                    constructor_declaration
-                      ~loc
-                      ~name:(Located.mk ~loc name)
-                      ~args:(Pcstr_tuple [])
-                      ~res:(Some typ))))
+                  constructor_declaration
+                    ~loc
+                    ~name:(Located.mk ~loc name)
+                    ~args:(Pcstr_tuple [])
+                    ~res:(Some typ))))
       ]
  ;;
 
@@ -655,7 +655,7 @@ module Cl = struct
     then e
     else
       List.fold_right args ~init:e ~f:(fun arg acc ->
-          Cl.fun_ ~loc Asttypes.Nolabel None arg acc)
+        Cl.fun_ ~loc Asttypes.Nolabel None arg acc)
   ;;
 
   let apply ~loc e args =
@@ -692,19 +692,19 @@ let closize_poly ~loc = openize_helper ~is_open:false ~loc
 
 let map_type_param_names ~f ps =
   List.map ps ~f:(fun (t, _) ->
-      match t.ptyp_desc with
-      | Ptyp_var name -> f name
-      | _ -> failwith "bad argument of map_type_param_names")
+    match t.ptyp_desc with
+    | Ptyp_var name -> f name
+    | _ -> failwith "bad argument of map_type_param_names")
 ;;
 
 let prepare_param_triples
-    ~loc
-    ~extra
-    ?(inh = fun ~loc s -> Typ.var ~loc @@ "i" ^ s)
-    ?(syn = fun ~loc s -> Typ.var ~loc @@ "s" ^ s)
-    ?(default_inh = [%type: 'inh])
-    ?(default_syn = [%type: 'syn])
-    names
+  ~loc
+  ~extra
+  ?(inh = fun ~loc s -> Typ.var ~loc @@ "i" ^ s)
+  ?(syn = fun ~loc s -> Typ.var ~loc @@ "s" ^ s)
+  ?(default_inh = [%type: 'inh])
+  ?(default_syn = [%type: 'syn])
+  names
   =
   let ps =
     List.concat_map names ~f:(fun n -> [ inh ~loc n; Typ.var ~loc n; syn ~loc n ])

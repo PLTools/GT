@@ -131,13 +131,13 @@ let compare_core_type a b =
 ;;
 
 let visit_typedecl
-    ~loc
-    ?(onrecord = fun _ -> not_implemented ~loc "record types")
-    ?(onmanifest = fun _ -> not_implemented ~loc "manifest")
-    ?(onvariant = fun _ -> not_implemented ~loc "algebraic types")
-    ?(onabstract = fun _ -> not_implemented ~loc "abstract types without manifest")
-    ?(onopen = fun () -> not_implemented ~loc "open types")
-    tdecl
+  ~loc
+  ?(onrecord = fun _ -> not_implemented ~loc "record types")
+  ?(onmanifest = fun _ -> not_implemented ~loc "manifest")
+  ?(onvariant = fun _ -> not_implemented ~loc "algebraic types")
+  ?(onabstract = fun _ -> not_implemented ~loc "abstract types without manifest")
+  ?(onopen = fun () -> not_implemented ~loc "open types")
+  tdecl
   =
   match tdecl.ptype_kind with
   | Ptype_record r -> onrecord r
@@ -145,8 +145,8 @@ let visit_typedecl
   | Ptype_variant cds -> onvariant cds
   | Ptype_abstract ->
     (match tdecl.ptype_manifest with
-    | None -> onabstract ()
-    | Some typ -> onmanifest typ)
+     | None -> onabstract ()
+     | Some typ -> onmanifest typ)
 ;;
 
 let affect_longident ~f = function
@@ -204,7 +204,7 @@ let vars_from_tdecl tdecl =
   in
   let of_labels ls =
     List.fold_left ~init:SS.empty ls ~f:(fun acc { pld_type } ->
-        SS.union acc (vars_from_core_type pld_type))
+      SS.union acc (vars_from_core_type pld_type))
   in
   let ans2 =
     match tdecl.ptype_kind with
@@ -214,7 +214,7 @@ let vars_from_tdecl tdecl =
       List.fold_left cds ~init:SS.empty ~f:(fun acc -> function
         | { pcd_args = Pcstr_tuple ts } ->
           List.fold_left ~init:SS.empty ts ~f:(fun acc x ->
-              SS.union acc (vars_from_core_type x))
+            SS.union acc (vars_from_core_type x))
         | { pcd_args = Pcstr_record ls } -> SS.union acc (of_labels ls))
   in
   SS.union ans2 ans
@@ -228,20 +228,20 @@ let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
     | Ptyp_var name -> Option.value (onvar name) ~default:t
     | Ptyp_constr (name, args) ->
       (match onconstr name.txt args with
-      | None -> { t with ptyp_desc = Ptyp_constr (name, List.map ~f:helper args) }
-      | Some t -> t)
+       | None -> { t with ptyp_desc = Ptyp_constr (name, List.map ~f:helper args) }
+       | Some t -> t)
     | Ptyp_tuple args -> { t with ptyp_desc = Ptyp_tuple (List.map ~f:helper args) }
     | Ptyp_arrow (lab, from, to_) ->
       { t with ptyp_desc = Ptyp_arrow (lab, helper from, helper to_) }
     | Ptyp_variant (rows, flg, opt) ->
       let rows =
         List.map rows ~f:(fun rf ->
-            match rf.prf_desc with
-            | Rinherit t -> { rf with prf_desc = Rinherit (helper t) }
-            | Rtag (name, flg, ps) ->
-              (* Format.printf "got tag `%s`\n%!" name.txt; *)
-              let params = List.map ps ~f:helper in
-              { rf with prf_desc = Rtag (name, flg, params) })
+          match rf.prf_desc with
+          | Rinherit t -> { rf with prf_desc = Rinherit (helper t) }
+          | Rtag (name, flg, ps) ->
+            (* Format.printf "got tag `%s`\n%!" name.txt; *)
+            let params = List.map ps ~f:helper in
+            { rf with prf_desc = Rtag (name, flg, params) })
       in
       { t with ptyp_desc = Ptyp_variant (rows, flg, opt) }
     | _ -> failwith "not implemented"
@@ -251,8 +251,8 @@ let map_core_type ?(onconstr = fun _ _ -> None) ~onvar t =
 
 let list_first_some ~f xs =
   List.fold_left xs ~init:None ~f:(function
-      | None -> f
-      | Some ans -> fun _ -> Some ans)
+    | None -> f
+    | Some ans -> fun _ -> Some ans)
 ;;
 
 let is_type_used_in ~tdecl lident =
@@ -264,8 +264,8 @@ let is_type_used_in ~tdecl lident =
     | Ptyp_any | Ptyp_var _ | Ptyp_class _ | Ptyp_package _ | Ptyp_extension _ -> ()
     | Ptyp_variant (rfs, _, _) ->
       List.iter rfs ~f:(function
-          | { prf_desc = Rtag (_, _, xs) } -> List.iter xs ~f:helper
-          | { prf_desc = Rinherit t } -> helper t)
+        | { prf_desc = Rtag (_, _, xs) } -> List.iter xs ~f:helper
+        | { prf_desc = Rinherit t } -> helper t)
     | Ptyp_poly (_, t) | Ptyp_alias (t, _) -> helper t
     | Ptyp_tuple args | Ptyp_constr (_, args) -> List.iter args ~f:helper
     | Ptyp_arrow (_, l, r) ->
@@ -282,8 +282,8 @@ let is_type_used_in ~tdecl lident =
       ~onmanifest:helper
       ~onvariant:
         (List.iter ~f:(function
-            | { pcd_args = Pcstr_tuple ls } -> List.iter ~f:helper ls
-            | { pcd_args = Pcstr_record ls } -> onrecord ls))
+          | { pcd_args = Pcstr_tuple ls } -> List.iter ~f:helper ls
+          | { pcd_args = Pcstr_record ls } -> onrecord ls))
       ~onrecord;
     false
   with
@@ -297,8 +297,8 @@ let maybe_specialiaze ~what where =
    * print_endline "=="; *)
   let myfold ~f ~init xs =
     List.fold_left ~init xs ~f:(function
-        | Some r -> fun _ -> Some r
-        | None -> f)
+      | Some r -> fun _ -> Some r
+      | None -> f)
   in
   let rec loop t =
     (* Format.printf "loop: %a\n%!" Pprintast.core_type t; *)
@@ -307,9 +307,9 @@ let maybe_specialiaze ~what where =
       (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
       Some
         (List.map2 what.ptype_params args ~f:(fun (param, _) typ ->
-             match param.ptyp_desc with
-             | Ptyp_var s -> s, typ
-             | _ -> failwith "should not happen"))
+           match param.ptyp_desc with
+           | Ptyp_var s -> s, typ
+           | _ -> failwith "should not happen"))
     | Ptyp_tuple args | Ptyp_constr (_, args) -> myfold args ~init:None ~f:loop
     | Ptyp_var _ -> None
     (* | Ptyp_record (labs, _) ->
@@ -334,9 +334,9 @@ let specialize_for_tdecl ~what ~where =
     ~onmanifest:(fun t -> maybe_specialiaze ~what [ t ])
     ~onvariant:(fun cstrs ->
       list_first_some cstrs ~f:(fun c ->
-          match c.pcd_args with
-          | Pcstr_tuple ts -> maybe_specialiaze ~what ts
-          | _ -> assert false))
+        match c.pcd_args with
+        | Pcstr_tuple ts -> maybe_specialiaze ~what ts
+        | _ -> assert false))
     ~onabstract:(fun _ -> None)
   |> function
   | None -> []
@@ -442,60 +442,60 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
   let k cs = pexp_match ~loc what cs in
   let rs =
     List.map rows ~f:(function
-        | Rtag (lab, _, args) ->
-          let args =
-            match args with
-            | [ t ] -> unfold_tuple t
-            | [] -> []
-            | _ -> failwith "we don't support conjunction types"
-          in
-          let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
-          let lhs =
-            ppat_variant ~loc lab.txt
-            @@
-            match args with
-            | [] -> None
-            | _ ->
-              Some
-                (ppat_tuple ~loc
-                @@ List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s)) names)
-          in
-          case ~guard:None ~lhs ~rhs:(onrow lab @@ List.combine names args)
-        | Rinherit typ ->
-          (match typ.ptyp_desc with
-          | Ptyp_constr ({ txt; loc }, ts) ->
-            let newname = "subj" in
-            let lhs =
-              ppat_alias
-                ~loc
-                (ppat_type ~loc (Located.mk ~loc txt))
-                (Located.mk ~loc newname)
-            in
-            case ~guard:None ~lhs ~rhs:(oninherit ts txt newname)
-          | _ -> failwith "this inherit field isn't supported"))
+      | Rtag (lab, _, args) ->
+        let args =
+          match args with
+          | [ t ] -> unfold_tuple t
+          | [] -> []
+          | _ -> failwith "we don't support conjunction types"
+        in
+        let names = List.map args ~f:(fun _ -> gen_symbol ~prefix:"_" ()) in
+        let lhs =
+          ppat_variant ~loc lab.txt
+          @@
+          match args with
+          | [] -> None
+          | _ ->
+            Some
+              (ppat_tuple ~loc
+              @@ List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s)) names)
+        in
+        case ~guard:None ~lhs ~rhs:(onrow lab @@ List.combine names args)
+      | Rinherit typ ->
+        (match typ.ptyp_desc with
+         | Ptyp_constr ({ txt; loc }, ts) ->
+           let newname = "subj" in
+           let lhs =
+             ppat_alias
+               ~loc
+               (ppat_type ~loc (Located.mk ~loc txt))
+               (Located.mk ~loc newname)
+           in
+           case ~guard:None ~lhs ~rhs:(oninherit ts txt newname)
+         | _ -> failwith "this inherit field isn't supported"))
   in
   let ls =
     match labels with
     | None -> []
     | Some ls ->
       List.map ls ~f:(fun lab ->
-          let newname = "subj" in
-          let lhs =
-            ppat_alias
-              ~loc
-              (ppat_type ~loc (Located.mk ~loc (Lident lab)))
-              (Located.mk ~loc newname)
-          in
-          case ~guard:None ~lhs ~rhs:(onlabel lab newname))
+        let newname = "subj" in
+        let lhs =
+          ppat_alias
+            ~loc
+            (ppat_type ~loc (Located.mk ~loc (Lident lab)))
+            (Located.mk ~loc newname)
+        in
+        case ~guard:None ~lhs ~rhs:(onlabel lab newname))
   in
   k @@ rs @ ls
 ;;
 
 let map_type_param_names ~f ps =
   List.map ps ~f:(fun (t, _) ->
-      match t.ptyp_desc with
-      | Ptyp_var name -> f name
-      | _ -> failwith "bad argument of map_type_param_names")
+    match t.ptyp_desc with
+    | Ptyp_var name -> f name
+    | _ -> failwith "bad argument of map_type_param_names")
 ;;
 
 let notify fmt =
@@ -506,8 +506,6 @@ let notify fmt =
       ())
     fmt
 ;;
-
-
 
 let string_after_a n = int_of_char 'a' |> ( + ) n |> char_of_int |> String.make 1
 
