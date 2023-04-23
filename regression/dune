@@ -4,3 +4,6 @@
    (:standard -warn-error -A -w +39-32-7-34))))
 
 (include dune.tests)
+
+(cram
+ (deps ../ppx/pp_gt.exe test824mut.ml))

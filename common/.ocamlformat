@@ -1,3 +1,4 @@
 profile=janestreet
 max-indent=2
-
+sequence-style = terminator
+field-space=loose

@@ -242,24 +242,58 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                 rhs
               | tdecls ->
                 (* we don't need self transformation for *)
+                let mutuals_pack_names =
+                  List.map self#tdecls ~f:(fun { ptype_name = { txt = name } } ->
+                    (* if this type is currently processed typedecl, we use default identifier
+                       if this type doesn't use tdecl currently being processd: use wildcard *)
+                    if String.equal name tdecl.ptype_name.txt
+                    then Some (self#self_arg_name name)
+                    else if is_type_used_in ~tdecl (Lident name)
+                    then Some (Naming.for_ self#trait_name name)
+                    else None)
+                in
+                let extra_ignores rhs =
+                  (* In some cases (like `type heap = t`) the self-transformation of heap
+                    is not required because we simply inherit class for t. The following hack is for such cases *)
+                  let helpful_info =
+                    match tdecl.ptype_kind with
+                    | Ptype_record _ | Ptype_variant _ -> true
+                    | Ptype_open -> failwith "unsupported case"
+                    | Ptype_abstract ->
+                      (match tdecl.ptype_manifest with
+                       | None -> true
+                       | Some { ptyp_desc = Ptyp_constr ({ txt = Lident l }, _) }
+                         when Option.is_some
+                              @@ List.find
+                                   mutual_decls
+                                   ~f:(fun { ptype_name = { txt } } -> String.equal l txt)
+                         -> false
+                       | _ -> true)
+                  in
+                  if helpful_info
+                  then rhs
+                  else
+                    List.fold_right mutuals_pack_names ~init:rhs ~f:(function
+                      | None -> Fun.id
+                      | Some name ->
+                        Cl.let_
+                          ~loc
+                          [ value_binding
+                              ~loc
+                              ~pat:(Pat.any ~loc)
+                              ~expr:(Exp.ident ~loc name)
+                          ])
+                in
                 let pat =
                   Pat.alias
                     ~loc
                     (Pat.tuple ~loc
-                    @@ List.map self#tdecls ~f:(fun { ptype_name = { txt = name } } ->
-                         (* if this type is currently processed typedecl, we use default identifier
-                            if this type doesn't use tdecl currently being processd: use wildcard *)
-                         (* TODO: if in some cases (like `type heap = t`) the self-transformation of heap
-                            is not required because we simply inherit class for t
-                            *)
-                         if String.equal name tdecl.ptype_name.txt
-                         then Pat.var ~loc (self#self_arg_name name)
-                         else if is_type_used_in ~tdecl (Lident name)
-                         then Pat.var ~loc (Naming.for_ self#trait_name name)
-                         else Pat.any ~loc))
+                    @@ List.map mutuals_pack_names ~f:(function
+                         | Some s -> Pat.var ~loc s
+                         | None -> Pat.any ~loc))
                     Naming.mutuals_pack
                 in
-                Cl.fun_ ~loc pat rhs
+                Cl.fun_ ~loc pat (extra_ignores rhs)
             in
             add_mutuals (add_fas (add_self body)))
         @@ [ (let parent_name = Naming.class_name_for_typ cur_name in

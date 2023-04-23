@@ -14,7 +14,10 @@
   (:standard -w -32-9 -warn-error -A))
  ;(inline_tests)
  (preprocess
-  (pps ppx_inline_test ppxlib.metaquot))
+  (pps
+   ppx_inline_test
+   ;ppx_expect
+   ppxlib.metaquot))
  (foreign_stubs
   (language c)
   (names common_stubs)))

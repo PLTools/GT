@@ -290,6 +290,18 @@ let is_type_used_in ~tdecl lident =
   | Found -> true
 ;;
 
+(* let%expect_test _ =
+  let loc = Ppxlib.Location.none in
+  let tdecl =
+    match [%stri type nonrec heap = t].pstr_desc with
+    | Pstr_type (_, [ h ]) -> h
+    | _ -> assert false
+  in
+  Printf.printf "%b\n" (is_type_used_in ~tdecl (Lident "t"));
+  Printf.printf "%b\n" (is_type_used_in ~tdecl (Lident "heap"));
+  [%expect {| |}]
+;; *)
+
 let maybe_specialiaze ~what where =
   (* Format.printf "maybe specialize: %a\n%!" Pprintast.structure_item
    *   {pstr_desc=(Pstr_type (Nonrecursive, [what])); pstr_loc=what.ptype_name.loc };

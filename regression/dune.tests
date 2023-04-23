@@ -1,5 +1,5 @@
 
-; camlp5 
+; camlp5
 (cram (deps test000.exe test001.exe test002.exe test003.exe test004.exe test005.exe test006.exe test007.exe test008.exe test009.exe test010.exe test011.exe test012.exe test013.exe test014.exe test015.exe test016.exe test017.exe test018.exe test019.exe test020.exe test021.exe test022.exe test023.exe test024.exe test025.exe test026.exe test027.exe test028.exe test029.exe test030.exe test031.exe test032.exe test036.exe test037.exe test040.exe test041.exe test042.exe test082mutal.exe test083polyvar.exe test086std.exe test087stateful.exe test089struct.exe test090eval.exe test091eval.exe test705.exe))
 
 (executable
@@ -454,7 +454,8 @@
   (name test824mut)
   (modules test824mut)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
+  ;(flags (:standard -dsource))
+  (preprocess (action (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
 (executable
