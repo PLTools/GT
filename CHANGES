@@ -1,10 +1,17 @@
 # Ureleased
 
-- Replace dependecy on base by a dependecy on Ppxlib.stdppx
+## Changed
+
+## 0.5.2 (2023-06-16)
 
 ## Changed
 
 - Add forgotten `html` plugin to `GT.ppx_all` findlib package
+- Replace dependecy on base by a dependecy on Ppxlib.stdppx
+- Support both `[@@deriving gt ~options:{...}]` and `[@@deriving gt ~plugins:{...}]`
+- Better pretty-printing of zero-argument constructors
+- Relax upper constraint on PPXlib to be <= 0.28
+
 
 ## 0.5.1 (2022-04-27)
 

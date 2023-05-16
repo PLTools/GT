@@ -7,19 +7,19 @@
 (name GT)
 
 (source
- (github JetBrains-Research/GT))
+ (github PLTools/GT))
 
 (package
  (name GT)
  (synopsis "Generic programming with extensible transformations")
  (license LGPL-2.1)
  (description
-  "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from Fran\195\167ois Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.")
+  "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from Fran\195\167ois Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.\n\n\nP.S. Since 2023 development team is no longer associated with JetBrains Research")
  (authors "https://github.com/dboulytchev" "https://github.com/Kakadu")
  (maintainers "Kakadu@pm.me")
- (homepage "https://github.com/JetBrains-Research/GT")
- (bug_reports "https://github.com/JetBrains-Research/GT/issues")
- (version 0.5)
+ (homepage "https://github.com/PLTools/GT")
+ (bug_reports "https://github.com/PLTools/GT/issues")
+ (version 0.5.2)
  (depends
   dune
   (ppxlib
