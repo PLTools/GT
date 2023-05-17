@@ -12,7 +12,7 @@
 (package
  (name GT)
  (synopsis "Generic programming with extensible transformations")
- (license LGPL-2.1)
+ (license LGPL-2.1-or-later)
  (description
   "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from Fran\195\167ois Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.\n\n\nP.S. Since 2023 development team is no longer associated with JetBrains Research")
  (authors "https://github.com/dboulytchev" "https://github.com/Kakadu")
@@ -28,6 +28,8 @@
   ocamlgraph
   logger-p5
   ppx_inline_test
+  (ocaml
+   (>= "4.13"))
   (ocaml-migrate-parsetree
    (>= "2.1.0"))
   (camlp5

@@ -18,7 +18,7 @@ the decision opposite to the one used in `visitors`.
 P.S. Since 2023 development team is no longer associated with JetBrains Research"""
 maintainer: ["Kakadu@pm.me"]
 authors: ["https://github.com/dboulytchev" "https://github.com/Kakadu"]
-license: "LGPL-2.1"
+license: "LGPL-2.1-or-later"
 homepage: "https://github.com/PLTools/GT"
 bug-reports: "https://github.com/PLTools/GT/issues"
 depends: [
@@ -28,6 +28,7 @@ depends: [
   "ocamlgraph"
   "logger-p5"
   "ppx_inline_test"
+  "ocaml" {>= "4.13"}
   "ocaml-migrate-parsetree" {>= "2.1.0"}
   "camlp5" {>= "8.00.02"}
   "conf-m4" {build}
