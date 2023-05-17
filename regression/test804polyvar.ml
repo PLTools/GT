@@ -17,7 +17,7 @@ type 'a pv = [ `A of 'a ]
 
 
 let () =
-  let sh x = GT.show pv GT.id x in
+  let sh x = GT.show pv Fun.id x in
   Printf.printf "%s\n%!" (sh @@ `A "aaa")
 
 
@@ -31,5 +31,5 @@ end (* : sig
 )
 
 let () =
-  let sh x = GT.show wtf GT.id x in
+  let sh x = GT.show wtf Fun.id x in
   Printf.printf "%s\t%s\n%!" (sh @@ Just(`A "a")) (sh @@ Just (`C "ccc"))

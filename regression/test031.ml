@@ -15,7 +15,7 @@ class ['a, 'b] print fa fb _ =
 
 let _ =
   Printf.printf "%s\n"
-    (GT.show(t) string_of_int id @@
+    (GT.show(t) string_of_int Fun.id @@
      GT.gmap(t) int_of_string (fun `B -> "`B") @@
 	   {x=1; y="2"; a="3"; b=`B}
     )

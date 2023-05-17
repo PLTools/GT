@@ -7,5 +7,5 @@
 let _ =
   let x = X (A 1, [Y (A "2", []); X (A 2, []); Y (A "3", [])]) in
   let y = GT.gmap t string_of_int int_of_string  x in
-  Printf.printf "%s\n" @@ GT.show t string_of_int GT.id x;
-  Printf.printf "%s\n" @@ GT.show t GT.id string_of_int y
+  Printf.printf "%s\n" @@ GT.show t string_of_int Fun.id x;
+  Printf.printf "%s\n" @@ GT.show t Fun.id string_of_int y
