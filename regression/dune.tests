@@ -336,7 +336,7 @@
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 ; ppx
-(cram (deps test800.exe test802mutal.exe test803polyvar.exe test804polyvar.exe test805std.exe test806fmt.exe test807showT.exe test811compare.exe test812html.exe test813htmlTy.exe test815abstr.exe test816hash.exe test820spec.exe test821clab.exe test822.exe test823list.exe test824mut.exe test825tuples.exe test826antiph.exe test828combi.exe test829enum.exe test840garrique.exe))
+(cram (deps test800.exe test802mutal.exe test803polyvar.exe test804polyvar.exe test805std.exe test806fmt.exe test807showT.exe test811compare.exe test812html.exe test813htmlTy.exe test815abstr.exe test816hash.exe test820spec.exe test821clab.exe test822.exe test823list.exe test824mut.exe test825tuples.exe test826antiph.exe test827.exe test828combi.exe test829enum.exe test840garrique.exe))
 
 (executable
   (name test800)
@@ -470,6 +470,14 @@
   (modules test826antiph)
   (libraries GT)
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
+  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+
+(executable
+  (name test827)
+  (modules test827)
+  (libraries GT)
+  (flags (:standard -rectypes -dsource))
+  (preprocess (action (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
 (executable
