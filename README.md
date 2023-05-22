@@ -19,6 +19,15 @@ The key feature of the approach in question is object-oriented representation of
 
 [Janestreet's PPX Traverse](https://github.com/janestreet-deprecated/ppx_traverse)
 
+## Installation
+
+    opam pin add GT https://github.com/PLTools/GT.git -y
+
+  or from the main opam repository
+
+    opam update
+    opam install GT -y
+
 ## Usage
 
 ### As PPX
@@ -27,8 +36,11 @@ Use findlib package `GT.ppx` in combination with `ppxlib`. See `ppxlib`'s manual
 
 ```
 ~ ocaml
-        OCaml version 4.07.1
+OCaml version 4.14.1
+Enter #help;; for help.
 
+# #use "topfind";;
+# #require "GT";;
 # #require "GT.ppx_all";;
 ../GT/ppx_all: added to search path
 ../GT/ppx_all/./ppx.exe --as-ppx: activated
@@ -42,16 +54,15 @@ Use findlib package `GT.syntax.all` to enable extension and all built-in plugins
 
     ocamlfind opt -syntax camlp5o -package GT.syntax.all regression/test081llist.ml -dsource
 
-[//]: # To preprocess only the code in this library (for example, a test) use the following shell command:
+To preprocess only the code in this library (for example, a test) use the following shell command:
 
-[//]: #     (cd _build && ../camlp5o_pp.sh pr_o.cmo ../regression/test005.ml)
+    dune exec camlp5/pp5+gt+plugins+o.exe regression/test005.ml
 
-To use camlp5 (>= 7.12) syntax extension in toplevel try this:
+To use camlp5 (>= 7.12) syntax extension in toplevel try (after installation) this:
 
-    #use "topfind.camlp5"
+    #use "topfind.camlp5";;
     #camlp5o;;
-    #require "GT-p5,GT.syntax.all";;
-    #load "pa_gt.cma";;
+    #require "GT,GT.syntax,GT.syntax.show,GT.syntax.map";;
     @type t = GT.int with gmap,show;; (* for example *)
 
 ## Directory structure
