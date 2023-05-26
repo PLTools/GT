@@ -14,4 +14,4 @@ Makefile
 /qtc-GT.*
 
 *.install
-
+_coverage
