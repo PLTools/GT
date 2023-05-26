@@ -1,11 +1,19 @@
-name: Build master
+name: Build master in docker
 
 on:
-  push:
-    paths-ignore:
-      - 'README.md'
+  pull_request:
     branches:
       - 'master'
+  push:
+    branches:
+      - 'master'
+    paths-ignore:
+      - 'README.md'
+
+env:
+  OPAMROOT: /home/opam/.opam
+  OPAMYES: true
+  GT_WITH_DOCS: yes
 
 jobs:
   build:
@@ -13,44 +21,34 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
-        ocaml-compiler:
-          - ocaml-base-compiler.4.14.1
-
-    env:
-      GT_WITH_DOCS: yes
+          - ubuntu-latest
 
     runs-on: ${{ matrix.os }}
+    container:
+      image: ocaml/opam:ubuntu-lts-ocaml-4.14
+      options: --user root               # dirty hack
 
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Retrieve date for cache key
-        id: cache-key
-        run: echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-        shell: bash
-
-      - name: Restore opam cache
-        id: opam-cache
-        uses: actions/cache@v2
-        with:
-          path: "~/.opam"
-          # invalidate cache daily, gets built daily using a scheduled job
-          key: ${{ steps.cache-key.outputs.date }}
-
-      - name: Use OCaml ${{ matrix.ocaml-version }}
-        uses: avsm/setup-ocaml@v2
-        with:
-          ocaml-compiler: ${{ matrix.ocaml-compiler }}
-
-      #- run: opam pin add GT . --no-action
-      - run: opam depext --yes --with-test
+      - run: |
+          git config --global --add safe.directory /__w/GT/GT
+          git submodule update --init
+      - run: opam pin add GT . --no-action
+      - run: opam depext GT --yes #--with-test
 
       - name: Install dependecies for documentation
-        run: opam install odoc pa_ppx --yes
+        run: |
+          sudo apt-get install pkg-config -y
+          opam install odoc pa_ppx --yes
 
-      - run: opam install . --deps-only --with-test
+      - run: opam install . --deps-only #--with-test
       - run: opam exec -- dune build  --profile=release
       - run: opam exec -- dune test   --profile=release
 
@@ -71,3 +69,13 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./_build/default/_doc/_html
+
+      - name: Send coverage report to Coveralls
+        run: |
+          #git config --global --add safe.directory /__w/zanuda/zanuda
+          opam exec -- make coverage
+          opam exec -- bisect-ppx-report send-to Coveralls --coverage-path $BISECT_DIR
+        env:
+          BISECT_DIR: /tmp/GTcov
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST_NUMBER: ${{ github.event.number }}

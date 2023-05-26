@@ -13,6 +13,8 @@
  (flags
   (:standard -w -32-9 -warn-error -A))
  ;(inline_tests)
+ (instrumentation
+  (backend bisect_ppx))
  (preprocess
   (pps
    ppx_inline_test

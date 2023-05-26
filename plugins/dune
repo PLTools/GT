@@ -8,6 +8,8 @@
  (public_name GT.syntax.show)
  (modules show)
  (libraries GT.common)
+ (instrumentation
+  (backend bisect_ppx))
  (synopsis "Plugin 'show'"))
 
 (library

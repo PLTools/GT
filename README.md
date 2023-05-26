@@ -5,6 +5,8 @@
 [1]:  https://github.com/JetBrains-Research/GT/actions/workflows/master.yml/badge.svg?branch=master
 [2]:  https://github.com/JetBrains-Research/GT/actions/workflows/master.yml
 
+[![Coverage Status](https://coveralls.io/repos/github/PLTools/GT/badge.svg?branch=master)](https://coveralls.io/github/PLTools/GT?branch=master)
+
 # Datatype-generic object-oriented transformations for OCaml (a.k.a. GT)
 
 This library implements a framework for datatype-generic programming in Objective Caml language.
