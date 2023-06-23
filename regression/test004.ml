@@ -17,7 +17,7 @@ class ['e] show_a' (for_a,for_b) =
 
 
 let show_a' () s =
-  (fst @@ fix_a (new show_a') (new show_b_t_stub)) () s
+  (fst @@ fix_a_b (new show_a') (new show_b_t_stub)) () s
 
 let () =
   Printf.printf "%s\n" (show_a' () x)

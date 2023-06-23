@@ -17,7 +17,7 @@ end
  *             | Ishow_a.B -> GT.transform_gc gcata_b (new show_b_t f) :
  *             a)}) *)
 
-let show_a' s = (fst @@ fix_a (new show_a_t_stub2) (new show_b_t_stub)) () s
+let show_a' s = (fst @@ fix_a_b (new show_a_t_stub2) (new show_b_t_stub)) () s
 
 let _ =
   let x = `A (`B (`C [1; 2; 3; 4])) in

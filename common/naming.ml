@@ -48,8 +48,12 @@ let init_trf_function trait s = trf_function trait s ^ "_0"
 let make_fix_name tdecls =
   (* Let's use only first type for fix function definition *)
   assert (List.length tdecls > 0);
-  let name = (List.hd tdecls).ptype_name.txt in
-  String.concat ~sep:"_" [ "fix"; name ]
+  let names =
+    tdecls
+    |> List.map ~f:(fun { ptype_name = { txt } } -> txt)
+    |> List.sort ~cmp:String.compare
+  in
+  String.concat ~sep:"_" ("fix" :: names)
 ;;
 
 let name_fix_generated_object ~plugin tdecl =

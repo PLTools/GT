@@ -363,6 +363,8 @@
   (name test804polyvar)
   (modules test804polyvar)
   (libraries GT)
+  (flags (:standard ;-dsource 
+  ))
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
@@ -476,7 +478,7 @@
   (name test827)
   (modules test827)
   (libraries GT)
-  (flags (:standard -rectypes -dsource))
+  (flags (:standard -rectypes))
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 

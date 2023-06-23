@@ -12,7 +12,7 @@ class show_a2stub prereq =
     method! c_C () a ys = "new " ^ super#c_C () a ys
   end
 
-let show_a_new eta = let (f, _) = fix_a (new show_a2stub) show_b_0 in f eta
+let show_a_new eta = let (f, _) = fix_a_b (new show_a2stub) show_b_0 in f eta
 
 let a = { a with plugins = object
                    method show eta = show_a_new () eta
@@ -20,4 +20,3 @@ let a = { a with plugins = object
 let _ =
   Printf.printf "%s\n" (GT.show(b) y);
   Printf.printf "%s\n" (GT.show(a) x);
-

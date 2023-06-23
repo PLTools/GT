@@ -142,7 +142,7 @@
       let _ = gcata_term
       let gcata_heap = gcata_t
       let _ = gcata_heap
-      let fix_api api0 pf0 t0 term0 heap0 =
+      let fix_api_heap_pf_t_term api0 pf0 t0 term0 heap0 =
         let rec traitapi inh subj =
           gcata_api (api0 (traitapi, traitpf, traitt, traitterm, traitheap))
             inh subj
@@ -159,7 +159,7 @@
           gcata_heap (heap0 (traitapi, traitpf, traitt, traitterm, traitheap))
             inh subj in
         (traitapi, traitpf, traitt, traitterm, traitheap)
-      let _ = fix_api
+      let _ = fix_api_heap_pf_t_term
       class ['extra_api] fmt_api_t_stub ((_fself_api, _, _, fmt_term, _) as
                                            _mutuals_pack)
         =
@@ -309,27 +309,32 @@
       let _ = fmt_heap_0
       let fmt_api eta__028_ =
         let (f, _, _, _, _) =
-          fix_api fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0 fmt_heap_0 in
+          fix_api_heap_pf_t_term fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0
+            fmt_heap_0 in
         f eta__028_
       let _ = fmt_api
       let fmt_pf eta__029_ =
         let (_, f, _, _, _) =
-          fix_api fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0 fmt_heap_0 in
+          fix_api_heap_pf_t_term fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0
+            fmt_heap_0 in
         f eta__029_
       let _ = fmt_pf
       let fmt_t eta__030_ =
         let (_, _, f, _, _) =
-          fix_api fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0 fmt_heap_0 in
+          fix_api_heap_pf_t_term fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0
+            fmt_heap_0 in
         f eta__030_
       let _ = fmt_t
       let fmt_term eta__031_ =
         let (_, _, _, f, _) =
-          fix_api fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0 fmt_heap_0 in
+          fix_api_heap_pf_t_term fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0
+            fmt_heap_0 in
         f eta__031_
       let _ = fmt_term
       let fmt_heap eta__032_ =
         let (_, _, _, _, f) =
-          fix_api fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0 fmt_heap_0 in
+          fix_api_heap_pf_t_term fmt_api_0 fmt_pf_0 fmt_t_0 fmt_term_0
+            fmt_heap_0 in
         f eta__032_
       let _ = fmt_heap
       class ['extra_api] fmt_api_t _ =
@@ -360,35 +365,35 @@
       let api =
         {
           GT.gcata = gcata_api;
-          GT.fix = fix_api;
+          GT.fix = fix_api_heap_pf_t_term;
           GT.plugins = (object method fmt = fmt_api end)
         }
       let _ = api
       let pf =
         {
           GT.gcata = gcata_pf;
-          GT.fix = fix_api;
+          GT.fix = fix_api_heap_pf_t_term;
           GT.plugins = (object method fmt = fmt_pf end)
         }
       let _ = pf
       let t =
         {
           GT.gcata = gcata_t;
-          GT.fix = fix_api;
+          GT.fix = fix_api_heap_pf_t_term;
           GT.plugins = (object method fmt = fmt_t end)
         }
       let _ = t
       let term =
         {
           GT.gcata = gcata_term;
-          GT.fix = fix_api;
+          GT.fix = fix_api_heap_pf_t_term;
           GT.plugins = (object method fmt = fmt_term end)
         }
       let _ = term
       let heap =
         {
           GT.gcata = gcata_heap;
-          GT.fix = fix_api;
+          GT.fix = fix_api_heap_pf_t_term;
           GT.plugins = (object method fmt = fmt_heap end)
         }
       let _ = heap

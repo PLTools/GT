@@ -6,4 +6,52 @@
 (include dune.tests)
 
 (cram
- (deps ../ppx/pp_gt.exe test824mut.ml))
+ (applies_to test828)
+ (deps
+  ../ppx/pp_gt.exe
+  test828mut.ml
+  test828mut.exe
+  ;
+  ))
+
+; TODO outogenerate proper cram dependencies
+; (cram
+;  (applies_to * \ foo bar)
+;  (deps ../foo.exe))
+
+(cram
+ (deps
+  ../ppx/pp_gt.exe
+  test824mut.ml
+  test827mut.ml
+  test827mut.exe
+  test830mut.exe
+  ;
+  ))
+
+(executable
+ (name test827mut)
+ (modules test827mut)
+ (libraries GT)
+ (flags
+  (:standard
+   ;-dsource
+   ;-rectypes
+   ))
+ (preprocess
+  (action
+   (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/ppx/pp_gt.exe)))
+
+(executables
+ (names test830mut test828mut)
+ (modules test830mut test828mut)
+ (libraries GT)
+ (flags
+  (:standard -rectypes))
+ (preprocess
+  (action
+   (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/ppx/pp_gt.exe)))
