@@ -17,7 +17,7 @@ class [ 'fself ] show_b' prereq =
     method! c_C () _ s = "new C " ^ s
   end
 
-let show_b_new eta = let (_,f) = fix_a (new show_a_t_stub) (new show_b') in f eta
+let show_b_new eta = let (_,f) = fix_a_b (new show_a_t_stub) (new show_b') in f eta
 
 let _ =
   let y = `D (`B (`C "5")) in

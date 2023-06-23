@@ -10,7 +10,7 @@ class show_a_new ((_,fb,_) as prereq) =
   end
 
 let show_a_new eta =
-  let (f,_,_) = fix_a (new show_a_new) (new show_b_t_stub) (new show_c_t_stub) in
+  let (f,_,_) = fix_a_b_c (new show_a_new) (new show_b_t_stub) (new show_c_t_stub) in
   f eta
 
 

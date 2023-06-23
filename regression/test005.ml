@@ -21,10 +21,10 @@ module Show2 = struct
   let showb0 a = Printf.printf "new!\n"; new show_b_t_stub2 a
 
   let show_a () s =
-    (fst @@ fix_a showa0 showb0) () s
+    (fst @@ fix_a_b showa0 showb0) () s
 
   let show_b () s =
-    (snd @@ fix_a showa0 showb0) () s
+    (snd @@ fix_a_b showa0 showb0) () s
 
   let _ = Printf.printf "%s\n" (show_a () (`A (`B (`A (`D "4")))))
 end
@@ -50,7 +50,7 @@ module ShowC = struct
 
   class ['extra] show_c_stub2 make_clas =
     let show_a2,show_b2 =
-      Show2.(fix_a
+      Show2.(fix_a_b
                showa0
                (fun _ -> ((make_clas ()) (* :> 'extra show_b_t_stub *)) ))
     in
