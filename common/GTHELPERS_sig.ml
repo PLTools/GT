@@ -89,6 +89,7 @@ module type S = sig
 
     (* val new_type: loc:loc -> string -> t -> t *)
     val constraint_ : loc:loc -> t -> Typ.t -> t
+    val attribute : Ppxlib.attribute -> t -> t
   end
 
   and Typ : sig

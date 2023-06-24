@@ -142,6 +142,7 @@ module Exp = struct
     | "[]" | "::" | _ when HelpersBase.Char.is_alpha s.[0] && capitalized s -> <:expr< $uid:s$ >>
     | _ -> <:expr< $lid:s$ >>
 
+  let attribute _ e = e 
   let unit ~loc =  <:expr< () >>
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:expr< $lid:s$ >>) fmt
