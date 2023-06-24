@@ -100,6 +100,7 @@ module Exp = struct
 
   let from_caml e = e
   let ident ~loc s = pexp_ident ~loc @@ Located.lident ~loc s
+  let attribute attr e = { e with pexp_attributes = attr :: e.pexp_attributes }
   let of_longident ~loc l = pexp_ident ~loc (Located.mk ~loc l)
   let sprintf ~loc fmt = Printf.ksprintf (ident ~loc) fmt
   let unit ~loc = [%expr ()]
@@ -543,7 +544,7 @@ module Sig = struct
            (pmty_functor
               ~loc
               (Named (Located.mk ~loc (Some param), pmty_signature ~loc sigs))
-           @@ pmty_signature ~loc strs)
+            @@ pmty_signature ~loc strs)
   ;;
 
   let simple_gadt
