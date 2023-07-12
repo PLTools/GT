@@ -6,6 +6,8 @@
 
 ## Changed
 
+- Upgrade support of mutually recursive abbreviations (in presence of -rectypes). Previously some code would not compile (breaking)
+- Mutually recursive fixpoint on N typs is now called 'fix_typ1_typ2_..._typN' instead of 'fix_typ1' (breaking)
 - Add forgotten `html` plugin to `GT.ppx_all` findlib package
 - Replace dependecy on base by a dependecy on Ppxlib.stdppx
 - Support both `[@@deriving gt ~options:{...}]` and `[@@deriving gt ~plugins:{...}]`
