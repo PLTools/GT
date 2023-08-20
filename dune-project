@@ -21,21 +21,19 @@
  (bug_reports "https://github.com/PLTools/GT/issues")
  (version 0.5.2)
  (depends
-  dune
   (ppxlib
    (<= "0.28.0"))
-  ocamlfind
-  ocamlgraph
-  logger-p5
-  ppx_inline_test
-  bisect_ppx
   (ocaml
    (>= "4.13"))
-  (ocaml-migrate-parsetree
-   (>= "2.1.0"))
   (camlp5
    (>= "8.00.02"))
+  dune
+  (ocamlfind :build)
+  (logger-p5 :build)
+  (bisect_ppx :build)
   (conf-m4 :build)
+  ocamlgraph
+  ppx_inline_test
   ;
   ))
 
