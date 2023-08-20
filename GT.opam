@@ -24,7 +24,7 @@ bug-reports: "https://github.com/PLTools/GT/issues"
 depends: [
   "ppxlib" {<= "0.28.0"}
   "ocaml" {>= "4.13"}
-  "camlp5" {>= "8.00.02"}
+  "camlp5" {>= "8.00.05"}
   "dune" {>= "2.8"}
   "ocamlfind" {build}
   "logger-p5" {build}

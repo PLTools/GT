@@ -26,7 +26,7 @@
   (ocaml
    (>= "4.13"))
   (camlp5
-   (>= "8.00.02"))
+   (>= "8.00.05"))
   dune
   (ocamlfind :build)
   (logger-p5 :build)
