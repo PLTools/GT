@@ -123,7 +123,7 @@ decoration of the original declaration:
 
 For mutually recursive type declarations add decoration only to the last type
 
-```
+```ocaml
 type t = ....
 and heap = t [@@deriving gt ~options:{ show }]
 ```
@@ -162,10 +162,11 @@ In our framework (at least by now) all transformations are expressed by the foll
 
 or more precisely
 
-````ocaml
+```ocaml
 GT.fix (fun fself init value ->
     GT.transform tree (new tr_class f_1 ... f_n fself) init value
   ) init value
+```
 
 where
 
@@ -196,7 +197,7 @@ GT.fix (fun fself ->
     GT.transform tree (new show' fself) ()
   )
   (Mul (Var "a", Add (Int 1, Var "b")))
-````
+```
 
 Now the result is
 
