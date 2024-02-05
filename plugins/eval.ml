@@ -1,6 +1,6 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2020
+ * Copyright (C) 2016-2023
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -22,8 +22,7 @@
 
     [('env -> 'a ->  'a2) ->
      ('env -> 'b ->  'b2) -> ... ->
-     'env -> ('a,'b,...) typ -> ('a2, 'b2, ...) typ ]
-  *)
+     'env -> ('a,'b,...) typ -> ('a2, 'b2, ...) typ ] *)
 
 open Ppxlib
 open Printf
@@ -79,8 +78,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             ~loc
             (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
             (wrap
-            @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt)
-            @@ map_type_param_names tdecl.ptype_params ~f:(fun s -> Typ.var ~loc s))
+             @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt)
+             @@ map_type_param_names tdecl.ptype_params ~f:(fun s -> Typ.var ~loc s))
         ; (let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
            Ctf.constraint_
              ~loc
@@ -97,8 +96,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             ~loc
             (Typ.var ~loc @@ Naming.make_extra_param tdecl.ptype_name.txt)
             (wrap
-            @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt)
-            @@ map_type_param_names tdecl.ptype_params ~f:(fun s -> Typ.var ~loc s))
+             @@ Typ.constr ~loc (Lident tdecl.ptype_name.txt)
+             @@ map_type_param_names tdecl.ptype_params ~f:(fun s -> Typ.var ~loc s))
         ; (let syn = sprintf "syn_%s" tdecl.ptype_name.txt in
            Cf.constraint_
              ~loc
@@ -112,7 +111,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         let pat =
           Pat.record ~loc
           @@ List.map labs ~f:(fun l ->
-               Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+            Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
         in
         let methname = sprintf "do_%s" tdecl.ptype_name.txt in
         [ Cf.method_concrete ~loc methname
@@ -120,12 +119,12 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           @@ Exp.fun_ ~loc pat
           @@ Exp.record ~loc
           @@ List.map labs ~f:(fun { pld_name; pld_type } ->
-               ( lident pld_name.txt
-               , self#app_transformation_expr
-                   ~loc
-                   (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
-                   (Exp.ident ~loc "env")
-                   (Exp.ident ~loc pld_name.txt) ))
+            ( lident pld_name.txt
+            , self#app_transformation_expr
+                ~loc
+                (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
+                (Exp.ident ~loc "env")
+                (Exp.ident ~loc pld_name.txt) ))
         ]
     end
 

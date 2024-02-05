@@ -1,6 +1,6 @@
 (*
  * Generic transformers: plugins.
- * Copyright (C) 2016-2022
+ * Copyright (C) 2016-2023
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
@@ -19,9 +19,7 @@
 
     [('env -> 'a -> 'env * 'a2) ->
      ('env -> 'b -> 'env * 'b2) -> ... ->
-     'env -> ('a,'b,...) typ -> 'env * ('a2, 'b2, ...) typ ]
-
-  *)
+     'env -> ('a,'b,...) typ -> 'env * ('a2, 'b2, ...) typ ] *)
 
 open Ppxlib
 open Stdppx
@@ -104,7 +102,45 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
 
       method! on_record_declaration ~loc ~is_self_rec ~mutual_decls tdecl labs =
         (* TODO: *)
-        failwith "not implemented"
+        let tempvals = List.map ~f:(fun _ -> gen_symbol ~prefix:"lab" ()) labs in
+        let pat =
+          Pat.record ~loc
+          @@ List.map labs ~f:(fun l ->
+            Lident l.pld_name.txt, Pat.var ~loc l.pld_name.txt)
+        in
+        let env_top = gen_symbol ~prefix:"env" () in
+        let eenv = Exp.ident ~loc env_top in
+        let penv = Pat.sprintf ~loc "%s" env_top in
+        let methname = sprintf "do_%s" tdecl.ptype_name.txt in
+        [ Cf.method_concrete ~loc methname
+          @@ Exp.fun_ ~loc penv
+          @@ Exp.fun_ ~loc pat
+          @@ List.fold_right2
+               labs
+               tempvals
+               ~f:(fun { pld_name; pld_type } tval acc ->
+                 Exp.let_one
+                   ~loc
+                   Pat.(tuple ~loc [ penv; var ~loc tval ])
+                   (self#app_transformation_expr
+                      ~loc
+                      (self#do_typ_gen ~loc ~is_self_rec ~mutual_decls tdecl pld_type)
+                      eenv
+                      (Exp.ident ~loc pld_name.txt))
+                   acc)
+               ~init:
+                 (Exp.tuple
+                    ~loc
+                    [ eenv
+                    ; Exp.record
+                        ~loc
+                        (List.map2
+                           ~f:(fun { pld_name } asdf ->
+                             lident pld_name.txt, Exp.ident ~loc asdf)
+                           labs
+                           tempvals)
+                    ])
+        ]
     end
 
   let create = (new g :> P.plugin_constructor)

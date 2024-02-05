@@ -350,6 +350,9 @@
   Mapped PV_ext3 and showed as a pv_ext3: `E (1.)
   $ ./test086std.exe
   $ ./test087stateful.exe
+  1
+  2
+  3
   $ ./test089struct.exe
   { info=asdf; node=EConst (19); }
   { info=__asdf; node=EConst (19); }
