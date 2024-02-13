@@ -12,7 +12,7 @@ on:
 
 env:
   OPAMROOT: /home/opam/.opam
-  OPAMYES: true
+  OPAMCONFIRMLEVEL: unsafe-yes
   GT_WITH_DOCS: yes
 
 jobs:
@@ -30,12 +30,15 @@ jobs:
 
     steps:
       - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
+        uses: styfle/cancel-workflow-action@0.12.1
         with:
           access_token: ${{ github.token }}
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - run: sudo apt update
+      - run: opam --version
 
       - run: |
           git config --global --add safe.directory /__w/GT/GT
@@ -45,7 +48,8 @@ jobs:
 
       - name: Install dependecies for documentation
         run: |
-          sudo apt-get install pkg-config -y
+          sudo apt-get install pkg-config libpcre2-dev -y
+          #opam install odoc pa_ppx --yes --depext
           opam install odoc pa_ppx --yes
 
       - run: opam install . --deps-only #--with-test
