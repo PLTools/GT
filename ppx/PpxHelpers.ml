@@ -3,7 +3,7 @@ open GTCommon
 open HelpersBase
 open Ppxlib.Ast_builder.Default
 
-let ( @@ ) = Caml.( @@ )
+let ( @@ ) = Stdlib.( @@ )
 let nolabelize xs = List.map ~f:(fun x -> Asttypes.Nolabel, x) xs
 let invariantize types = List.map types ~f:(fun x -> x, (NoVariance, NoInjectivity))
 

@@ -36,7 +36,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
     let name_migrations = List.zip_exn param_names rez_names in
     let assoc s =
       try List.Assoc.find_exn ~equal:String.equal name_migrations s with
-      | Caml.Not_found ->
+      | Stdlib.Not_found ->
         Ppxlib.Location.raise_errorf
           ~loc:Location.none
           "can't find new typ for param `%s"

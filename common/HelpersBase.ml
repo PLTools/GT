@@ -514,7 +514,7 @@ let notify fmt =
   Format.kasprintf
     (fun s ->
       let _cmd = Printf.sprintf "notify-send \"%s\"" s in
-      let (_ : int) = Caml.Sys.command _cmd in
+      let (_ : int) = Stdlib.Sys.command _cmd in
       ())
     fmt
 ;;

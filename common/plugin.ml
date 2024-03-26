@@ -10,7 +10,7 @@
     See {!Plugin_intf} for complete description of all valuable methods
   *)
 
-module Format = Caml.Format
+module Format = Stdlib.Format
 open Ppxlib
 open Stdppx
 open Printf
@@ -22,8 +22,8 @@ let use_logging = false
 
 let log fmt =
   if use_logging
-  then Caml.Format.kasprintf (Caml.Format.eprintf "%s\n%!") fmt
-  else Caml.Format.ifprintf Caml.Format.std_formatter fmt
+  then Stdlib.Format.kasprintf (Stdlib.Format.eprintf "%s\n%!") fmt
+  else Stdlib.Format.ifprintf Stdlib.Format.std_formatter fmt
 ;;
 
 module Make (AstHelpers : GTHELPERS_sig.S) = struct
@@ -110,8 +110,8 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       (* parse arguments like { _1=<expr>; ...; _N=<expr>; ...} *)
       val reinterpreted_args =
         let check_name s =
-          try Caml.Scanf.sscanf s "_%d" Option.some with
-          | Caml.Scanf.Scan_failure _ -> None
+          try Stdlib.Scanf.sscanf s "_%d" Option.some with
+          | Stdlib.Scanf.Scan_failure _ -> None
         in
         List.fold_left initial_args ~init:[] ~f:(fun acc (lident, expr) ->
           match lident with
@@ -956,7 +956,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           ~f:(fun {attr_name={txt}} -> String.equal txt "combinatorial")
     in *)
         if (* Option.is_some cmb_attr &&*)
-           Caml.( = ) tdecl.ptype_kind Ptype_abstract
+           Stdlib.( = ) tdecl.ptype_kind Ptype_abstract
            && (not (is_polyvariant_tdecl tdecl))
            && not (is_tuple_tdecl tdecl)
         then (

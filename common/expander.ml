@@ -12,7 +12,7 @@ open HelpersBase
 open Printf
 open Naming
 
-let ( @@ ) = Caml.( @@ )
+let ( @@ ) = Stdlib.( @@ )
 
 type config_plugin =
   | Skip
@@ -694,7 +694,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               let n_new = Naming.self_typ_param_name ^ "__new" in
               let t2 =
                 map_core_type acc ~onvar:(fun s ->
-                  (* Caml.Printf.printf "cmp '%s' and '%s' = %b\n%!" s name (String.equal s name ); *)
+                  (* Stdlib.Printf.printf "cmp '%s' and '%s' = %b\n%!" s name (String.equal s name ); *)
                   if String.equal s name then Some (ptyp_var ~loc n_new) else None)
               in
               n_new :: ns, t2)
@@ -720,7 +720,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   end)
 
   module T = Graph.Topological.Make (G)
-  module SM = Caml.Map.Make (String)
+  module SM = Stdlib.Map.Make (String)
 
   let topsort_tdecls tdecls =
     (* TODO: we need topological sorting because in case
@@ -754,7 +754,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         | None -> acc
         | Some s ->
           (match SM.find s name_map with
-           | exception Caml.Not_found -> acc
+           | exception Stdlib.Not_found -> acc
            | _ -> G.add_edge acc s tdecl.ptype_name.txt))
     in
     let tdecls_new = T.fold (fun s acc -> SM.find s name_map :: acc) g [] |> List.rev in
