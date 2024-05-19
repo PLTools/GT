@@ -17,6 +17,8 @@
  (public_name GT.syntax.gfmt)
  (modules gfmt)
  (libraries GTCommon)
+ (instrumentation
+  (backend bisect_ppx))
  (synopsis "Plugin 'gfmt'"))
 
 (library
@@ -24,6 +26,8 @@
  (public_name GT.syntax.foldl)
  (modules foldl)
  (libraries GTCommon)
+ (instrumentation
+  (backend bisect_ppx))
  (synopsis "Plugin 'foldl'"))
 
 (library
@@ -31,6 +35,8 @@
  (public_name GT.syntax.foldr)
  (modules foldr)
  (libraries GTCommon foldl)
+ (instrumentation
+  (backend bisect_ppx))
  (synopsis "Plugin 'foldr'"))
 
 (library
@@ -38,6 +44,8 @@
  (public_name GT.syntax.eq)
  (modules eq)
  (libraries GTCommon compare)
+ (instrumentation
+  (backend bisect_ppx))
  (synopsis "Plugin 'eq'"))
 
 (library
@@ -46,6 +54,8 @@
  (modules compare)
  (synopsis "Plugin 'compare'")
  (libraries GTCommon)
+ (instrumentation
+  (backend bisect_ppx))
  (flags
   (:standard -w -7-9)))
 
@@ -54,7 +64,9 @@
  (public_name GT.syntax.map)
  (modules gmap)
  (synopsis "Plugin 'map' a.k.a. functor's fmap")
- (libraries GTCommon))
+ (libraries GTCommon)
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name eval)
@@ -63,7 +75,9 @@
  (libraries GTCommon gmap)
  (synopsis "Plugin 'eval'")
  (flags
-  (:standard -w -7-9-13-36)))
+  (:standard -w -7-9-13-36))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name stateful)
@@ -71,7 +85,8 @@
  (modules stateful)
  (libraries GTCommon gmap)
  (synopsis "Plugin 'stateful'")
- (flags (:standard)))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name html)
@@ -80,7 +95,9 @@
  (libraries GTCommon)
  (synopsis "Plugin 'html'")
  (flags
-  (:standard -w -7-9-13-36)))
+  (:standard -w -7-9-13-36))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name ghash)
@@ -89,7 +106,9 @@
  (libraries GTCommon)
  (synopsis "Plugin 'hash'")
  (flags
-  (:standard -w -7-9-13-36)))
+  (:standard -w -7-9-13-36))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name enum)
@@ -98,7 +117,9 @@
  (libraries GTCommon)
  (synopsis "Plugin 'enum'")
  (flags
-  (:standard -w -7-9-13-36)))
+  (:standard -w -7-9-13-36))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name syntax_all)
@@ -116,4 +137,6 @@
   GT.syntax.eval
   GT.syntax.stateful
   GT.syntax.html
-  GT.syntax.hash))
+  GT.syntax.hash)
+ (instrumentation
+  (backend bisect_ppx)))

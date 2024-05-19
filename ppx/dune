@@ -8,7 +8,9 @@
  (preprocess
   (pps ppxlib.metaquot))
  (flags
-  (:standard -w -27-9 -warn-error -A -linkall)))
+  (:standard -w -27-9 -warn-error -A -linkall))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name ppx_all)
@@ -32,7 +34,9 @@
  (wrapped false)
  (synopsis "PPX syntax extension on top of ppxlib + plugins")
  (flags
-  (:standard -linkall -w -33)))
+  (:standard -linkall -w -33))
+ (instrumentation
+  (backend bisect_ppx)))
 
 (executable
  (name pp_gt)
@@ -55,7 +59,9 @@
   ghash
   enum)
  (flags
-  (:standard -linkall)))
+  (:standard -linkall))
+ (instrumentation
+  (backend bisect_ppx)))
 
 ;(executable
 ; (name pp_all)

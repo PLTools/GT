@@ -29,29 +29,29 @@
   ;
   ))
 
-(executable
- (name test827mut)
- (modules test827mut)
- (libraries GT)
- (flags
-  (:standard
-   ;-dsource
-   ;-rectypes
-   ))
- (preprocess
-  (action
-   (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
- (preprocessor_deps
-  (file %{project_root}/ppx/pp_gt.exe)))
+; (executable
+;  (name test827mut)
+;  (modules test827mut)
+;  (libraries GT)
+;  (flags
+;   (:standard
+;    ;-dsource
+;    ;-rectypes
+;    ))
+;  (preprocess
+;   (action
+;    (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
+;  (preprocessor_deps
+;   (file %{project_root}/ppx/pp_gt.exe)))
 
-(executables
- (names test830mut test828mut)
- (modules test830mut test828mut)
- (libraries GT)
- (flags
-  (:standard -rectypes))
- (preprocess
-  (action
-   (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
- (preprocessor_deps
-  (file %{project_root}/ppx/pp_gt.exe)))
+; (executables
+;  (names test830mut test828mut)
+;  (modules test830mut test828mut)
+;  (libraries GT)
+;  (flags
+;   (:standard -rectypes))
+;  (preprocess
+;   (action
+;    (run %{project_root}/ppx/pp_gt.exe -pretty --as-pp %{input-file})))
+;  (preprocessor_deps
+;   (file %{project_root}/ppx/pp_gt.exe)))

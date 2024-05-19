@@ -1,3 +1,26 @@
+(*** command line arguments ***)
+
+let tests         = ref false
+let tests_dune    = ref false
+let tests_dir     = ref "./regression"
+let camlp5_flags   = ref false
+let doc_flags      = ref false
+let logger_flags  = ref false
+let all_flags     = ref false
+let all           = ref false
+
+let args =
+  let set_tests_dir s = tests_dir := s in
+  Arg.align @@
+    [ ("-tests-dir"  , Arg.String set_tests_dir, "DIR discover tests in this directory"      )
+    ; ("-tests"      , Arg.Set tests_dune      , " generate dune build file for tests"       )
+    ; ("-camlp5-flags", Arg.Set camlp5_flags      , " discover camlp5 flags (camlp5-flags.cfg)" )
+    ; ("-doc-flags"   , Arg.Set doc_flags        , " discover whether to build documentation")
+    ; ("-logger-flags", Arg.Set logger_flags    , " discover logger flags (logger-flags.cfg)" )
+    ; ("-all-flags"   , Arg.Set all_flags       , " discover all flags"                       )
+    ; ("-all"         , Arg.Set all             , " discover all"                             )
+    ]
+
 module Cfg = Configurator.V1
 
 (*** utility functions ***)
@@ -108,7 +131,7 @@ let camlp5_rectypes_tests =
   ]
 
 let ppx_rectypes_tests =
-  [ "test798gen"; "test817logic"
+  [ "test798gen"; "test817logic"; "test827"; "test828mut"; "test830mut"
   ]
 
 let camlp5_tests dir =
@@ -178,6 +201,8 @@ let gen_tests_dune dir =
     (* --as-pp will output serialized AST
         without it the human-readable AST will be printed
     ***)
+    (* Format.fprintf ppf "@[(instrumentation (backend bisect_ppx))@]"; *)
+    (* Format.fprintf ppf "@[(preprocess (pps GT.ppx_all))@]"; *)
     Format.fprintf ppf "@[(preprocess (action (run %s --as-pp %%{input-file})))@]@," pp;
     Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
@@ -198,28 +223,7 @@ let discover_doc () =
     Cfg.Flags.write_lines filename [];
     ()
 
-(*** command line arguments ***)
 
-let tests         = ref false
-let tests_dune    = ref false
-let tests_dir     = ref "./regression"
-let camlp5_flags   = ref false
-let doc_flags      = ref false
-let logger_flags  = ref false
-let all_flags     = ref false
-let all           = ref false
-
-let args =
-  let set_tests_dir s = tests_dir := s in
-  Arg.align @@
-    [ ("-tests-dir"  , Arg.String set_tests_dir, "DIR discover tests in this directory"      )
-    ; ("-tests"      , Arg.Set tests_dune      , " generate dune build file for tests"       )
-    ; ("-camlp5-flags", Arg.Set camlp5_flags      , " discover camlp5 flags (camlp5-flags.cfg)" )
-    ; ("-doc-flags"   , Arg.Set doc_flags        , " discover whether to build documentation")
-    ; ("-logger-flags", Arg.Set logger_flags    , " discover logger flags (logger-flags.cfg)" )
-    ; ("-all-flags"   , Arg.Set all_flags       , " discover all flags"                       )
-    ; ("-all"         , Arg.Set all             , " discover all"                             )
-    ]
 
 (*** main ***)
 
