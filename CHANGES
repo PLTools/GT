@@ -5,7 +5,7 @@
 
 ## Changed
 
-* It compiles for OCaml 5.2
+* It compiles for OCaml 4.14 or 5.2
 * Upper bound for ppxlib is <= 0.32.1
 * Minor fixes
 
