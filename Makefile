@@ -27,7 +27,7 @@ promote:
 
 celan: clean
 clean:
-	$(RM) -r _build
+	$(RM) -r _build _coverage
 
 rebuild: clean
 	$(MAKE) all tests

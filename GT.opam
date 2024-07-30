@@ -23,7 +23,7 @@ homepage: "https://github.com/PLTools/GT"
 bug-reports: "https://github.com/PLTools/GT/issues"
 depends: [
   "ppxlib" {<= "0.32.1"}
-  "ocaml" {>= "4.13"}
+  "ocaml" {>= "4.13" & < "5.0.0" | >= "5.2.0" & < "5.3.0"}
   "camlp5" {>= "8.00.05"}
   "dune" {>= "2.8"}
   "ocamlfind" {build}
