@@ -1,9 +1,12 @@
-| Branch master                   |
-| ------------------------------- |
-| [![GT][1]][2] |
+[![GT][1]][2]
+[![GT][3]][4]
+[License](https://img.shields.io/badge/license-LGPL-blue)
+[![API docs](https://img.shields.io/badge/Documentation-API-yellowgreen)](https://PLTools.github.io/GT/GT)
 
-[1]:  https://github.com/JetBrains-Research/GT/actions/workflows/master.yml/badge.svg?branch=master
-[2]:  https://github.com/JetBrains-Research/GT/actions/workflows/master.yml
+[1]:  https://github.com/PLTools/GT/actions/workflows/master.yml/badge.svg?branch=master
+[2]:  https://github.com/PLTools/GT/actions/workflows/master.yml
+[3]:  https://github.com/PLTools/GT/actions/workflows/master52.yml/badge.svg?branch=master
+[4]:  https://github.com/PLTools/GT/actions/workflows/master52.yml
 
 [![Coverage Status](https://coveralls.io/repos/github/PLTools/GT/badge.svg?branch=master)](https://coveralls.io/github/PLTools/GT?branch=master)
 

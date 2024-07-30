@@ -37,12 +37,15 @@
   (camlp5
    (>= "8.00.05"))
   dune
+  ocamlgraph
+  ppx_inline_test
   (ocamlfind :build)
   (logger-p5 :build)
   (bisect_ppx :build)
   (conf-m4 :build)
-  ocamlgraph
-  ppx_inline_test
+  (odoc :with-doc)
+  (odig :with-doc)
+  (pa_ppx :with-doc)
   ;
   ))
 

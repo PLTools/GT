@@ -43,6 +43,13 @@ uninstall:
 	dune build @install $(DFLAGS)
 	dune uninstall $(DFLAGS)
 
+.PHONY: odig
+ODIG_SWITCHES = --odoc-theme=odig.gruvbox.light
+ODIG_SWITCHES += --no-tag-index
+ODIG_SWITCHES += --no-pkg-deps
+odig:
+	odig odoc $(ODIG_SWITCHES) GT
+
 .PHONY: coverage
 TEST_COV_D ?= /tmp/GTcov
 coverage:

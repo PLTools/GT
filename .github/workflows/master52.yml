@@ -1,9 +1,6 @@
-name: Build master in docker
+name: Build master in docker (OCaml 5.2)
 
 on:
-  # pull_request:
-  #   branches:
-  #     - 'master'
   push:
     branches:
       - 'master'
@@ -25,9 +22,10 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
+
     runs-on: ${{ matrix.os }}
     container:
-      image: ocaml/opam:ubuntu-lts-ocaml-4.14
+      image: ocaml/opam:ubuntu-lts-ocaml-5.2
       options: --user root # Kind of important dirty hack
       #options: --user opam               # dirty hack
 
@@ -43,6 +41,7 @@ jobs:
       - run: opam --version
 
       - name: bisect many not work without it
+        if: false #we will not run coverage in 5.2
         run: |
           git config --global --add safe.directory /__w/GT/GT
           #git submodule update --init
@@ -56,41 +55,10 @@ jobs:
       - run: opam exec -- dune build @check --profile=release
       - run: opam exec -- dune test --profile=release
 
-      - name: Send coverage report to Coveralls
-        run: |
-          opam exec -- make coverage
-          opam exec -- bisect-ppx-report send-to Coveralls --coverage-path $BISECT_DIR
-        env:
-          BISECT_DIR: /tmp/GTcov
-          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PULL_REQUEST_NUMBER: ${{ github.event.number }}
-
       - name: Installing using Opam
         run: |
           opam exec -- dune build @install
           opam exec -- dune install
-
-      - name: Deploy documentation
-        #if: ${{ github.event.pull_request.head.repo.full_name == 'PLTools/OCanren' }}
-        if: false
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_build/default/_doc/_html
-
-      - name: Build API documentation
-        if: github.event_name != 'pull_request'
-        run: |
-          opam exec -- make install odig
-          echo "ODIG_DOC_LOC=$(opam exec -- odig cache path)/html" >> $GITHUB_ENV
-
-      - name: Deploy documentation
-        #if: ${{ github.event.pull_request.head.repo.full_name == 'PLTools/GT' }}
-        #if: false
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir:  ${{ env.ODIG_DOC_LOC }}
 
       - name: List files
         run: opam show --list-files GT
