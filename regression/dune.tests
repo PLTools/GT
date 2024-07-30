@@ -1,7 +1,8 @@
+; camlp5
 
-; camlp5 
-(cram (deps test000.exe test001.exe test002.exe test003.exe test004.exe test005.exe test006.exe test007.exe test008.exe test009.exe test010.exe test011.exe test012.exe test013.exe test014.exe test015.exe test016.exe test017.exe test018.exe test019.exe test020.exe test021.exe test022.exe test023.exe test024.exe test025.exe test026.exe test027.exe test028.exe test029.exe test030.exe test031.exe test032.exe test036.exe test037.exe test040.exe test041.exe test042.exe test082mutal.exe test083polyvar.exe test086std.exe test087stateful.exe test089struct.exe test090eval.exe test091eval.exe test705.exe))
-
+(cram
+  (applies_to test000)
+  (deps test000.exe))
 (executable
   (name test000)
   (modules test000)
@@ -9,6 +10,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test001)
+  (deps test001.exe))
 (executable
   (name test001)
   (modules test001)
@@ -16,6 +20,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test002)
+  (deps test002.exe))
 (executable
   (name test002)
   (modules test002)
@@ -23,6 +30,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test003)
+  (deps test003.exe))
 (executable
   (name test003)
   (modules test003)
@@ -30,6 +40,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test004)
+  (deps test004.exe))
 (executable
   (name test004)
   (modules test004)
@@ -37,6 +50,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test005)
+  (deps test005.exe))
 (executable
   (name test005)
   (modules test005)
@@ -44,6 +60,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test006)
+  (deps test006.exe))
 (executable
   (name test006)
   (modules test006)
@@ -51,6 +70,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test007)
+  (deps test007.exe))
 (executable
   (name test007)
   (modules test007)
@@ -58,6 +80,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test008)
+  (deps test008.exe))
 (executable
   (name test008)
   (modules test008)
@@ -65,6 +90,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test009)
+  (deps test009.exe))
 (executable
   (name test009)
   (modules test009)
@@ -72,6 +100,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test010)
+  (deps test010.exe))
 (executable
   (name test010)
   (modules test010)
@@ -79,6 +110,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test011)
+  (deps test011.exe))
 (executable
   (name test011)
   (modules test011)
@@ -86,6 +120,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test012)
+  (deps test012.exe))
 (executable
   (name test012)
   (modules test012)
@@ -93,6 +130,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test013)
+  (deps test013.exe))
 (executable
   (name test013)
   (modules test013)
@@ -100,6 +140,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test014)
+  (deps test014.exe))
 (executable
   (name test014)
   (modules test014)
@@ -107,6 +150,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test015)
+  (deps test015.exe))
 (executable
   (name test015)
   (modules test015)
@@ -114,6 +160,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test016)
+  (deps test016.exe))
 (executable
   (name test016)
   (modules test016)
@@ -121,6 +170,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test017)
+  (deps test017.exe))
 (executable
   (name test017)
   (modules test017)
@@ -128,6 +180,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test018)
+  (deps test018.exe))
 (executable
   (name test018)
   (modules test018)
@@ -135,6 +190,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test019)
+  (deps test019.exe))
 (executable
   (name test019)
   (modules test019)
@@ -142,6 +200,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test020)
+  (deps test020.exe))
 (executable
   (name test020)
   (modules test020)
@@ -149,6 +210,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test021)
+  (deps test021.exe))
 (executable
   (name test021)
   (modules test021)
@@ -156,6 +220,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test022)
+  (deps test022.exe))
 (executable
   (name test022)
   (modules test022)
@@ -163,6 +230,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test023)
+  (deps test023.exe))
 (executable
   (name test023)
   (modules test023)
@@ -170,6 +240,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test024)
+  (deps test024.exe))
 (executable
   (name test024)
   (modules test024)
@@ -177,6 +250,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test025)
+  (deps test025.exe))
 (executable
   (name test025)
   (modules test025)
@@ -184,6 +260,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test026)
+  (deps test026.exe))
 (executable
   (name test026)
   (modules test026)
@@ -191,6 +270,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test027)
+  (deps test027.exe))
 (executable
   (name test027)
   (modules test027)
@@ -198,6 +280,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test028)
+  (deps test028.exe))
 (executable
   (name test028)
   (modules test028)
@@ -205,6 +290,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test029)
+  (deps test029.exe))
 (executable
   (name test029)
   (modules test029)
@@ -212,6 +300,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test030)
+  (deps test030.exe))
 (executable
   (name test030)
   (modules test030)
@@ -219,6 +310,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test031)
+  (deps test031.exe))
 (executable
   (name test031)
   (modules test031)
@@ -226,6 +320,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test032)
+  (deps test032.exe))
 (executable
   (name test032)
   (modules test032)
@@ -233,6 +330,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test036)
+  (deps test036.exe))
 (executable
   (name test036)
   (modules test036)
@@ -240,6 +340,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test037)
+  (deps test037.exe))
 (executable
   (name test037)
   (modules test037)
@@ -247,6 +350,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test040)
+  (deps test040.exe))
 (executable
   (name test040)
   (modules test040)
@@ -254,6 +360,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test041)
+  (deps test041.exe))
 (executable
   (name test041)
   (modules test041)
@@ -261,6 +370,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test042)
+  (deps test042.exe))
 (executable
   (name test042)
   (modules test042)
@@ -268,6 +380,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test082)
+  (deps test082mutal.exe))
 (executable
   (name test082mutal)
   (modules test082mutal)
@@ -275,6 +390,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test083)
+  (deps test083polyvar.exe))
 (executable
   (name test083polyvar)
   (modules test083polyvar)
@@ -282,6 +400,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test086)
+  (deps test086std.exe))
 (executable
   (name test086std)
   (modules test086std)
@@ -289,6 +410,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test087)
+  (deps test087stateful.exe))
 (executable
   (name test087stateful)
   (modules test087stateful)
@@ -296,6 +420,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test089)
+  (deps test089struct.exe))
 (executable
   (name test089struct)
   (modules test089struct)
@@ -303,6 +430,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test090)
+  (deps test090eval.exe))
 (executable
   (name test090eval)
   (modules test090eval)
@@ -310,6 +440,9 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test091)
+  (deps test091eval.exe))
 (executable
   (name test091eval)
   (modules test091eval)
@@ -317,16 +450,20 @@
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
+(cram
+  (applies_to test705)
+  (deps test705.exe))
 (executable
   (name test705)
   (modules test705)
   (libraries GT)
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
-
 ; camlp5+rectypes
-(cram (deps test081llist.exe))
 
+(cram
+  (applies_to test081)
+  (deps test081llist.exe))
 (executable
   (name test081llist)
   (modules test081llist)
@@ -334,10 +471,10 @@
   (libraries GT)
   (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
-
 ; ppx
-(cram (deps test800.exe test802mutal.exe test803polyvar.exe test804polyvar.exe test805std.exe test806fmt.exe test807showT.exe test811compare.exe test812html.exe test813htmlTy.exe test815abstr.exe test816hash.exe test820spec.exe test821clab.exe test822.exe test823list.exe test824mut.exe test825tuples.exe test826antiph.exe test827mut.exe test828combi.exe test829enum.exe test840garrique.exe))
-
+(cram
+      (applies_to test800)
+      (deps test800.exe))
 (executable
   (name test800)
   (modules test800)
@@ -345,6 +482,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test802)
+  (deps test802mutal.exe))
 (executable
   (name test802mutal)
   (modules test802mutal)
@@ -352,6 +492,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test803)
+  (deps test803polyvar.exe))
 (executable
   (name test803polyvar)
   (modules test803polyvar)
@@ -359,6 +502,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test804)
+  (deps test804polyvar.exe))
 (executable
   (name test804polyvar)
   (modules test804polyvar)
@@ -366,6 +512,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test805)
+  (deps test805std.exe))
 (executable
   (name test805std)
   (modules test805std)
@@ -373,6 +522,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test806)
+  (deps test806fmt.exe))
 (executable
   (name test806fmt)
   (modules test806fmt)
@@ -380,6 +532,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test807)
+  (deps test807showT.exe))
 (executable
   (name test807showT)
   (modules test807showT)
@@ -387,6 +542,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test811)
+  (deps test811compare.exe))
 (executable
   (name test811compare)
   (modules test811compare)
@@ -394,6 +552,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test812)
+  (deps test812html.exe))
 (executable
   (name test812html)
   (modules test812html)
@@ -401,6 +562,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test813)
+  (deps test813htmlTy.exe))
 (executable
   (name test813htmlTy)
   (modules test813htmlTy)
@@ -408,6 +572,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test815)
+  (deps test815abstr.exe))
 (executable
   (name test815abstr)
   (modules test815abstr)
@@ -415,6 +582,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test816)
+  (deps test816hash.exe))
 (executable
   (name test816hash)
   (modules test816hash)
@@ -422,6 +592,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test820)
+  (deps test820spec.exe))
 (executable
   (name test820spec)
   (modules test820spec)
@@ -429,6 +602,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test821)
+  (deps test821clab.exe))
 (executable
   (name test821clab)
   (modules test821clab)
@@ -436,6 +612,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test822)
+  (deps test822.exe))
 (executable
   (name test822)
   (modules test822)
@@ -443,6 +622,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test823)
+  (deps test823list.exe))
 (executable
   (name test823list)
   (modules test823list)
@@ -450,6 +632,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test824)
+  (deps test824mut.exe))
 (executable
   (name test824mut)
   (modules test824mut)
@@ -457,6 +642,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test825)
+  (deps test825tuples.exe))
 (executable
   (name test825tuples)
   (modules test825tuples)
@@ -464,6 +652,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test826)
+  (deps test826antiph.exe))
 (executable
   (name test826antiph)
   (modules test826antiph)
@@ -471,6 +662,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test827)
+  (deps test827mut.exe))
 (executable
   (name test827mut)
   (modules test827mut)
@@ -478,6 +672,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test828)
+  (deps test828combi.exe))
 (executable
   (name test828combi)
   (modules test828combi)
@@ -485,6 +682,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test829)
+  (deps test829enum.exe))
 (executable
   (name test829enum)
   (modules test829enum)
@@ -492,16 +692,20 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test840)
+  (deps test840garrique.exe))
 (executable
   (name test840garrique)
   (modules test840garrique)
   (libraries GT)
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
-
 ; ppx+rectypes
-(cram (deps test798gen.exe test817logic.exe test827.exe test828mut.exe test830mut.exe))
 
+(cram
+  (applies_to test798)
+  (deps test798gen.exe))
 (executable
   (name test798gen)
   (modules test798gen)
@@ -510,6 +714,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test817)
+  (deps test817logic.exe))
 (executable
   (name test817logic)
   (modules test817logic)
@@ -518,6 +725,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test827)
+  (deps test827.exe))
 (executable
   (name test827)
   (modules test827)
@@ -526,6 +736,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test828)
+  (deps test828mut.exe))
 (executable
   (name test828mut)
   (modules test828mut)
@@ -534,6 +747,9 @@
   (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
   (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
 
+(cram
+  (applies_to test830)
+  (deps test830mut.exe))
 (executable
   (name test830mut)
   (modules test830mut)

@@ -119,4 +119,3 @@
     end[@@ocaml.doc "@inline"][@@merlin.hide ]
   let __ (type a) (type b) =
     (fun eta -> GT.gmap bbb eta : (a -> b) -> a bbb -> b bbb)
-  $ ./test827mut.exe

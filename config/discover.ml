@@ -152,41 +152,56 @@ let ppx_tests dir =
 
 
 
+let get_test_prefix test_name =
+  assert (String.starts_with ~prefix:"test" test_name);
+  let i = ref 4 in
+  let len = String.length test_name in
+  let (c0, c9) = Char.(code '0', code '9') in
+  while !i < len && (c0 <= Char.code test_name.[!i]) && (Char.code test_name.[!i] <= c9) do
+    incr i
+  done;
+  String.sub test_name 0 (!i)
+
+let () =
+  assert (get_test_prefix "test123" = "test123");
+  assert (get_test_prefix "test1asdf" = "test1");
+  ()
+
 (* generates build rules for `test*.exe` *)
 let gen_tests_dune dir =
-  let cramch =
-    let f = Format.sprintf "regression.t" in
-    let _ = Sys.command (Format.sprintf "rm -f %s" f) in
-    open_out f
-  in
   let outch  = open_out (Format.sprintf "dune.tests") in
   let fmt = Format.formatter_of_out_channel outch in
   Format.pp_set_margin fmt 80;
   Format.pp_set_max_indent fmt 6;
+  let printfn ppf = Format.fprintf fmt ppf in
   let wrap ?flags desc tests rewriter =
-    tests |> List.iter (fun s ->
+
+    (* tests |> List.iter (fun s ->
       Printf.fprintf cramch "  $ ./%s.exe\n%!" s
-    );
+    ); *)
     match tests with
     | [] -> ()
     | _ ->
-        let exes = String.concat " " @@ List.map (Printf.sprintf "%s.exe") tests in
-        Format.fprintf fmt "\n; %s\n" desc;
-        Format.fprintf fmt "(cram (deps %s))\n" exes;
+        printfn "; %s\n" desc;
 
         tests |> List.iter (fun test ->
-          Format.fprintf fmt "@[(executable";
-          Format.fprintf fmt "@[<v 2>  ";
-          Format.fprintf fmt "@[(name %s)@]@," test;
-          Format.fprintf fmt "@[(modules %s)@]@," test;
+          let tprefix = get_test_prefix test in
+          Out_channel.with_open_text (tprefix ^ ".t") (fun cramch ->
+            Printf.fprintf cramch "  $ ./%s.exe\n%!" test
+          );
+          printfn "@[<v 2>(cram@ @[(applies_to %s)@]@ @[(deps %s.exe)@])@]" tprefix test;
+          printfn "@[(executable";
+          printfn "@[<v 2>  ";
+          printfn "@[(name %s)@]@," test;
+          printfn "@[(modules %s)@]@," test;
           let () = match flags with
             | None -> ()
-            | Some f -> Format.fprintf fmt "@[(flags (:standard %s))@]@," f
+            | Some f -> printfn "@[(flags (:standard %s))@]@," f
           in
-          Format.fprintf fmt "@[(libraries GT)@]@,";
-          Format.fprintf fmt "@[%a@]" rewriter ();
-          Format.fprintf fmt "@]"; (* close vbox *)
-          Format.fprintf fmt ")@]\n"
+          printfn "@[(libraries GT)@]@,";
+          printfn "@[%a@]" rewriter ();
+          printfn "@]"; (* close vbox *)
+          printfn ")@]\n"
         );
         Format.pp_print_flush fmt ()
   in
@@ -206,11 +221,11 @@ let gen_tests_dune dir =
     Format.fprintf ppf "@[(preprocess (action (run %s --as-pp %%{input-file})))@]@," pp;
     Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
-  let () = wrap "camlp5 " (camlp5_tests dir) p5_rewriter in
+  let () = wrap "camlp5" (camlp5_tests dir) p5_rewriter in
   let () = wrap ~flags:"-rectypes" "camlp5+rectypes" (camlp5_rectypes_tests) p5_rewriter in
   let () = wrap "ppx" (ppx_tests dir) ppx_rewriter in
   let () = wrap ~flags:"-rectypes" "ppx+rectypes" (ppx_rectypes_tests) ppx_rewriter in
-  close_out cramch;
+
   close_out outch
 
 let discover_doc () =

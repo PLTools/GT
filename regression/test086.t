@@ -1,0 +1,1 @@
+  $ ./test086std.exe

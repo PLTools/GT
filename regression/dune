@@ -14,11 +14,6 @@
   ;
   ))
 
-; TODO outogenerate proper cram dependencies
-; (cram
-;  (applies_to * \ foo bar)
-;  (deps ../foo.exe))
-
 (cram
  (deps
   ../ppx/pp_gt.exe

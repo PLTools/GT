@@ -1,0 +1,1 @@
+  $ ./test811compare.exe

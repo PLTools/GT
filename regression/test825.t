@@ -1,0 +1,1 @@
+  $ ./test825tuples.exe

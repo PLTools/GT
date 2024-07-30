@@ -14,9 +14,10 @@
   (run ./discover.exe -doc-flags)))
 
 (rule
- (targets dune.tests regression.t)
+ (targets dune.tests)
  (alias discover-tests)
- ;(deps tests.dune.tpl (source_tree ../regression))
+ (deps
+  (source_tree ../regression))
  (mode
   (promote-into ../regression))
  (action

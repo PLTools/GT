@@ -9,7 +9,9 @@ release: all
 
 discover-tests:
 	echo "" > regression/dune.tests
+	$(RM) -fr _build/default/config
 	dune build @discover-tests
+	cp _build/default/config/*.t regression/
 
 doc:
 	dune build @doc $(DFLAGS)
