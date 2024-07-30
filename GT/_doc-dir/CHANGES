@@ -1,0 +1,33 @@
+# Ureleased
+
+## Changed
+
+## 0.5.2 (2023-06-16)
+
+## Changed
+
+- Upgrade support of mutually recursive abbreviations (in presence of -rectypes). Previously some code would not compile (breaking)
+- Mutually recursive fixpoint on N typs is now called 'fix_typ1_typ2_..._typN' instead of 'fix_typ1' (breaking)
+- Add forgotten `html` plugin to `GT.ppx_all` findlib package
+- Replace dependecy on base by a dependecy on Ppxlib.stdppx
+- Support both `[@@deriving gt ~options:{...}]` and `[@@deriving gt ~plugins:{...}]`
+- Better pretty-printing of zero-argument constructors
+- Relax upper constraint on PPXlib to be <= 0.28
+
+
+## 0.5.1 (2022-04-27)
+
+## Changed
+
+- Upgrade to ppxlib <= 0.26 and OCaml 4.14
+
+## 0.5.0 (2022-02-11)
+
+## 0.4.2 (2021-08-09)
+
+### Changed
+
+- Add PPX rewriter GT.ppx_all that incapsulated all available plugins
+- Generated code has less warnings
+
+## 0.4.1 (2021-02-19)
