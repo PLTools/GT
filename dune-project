@@ -6,23 +6,26 @@
 
 (name GT)
 
+(license LGPL-2.1-or-later)
+
+(bug_reports "https://github.com/PLTools/GT/issues")
+
+(homepage "https://github.com/PLTools/GT")
+
 (source
  (github PLTools/GT))
 
 (package
  (name GT)
  (synopsis "Generic programming with extensible transformations")
- (license LGPL-2.1-or-later)
  (description
-  "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from Fran\195\167ois Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.\n\n\nP.S. Since 2023 development team is no longer associated with JetBrains Research")
+  "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from François Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.\n\n\nP.S. Since 2023 development team is no longer associated with JetBrains Research")
  (authors "https://github.com/dboulytchev" "https://github.com/Kakadu")
  (maintainers "Kakadu@pm.me")
- (homepage "https://github.com/PLTools/GT")
- (bug_reports "https://github.com/PLTools/GT/issues")
  (version 0.5.2)
  (depends
   (ppxlib
-   (<= "0.28.0"))
+   (<= "0.32.1"))
   (ocaml
    (>= "4.13"))
   (camlp5
@@ -41,5 +44,6 @@
  (name GT-bench)
  (synopsis "Some benchmarks. Should not be installed")
  (version 0.1)
+ (authors "Dmitrii Kosarev a.k.a. Kakadu")
  (maintainers "Kakadu@pm.me")
  (depends dune benchmark))

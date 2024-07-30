@@ -3,6 +3,8 @@ opam-version: "2.0"
 version: "0.1"
 synopsis: "Some benchmarks. Should not be installed"
 maintainer: ["Kakadu@pm.me"]
+authors: ["Dmitrii Kosarev a.k.a. Kakadu"]
+license: "LGPL-2.1-or-later"
 homepage: "https://github.com/PLTools/GT"
 bug-reports: "https://github.com/PLTools/GT/issues"
 depends: [
