@@ -25,7 +25,7 @@
  (version 0.5.3)
  (depends
   (ppxlib
-   (<= "0.32.1"))
+   (<= "0.33.0"))
   (ocaml
    (or
     (and
