@@ -401,6 +401,16 @@
   (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
 
 (cram
+  (applies_to test084)
+  (deps test084.exe))
+(executable
+  (name test084)
+  (modules test084)
+  (libraries GT)
+  (preprocess (action (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file})))
+  (preprocessor_deps (file %{project_root}/camlp5/pp5+gt+plugins+dump.exe)))
+
+(cram
   (applies_to test086)
   (deps test086std.exe))
 (executable
