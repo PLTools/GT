@@ -21,6 +21,7 @@
 open GTCommon
 open Ploc
 open MLast
+let failwiths = HelpersBase.failwiths
 
 module Located = struct
   type t = Ploc.t
@@ -142,7 +143,7 @@ module Exp = struct
     | "[]" | "::" | _ when HelpersBase.Char.is_alpha s.[0] && capitalized s -> <:expr< $uid:s$ >>
     | _ -> <:expr< $lid:s$ >>
 
-  let attribute _ e = e 
+  let attribute _ e = e
   let unit ~loc =  <:expr< () >>
   let sprintf ~loc fmt =
     Printf.ksprintf (fun s -> <:expr< $lid:s$ >>) fmt
@@ -312,7 +313,7 @@ module Typ = struct
     let init = List.hd r in
     List.fold_left (fun acc x -> arrow ~loc x acc) init (List.tl r)
 
-  let from_caml root_typ =
+  let rec from_caml root_typ =
     let rec helper typ =
       let loc = loc_from_caml typ.Ppxlib.ptyp_loc in
       match typ.ptyp_desc with
@@ -321,13 +322,16 @@ module Typ = struct
       | Ptyp_arrow (lab, l, r) -> arrow ~loc (helper l) (helper r)
       | Ptyp_constr ({txt;_}, ts) -> constr ~loc txt (List.map helper ts)
       | Ptyp_tuple ts -> <:ctyp< ( $list:(List.map helper ts)$ ) >>
-      | Ptyp_variant (_,_,_)
-      | _ -> failwith "Not implemented: conversion from OCaml ast to Camlp5 Ast"
+      | Ptyp_variant (cs, flg, None) ->
+          variant ~loc ~is_open:(match flg with Closed -> false | Open -> true) cs
+      | Ptyp_variant (_,_,Some _ )
+      | _ ->
+        failwiths "Not implemented: conversion from OCaml AST to Camlp5 AST (%s %d)" __FILE__ __LINE__
     in
     helper root_typ
 
   (* this might need to be changed *)
-  let variant ~loc ?(is_open=false) fs =
+  and variant ~loc ?(is_open=false) fs =
     let vs = fs |> List.map (fun rf -> match rf.Ppxlib.prf_desc with
         | Ppxlib.Rinherit core_typ -> PvInh (loc, from_caml core_typ)
         | Rtag (lb, is_open, args) ->
@@ -335,7 +339,7 @@ module Typ = struct
       ) in
     if is_open
     then <:ctyp< [ > $list:vs$ ] >>
-    else <:ctyp< [ < $list:vs$ ] >>
+    else <:ctyp< [ = $list:vs$ ] >>
 
   let variant_of_t ~loc typ =
     <:ctyp< [ > $list:[PvInh (loc, typ)]$ ] >>
