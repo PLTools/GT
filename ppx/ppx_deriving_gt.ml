@@ -34,7 +34,7 @@ let str_type_decl : (_, _) Deriving.Generator.t =
         | Some _, Some _ ->
           Location.raise_errorf
             ~loc
-            "You can't specify both options and plugins. Use only on eof them"
+            "You can't specify both options and plugins. Use only one of them"
       in
       H.str_type_decl_many_plugins
         ~loc
@@ -44,23 +44,32 @@ let str_type_decl : (_, _) Deriving.Generator.t =
          | Some xs ->
            List.map
              (function
-              | Lident name, e ->
-                let extra =
-                  match e.pexp_desc with
-                  | Pexp_record (xs, _) -> List.map (fun ({ txt }, b) -> txt, b) xs
-                  | Pexp_ident { txt = Lident s } when s = name -> []
-                  | _ -> Location.raise_errorf ~loc "bad argument of a plugin"
-                in
-                name, Expander.Use extra
-              | _ -> Location.raise_errorf ~loc "only lowercase identifiers are allowed")
+               | Lident name, e ->
+                 let extra =
+                   match e.pexp_desc with
+                   | Pexp_record (xs, _) -> List.map (fun ({ txt }, b) -> txt, b) xs
+                   | Pexp_ident { txt = Lident s } when s = name -> []
+                   | _ -> Location.raise_errorf ~loc "bad argument of a plugin"
+                 in
+                 name, Expander.Use extra
+               | _ -> Location.raise_errorf ~loc "only lowercase identifiers are allowed")
              xs)
         info)
 ;;
 
 let sig_type_decl : (_, _) Deriving.Generator.t =
   Deriving.Generator.make
-    Deriving.Args.(empty +> arg "options" r)
-    (fun ~loc ~path info options ->
+    Deriving.Args.(empty +> arg "options" r +> arg "plugins" r)
+    (fun ~loc ~path info options plugins ->
+      let options =
+        match options, plugins with
+        | None, None -> None
+        | Some p, None | None, Some p -> Some p
+        | Some _, Some _ ->
+          Location.raise_errorf
+            ~loc
+            "You can't specify both options and plugins. Use only one of them"
+      in
       let generator_f si =
         H.sig_type_decl_many_plugins
           ~loc
@@ -70,8 +79,9 @@ let sig_type_decl : (_, _) Deriving.Generator.t =
            | Some xs ->
              List.map
                (function
-                | Lident name, e -> name, Expander.Use []
-                | _ -> Location.raise_errorf ~loc "only lowercase identifiers are allowed")
+                 | Lident name, e -> name, Expander.Use []
+                 | _ ->
+                   Location.raise_errorf ~loc "only lowercase identifiers are allowed")
                xs)
       in
       generator_f [] info)

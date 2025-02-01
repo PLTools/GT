@@ -1,8 +1,9 @@
 ## Ureleased
 
-## Changed 
+## Changed
 
 * Fix issue 32: using polyvariants as type arguments crashed for Camlp5
+* Allow both 'options' and 'plugins' in the signatures
 
 ## 0.5.3 (2024-07-30)
 

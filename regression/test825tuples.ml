@@ -12,5 +12,5 @@ type t = GT.int * GT.string
   [@@deriving gt ~options:{show; gmap; compare; eq; eval; foldl; html; stateful }]
 end : sig
 type t = GT.int * GT.string
-  [@@deriving gt ~options:{show; gmap; compare; eq; eval; foldl; html; stateful }]
+  [@@deriving gt ~plugins:{show; gmap; compare; eq; eval; foldl; html; stateful }]
 end)
