@@ -55,4 +55,7 @@
  (version 0.1)
  (authors "Dmitrii Kosarev a.k.a. Kakadu")
  (maintainers "Kakadu@pm.me")
- (depends dune benchmark))
+ (depends
+  dune
+  (benchmark
+   (< "1.7"))))

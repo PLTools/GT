@@ -9,7 +9,7 @@ homepage: "https://github.com/PLTools/GT"
 bug-reports: "https://github.com/PLTools/GT/issues"
 depends: [
   "dune" {>= "2.8"}
-  "benchmark"
+  "benchmark" {< "1.7"}
   "odoc" {with-doc}
 ]
 build: [
