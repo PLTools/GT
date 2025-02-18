@@ -38,7 +38,7 @@
    (>= "8.00.05"))
   dune
   ocamlgraph
-  ppx_inline_test
+  ppx_inline_test_nobase
   (ocamlfind :build)
   (logger-p5 :build)
   (bisect_ppx :build)

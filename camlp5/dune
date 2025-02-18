@@ -40,7 +40,7 @@
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,logger,ppxlib,ocamlgraph
    -package
-   ppx_inline_test.runtime-lib,bisect_ppx.common,bisect_ppx.runtime
+   ppx_inline_test_nobase.runtime-lib,bisect_ppx.common,bisect_ppx.runtime
    -I
    ../common
    %{read-lines:../config/package-doc.cfg}
@@ -70,7 +70,7 @@
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,logger,ppxlib,ocamlgraph
    -package
-   ppx_inline_test.runtime-lib
+   ppx_inline_test_nobase.runtime-lib
    -I
    ../common
    %{read-lines:../config/package-doc.cfg}
@@ -95,7 +95,7 @@
    -package
    logger,ppxlib,ocamlgraph
    -package
-   ppx_inline_test.runtime-lib,bisect_ppx.common,bisect_ppx.runtime
+   ppx_inline_test_nobase.runtime-lib,bisect_ppx.common,bisect_ppx.runtime
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
    -o
@@ -108,7 +108,7 @@
   (run
    mkcamlp5.opt
    -package
-   ppx_inline_test.runtime-lib
+   ppx_inline_test_nobase.runtime-lib
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,logger,GT.common,ocamlgraph
    %{deps}
@@ -122,11 +122,11 @@
   (run
    mkcamlp5
    -package
-   ppx_inline_test.runtime-lib
+   ppx_inline_test_nobase.runtime-lib
    -package
    camlp5,camlp5.pa_o,camlp5.pr_o,camlp5.extend,camlp5.quotations,logger,GT.common,ocamlgraph
    -package
-   ppx_inline_test.runtime-lib
+   ppx_inline_test_nobase.runtime-lib
    %{deps}
    -o
    %{targets})))
@@ -139,7 +139,7 @@
    -package
    camlp5,camlp5.pa_o,camlp5.extend,camlp5.quotations
    -package
-   ppx_inline_test.runtime-lib
+   ppx_inline_test_nobase.runtime-lib
    pr_dump.cmx
    -o
    %{targets})))
@@ -152,6 +152,6 @@
    -package
    camlp5,camlp5.quotations,camlp5.pr_dump,camlp5.pa_o,camlp5.extend,ocamlgraph
    -package
-   ppx_inline_test.runtime-lib
+   ppx_inline_test_nobase.runtime-lib
    -o
    %{targets})))

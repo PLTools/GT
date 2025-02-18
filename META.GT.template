@@ -27,7 +27,7 @@ package "View" (
 package "common" (
   directory = "common"
   description = "Actual code that perform codegeneration. Will used for creating new plugins"
-  requires = "ocamlgraph ppxlib  ppx_inline_test.runtime-lib"
+  requires = "ocamlgraph ppxlib  ppx_inline_test_nobase.runtime-lib"
   archive(byte) = "GTCommon.cma"
   archive(native) = "GTCommon.cmxa"
   plugin(byte) = "GTCommon.cma"

@@ -20,23 +20,16 @@ module Make : functor (Helpers : GTHELPERS_sig.S) -> sig
   val str_type_decl_many_plugins
     :  loc:loc
     -> Str.t list
-    -> (Base.string * config_plugin) list
+    -> (string * config_plugin) list
     -> Ppxlib.rec_flag * Ppxlib.type_declaration list
     -> Str.t HelpersBase.List.t
 
   val sig_type_decl_many_plugins
     :  loc:loc
     -> Sig.t list
-    -> (Base.string * config_plugin) list
+    -> (string * config_plugin) list
     -> Ppxlib.rec_flag * Ppxlib.type_declaration list
     -> Sig.t HelpersBase.List.t
-  (*
-val str_type_ext_many_plugins: loc:loc ->
-  Str.t list ->
-  (Base.string * config_plugin) list ->
-  Ppxlib.type_extension ->
-  Str.t HelpersBase.List.t
-*)
 end
 
 (** Registers a plugin. See {! Plugin_intf.PluginRes } for plugin interface. *)

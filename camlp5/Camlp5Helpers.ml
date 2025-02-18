@@ -21,6 +21,7 @@
 open GTCommon
 open Ploc
 open MLast
+
 let failwiths = HelpersBase.failwiths
 
 module Located = struct
@@ -272,7 +273,7 @@ module Typ = struct
   let pair ~loc l r = <:ctyp< ( $list:[l;r]$ ) >>
 
   let access2 ~loc mname tname =
-    assert (Base.Char.is_uppercase mname.[0]);
+    assert (HelpersBase.Char.is_uppercase mname.[0]);
     of_longident ~loc (Ldot (Lident mname, tname))
 
   let var  ~loc s = <:ctyp< '$s$ >>

@@ -211,11 +211,12 @@ let vars_from_tdecl tdecl =
     | Ptype_open | Ptype_abstract -> SS.empty
     | Ptype_record ls -> of_labels ls
     | Ptype_variant cds ->
-      List.fold_left cds ~init:SS.empty ~f:(fun acc -> function
-        | { pcd_args = Pcstr_tuple ts } ->
-          List.fold_left ~init:SS.empty ts ~f:(fun acc x ->
-            SS.union acc (vars_from_core_type x))
-        | { pcd_args = Pcstr_record ls } -> SS.union acc (of_labels ls))
+      List.fold_left cds ~init:SS.empty ~f:(fun acc ->
+          function
+          | { pcd_args = Pcstr_tuple ts } ->
+            List.fold_left ~init:SS.empty ts ~f:(fun acc x ->
+              SS.union acc (vars_from_core_type x))
+          | { pcd_args = Pcstr_record ls } -> SS.union acc (of_labels ls))
   in
   SS.union ans2 ans
 ;;
@@ -291,16 +292,16 @@ let is_type_used_in ~tdecl lident =
 ;;
 
 (* let%expect_test _ =
-  let loc = Ppxlib.Location.none in
-  let tdecl =
-    match [%stri type nonrec heap = t].pstr_desc with
-    | Pstr_type (_, [ h ]) -> h
-    | _ -> assert false
-  in
-  Printf.printf "%b\n" (is_type_used_in ~tdecl (Lident "t"));
-  Printf.printf "%b\n" (is_type_used_in ~tdecl (Lident "heap"));
-  [%expect {| |}]
-;; *)
+   let loc = Ppxlib.Location.none in
+   let tdecl =
+   match [%stri type nonrec heap = t].pstr_desc with
+   | Pstr_type (_, [ h ]) -> h
+   | _ -> assert false
+   in
+   Printf.printf "%b\n" (is_type_used_in ~tdecl (Lident "t"));
+   Printf.printf "%b\n" (is_type_used_in ~tdecl (Lident "heap"));
+   [%expect {| |}]
+   ;; *)
 
 let maybe_specialiaze ~what where =
   (* Format.printf "maybe specialize: %a\n%!" Pprintast.structure_item
@@ -470,7 +471,7 @@ let prepare_patt_match_poly ~loc what rows labels ~onrow ~onlabel ~oninherit =
           | _ ->
             Some
               (ppat_tuple ~loc
-              @@ List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s)) names)
+               @@ List.map ~f:(fun s -> ppat_var ~loc (Located.mk ~loc s)) names)
         in
         case ~guard:None ~lhs ~rhs:(onrow lab @@ List.combine names args)
       | Rinherit typ ->
