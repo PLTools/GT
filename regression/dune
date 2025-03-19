@@ -1,7 +1,7 @@
 (env
  (dev
   (flags
-   (:standard -warn-error -A -w +39-32-7-34))))
+   (:standard -warn-error -A -w +39-32-7-34 -w -unused-constructor))))
 
 (include dune.tests)
 

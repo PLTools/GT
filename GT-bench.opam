@@ -8,7 +8,7 @@ license: "LGPL-2.1-or-later"
 homepage: "https://github.com/PLTools/GT"
 bug-reports: "https://github.com/PLTools/GT/issues"
 depends: [
-  "dune" {>= "2.8"}
+  "dune" {>= "3.16"}
   "benchmark" {< "1.7"}
   "odoc" {with-doc}
 ]

@@ -1,6 +1,5 @@
 (*** command line arguments ***)
 
-let tests         = ref false
 let tests_dune    = ref false
 let tests_dir     = ref "./regression"
 let camlp5_flags   = ref false
@@ -24,18 +23,6 @@ let args =
 module Cfg = Configurator.V1
 
 (*** utility functions ***)
-
-(* pretty dumb file reading *)
-let read_file fn =
-  let ichan = open_in fn in
-  let rec helper lines =
-    try
-      let line = input_line ichan in
-      helper (line :: lines)
-    with End_of_file -> lines
-  in
-  let lines = List.rev @@ helper [] in
-  String.concat "\n" lines
 
 let extract_words = Cfg.Flags.extract_comma_space_separated_words
 
@@ -114,7 +101,7 @@ let discover_logger_flags cfg =
   in
   Cfg.Flags.write_lines "logger-flags.cfg" cmos
 
-let discover_tests ?(except=[]) cfg pattern =
+let _discover_tests ?(except=[]) cfg pattern =
   let out =
     Cfg.Process.run_capture_exn cfg ~dir:"../../regression"
       "find" ["."; "-maxdepth"; "1"; "-iname"; pattern; "-exec"; "basename"; "{}"; "'.ml'"; "\\;"]
@@ -175,10 +162,6 @@ let gen_tests_dune dir =
   Format.pp_set_max_indent fmt 6;
   let printfn ppf = Format.fprintf fmt ppf in
   let wrap ?flags desc tests rewriter =
-
-    (* tests |> List.iter (fun s ->
-      Printf.fprintf cramch "  $ ./%s.exe\n%!" s
-    ); *)
     match tests with
     | [] -> ()
     | _ ->
@@ -222,9 +205,9 @@ let gen_tests_dune dir =
     Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
   let () = wrap "camlp5" (camlp5_tests dir) p5_rewriter in
-  let () = wrap ~flags:"-rectypes" "camlp5+rectypes" (camlp5_rectypes_tests) p5_rewriter in
+  let () = wrap ~flags:"-rectypes" "camlp5+rectypes" camlp5_rectypes_tests p5_rewriter in
   let () = wrap "ppx" (ppx_tests dir) ppx_rewriter in
-  let () = wrap ~flags:"-rectypes" "ppx+rectypes" (ppx_rectypes_tests) ppx_rewriter in
+  let () = wrap ~flags:"-rectypes" "ppx+rectypes" ppx_rectypes_tests ppx_rewriter in
 
   close_out outch
 

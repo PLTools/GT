@@ -19,6 +19,7 @@
  (deps
   (source_tree ../regression))
  (mode
-  (promote-into ../regression))
+  (promote
+   (into ../regression)))
  (action
   (run ./discover.exe -tests -tests-dir %{project_root}/regression)))

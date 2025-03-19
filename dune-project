@@ -1,4 +1,4 @@
-(lang dune 2.8)
+(lang dune 3.16)
 
 (generate_opam_files true)
 
@@ -24,8 +24,6 @@
  (maintainers "Kakadu@pm.me")
  (version 0.5.3)
  (depends
-  (ppxlib
-   (<= "0.33.0"))
   (ocaml
    (or
     (and
@@ -34,9 +32,12 @@
     (and
      (>= "5.2.0")
      (< "5.3.0"))))
+  (dune
+   (>= "3.16"))
+  (ppxlib
+   (<= "0.33.0"))
   (camlp5
    (>= "8.00.05"))
-  dune
   ocamlgraph
   ppx_inline_test_nobase
   (ocamlfind :build)

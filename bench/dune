@@ -2,7 +2,7 @@
  (_
   (ocamlopt_flags -S)
   (flags
-   (:standard -w -9-32-33))))
+   (:standard -w -9-32-33-37))))
 
 (executable
  (name bench1)

@@ -14,6 +14,8 @@ module MySamples = struct
     }
   [@@deriving gt ~plugins:{ show }]
 
+  [@@@ocaml.warning "-34"]
+
   type samples = (GT.string * t GT.list) GT.list [@@deriving gt ~plugins:{ show }]
 
   let save res filename =
@@ -351,110 +353,110 @@ let __ () =
   let module M = Lambda.Iter in
   sizes
   |> List.iter (fun n ->
-       let xs = M.create n in
-       let wrap f () =
-         (* Gc.major ();
-              Gc.minor ();
-              Gc.compact (); *)
-         let _ = f () xs in
-         ()
-       in
-       let res =
-         throughputN
-           ~repeat
-           ~style
-           timeout
-           [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
-           ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
-           ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
-           ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
-           ]
-       in
-       print_newline ();
-       tabulate ~confidence res)
+    let xs = M.create n in
+    let wrap f () =
+      (* Gc.major ();
+         Gc.minor ();
+         Gc.compact (); *)
+      let _ = f () xs in
+      ()
+    in
+    let res =
+      throughputN
+        ~repeat
+        ~style
+        timeout
+        [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
+        ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
+        ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
+        ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
+        ]
+    in
+    print_newline ();
+    tabulate ~confidence res)
 ;;
 
 let __ () =
   let module M = Lambda.Id in
   sizes
   |> List.iter (fun n ->
-       let xs = M.create n in
-       let wrap f () =
-         (* Gc.major ();
-              Gc.minor ();
-              Gc.compact (); *)
-         let _ = f () xs in
-         ()
-       in
-       let res =
-         throughputN
-           ~repeat
-           ~style
-           timeout
-           [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
-           ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
-           ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
-           ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
-           ]
-       in
-       print_newline ();
-       let () = MySamples.save res (Printf.sprintf "%s_%d.sexp" M.name n) in
-       tabulate ~confidence res)
+    let xs = M.create n in
+    let wrap f () =
+      (* Gc.major ();
+         Gc.minor ();
+         Gc.compact (); *)
+      let _ = f () xs in
+      ()
+    in
+    let res =
+      throughputN
+        ~repeat
+        ~style
+        timeout
+        [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
+        ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
+        ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
+        ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
+        ]
+    in
+    print_newline ();
+    let () = MySamples.save res (Printf.sprintf "%s_%d.sexp" M.name n) in
+    tabulate ~confidence res)
 ;;
 
 let () =
   let module M = Lambda.PP in
   sizes
   |> List.iter (fun n ->
-       let xs = M.create n in
-       let b = Buffer.create 2000 in
-       let wrap f () =
-         Buffer.clear b;
-         let ppf = Format.formatter_of_buffer b in
-         let _ = f ppf xs in
-         let () = Format.pp_print_flush ppf () in
-         ()
-       in
-       let res =
-         throughputN
-           ~repeat
-           ~style
-           timeout
-           [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
-           ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
-           ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
-           ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
-           ]
-       in
-       print_newline ();
-       let () = MySamples.save res (Printf.sprintf "%s_%d.sexp" M.name n) in
-       tabulate ~confidence res)
+    let xs = M.create n in
+    let b = Buffer.create 2000 in
+    let wrap f () =
+      Buffer.clear b;
+      let ppf = Format.formatter_of_buffer b in
+      let _ = f ppf xs in
+      let () = Format.pp_print_flush ppf () in
+      ()
+    in
+    let res =
+      throughputN
+        ~repeat
+        ~style
+        timeout
+        [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
+        ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
+        ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
+        ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
+        ]
+    in
+    print_newline ();
+    let () = MySamples.save res (Printf.sprintf "%s_%d.sexp" M.name n) in
+    tabulate ~confidence res)
 ;;
 
 let () =
   let module M = Lambda.Eval in
   sizes
   |> List.iter (fun n ->
-       let xs = M.create n in
-       let wrap f () =
-         (* Gc.major ();
-              Gc.minor ();
-              Gc.compact (); *)
-         let _ = f () xs in
-         ()
-       in
-       let res =
-         throughputN
-           ~repeat
-           ~style
-           timeout
-           [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
-           ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
-           ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
-           ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
-           ]
-       in
-       let () = MySamples.save res (Printf.sprintf "%s_%d.sexp" M.name n) in
-       print_newline ();
-       tabulate ~confidence res)
+    let xs = M.create n in
+    let wrap f () =
+      (* Gc.major ();
+         Gc.minor ();
+         Gc.compact (); *)
+      let _ = f () xs in
+      ()
+    in
+    let res =
+      throughputN
+        ~repeat
+        ~style
+        timeout
+        [ Printf.sprintf "%s_D_%d" M.name n, wrap M.D.f, ()
+        ; Printf.sprintf "%s_M_%d" M.name n, wrap M.M.f, ()
+        ; Printf.sprintf "%s_V_%d" M.name n, wrap M.V.f, ()
+        ; Printf.sprintf "%s_G_%d" M.name n, wrap M.G.f, ()
+        ]
+    in
+    let () = MySamples.save res (Printf.sprintf "%s_%d.sexp" M.name n) in
+    print_newline ();
+    tabulate ~confidence res)
 ;;
