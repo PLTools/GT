@@ -48,6 +48,7 @@ ODIG_SWITCHES = --odoc-theme=odig.gruvbox.light
 ODIG_SWITCHES += --no-tag-index
 ODIG_SWITCHES += --no-pkg-deps
 odig:
+	dune install $(DFLAGS) GT
 	odig odoc $(ODIG_SWITCHES) GT
 
 .PHONY: coverage

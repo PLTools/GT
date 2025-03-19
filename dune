@@ -1,1 +1,9 @@
 (dirs :standard \ regression_ppx work)
+
+(documentation
+ (package GT))
+
+(mdx
+ (files index.mld)
+ (package GT)
+ (libraries GT))

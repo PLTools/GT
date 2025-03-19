@@ -35,6 +35,7 @@ depends: [
   "odoc" {with-doc}
   "odig" {with-doc}
   "pa_ppx" {with-doc}
+  "mdx" {with-test}
 ]
 build: [
   ["dune" "subst"] {dev}

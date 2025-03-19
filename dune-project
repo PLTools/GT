@@ -2,6 +2,8 @@
 
 (generate_opam_files true)
 
+(using mdx 0.3)
+
 (cram enable)
 
 (name GT)
@@ -47,6 +49,7 @@
   (odoc :with-doc)
   (odig :with-doc)
   (pa_ppx :with-doc)
+  (mdx :with-test)
   ;
   ))
 
