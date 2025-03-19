@@ -39,18 +39,54 @@ The key feature of the approach in question is object-oriented representation of
 
 Use findlib package `GT.ppx` in combination with `ppxlib`. See `ppxlib`'s manual for full guidance. In short do
 
-```
-~ ocaml
-OCaml version 4.14.1
-Enter #help;; for help.
-
+<!-- $MDX non-deterministic=output -->
+```ocaml
 # #use "topfind";;
 # #require "GT";;
 # #require "GT.ppx_all";;
 ../GT/ppx_all: added to search path
 ../GT/ppx_all/./ppx.exe --as-ppx: activated
+```
+
+```ocaml
 # type 'a list = Nil | Cons of 'a * 'a list [@@deriving gt ~options:{fmt; show}];;
-...
+type 'a list = Nil | Cons of 'a * 'a list
+class virtual ['ia, 'a, 'sa, 'inh, 'extra, 'syn] list_t :
+  object
+    method virtual c_Cons : 'inh -> 'extra -> 'a -> 'a list -> 'syn
+    method virtual c_Nil : 'inh -> 'extra -> 'syn
+  end
+val gcata_list :
+  ('a, 'typ0__003_, 'b, 'c, 'typ0__003_ list, 'd) #list_t ->
+  'c -> 'typ0__003_ list -> 'd = <fun>
+class ['a, 'b] show_list_t :
+  (unit -> 'a -> string) ->
+  (unit -> 'a list -> string) ->
+  object
+    constraint 'b = 'a list
+    method c_Cons : unit -> 'a list -> 'a -> 'a list -> string
+    method c_Nil : unit -> 'a list -> string
+  end
+class ['a, 'b] fmt_list_t :
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'a list -> unit) ->
+  object
+    constraint 'b = 'a list
+    method c_Cons : Format.formatter -> 'a list -> 'a -> 'a list -> unit
+    method c_Nil : Format.formatter -> 'a list -> unit
+  end
+val fmt_list :
+  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit =
+  <fun>
+val list :
+  (('a, 'b, 'c, 'd, 'b list, 'e) #list_t -> 'd -> 'b list -> 'e,
+   < fmt : (Format.formatter -> 'f -> unit) ->
+           Format.formatter -> 'f list -> unit;
+     show : ('g -> string) -> 'g list -> string >,
+   (('h -> 'i list -> 'j) -> ('k, 'i, 'l, 'h, 'i list, 'j) #list_t) ->
+   'h -> 'i list -> 'j)
+  GT.t = {GT.gcata = <fun>; plugins = <obj>; fix = <fun>}
+val show_list : ('a -> string) -> 'a list -> string = <fun>
 ```
 
 ### As Camlp5 syntax extension
@@ -65,10 +101,14 @@ To preprocess only the code in this library (for example, a test) use the follow
 
 To use camlp5 (>= 7.12) syntax extension in toplevel try (after installation) this:
 
-    #use "topfind.camlp5";;
-    #camlp5o;;
-    #require "GT,GT.syntax,GT.syntax.show,GT.syntax.map";;
-    @type t = GT.int with gmap,show;; (* for example *)
+<!-- $MDX non-deterministic=output -->
+```ocaml
+# #use "topfind.camlp5";;
+# #camlp5o;;
+# #require "GT.syntax";;
+# #require "GT.syntax.all";;
+# @type t = GT.int with gmap,show;; (* for example *)
+```
 
 ## Directory structure
 
@@ -82,7 +122,7 @@ To use camlp5 (>= 7.12) syntax extension in toplevel try (after installation) th
 # Dependencies
 
 - `ppxlib`
-- `camlp5
+- `camlp5`
 - `ocamlgraph` for topological sorting
 - `ocamlbuild` as build system
 
