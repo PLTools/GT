@@ -1,2 +1,334 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>index (GT.index)</title><meta charset="utf-8"/><link rel="stylesheet" href="../_odoc-theme/odoc.css"/><meta name="generator" content="odoc 3.0.0_beta1"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../index.html">🏠</a> &#x00BB; GT</nav><header class="odoc-preamble"><h1 id="package-GT"><a href="#package-GT" class="anchor"></a>Package GT <span class="version">0.5.3</span> <nav><a type="text/plain; charset=UTF-8" href="_doc-dir/CHANGES">changes</a> <a href="https://github.com/PLTools/GT/issues">issues</a> <a href="#package_info">more…</a></nav></h1><ul class="modules"><li><a href="Compare/index.html"><code>Compare</code></a> <span class="synopsis"><i>Compare</i> plugin: receive another value as inherited attribute and compare.</span></li><li><a href="Enum/index.html"><code>Enum</code></a> </li><li><a href="Eq/index.html"><code>Eq</code></a> <span class="synopsis"><i>Eq</i> plugin: receive another value as inherited attribute and test for equality.</span></li><li><a href="Eval/index.html"><code>Eval</code></a> <span class="synopsis"><i>Eval</i> plugin: functors + inherited value to make decisions about how to map values.</span></li><li><a href="Foldl/index.html"><code>Foldl</code></a> <span class="synopsis"><i>Foldl</i> plugin: fold all values in a type.</span></li><li><a href="Foldr/index.html"><code>Foldr</code></a> <span class="synopsis"><i>Foldr</i> plugin: fold all values in a type.</span></li><li><a href="GT/index.html"><code>GT</code></a> </li><li><a href="GTCommon/index.html"><code>GTCommon</code></a> </li><li><a href="Gfmt/index.html"><code>Gfmt</code></a> <span class="synopsis"><i>Format</i> module: pretty-prints a value to <code>Format.formatter</code> using <code>Format</code> module.</span></li><li><a href="Ghash/index.html"><code>Ghash</code></a> <span class="synopsis"><i>Hash</i> plugin.</span></li><li><a href="Gmap/index.html"><code>Gmap</code></a> <span class="synopsis"><i>Gmap</i> plugin (functor).</span></li><li><a href="HTML/index.html"><code>HTML</code></a> <span class="synopsis">Viewing values of various types in HTML format.</span></li><li><a href="Html/index.html"><code>Html</code></a> <span class="synopsis"><i>Html</i> module: converts a value to its html represenation (work in progress).</span></li><li><a href="Pa_gt/index.html"><code>Pa_gt</code></a> </li><li><a href="Ppx/index.html"><code>Ppx</code></a> </li><li><a href="Ppx_all/index.html"><code>Ppx_all</code></a> </li><li><a href="Show/index.html"><code>Show</code></a> <span class="synopsis"><i>Show</i> plugin: converts value to a string.</span></li><li><a href="Stateful/index.html"><code>Stateful</code></a> <span class="synopsis"><i>Stateful</i> plugin: functors + inherited value to make decisions about how to map values.</span></li><li><a href="View/index.html"><code>View</code></a> <span class="synopsis">Viewing values of various types.</span></li></ul></header><div class="odoc-tocs"><nav class="odoc-toc odoc-local-toc"><ul><li><a href="#package_info">Package info</a></li></ul></nav></div><div class="odoc-content"><h2 id="package_info"><a href="#package_info" class="anchor"></a>Package info</h2><table class="package info"><tr id="info-authors"><td><a href="#info-authors" aria-hidden="true" class="anchor"></a>authors</td><td><ul><li>https://github.com/Kakadu</li><li>https://github.com/dboulytchev</li></ul></td></tr><tr id="info-changes-files"><td><a href="#info-changes-files" aria-hidden="true" class="anchor"></a>changes-files</td><td><ul><li><a type="text/plain; charset=UTF-8" href="_doc-dir/CHANGES">CHANGES</a></li></ul></td></tr><tr id="info-depends"><td><a href="#info-depends" aria-hidden="true" class="anchor"></a>depends</td><td><ul><li><a href="../bisect_ppx/index.html">bisect_ppx</a></li><li><a href="../camlp5/index.html">camlp5</a></li><li><a href="../conf-m4/index.html">conf-m4</a></li><li><a href="../dune/index.html">dune</a></li><li><a href="../logger-p5/index.html">logger-p5</a></li><li><a href="../ocaml/index.html">ocaml</a></li><li><a href="../ocamlfind/index.html">ocamlfind</a></li><li><a href="../ocamlgraph/index.html">ocamlgraph</a></li><li><a href="../odig/index.html">odig</a></li><li><a href="../odoc/index.html">odoc</a></li><li><a href="../pa_ppx/index.html">pa_ppx</a></li><li><a href="../ppx_inline_test_nobase/index.html">ppx_inline_test_nobase</a></li><li><a href="../ppxlib/index.html">ppxlib</a></li></ul></td></tr><tr id="info-homepage"><td><a href="#info-homepage" aria-hidden="true" class="anchor"></a>homepage</td><td><ul><li><a href="https://github.com/PLTools/GT">https://github.com/PLTools/GT</a></li></ul></td></tr><tr id="info-issues"><td><a href="#info-issues" aria-hidden="true" class="anchor"></a>issues</td><td><ul><li><a href="https://github.com/PLTools/GT/issues">https://github.com/PLTools/GT/issues</a></li></ul></td></tr><tr id="info-license"><td><a href="#info-license" aria-hidden="true" class="anchor"></a>license</td><td><ul><li>LGPL-2.1-or-later</li></ul></td></tr><tr id="info-maintainers"><td><a href="#info-maintainers" aria-hidden="true" class="anchor"></a>maintainers</td><td><ul><li>Kakadu&commat;pm.me</li></ul></td></tr><tr id="info-readme-files"><td><a href="#info-readme-files" aria-hidden="true" class="anchor"></a>readme-files</td><td><ul><li><a type="text/plain; charset=UTF-8" href="_doc-dir/README.md">README.md</a></li></ul></td></tr><tr id="info-repo"><td><a href="#info-repo" aria-hidden="true" class="anchor"></a>repo</td><td><ul><li>git+https://github.com/PLTools/GT.git</li></ul></td></tr><tr id="info-version"><td><a href="#info-version" aria-hidden="true" class="anchor"></a>version</td><td><ul><li>0.5.3</li></ul></td></tr></table></div></body></html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>index (GT.index)</title><meta charset="utf-8"/><link rel="stylesheet" href="../_odoc-theme/odoc.css"/><meta name="generator" content="odoc 3.0.0_beta1"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../index.html">🏠</a> &#x00BB; GT</nav><header class="odoc-preamble"><h1 id="package-GT"><a href="#package-GT" class="anchor"></a>Package GT <span class="version">0.5.3</span> <nav><a type="text/plain; charset=UTF-8" href="_doc-dir/CHANGES">changes</a> <a href="https://github.com/PLTools/GT/issues">issues</a> <a href="#package_info">more…</a></nav></h1><p>Datatype-generic object-oriented transformations for OCaml</p></header><div class="odoc-tocs"><nav class="odoc-toc odoc-local-toc"><ul><li><a href="#basic-usage">Basic Usage</a></li><li><a href="#example:-processing-expressions">Example: Processing Expressions</a></li><li><a href="#package_info">Package info</a></li></ul></nav></div><div class="odoc-content"><h2 id="basic-usage"><a href="#basic-usage" class="anchor"></a>Basic Usage</h2><p>This is a simple demo being run in OCaml toplevel.</p><pre class="language-ocaml"><code># #use &quot;topfind&quot;;;
+- : unit = ()
+Findlib has been successfully loaded. Additional directives:
+  #require &quot;package&quot;;;      to load a package
+  #list;;                   to list the available packages
+  #camlp4o;;                to load camlp4 (standard syntax)
+  #camlp4r;;                to load camlp4 (revised syntax)
+  #predicates &quot;p,q,...&quot;;;   to set these predicates
+  Topfind.reset();;         to force that packages will be reloaded
+  #thread;;                 to enable threads
+
+- : unit = ()
+# #require &quot;GT&quot;;;
+# #require &quot;GT.syntax.all&quot;;;
+# #require &quot;GT.ppx_all&quot;;;</code></pre><p>The `deriving` specification will generate</p><ul><li>a class for our type</li><li>one class per transformation to represent transformation</li><li>bunch of functions per transformation to provide `ppx_deriving` like functional interface</li></ul><pre class="language-ocaml"><code># type 'a list = Nil | Cons of 'a * 'a list [@@deriving gt ~options:{fmt; show}];;
+type 'a list = Nil | Cons of 'a * 'a list
+class virtual ['ia, 'a, 'sa, 'inh, 'extra, 'syn] list_t :
+  object
+    method virtual c_Cons : 'inh -&gt; 'extra -&gt; 'a -&gt; 'a list -&gt; 'syn
+    method virtual c_Nil : 'inh -&gt; 'extra -&gt; 'syn
+  end
+val gcata_list :
+  ('a, 'typ0__003_, 'b, 'c, 'typ0__003_ list, 'd) #list_t -&gt;
+  'c -&gt; 'typ0__003_ list -&gt; 'd = &lt;fun&gt;
+class ['a, 'b] show_list_t :
+  (unit -&gt; 'a -&gt; string) -&gt;
+  (unit -&gt; 'a list -&gt; string) -&gt;
+  object
+    constraint 'b = 'a list
+    method c_Cons : unit -&gt; 'a list -&gt; 'a -&gt; 'a list -&gt; string
+    method c_Nil : unit -&gt; 'a list -&gt; string
+  end
+class ['a, 'b] fmt_list_t :
+  (Format.formatter -&gt; 'a -&gt; unit) -&gt;
+  (Format.formatter -&gt; 'a list -&gt; unit) -&gt;
+  object
+    constraint 'b = 'a list
+    method c_Cons : Format.formatter -&gt; 'a list -&gt; 'a -&gt; 'a list -&gt; unit
+    method c_Nil : Format.formatter -&gt; 'a list -&gt; unit
+  end
+val fmt_list :
+  (Format.formatter -&gt; 'a -&gt; unit) -&gt; Format.formatter -&gt; 'a list -&gt; unit =
+  &lt;fun&gt;
+val list :
+  (('a, 'b, 'c, 'd, 'b list, 'e) #list_t -&gt; 'd -&gt; 'b list -&gt; 'e,
+   &lt; fmt : (Format.formatter -&gt; 'f -&gt; unit) -&gt;
+           Format.formatter -&gt; 'f list -&gt; unit;
+     show : ('g -&gt; string) -&gt; 'g list -&gt; string &gt;,
+   (('h -&gt; 'i list -&gt; 'j) -&gt; ('k, 'i, 'l, 'h, 'i list, 'j) #list_t) -&gt;
+   'h -&gt; 'i list -&gt; 'j)
+  GT.t = {GT.gcata = &lt;fun&gt;; plugins = &lt;obj&gt;; fix = &lt;fun&gt;}
+val show_list : ('a -&gt; string) -&gt; 'a list -&gt; string = &lt;fun&gt;</code></pre><pre class="language-ocaml"><code># Format.printf &quot;%a\n%!&quot; (fmt_list Format.pp_print_int) (Cons(1, Nil));;
+Cons (1, Nil)
+- : unit = ()</code></pre><h2 id="example:-processing-expressions"><a href="#example:-processing-expressions" class="anchor"></a>Example: Processing Expressions</h2><p>Let us have the following type for simple arithmetic expressions:</p><pre class="language-ocaml"><code>type expr =
+  | Add of expr * expr
+  | Mul of expr * expr
+  | Int of int
+  | Var of string</code></pre><p>One of the first typical &quot;boilerplate&quot; tasks is printing; much like other available generic frameworks this simple goal can be achieved with our library by a little decoration of the original declaration:</p><pre class="language-ocaml"><code># type expr =
+  | Add of expr * expr
+  | Mul of expr * expr
+  | Int of GT.int
+  | Var of GT.string [@@deriving gt ~options:{show}];;
+type expr =
+    Add of expr * expr
+  | Mul of expr * expr
+  | Int of int
+  | Var of string
+class virtual ['inh, 'extra, 'syn] expr_t :
+  object
+    method virtual c_Add : 'inh -&gt; 'extra -&gt; expr -&gt; expr -&gt; 'syn
+    method virtual c_Int : 'inh -&gt; 'extra -&gt; int -&gt; 'syn
+    method virtual c_Mul : 'inh -&gt; 'extra -&gt; expr -&gt; expr -&gt; 'syn
+    method virtual c_Var : 'inh -&gt; 'extra -&gt; string -&gt; 'syn
+  end
+val gcata_expr : ('a, expr, 'b) #expr_t -&gt; 'a -&gt; expr -&gt; 'b = &lt;fun&gt;
+class ['a] show_expr_t :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    constraint 'a = expr
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end
+val expr :
+  (('a, expr, 'b) #expr_t -&gt; 'a -&gt; expr -&gt; 'b, &lt; show : expr -&gt; string &gt;,
+   (('c -&gt; expr -&gt; 'd) -&gt; ('c, expr, 'd) #expr_t) -&gt; 'c -&gt; expr -&gt; 'd)
+  GT.t = {GT.gcata = &lt;fun&gt;; plugins = &lt;obj&gt;; fix = &lt;fun&gt;}
+val show_expr : expr -&gt; string = &lt;fun&gt;</code></pre><p>For mutually recursive type declarations add decoration only to the last type</p><pre class="language-ocaml"><code>type t = Anything
+and heap = t [@@deriving gt ~options:{ show }]</code></pre><p>In our framework (at least by now) all transformations are expressed by the following common pattern:</p><pre class="language-ocaml"><code>fun tr_obj init value -&gt; GT.transform(t) tr_obj init value</code></pre><p>or more precisely</p><pre class="language-ocaml"><code>GT.fix (fun fself init value -&gt;
+    GT.transform tree (new tr_class f_1 ... f_n fself) init value
+  ) init value</code></pre><p>where</p><ul><li><code> t </code> is a polymorphic type with _n_ parameters;</li><li><code> tr_obj </code> - transformation object for some transformation;</li><li><code> f_1, ..., f_n </code> - transformation functions for type parameters;</li><li><code>init</code> - some initial value (additional parameter);</li><li><code>value</code> - the value to transform of type <code> (a_1, a_2, ..., a_n) t </code> .</li></ul><p>Transformations function <code> f_j </code> usually have type <code> inh_j -&gt; a_j -&gt; syn_j </code>. Types <code> inh_j </code> and <code> syn_j </code> may be arbitrary; they can be interpreted as _inherited_ and _synthesized_ attributes for type parameter transformations, if we interpret catamorphisms in attribute-grammar fashion. For example, for &quot;show&quot; `inh_j` = `unit` and `s_j` = `string`.</p><p>Transformation object is an object which performs the actual transformation on a per-constructor basis; we can think of it as a collection of methods, one per data type constructor. Transformation objects can be given either implicitly by object expressions or created as instances of transformation classes. Each class, in turn, can be generated by a system, hand-written from scratch or inherited from an existing ones.</p><p>In our example the phrase &quot;`with show`&quot; makes the framework to invoke a used-defined plugin, called &quot;`show`&quot;. The architecture of the framework is developed to encourage the end-users to provide their own plugins; writing plugins is considered as an easy task.</p><p>The key feature of the approach we advocate here is that object-oriented representation of transformations makes them quite easy to modify. For example, if we are not satisfied by the &quot;default&quot; behavior of &quot;show&quot;, we can adjust it only for the &quot;cases of interest&quot;:</p><pre class="language-ocaml"><code># class show' fself = object
+   inherit [_] show_expr_t fself
+   method c_Var _ _ s = s
+  end;;
+class show' :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end</code></pre><pre class="language-ocaml"><code># GT.transform expr (new show') ()
+    (Mul (Var &quot;a&quot;, Add (Int 1, Var &quot;b&quot;)))
+- : string = &quot;Mul (a, Add (Int (1), b))&quot;</code></pre><p>Now the result is</p><pre class="language-ocaml"><code>&quot;Mul (a, Add (Int (1), b))&quot;</code></pre><p>We fixed only the &quot;case of interest&quot;; method &quot;`c_Var`&quot; takes three arguments - the inherited attribute (which is always unit here), the original value (actually, _augmented_ original value, see below), and immediate arguments of corresponding constructor (actually, their _augmented_ versions). In this case &quot;`s`&quot; is just a string argument of the constructor &quot;`Var`&quot;.</p><p>If we still not satisfied with the result, we can further proceed with fixing things up:</p><pre class="language-ocaml"><code># class show'' fself = object
+    inherit show' fself
+    method c_Int _ _ i = string_of_int i
+  end;;
+class show'' :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end
+
+# GT.transform(expr) (new show'') () (Mul (Var &quot;a&quot;, Add (Int 1, Var &quot;b&quot;)))
+- : string = &quot;Mul (a, Add (1, b))&quot;</code></pre><p>In the next step we're going to switch to infix representation of operators; this case is interesting since we have to adjust the behavior of the transformation not only for the single node, but to all its sub-trees as well. Fortunately, this is easy:</p><pre class="language-ocaml"><code># class show''' fself = object
+    inherit show'' fself
+    method c_Add () _ x y = fself () x ^ &quot; + &quot; ^ fself () y
+    method c_Mul () _ x y = fself () x ^ &quot; * &quot; ^ fself () y
+  end
+class show''' :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end
+
+# GT.transform(expr) (new show''') () (Mul (Var &quot;a&quot;, Add (Int 1, Var &quot;b&quot;)))
+- : string = &quot;a * 1 + b&quot;</code></pre><p>Method &quot;`c_Add`&quot; takes four arguments:</p><ul><li>inherited attribute (here unit);</li><li>original node;</li><li>parameters of the constructor (<em>x</em> and <em>y</em>).</li></ul><p>Finally, we may want to provide a complete infix representation (including a minimal amount of necessary brackets):</p><pre class="language-ocaml"><code># class show4 fself =
+    let enclose op p x y =
+      let prio = function
+      | Add (_, _) -&gt; 1
+      | Mul (_, _) -&gt; 2
+      | _ -&gt; 3
+      in
+      let bracket f x = if f then &quot;(&quot; ^ x ^ &quot;)&quot; else x in
+      bracket (p &gt;  prio x) (fself () x) ^ op ^
+      bracket (p &gt;= prio y) (fself () y)
+    in
+    object
+      inherit show''' fself
+      method c_Mul _ _ x y = enclose &quot;*&quot; 2 x y
+      method c_Add _ _ x y = enclose &quot;+&quot; 1 x y
+    end;;
+class show4 :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end</code></pre><p>On the final note for this example we point out that all these flavors of &quot;show&quot; transformation coexist simultaneously; any of them can be used as a starting point for further adjustments.</p><p>Our next example is variable-collecting function. For this purpose we add &quot;`foldl`&quot; the the list of user-defined plugins:</p><pre class="language-ocaml"><code># type expr =
+  | Add of expr * expr
+  | Mul of expr * expr
+  | Int of GT.int
+  | Var of GT.string [@@deriving gt ~plugins:{show; foldl}]
+type expr =
+    Add of expr * expr
+  | Mul of expr * expr
+  | Int of int
+  | Var of string
+class virtual ['inh, 'extra, 'syn] expr_t :
+  object
+    method virtual c_Add : 'inh -&gt; 'extra -&gt; expr -&gt; expr -&gt; 'syn
+    method virtual c_Int : 'inh -&gt; 'extra -&gt; int -&gt; 'syn
+    method virtual c_Mul : 'inh -&gt; 'extra -&gt; expr -&gt; expr -&gt; 'syn
+    method virtual c_Var : 'inh -&gt; 'extra -&gt; string -&gt; 'syn
+  end
+val gcata_expr : ('a, expr, 'b) #expr_t -&gt; 'a -&gt; expr -&gt; 'b = &lt;fun&gt;
+class ['syn, 'a] foldl_expr_t :
+  ('syn -&gt; expr -&gt; 'syn) -&gt;
+  object
+    constraint 'a = expr
+    method c_Add : 'syn -&gt; expr -&gt; expr -&gt; expr -&gt; 'syn
+    method c_Int : 'syn -&gt; expr -&gt; int -&gt; 'syn
+    method c_Mul : 'syn -&gt; expr -&gt; expr -&gt; expr -&gt; 'syn
+    method c_Var : 'syn -&gt; expr -&gt; string -&gt; 'syn
+  end
+val foldl_expr : 'a -&gt; expr -&gt; 'a = &lt;fun&gt;
+class ['a] show_expr_t :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    constraint 'a = expr
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end
+val expr :
+  (('a, expr, 'b) #expr_t -&gt; 'a -&gt; expr -&gt; 'b,
+   &lt; foldl : 'c -&gt; expr -&gt; 'c; show : expr -&gt; string &gt;,
+   (('d -&gt; expr -&gt; 'e) -&gt; ('d, expr, 'e) #expr_t) -&gt; 'd -&gt; expr -&gt; 'e)
+  GT.t = {GT.gcata = &lt;fun&gt;; plugins = &lt;obj&gt;; fix = &lt;fun&gt;}
+val show_expr : expr -&gt; string = &lt;fun&gt;</code></pre><p>With this plugin enabled we can easily express what we want:</p><pre class="language-ocaml"><code># module S = Set.Make (String)</code></pre><pre class="language-ocaml"><code># class vars fself = object
+    inherit [S.t,_] foldl_expr_t fself
+    method c_Var s _ x = S.add x s
+  end
+class vars :
+  (S.t -&gt; expr -&gt; S.t) -&gt;
+  object
+    method c_Add : S.t -&gt; expr -&gt; expr -&gt; expr -&gt; S.t
+    method c_Int : S.t -&gt; expr -&gt; int -&gt; S.t
+    method c_Mul : S.t -&gt; expr -&gt; expr -&gt; expr -&gt; S.t
+    method c_Var : S.t -&gt; expr -&gt; string -&gt; S.t
+  end
+
+# let vars e = S.elements (GT.transform(expr) (new vars) S.empty e)
+val vars : expr -&gt; string list/2 = &lt;fun&gt;</code></pre><p>In the default version, <code> foldl_expr_t </code> is generated in such a way that inherited attribute value (in out case of type <code>S.t</code>) is simply threaded through all nodes of the data structure. This behavior as such gives us nothing; however we can redefine the &quot;interesting case&quot; (variable occurrence) to take this occurrence into account.</p><p>The next example - expression evaluator - demonstrates the case when we implement transformation class &quot;from scratch&quot;. The appropriate class type is rather cumbersome; fortunately, the framework provides us some empty virtual class to inherit from:</p><pre class="language-ocaml"><code># class eval fself = object
+    inherit [string -&gt; int, int, _] expr_t
+    method c_Var s _ x = s x
+    method c_Int _ _ i = i
+    method c_Add s _ x y = fself s x + fself s y
+    method c_Mul s _ x y = fself s x * fself s y
+  end;;
+class eval :
+  ((string -&gt; int) -&gt; expr -&gt; int) -&gt;
+  object
+    method c_Add : (string -&gt; int) -&gt; int -&gt; expr -&gt; expr -&gt; int
+    method c_Int : (string -&gt; int) -&gt; int -&gt; int -&gt; int
+    method c_Mul : (string -&gt; int) -&gt; int -&gt; expr -&gt; expr -&gt; int
+    method c_Var : (string -&gt; int) -&gt; int -&gt; string -&gt; int
+  end</code></pre><p>Since we develop a new transformation, we have to take care of types for inherited and synthesized attributes (when we're extending the existing classes these types are already taken care of). Since our evaluator needs a state to bind variables, the type of inherited attribute is &quot;`string -&gt; int`&quot; and the type of synthesized attribute is just &quot;`int`&quot;. The implementations of methods are straightforward.</p><p>As a final example we consider expression simplification. This time we can make use of plugin &quot;`map`&quot;, which in default implementation just copies the data structure (beware: multiplying shared substructures):</p><pre class="language-ocaml"><code># type expr =
+  | Add of expr * expr
+  | Mul of expr * expr
+  | Int of GT.int
+  | Var of GT.string [@@deriving gt ~plugins:{show; foldl; gmap}];;
+type expr =
+    Add of expr * expr
+  | Mul of expr * expr
+  | Int of int
+  | Var of string
+class virtual ['inh, 'extra, 'syn] expr_t :
+  object
+    method virtual c_Add : 'inh -&gt; 'extra -&gt; expr -&gt; expr -&gt; 'syn
+    method virtual c_Int : 'inh -&gt; 'extra -&gt; int -&gt; 'syn
+    method virtual c_Mul : 'inh -&gt; 'extra -&gt; expr -&gt; expr -&gt; 'syn
+    method virtual c_Var : 'inh -&gt; 'extra -&gt; string -&gt; 'syn
+  end
+val gcata_expr : ('a, expr, 'b) #expr_t -&gt; 'a -&gt; expr -&gt; 'b = &lt;fun&gt;
+class ['a, 'b] gmap_expr_t :
+  (unit -&gt; expr -&gt; expr) -&gt;
+  object
+    constraint 'a = expr
+    constraint 'b = expr
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
+    method c_Int : unit -&gt; expr -&gt; int -&gt; expr
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
+    method c_Var : unit -&gt; expr -&gt; string -&gt; expr
+  end
+class ['syn, 'a] foldl_expr_t :
+  ('syn -&gt; expr -&gt; 'syn) -&gt;
+  object
+    constraint 'a = expr
+    method c_Add : 'syn -&gt; expr -&gt; expr -&gt; expr -&gt; 'syn
+    method c_Int : 'syn -&gt; expr -&gt; int -&gt; 'syn
+    method c_Mul : 'syn -&gt; expr -&gt; expr -&gt; expr -&gt; 'syn
+    method c_Var : 'syn -&gt; expr -&gt; string -&gt; 'syn
+  end
+val foldl_expr : 'a -&gt; expr -&gt; 'a = &lt;fun&gt;
+class ['a] show_expr_t :
+  (unit -&gt; expr -&gt; string) -&gt;
+  object
+    constraint 'a = expr
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Int : unit -&gt; expr -&gt; int -&gt; string
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; string
+    method c_Var : unit -&gt; expr -&gt; string -&gt; string
+  end
+val expr :
+  (('a, expr, 'b) #expr_t -&gt; 'a -&gt; expr -&gt; 'b,
+   &lt; foldl : 'c -&gt; expr -&gt; 'c; gmap : expr -&gt; expr; show : expr -&gt; string &gt;,
+   (('d -&gt; expr -&gt; 'e) -&gt; ('d, expr, 'e) #expr_t) -&gt; 'd -&gt; expr -&gt; 'e)
+  GT.t = {GT.gcata = &lt;fun&gt;; plugins = &lt;obj&gt;; fix = &lt;fun&gt;}
+val gmap_expr : expr -&gt; expr = &lt;fun&gt;
+val show_expr : expr -&gt; string = &lt;fun&gt;</code></pre><p>In the first iteration we simplify additions by performing constant calculations; we also &quot;normalize&quot; additions in such a way, that if it has one constant operand, then this operand occupies &quot;left&quot; position. The normalization makes it possible to take into account the associativity of addition:</p><pre class="language-ocaml"><code># class simplify_add =
+    let (+) a b =
+      match a, b with
+      | Int a, Int b -&gt; Int (a+b)
+      | Int a, Add (Int b, c)
+      | Add (Int a, c), Int b -&gt; Add (Int (a+b), c)
+      | Add (Int a, c), Add (Int b, d) -&gt; Add (Int (a+b), Add (c, d))
+      | _, Int _ -&gt; Add (b, a)
+      | _ -&gt; Add (a, b)
+    in
+    fun fself -&gt; object
+      inherit [_,_] gmap_expr_t fself
+      method c_Add _ _ x y = fself () x + fself () y
+    end
+class simplify_add :
+  (unit -&gt; expr -&gt; expr) -&gt;
+  object
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
+    method c_Int : unit -&gt; expr -&gt; int -&gt; expr
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
+    method c_Var : unit -&gt; expr -&gt; string -&gt; expr
+  end</code></pre><p>As we can see, we again concentrated only on the &quot;interesting case&quot;; the implementation of infix &quot;`+`&quot; may look cumbersome, but this is an essential part of the transformation.</p><p>Equally, we can handle the simplification of multiplication:</p><pre class="language-ocaml"><code>class simplify_mul =
+  let ( * ) a b =
+    match a, b with
+    | Int a, Int b -&gt; Int (a*b)
+    | Int a, Mul (Int b, c)
+    | Mul (Int a, c), Int b -&gt; Mul (Int (a*b), c)
+    | Mul (Int a, c), Mul (Int b, d) -&gt; Mul (Int (a*b), Add (c, d))
+    | _, Int _ -&gt; Mul (b, a)
+    | _ -&gt; Mul (a, b)
+  in
+  fun fself -&gt; object
+    inherit simplify_add fself
+    method c_Mul _ _ x y = fself () x * fself () y
+  end</code></pre><p>The class &quot;`simplify_mul`&quot; implements a decent simplifier; however, it overlooks the following equalities: &quot;0*x=0&quot;, &quot;0+x=x&quot;, and &quot;1*x=x&quot;. These cases can be easily integrated into existing implementation:</p><pre class="language-ocaml"><code># class simplify_all fself = object
+    inherit simplify_mul fself as super
+    method c_Add i it x y =
+       match super#c_Add i it x y with
+       | Add (Int 0, a) -&gt; a
+       | x -&gt; x
+    method c_Mul i it x y =
+       match super#c_Mul i it x y with
+       | Mul (Int 1, a) -&gt; a
+       | Mul (Int 0, _) -&gt; Int 0
+       | x -&gt; x
+  end;;
+class simplify_all :
+  (unit -&gt; expr -&gt; expr) -&gt;
+  object
+    method c_Add : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
+    method c_Int : unit -&gt; expr -&gt; int -&gt; expr
+    method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
+    method c_Var : unit -&gt; expr -&gt; string -&gt; expr
+  end</code></pre><p>The interesting part of this implementation is an explicit utilization of a superclass' methods. It may looks at first glance that we handle only top-level case; however, due to late binding, for example, <code> fself () x </code> in <code> simplify_mul </code> implementation is bound to the overriden transformation, which is (in this particular case) is <code> simplify_all </code>.</p><p>The complete example can be found in file <code> sample/expr.ml </code>.</p><h2 id="package_info"><a href="#package_info" class="anchor"></a>Package info</h2><table class="package info"><tr id="info-authors"><td><a href="#info-authors" aria-hidden="true" class="anchor"></a>authors</td><td><ul><li>https://github.com/Kakadu</li><li>https://github.com/dboulytchev</li></ul></td></tr><tr id="info-changes-files"><td><a href="#info-changes-files" aria-hidden="true" class="anchor"></a>changes-files</td><td><ul><li><a type="text/plain; charset=UTF-8" href="_doc-dir/CHANGES">CHANGES</a></li></ul></td></tr><tr id="info-depends"><td><a href="#info-depends" aria-hidden="true" class="anchor"></a>depends</td><td><ul><li><a href="../bisect_ppx/index.html">bisect_ppx</a></li><li><a href="../camlp5/index.html">camlp5</a></li><li><a href="../conf-m4/index.html">conf-m4</a></li><li><a href="../dune/index.html">dune</a></li><li><a href="../logger-p5/index.html">logger-p5</a></li><li><a href="../mdx/index.html">mdx</a></li><li><a href="../ocaml/index.html">ocaml</a></li><li><a href="../ocamlfind/index.html">ocamlfind</a></li><li><a href="../ocamlgraph/index.html">ocamlgraph</a></li><li><a href="../odig/index.html">odig</a></li><li><a href="../odoc/index.html">odoc</a></li><li><a href="../pa_ppx/index.html">pa_ppx</a></li><li><a href="../ppx_inline_test_nobase/index.html">ppx_inline_test_nobase</a></li><li><a href="../ppxlib/index.html">ppxlib</a></li></ul></td></tr><tr id="info-homepage"><td><a href="#info-homepage" aria-hidden="true" class="anchor"></a>homepage</td><td><ul><li><a href="https://github.com/PLTools/GT">https://github.com/PLTools/GT</a></li></ul></td></tr><tr id="info-issues"><td><a href="#info-issues" aria-hidden="true" class="anchor"></a>issues</td><td><ul><li><a href="https://github.com/PLTools/GT/issues">https://github.com/PLTools/GT/issues</a></li></ul></td></tr><tr id="info-license"><td><a href="#info-license" aria-hidden="true" class="anchor"></a>license</td><td><ul><li>LGPL-2.1-or-later</li></ul></td></tr><tr id="info-maintainers"><td><a href="#info-maintainers" aria-hidden="true" class="anchor"></a>maintainers</td><td><ul><li>Kakadu&commat;pm.me</li></ul></td></tr><tr id="info-readme-files"><td><a href="#info-readme-files" aria-hidden="true" class="anchor"></a>readme-files</td><td><ul><li><a type="text/plain; charset=UTF-8" href="_doc-dir/README.md">README.md</a></li></ul></td></tr><tr id="info-repo"><td><a href="#info-repo" aria-hidden="true" class="anchor"></a>repo</td><td><ul><li>git+https://github.com/PLTools/GT.git</li></ul></td></tr><tr id="info-version"><td><a href="#info-version" aria-hidden="true" class="anchor"></a>version</td><td><ul><li>0.5.3</li></ul></td></tr></table></div></body></html>
