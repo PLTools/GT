@@ -4,6 +4,6 @@
  (package GT))
 
 (mdx
- (files index.mld)
+ (files index.mld README.md)
  (package GT)
  (libraries GT))
