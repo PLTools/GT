@@ -12,20 +12,20 @@
      * <span>(<span class="xref-unresolved">Astlib</span>.Ast_500.Asttypes.variance * <span class="xref-unresolved">Astlib</span>.Ast_500.Asttypes.injectivity)</span>)</span>
       list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Astlib</span>.Ast_500.Parsetree.class_field list</span> <span class="arrow">&#45;&gt;</span></span>
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-of_class_declarations"><a href="#val-of_class_declarations" class="anchor"></a><code><span><span class="keyword">val</span> of_class_declarations : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Ppxlib__</span>.Import.class_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-of_tdecls"><a href="#val-of_tdecls" class="anchor"></a><code><span><span class="keyword">val</span> of_tdecls : 
   <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib_ast__Ast_helper_lite</span>.loc <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Astlib</span>.Ast_500.Parsetree.type_declaration <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Astlib</span>.Ast_500.Parsetree.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-tdecl"><a href="#val-tdecl" class="anchor"></a><code><span><span class="keyword">val</span> tdecl : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">name</span>:string <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">params</span>:<span>string list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.core_type <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-tdecl_record"><a href="#val-tdecl_record" class="anchor"></a><code><span><span class="keyword">val</span> tdecl_record : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">name</span>:string <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">params</span>:<span>string list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Ppxlib</span>.label_declaration list</span> <span class="arrow">&#45;&gt;</span></span>
@@ -39,27 +39,27 @@
   <span><span class="label">params</span>:<span><span class="xref-unresolved">Astlib</span>.Ast_500.Parsetree.core_type list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Astlib</span>.Ast_500.Parsetree.class_field list</span> <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-value"><a href="#val-value" class="anchor"></a><code><span><span class="keyword">val</span> value : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="optlabel">?flag</span>:<span class="xref-unresolved">Ppxlib</span>.rec_flag <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Ppxlib__</span>.Import.value_binding list</span> <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-single_value"><a href="#val-single_value" class="anchor"></a><code><span><span class="keyword">val</span> single_value : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.pattern <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.expression <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-values"><a href="#val-values" class="anchor"></a><code><span><span class="keyword">val</span> values : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="optlabel">?rec_flag</span>:<span class="xref-unresolved">Ppxlib</span>.rec_flag <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Ppxlib__</span>.Import.value_binding list</span> <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-of_vb"><a href="#val-of_vb" class="anchor"></a><code><span><span class="keyword">val</span> of_vb : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="optlabel">?rec_flag</span>:<span class="xref-unresolved">Ppxlib</span>.rec_flag <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.value_binding <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-tdecl_abstr"><a href="#val-tdecl_abstr" class="anchor"></a><code><span><span class="keyword">val</span> tdecl_abstr : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span>string <span class="arrow">&#45;&gt;</span></span>
   <span><span><span>string option</span> list</span> <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-functor1"><a href="#val-functor1" class="anchor"></a><code><span><span class="keyword">val</span> functor1 : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span>string option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">param</span>:string <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.signature <span class="arrow">&#45;&gt;</span></span>
@@ -70,13 +70,13 @@
   <span><span class="label">params_count</span>:int <span class="arrow">&#45;&gt;</span></span>
   <span><span><span>(string * <a href="../Typ/index.html#type-t">Typ.t</a>)</span> list</span> <span class="arrow">&#45;&gt;</span></span>
   <a href="#type-t">t</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-module_"><a href="#val-module_" class="anchor"></a><code><span><span class="keyword">val</span> module_ : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span>string <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.module_expr <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-modtype"><a href="#val-modtype" class="anchor"></a><code><span><span class="keyword">val</span> modtype : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.module_type_declaration <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-include_"><a href="#val-include_" class="anchor"></a><code><span><span class="keyword">val</span> include_ : 
-  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Import.location <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="label">loc</span>:<span class="xref-unresolved">Ppxlib__</span>.Location.t <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Ppxlib__</span>.Import.module_expr <span class="arrow">&#45;&gt;</span></span>
   <span class="xref-unresolved">Ppxlib__</span>.Import.structure_item</span></code></div></div></div></body></html>
