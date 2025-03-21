@@ -2,8 +2,14 @@
 
 ## Changed
 
+## 0.5.4 (2025-03-21)
+
+## Changed
+
 * Fix issue 32: using polyvariants as type arguments crashed for Camlp5
 * Allow both 'options' and 'plugins' in the signatures
+* Allow only ppxlib <= 0.34, benchmark library < 1.7 and dune >= 3.16
+* Add some documentation using OCaml MDX
 
 ## 0.5.3 (2024-07-30)
 
