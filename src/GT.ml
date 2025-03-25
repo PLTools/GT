@@ -91,15 +91,17 @@ let string_of_int32     = Int32.to_string
 let string_of_int64     = Int64.to_string
 let string_of_nativeint = Nativeint.to_string
 
-GENERIFY(bool)
-GENERIFY(int)
-GENERIFY(string)
-GENERIFY(float)
-GENERIFY(char)
-GENERIFY(unit)
-GENERIFY(int32)
-GENERIFY(int64)
-GENERIFY(nativeint)
+
+[%%generify bool]
+[%%generify int]
+[%%generify string]
+[%%generify float]
+[%%generify char]
+[%%generify unit]
+[%%generify int32]
+[%%generify int64]
+[%%generify nativeint]
+
 
 (* Fixpoint combinator to define recursive transformation without extra
  * object allocations *)
@@ -128,7 +130,7 @@ let gcata_list tr inh s = match s with
 
 class ['a, 'self] html_list_t fa fself =
   object
-    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] @list
+    inherit [unit, 'a, HTML.viewer, unit, 'self, HTML.viewer] list_t
     method c_Nil  _ _      = View.string "[]"
     method c_Cons _ _ x xs =
       HTML.seq (

@@ -1,0 +1,7 @@
+(library
+ (name m4instead)
+ (kind ppx_rewriter)
+ (libraries ppxlib)
+ (modules m4instead)
+ (preprocess
+  (pps ppxlib.metaquot)))
