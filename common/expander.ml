@@ -384,9 +384,13 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                        | Ptyp_constr ({ txt; loc }, params) ->
                          wrap ~is_poly:true txt params
                        | _ -> assert false))
-             | Ptyp_extension _ ->
-               not_implemented "extensions in types `%s`" (string_of_core_type typ)
-             | _ -> failwith "not implemented ")
+             | Ptyp_any
+             | Ptyp_arrow (_, _, _)
+             | Ptyp_object (_, _)
+             | Ptyp_class (_, _)
+             | Ptyp_poly (_, _)
+             | Ptyp_package _ | Ptyp_extension _ ->
+               not_implemented "extensions in types `%s`" (string_of_core_type typ))
         in
         let toplevel typ =
           match typ.ptyp_desc with
