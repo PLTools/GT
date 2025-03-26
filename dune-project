@@ -45,7 +45,6 @@
   (ocamlfind :build)
   (logger-p5 :build)
   (bisect_ppx :build)
-  (conf-m4 :build)
   (odoc :with-doc)
   (odig :with-doc)
   (pa_ppx :with-doc)
