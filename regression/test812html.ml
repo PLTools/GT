@@ -10,6 +10,24 @@ type 'a t2 = A of GT.int | C of 'a * GT.int
 type t4 = GT.int t2
 [@@deriving gt ~options:{html}]
 
+let () =
+  let x1 = {a=5; b="beeeee"} in
+  Format.printf "%s\n\n%!" @@ HTML.toHTML @@ GT.html t x1
+
+let () =
+  let x2 = A 5655 in
+  Format.printf "%s\n\n%!" @@ HTML.toHTML @@
+  GT.html t2 (GT.html GT.float) x2;
+
+  let x3 = C (3.1415, 888) in
+  Format.printf "%s\n\n%!" @@ HTML.toHTML @@
+  GT.html t2 (GT.html GT.float) x3
+
+let () =
+  let x4 = C (3, 888) in
+  Format.printf "%s\n\n%!" @@ HTML.toHTML @@
+  GT.html t4 x4
+
 (*
 let () =
   let ch = open_out "/tmp/out.html" in

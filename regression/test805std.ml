@@ -40,3 +40,14 @@ end = struct
   type nonrec ('a,'b) arr1 = ('a * 'b) GT.array [@@deriving gt ~options:{show; gmap; foldl; eq; compare; eval; html}]
 
 end
+
+let _ = GT.show T.t1 (GT.show GT.int) 5
+let _ = GT.show T.t2 (5,"")
+let _ = GT.show T.t3 (GT.show GT.int) (5, 2, "")
+let _ = GT.show T.t4 (GT.show GT.int) (Bytes.of_string "")
+let _ = GT.show T.bindings []
+let _ = GT.show T.u1 (GT.show GT.int) (Some 1)
+let __crashes () = GT.show T.u2 (GT.show GT.int) (lazy 1)
+let _ = GT.show T.u3 (GT.show GT.int) { T.aa = 452; bb = "" }
+let _ = Format.asprintf "%a" (GT.fmt T.r1 (GT.fmt GT.int)) (ref 5)
+let _ = GT.show T.arr1 (GT.show GT.int) (GT.show GT.int) [| 1,1 |]

@@ -49,3 +49,13 @@ include (
       type 'a aaa = 'a bbb GT.option
       and 'a bbb = 'a bbb GT.list [@@deriving gt ~options:{ gmap }]
     end)
+
+let __ =
+  let some = GT.transform_gc gcata_option (fun fself -> new gmap_option_t (fun () -> Fun.id) fself) () (Some 5) in
+  assert (some = Some 5);
+  let none = GT.transform_gc gcata_option (fun fself -> new gmap_option_t (fun () -> Fun.id) fself) () None in
+  assert (none = None);
+  let some = GT.transform_gc gcata_list (fun fself -> new gmap_list_t (fun () -> (+)1) fself) () [5] in
+  assert (some = [6])
+
+let __ = GT.gmap bbb Fun.id ([[]])

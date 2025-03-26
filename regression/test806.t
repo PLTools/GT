@@ -15,3 +15,5 @@
   Some (B)
   None
   Some (C)
+  `A
+  `B ("x")

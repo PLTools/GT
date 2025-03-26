@@ -27,3 +27,7 @@ type t4 = A | B | C [@@deriving gt ~options:{fmt}]
 
 let () =
   printf "%a\n" (pp_print_list [%fmt: t4 GT.option]) [ Some A; Some B; None; Some C]
+
+type t5 = [ `A | `B of GT.string ] [@@deriving gt ~options:{fmt}]
+let () =
+  printf "%a\n" (pp_print_list [%fmt: t5 ]) [ `A; `B "x"]

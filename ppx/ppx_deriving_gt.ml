@@ -1,6 +1,6 @@
 (*
  * Generic Transformers PPX syntax extension.
- * Copyright (C) 2016-2021
+ * Copyright (C) 2016-2025
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *
@@ -9,11 +9,6 @@
 open Ppxlib
 open GTCommon
 module E = Expander.Make (PpxHelpers)
-
-let gt_param name =
-  let open Deriving.Args in
-  arg name __
-;;
 
 let r =
   let open Deriving.Args in

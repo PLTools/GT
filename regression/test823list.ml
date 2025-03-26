@@ -16,3 +16,7 @@ end = struct
   type 'a list = [ `Nil  | `Cons of ('a * 'a list) ]
   [@@deriving gt ~options:{ (* show; *) gmap; }]
 end
+
+let () =
+  let _ = [%gmap: GT.int L.list] () `Nil in
+  ()

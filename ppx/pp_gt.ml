@@ -1,5 +1,7 @@
 (* TODO: make -pretty option to be a default *)
 
+[@@@coverage off]
+
 (*
  * Generic Transformers PPX syntax extension.
  * Copyright (C) 2016-2019
