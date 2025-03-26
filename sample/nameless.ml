@@ -11,6 +11,8 @@ let index xs v =
   in
   helper 0 xs
 
+[@@@ocaml.warning "-unused-type-declaration"]
+
 class [ 'lam , 'nless ] lam_to_nameless
   (flam : string list -> 'lam -> 'nless) =
 object

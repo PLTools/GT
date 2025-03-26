@@ -12,6 +12,8 @@ let () =
   Printf.printf "%s\n%!" (sh @@ "aaa" :: "bbb");
   ()
 
+[@@@ocaml.warning "-unused-type-declaration"]
+
 module L : sig
   @type 'a list = ('a, 'a list) AL.alist with show,gmap,foldl
 end = struct
