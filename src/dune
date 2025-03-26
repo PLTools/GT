@@ -26,7 +26,6 @@
  (synopsis "Generic transformers for algebraic types")
  (preprocessor_deps
   ;(package GT-p5)
-  (file %{project_root}/src/macro.m4)
   (file %{project_root}/camlp5/pp5+gt+dump.exe))
  (preprocess
   (pps m4instead GT.ppx_all))
