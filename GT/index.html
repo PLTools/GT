@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>index (GT.index)</title><meta charset="utf-8"/><link rel="stylesheet" href="../_odoc-theme/odoc.css"/><meta name="generator" content="odoc 3.0.0_beta1"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../index.html">🏠</a> &#x00BB; GT</nav><header class="odoc-preamble"><h1 id="package-GT"><a href="#package-GT" class="anchor"></a>Package GT <span class="version">0.5.3</span> <nav><a type="text/plain; charset=UTF-8" href="_doc-dir/CHANGES">changes</a> <a href="https://github.com/PLTools/GT/issues">issues</a> <a href="#package_info">more…</a></nav></h1><p>Datatype-generic object-oriented transformations for OCaml</p></header><div class="odoc-tocs"><nav class="odoc-toc odoc-local-toc"><ul><li><a href="#basic-usage">Basic Usage</a></li><li><a href="#example:-processing-expressions">Example: Processing Expressions</a></li><li><a href="#package_info">Package info</a></li></ul></nav></div><div class="odoc-content"><h2 id="basic-usage"><a href="#basic-usage" class="anchor"></a>Basic Usage</h2><p>This is a simple demo being run in OCaml toplevel.</p><pre class="language-ocaml"><code># #use &quot;topfind&quot;;;
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>index (GT.index)</title><meta charset="utf-8"/><link rel="stylesheet" href="../_odoc-theme/odoc.css"/><meta name="generator" content="odoc 3.0.0"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../index.html">Index</a> &#x00BB; GT</nav><header class="odoc-preamble"><h1 id="package-GT"><a href="#package-GT" class="anchor"></a>Package GT <span class="version">0.5.3</span> <nav><a type="text/plain; charset=UTF-8" href="_doc-dir/CHANGES">changes</a> <a href="https://github.com/PLTools/GT/issues">issues</a> <a href="#package_info">more…</a></nav></h1><p>Datatype-generic object-oriented transformations for OCaml</p></header><div class="odoc-tocs"><nav class="odoc-toc odoc-local-toc"><ul><li><a href="#basic-usage">Basic Usage</a></li><li><a href="#example:-processing-expressions">Example: Processing Expressions</a></li><li><a href="#package_info">Package info</a></li></ul></nav></div><div class="odoc-content"><h2 id="basic-usage"><a href="#basic-usage" class="anchor"></a>Basic Usage</h2><p>This is a simple demo being run in OCaml toplevel.</p><pre class="language-ocaml"><code># #use &quot;topfind&quot;;;
 - : unit = ()
 Findlib has been successfully loaded. Additional directives:
   #require &quot;package&quot;;;      to load a package
@@ -88,7 +88,7 @@ val expr :
    (('c -&gt; expr -&gt; 'd) -&gt; ('c, expr, 'd) #expr_t) -&gt; 'c -&gt; expr -&gt; 'd)
   GT.t = {GT.gcata = &lt;fun&gt;; plugins = &lt;obj&gt;; fix = &lt;fun&gt;}
 val show_expr : expr -&gt; string = &lt;fun&gt;</code></pre><p>For mutually recursive type declarations add decoration only to the last type</p><pre class="language-ocaml"><code>type t = Anything
-and heap = t [@@deriving gt ~options:{ show }]</code></pre><p>In our framework (at least by now) all transformations are expressed by the following common pattern:</p><pre class="language-ocaml"><code>fun tr_obj init value -&gt; GT.transform(t) tr_obj init value</code></pre><p>or more precisely</p><pre class="language-ocaml"><code>GT.fix (fun fself init value -&gt;
+and heap = t [@@deriving gt ~options:{ show }]</code></pre><p>In our framework (at least by now) all transformations are expressed by the following common pattern:</p><pre class="language-ocaml"><code>  fun tr_obj init value -&gt; GT.transform(t) tr_obj init value</code></pre><p>or more precisely</p><pre class="language-ocaml"><code>GT.fix (fun fself init value -&gt;
     GT.transform tree (new tr_class f_1 ... f_n fself) init value
   ) init value</code></pre><p>where</p><ul><li><code> t </code> is a polymorphic type with _n_ parameters;</li><li><code> tr_obj </code> - transformation object for some transformation;</li><li><code> f_1, ..., f_n </code> - transformation functions for type parameters;</li><li><code>init</code> - some initial value (additional parameter);</li><li><code>value</code> - the value to transform of type <code> (a_1, a_2, ..., a_n) t </code> .</li></ul><p>Transformations function <code> f_j </code> usually have type <code> inh_j -&gt; a_j -&gt; syn_j </code>. Types <code> inh_j </code> and <code> syn_j </code> may be arbitrary; they can be interpreted as _inherited_ and _synthesized_ attributes for type parameter transformations, if we interpret catamorphisms in attribute-grammar fashion. For example, for &quot;show&quot; `inh_j` = `unit` and `s_j` = `string`.</p><p>Transformation object is an object which performs the actual transformation on a per-constructor basis; we can think of it as a collection of methods, one per data type constructor. Transformation objects can be given either implicitly by object expressions or created as instances of transformation classes. Each class, in turn, can be generated by a system, hand-written from scratch or inherited from an existing ones.</p><p>In our example the phrase &quot;`with show`&quot; makes the framework to invoke a used-defined plugin, called &quot;`show`&quot;. The architecture of the framework is developed to encourage the end-users to provide their own plugins; writing plugins is considered as an easy task.</p><p>The key feature of the approach we advocate here is that object-oriented representation of transformations makes them quite easy to modify. For example, if we are not satisfied by the &quot;default&quot; behavior of &quot;show&quot;, we can adjust it only for the &quot;cases of interest&quot;:</p><pre class="language-ocaml"><code># class show' fself = object
    inherit [_] show_expr_t fself
@@ -103,7 +103,7 @@ class show' :
     method c_Var : unit -&gt; expr -&gt; string -&gt; string
   end</code></pre><pre class="language-ocaml"><code># GT.transform expr (new show') ()
     (Mul (Var &quot;a&quot;, Add (Int 1, Var &quot;b&quot;)))
-- : string = &quot;Mul (a, Add (Int (1), b))&quot;</code></pre><p>Now the result is</p><pre class="language-ocaml"><code>&quot;Mul (a, Add (Int (1), b))&quot;</code></pre><p>We fixed only the &quot;case of interest&quot;; method &quot;`c_Var`&quot; takes three arguments - the inherited attribute (which is always unit here), the original value (actually, _augmented_ original value, see below), and immediate arguments of corresponding constructor (actually, their _augmented_ versions). In this case &quot;`s`&quot; is just a string argument of the constructor &quot;`Var`&quot;.</p><p>If we still not satisfied with the result, we can further proceed with fixing things up:</p><pre class="language-ocaml"><code># class show'' fself = object
+- : string = &quot;Mul (a, Add (Int (1), b))&quot;</code></pre><p>Now the result is</p><pre class="language-ocaml"><code> &quot;Mul (a, Add (Int (1), b))&quot;</code></pre><p>We fixed only the &quot;case of interest&quot;; method &quot;`c_Var`&quot; takes three arguments - the inherited attribute (which is always unit here), the original value (actually, _augmented_ original value, see below), and immediate arguments of corresponding constructor (actually, their _augmented_ versions). In this case &quot;`s`&quot; is just a string argument of the constructor &quot;`Var`&quot;.</p><p>If we still not satisfied with the result, we can further proceed with fixing things up:</p><pre class="language-ocaml"><code># class show'' fself = object
     inherit show' fself
     method c_Int _ _ i = string_of_int i
   end;;
@@ -299,20 +299,20 @@ class simplify_add :
     method c_Int : unit -&gt; expr -&gt; int -&gt; expr
     method c_Mul : unit -&gt; expr -&gt; expr -&gt; expr -&gt; expr
     method c_Var : unit -&gt; expr -&gt; string -&gt; expr
-  end</code></pre><p>As we can see, we again concentrated only on the &quot;interesting case&quot;; the implementation of infix &quot;`+`&quot; may look cumbersome, but this is an essential part of the transformation.</p><p>Equally, we can handle the simplification of multiplication:</p><pre class="language-ocaml"><code>class simplify_mul =
-  let ( * ) a b =
-    match a, b with
-    | Int a, Int b -&gt; Int (a*b)
-    | Int a, Mul (Int b, c)
-    | Mul (Int a, c), Int b -&gt; Mul (Int (a*b), c)
-    | Mul (Int a, c), Mul (Int b, d) -&gt; Mul (Int (a*b), Add (c, d))
-    | _, Int _ -&gt; Mul (b, a)
-    | _ -&gt; Mul (a, b)
-  in
-  fun fself -&gt; object
-    inherit simplify_add fself
-    method c_Mul _ _ x y = fself () x * fself () y
-  end</code></pre><p>The class &quot;`simplify_mul`&quot; implements a decent simplifier; however, it overlooks the following equalities: &quot;0*x=0&quot;, &quot;0+x=x&quot;, and &quot;1*x=x&quot;. These cases can be easily integrated into existing implementation:</p><pre class="language-ocaml"><code># class simplify_all fself = object
+  end</code></pre><p>As we can see, we again concentrated only on the &quot;interesting case&quot;; the implementation of infix &quot;`+`&quot; may look cumbersome, but this is an essential part of the transformation.</p><p>Equally, we can handle the simplification of multiplication:</p><pre class="language-ocaml"><code> class simplify_mul =
+   let ( * ) a b =
+     match a, b with
+     | Int a, Int b -&gt; Int (a*b)
+     | Int a, Mul (Int b, c)
+     | Mul (Int a, c), Int b -&gt; Mul (Int (a*b), c)
+     | Mul (Int a, c), Mul (Int b, d) -&gt; Mul (Int (a*b), Add (c, d))
+     | _, Int _ -&gt; Mul (b, a)
+     | _ -&gt; Mul (a, b)
+   in
+   fun fself -&gt; object
+     inherit simplify_add fself
+     method c_Mul _ _ x y = fself () x * fself () y
+   end</code></pre><p>The class &quot;`simplify_mul`&quot; implements a decent simplifier; however, it overlooks the following equalities: &quot;0*x=0&quot;, &quot;0+x=x&quot;, and &quot;1*x=x&quot;. These cases can be easily integrated into existing implementation:</p><pre class="language-ocaml"><code># class simplify_all fself = object
     inherit simplify_mul fself as super
     method c_Add i it x y =
        match super#c_Add i it x y with
