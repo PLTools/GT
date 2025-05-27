@@ -84,8 +84,8 @@
                 ((fun () -> fun subj -> GT.gmap GT.list (_fself_bbb fa ()) subj)
                    () _x__012_))
         end
-      let gmap_aaa_0 = new gmap_aaa_t_stub
-      let gmap_bbb_0 = new gmap_bbb_t_stub
+      let gmap_aaa_0 eta = (new gmap_aaa_t_stub) eta
+      let gmap_bbb_0 eta = (new gmap_bbb_t_stub) eta
       let gmap_aaa eta__007_ =
         let (f, _) = fix_aaa_bbb gmap_aaa_0 gmap_bbb_0 in f eta__007_
       let gmap_bbb eta__008_ =

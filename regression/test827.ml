@@ -38,7 +38,8 @@ class ['b, 'extra_bbb] show_bbb_t_stub (show_aaa, _fself_bbb)
     inherit ['b aaa, 'extra_bbb] GT.show_option_t (show_aaa fb) _fself_bbb
   end
 
-let show_aaa_0 : (unit -> _ -> string) * _ -> _ = fun eta -> new show_aaa_t_stub eta
+let show_aaa_0 = fun eta ->
+  new show_aaa_t_stub eta
 
 let fix_aaa aaa0 bbb0 =
   let rec traitaaa fa inh (subj : _) =
@@ -48,7 +49,8 @@ let fix_aaa aaa0 bbb0 =
   in
   (traitaaa, traitbbb)
 
-let show_bbb_0 = fun eta -> new show_bbb_t_stub eta
+let show_bbb_0 = fun eta ->
+  new show_bbb_t_stub eta
 
 (* let show_aaa eta__001_ =
      let f, _ = fix_aaa show_aaa_0 show_bbb_0 in

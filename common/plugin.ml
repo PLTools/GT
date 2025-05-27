@@ -1036,7 +1036,11 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                          ~is_mutal:(not (List.is_empty mutual_names))
                          tdecl
                      in
-                     Exp.new_ ~loc (Lident class_name)))
+                     Exp.fun_ ~loc (Pat.var ~loc "eta")
+                     @@ Exp.app
+                          ~loc
+                          (Exp.new_ ~loc (Lident class_name))
+                          (Exp.ident ~loc "eta")))
             else []
           in
           let need_rec, knots =
