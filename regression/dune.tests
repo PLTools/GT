@@ -591,6 +591,15 @@
   (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
+  (applies_to test818)
+  (deps test818complex.exe))
+(executable
+  (name test818complex)
+  (modules test818complex)
+  (libraries GT)
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
+
+(cram
   (applies_to test820)
   (deps test820spec.exe))
 (executable
@@ -727,7 +736,7 @@
   (name test828mut)
   (modules test828mut)
   (flags (:standard -rectypes))
-  (libraries GT bisect_ppx.runtime)
+  (libraries GT)
   (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram

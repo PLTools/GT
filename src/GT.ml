@@ -856,6 +856,7 @@ class ['self] show_bytes_t fself = object
   inherit [ unit, 'self, string] bytes_t
   method do_bytes () = Bytes.to_string
 end
+
 class ['self, 'syn] gmap_bytes_t fself = object
   inherit [unit, 'self, 'syn] bytes_t
   constraint 'syn = bytes
@@ -928,6 +929,104 @@ let bytes =
         method eq       = tr1 (new eq_bytes_t)
         method foldl    = tr1 (new foldl_bytes_t)
         method foldr    = tr1 (new foldr_bytes_t)
+    end
+  }
+
+type complex = Complex.t
+
+class virtual ['inh, 'self, 'syn] complex_t = object
+  method virtual do_complex : 'inh -> complex -> 'syn
+end
+
+let gcata_complex tr inh subj = tr#do_complex inh subj
+
+class ['self] html_complex_t fself =
+  object
+    inherit [unit, 'self, HTML.viewer] complex_t
+    method do_complex () { Complex.re; im } =
+      HTML.seq [ HTML.float re; HTML.float im ]
+  end
+
+class ['self] show_complex_t fself = object
+  inherit [ unit, 'self, string] complex_t
+  method do_complex () { Complex.re; im } = 
+    Printf.sprintf "{ re=%f; im=%f }" re im
+end
+
+class ['self, 'syn] gmap_complex_t fself = object
+  inherit [unit, 'self, 'syn] complex_t
+  constraint 'syn = complex
+  method do_complex () = Fun.id
+end
+
+class ['self] fmt_complex_t fself = object
+  inherit [Format.formatter, 'self, unit] complex_t
+
+  method do_complex fmt { Complex.re; im }=
+    Format.fprintf fmt "{ re=%f; im=%f }" re im
+end
+
+class [ 'self, 'syn, 'env ] eval_complex_t fself =
+  object
+    inherit [ 'env, 'self, 'syn] complex_t
+    constraint 'syn = complex
+    method do_complex env arr = arr
+  end
+
+class [ 'self, 'syn, 'env ] stateful_complex_t fself =
+  object
+    inherit ['env, 'self, 'syn] complex_t
+    constraint 'syn = 'env * complex
+    method do_complex env0 arr = (env0,arr)
+  end
+
+class ['syn, 'self] foldl_complex_t fself =
+  object
+    inherit ['syn, 'self, 'syn] complex_t
+    method do_complex env _ = env
+  end
+
+class ['syn, 'self] foldr_complex_t fself =
+  object
+    inherit ['syn, 'self, 'syn] complex_t
+    method do_complex env _ = env
+  end
+
+class ['self] eq_complex_t fself =
+  object
+    inherit [complex, 'self, bool] complex_t
+    method do_complex env arr = (Stdlib.compare env arr = 0)
+  end
+
+class ['self] compare_complex_t fself =
+  object
+    inherit [complex, 'self, comparison] complex_t
+    method do_complex env other =
+      let c = Float.compare env.re other.re in
+      if c < 0 then LT
+      else if c = 0 then compare_primitive env.im other.im
+      else GT
+  end
+
+let complex =
+  { gcata = gcata_complex
+  ; fix = (fun c -> transform_gc gcata_complex c)
+  ; plugins =
+      let tr  obj    s = gcata_complex (obj (fun _ _ -> assert false) ) () s in
+      let tr1 obj i  s = gcata_complex (obj (fun _ _ -> assert false) ) i  s in
+      object
+        method show   = tr (new show_complex_t)
+        method gmap   = tr (new gmap_complex_t)
+        method html   = tr (new html_complex_t)
+
+        method fmt    = tr1 (new fmt_complex_t)
+
+        method eval   = tr1 (new eval_complex_t)
+        method stateful = tr1 (new stateful_complex_t)
+        method compare  = tr1 (new compare_complex_t)
+        method eq       = tr1 (new eq_complex_t)
+        method foldl    = tr1 (new foldl_complex_t)
+        method foldr    = tr1 (new foldr_complex_t)
     end
   }
 
