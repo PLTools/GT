@@ -1,3 +1,8 @@
+(env
+ (_
+  (flags
+   (:standard -warn-error -26))))
+
 (executable
  (name discover)
  (modules Discover)

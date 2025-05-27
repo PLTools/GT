@@ -199,6 +199,11 @@ module A = struct
     (* (fun y -> x+y)x when x = 1 *)
     Printf.printf "%s\n" @@ to_string @@
     recursive_eval ["x", `Num 1] (`App (`Abs ("y", `Add (`Var "x", `Var "y")), `Var "x") );
+
+    (* (fun y -> x+1) *)
+    Printf.printf "%s\n" @@ to_string @@
+    recursive_eval [] (`Abs ("y", `Add (`Var "x", `Num 1)));
+    
     ()
 
 end

@@ -489,8 +489,7 @@
   (name test800)
   (modules test800)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test802)
@@ -499,8 +498,7 @@
   (name test802mutal)
   (modules test802mutal)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test803)
@@ -509,8 +507,7 @@
   (name test803polyvar)
   (modules test803polyvar)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test804)
@@ -519,8 +516,7 @@
   (name test804polyvar)
   (modules test804polyvar)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test805)
@@ -529,8 +525,7 @@
   (name test805std)
   (modules test805std)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test806)
@@ -539,8 +534,7 @@
   (name test806fmt)
   (modules test806fmt)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test807)
@@ -549,8 +543,7 @@
   (name test807showT)
   (modules test807showT)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test811)
@@ -559,8 +552,7 @@
   (name test811compare)
   (modules test811compare)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test812)
@@ -569,8 +561,7 @@
   (name test812html)
   (modules test812html)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test813)
@@ -579,8 +570,7 @@
   (name test813htmlTy)
   (modules test813htmlTy)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test815)
@@ -589,8 +579,7 @@
   (name test815abstr)
   (modules test815abstr)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test816)
@@ -599,8 +588,7 @@
   (name test816hash)
   (modules test816hash)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test820)
@@ -609,8 +597,7 @@
   (name test820spec)
   (modules test820spec)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test821)
@@ -619,8 +606,7 @@
   (name test821clab)
   (modules test821clab)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test822)
@@ -629,8 +615,7 @@
   (name test822)
   (modules test822)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test823)
@@ -639,8 +624,7 @@
   (name test823list)
   (modules test823list)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test824)
@@ -649,8 +633,7 @@
   (name test824mut)
   (modules test824mut)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test825)
@@ -659,8 +642,7 @@
   (name test825tuples)
   (modules test825tuples)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test826)
@@ -669,8 +651,7 @@
   (name test826antiph)
   (modules test826antiph)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test827)
@@ -679,8 +660,7 @@
   (name test827mut)
   (modules test827mut)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test828)
@@ -689,8 +669,7 @@
   (name test828combi)
   (modules test828combi)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test829)
@@ -699,8 +678,7 @@
   (name test829enum)
   (modules test829enum)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test840)
@@ -709,8 +687,7 @@
   (name test840garrique)
   (modules test840garrique)
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 ; ppx+rectypes
 
 (cram
@@ -721,8 +698,7 @@
   (modules test798gen)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test817)
@@ -732,8 +708,7 @@
   (modules test817logic)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test827)
@@ -743,8 +718,7 @@
   (modules test827)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test828)
@@ -753,9 +727,8 @@
   (name test828mut)
   (modules test828mut)
   (flags (:standard -rectypes))
-  (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (libraries GT bisect_ppx.runtime)
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 
 (cram
   (applies_to test830)
@@ -765,5 +738,4 @@
   (modules test830mut)
   (flags (:standard -rectypes))
   (libraries GT)
-  (preprocess (action (run %{project_root}/ppx/pp_gt.exe --as-pp %{input-file})))
-  (preprocessor_deps (file %{project_root}/ppx/pp_gt.exe)))
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))

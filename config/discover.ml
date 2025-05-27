@@ -195,14 +195,14 @@ let gen_tests_dune dir =
     Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
   in
   let ppx_rewriter ppf () =
-    let pp = "%{project_root}/ppx/pp_gt.exe" in
+    (* let pp = "%{project_root}/ppx/pp_gt.exe" in *)
     (* --as-pp will output serialized AST
         without it the human-readable AST will be printed
     ***)
-    (* Format.fprintf ppf "@[(instrumentation (backend bisect_ppx))@]"; *)
-    (* Format.fprintf ppf "@[(preprocess (pps GT.ppx_all))@]"; *)
-    Format.fprintf ppf "@[(preprocess (action (run %s --as-pp %%{input-file})))@]@," pp;
-    Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp
+    Format.fprintf ppf "@[(instrumentation (backend bisect_ppx))@]";
+    Format.fprintf ppf "@[(preprocess (pps GT.ppx_all))@]";
+    (* Format.fprintf ppf "@[(preprocess (action (run %s --as-pp %%{input-file})))@]@," pp; *)
+    (* Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp *)
   in
   let () = wrap "camlp5" (camlp5_tests dir) p5_rewriter in
   let () = wrap ~flags:"-rectypes" "camlp5+rectypes" camlp5_rectypes_tests p5_rewriter in
