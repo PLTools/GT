@@ -42,6 +42,7 @@
    (>= "8.00.05"))
   ocamlgraph
   ppx_inline_test_nobase
+  mdx
   (ocamlfind :build)
   (logger-p5 :build)
   (bisect_ppx :build)
@@ -49,7 +50,6 @@
   (odoc :with-doc)
   (odig :with-doc)
   (pa_ppx :with-doc)
-  (mdx :with-test)
   ;
   ))
 
