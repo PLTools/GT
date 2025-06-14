@@ -34,15 +34,14 @@
     (and
      (>= "5.2.0")
      (< "5.3.0"))))
-  (dune
-   (>= "3.16"))
+  dune
   (ppxlib
    (<= "0.34.0"))
   (camlp5
    (>= "8.00.05"))
   ocamlgraph
   ppx_inline_test_nobase
-  mdx
+  (mdx :build)
   (ocamlfind :build)
   (logger-p5 :build)
   (bisect_ppx :build)
@@ -63,3 +62,4 @@
   dune
   (benchmark
    (< "1.7"))))
+
