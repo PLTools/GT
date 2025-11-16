@@ -39,7 +39,7 @@ let loc_from_caml camlloc =
 let noloc = Ploc.dummy
 
 type type_arg = MLast.type_var
-let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), (None, false))
+let named_type_arg ~loc s : type_arg = (Ploc.VaVal (Some s), Ploc.VaVal "")
 
 type lab_decl = (loc * string * bool * ctyp)
 let lab_decl ~loc name is_mut typ = (loc, name, is_mut, typ)
@@ -270,7 +270,7 @@ module Typ = struct
   let ident ~loc s = <:ctyp< $lid:s$ >>
   let string ~loc = <:ctyp< string >>
   let unit ~loc = <:ctyp< unit >>
-  let pair ~loc l r = <:ctyp< ( $list:[l;r]$ ) >>
+
 
   let access2 ~loc mname tname =
     assert (HelpersBase.Char.is_uppercase mname.[0]);
@@ -282,7 +282,8 @@ module Typ = struct
   let alias ~loc t s =
     let p = var ~loc s in
     <:ctyp< $t$ as $p$ >>
-  let tuple ~loc lt = <:ctyp< ( $list:lt$ ) >>
+  let tuple ~loc lt = <:ctyp< ( $list:List.map (fun x -> (VaVal None,x)) lt$ ) >>
+  let pair ~loc : t -> t -> t = fun l r -> <:ctyp< ( $list:[(VaVal None, l); (VaVal None, r)]$ ) >>
   let constr ~loc lident =
     let init = of_longident ~loc lident in
     function
@@ -322,7 +323,7 @@ module Typ = struct
       | Ptyp_var s -> <:ctyp< '$s$ >>
       | Ptyp_arrow (lab, l, r) -> arrow ~loc (helper l) (helper r)
       | Ptyp_constr ({txt;_}, ts) -> constr ~loc txt (List.map helper ts)
-      | Ptyp_tuple ts -> <:ctyp< ( $list:(List.map helper ts)$ ) >>
+      | Ptyp_tuple ts -> <:ctyp< ( $list:(List.map (fun x -> (Ploc.VaVal None, helper x)) ts)$ ) >>
       | Ptyp_variant (cs, flg, None) ->
           variant ~loc ~is_open:(match flg with Closed -> false | Open -> true) cs
       | Ptyp_variant (_,_,Some _ )
@@ -436,7 +437,7 @@ module Str = struct
     <:str_item< class $list:[c]$ >>
 
   let tdecl ~loc ~name ~params rhs =
-    let tdPrm = List.map (fun s -> (VaVal (Some s), (None,false))) params in
+    let tdPrm = List.map (fun s -> (VaVal (Some s), VaVal "")) params in
     let t = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = $rhs$ >>
     in
     <:str_item< type $list:[t]$ >>
@@ -454,7 +455,7 @@ module Str = struct
     fun ~loc ~name ~params_count ts ->
     let ltv =
       List.init params_count (fun n ->
-          (VaVal (Some (Printf.sprintf "dummy%d" n)), (None, false))) in
+          (VaVal (Some (Printf.sprintf "dummy%d" n)), VaVal "")) in
     let ls = (loc, VaVal name) in
     let ltt = [] in
     let t =
@@ -595,7 +596,7 @@ module Sig = struct
       <:ctyp< [ $list:cs$ ] >>
     in
     let tdPrm = List.init params_count (fun n ->
-            (VaVal (Some (Printf.sprintf "dummy%d" n)), (None,false))) in
+            (VaVal (Some (Printf.sprintf "dummy%d" n)), VaVal "")) in
     let td = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = $tdDef$ >>
     in
     <:sig_item< type $list:[td]$ >>
@@ -604,7 +605,7 @@ module Sig = struct
 
   let tdecl_abstr: loc:loc -> string -> string option list -> t = fun ~loc name params ->
 
-    let tdPrm = List.map (fun s -> (VaVal s, (None,false))) params in
+    let tdPrm = List.map (fun s -> (VaVal s, VaVal "")) params in
     let td = <:type_decl< $tp:(loc, VaVal name)$ $list:tdPrm$ = 'abstract >>
     in
     <:sig_item< type $list:[td]$ >>
@@ -779,7 +780,8 @@ let typ_vars_of_typ t =
     | <:ctyp< { $list:llsbt$ } >>  ->
       ListLabels.fold_left ~init:acc ~f:(fun acc (_,_,_,t, _) -> helper acc t) llsbt
     | <:ctyp< [ $list:llslt$ ] >> -> failwith "sum"
-    | <:ctyp< ( $list:lt$ )    >> -> ListLabels.fold_left ~init:acc ~f:helper lt
+    | <:ctyp< ( $list:lt$ )    >> ->
+      ListLabels.fold_left ~init:acc ~f:(fun acc (_,x) -> helper acc x) lt
     | <:ctyp< [ = $list:lpv$ ] >>  -> failwith "polyvariant"
     | _ -> acc (* This could be wrong *)
   in
