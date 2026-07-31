@@ -277,7 +277,7 @@ module Typ = struct
   ;;
 
   let variant_of_t ~loc t = [%type: [> [%t t] ]]
-  let alias ~loc t s = ptyp_alias ~loc t s
+  let alias ~loc t s = ptyp_alias ~loc t (Located.mk ~loc s)
   let poly ~loc names t = ptyp_poly ~loc (List.map names ~f:(Located.mk ~loc)) t
   let map ~onvar t = HelpersBase.map_core_type ~onvar t
 
@@ -328,13 +328,13 @@ module Str = struct
   type t = structure_item
 
   let single_class
-    ~loc
-    ?(virt = Asttypes.Virtual)
-    ?(pat = [%pat? _])
-    ?(wrap = fun x -> x)
-    ~name
-    ~params
-    body
+        ~loc
+        ?(virt = Asttypes.Virtual)
+        ?(pat = [%pat? _])
+        ?(wrap = fun x -> x)
+        ~name
+        ~params
+        body
     =
     pstr_class
       [ Ast_helper.Ci.mk ~virt ~params (Located.mk ~loc name)
@@ -403,8 +403,8 @@ module Str = struct
            ~name:(Located.mk ~loc name)
            ~params:
              (List.map params ~f:(function
-               | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
-               | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
+                | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
+                | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
            ~cstrs:[]
            ~kind:Ptype_abstract
            ~private_:Public
@@ -427,7 +427,7 @@ module Str = struct
   let simple_gadt
     : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t
     =
-   fun ~loc ~name ~params_count xs ->
+    fun ~loc ~name ~params_count xs ->
     pstr_type
       ~loc
       Recursive
@@ -447,7 +447,7 @@ module Str = struct
                     ~args:(Pcstr_tuple [])
                     ~res:(Some typ))))
       ]
- ;;
+  ;;
 
   let module_ ~loc name me =
     pstr_module ~loc @@ module_binding ~loc ~name:(Located.mk ~loc (Some name)) ~expr:me
@@ -461,7 +461,7 @@ module Me = struct
   type t = module_expr
 
   let structure ~loc sis = pmod_structure ~loc sis
-  let ident ~loc lident = pmod_ident ~loc (Located.mk ~loc lident)
+  let ident ~loc (lident : Ppxlib.longident) = pmod_ident ~loc (Located.mk ~loc lident)
   let apply ~loc = pmod_apply ~loc
 
   let functor_ ~loc name argt body =
@@ -526,8 +526,8 @@ module Sig = struct
            ~name:(Located.mk ~loc name)
            ~params:
              (List.map params ~f:(function
-               | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
-               | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
+                | None -> ptyp_any ~loc, (NoVariance, NoInjectivity)
+                | Some s -> ptyp_var ~loc s, (NoVariance, NoInjectivity)))
            ~cstrs:[]
            ~kind:Ptype_abstract
            ~private_:Public
@@ -550,7 +550,7 @@ module Sig = struct
   let simple_gadt
     : loc:loc -> name:string -> params_count:int -> (string * Typ.t) list -> t
     =
-   fun ~loc ~name ~params_count xs ->
+    fun ~loc ~name ~params_count xs ->
     psig_type
       ~loc
       Recursive
@@ -570,7 +570,7 @@ module Sig = struct
                     ~args:(Pcstr_tuple [])
                     ~res:(Some typ))))
       ]
- ;;
+  ;;
 
   let module_ ~loc md = psig_module ~loc md
   let modtype ~loc = psig_modtype ~loc
@@ -664,7 +664,7 @@ module Cl = struct
   ;;
 
   let fun_ ~loc = pcl_fun ~loc Nolabel None
-  let constr ~loc (lid : longident) ts = pcl_constr ~loc (Located.mk ~loc lid) ts
+  let constr ~loc (lid : Ppxlib.longident) ts = pcl_constr ~loc (Located.mk ~loc lid) ts
   let structure ~loc = pcl_structure ~loc
   let let_ ~loc ?(flg = Nonrecursive) = Cl.let_ ~loc flg
 end
@@ -699,13 +699,13 @@ let map_type_param_names ~f ps =
 ;;
 
 let prepare_param_triples
-  ~loc
-  ~extra
-  ?(inh = fun ~loc s -> Typ.var ~loc @@ "i" ^ s)
-  ?(syn = fun ~loc s -> Typ.var ~loc @@ "s" ^ s)
-  ?(default_inh = [%type: 'inh])
-  ?(default_syn = [%type: 'syn])
-  names
+      ~loc
+      ~extra
+      ?(inh = fun ~loc s -> Typ.var ~loc @@ "i" ^ s)
+      ?(syn = fun ~loc s -> Typ.var ~loc @@ "s" ^ s)
+      ?(default_inh = [%type: 'inh])
+      ?(default_syn = [%type: 'syn])
+      names
   =
   let ps =
     List.concat_map names ~f:(fun n -> [ inh ~loc n; Typ.var ~loc n; syn ~loc n ])

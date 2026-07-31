@@ -46,21 +46,20 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       let k cs = Exp.match_ ~loc what cs in
       k
       @@ List.map cdts ~f:(fun cd ->
-           match cd.pcd_args with
-           | Pcstr_record ls ->
-             let names = List.map ls ~f:(fun _ -> gen_symbol ()) in
-             case
-               ~lhs:
-                 (Pat.constr_record ~loc cd.pcd_name.txt
-                  @@ List.map2_exn ls names ~f:(fun l s -> l.pld_name.txt, Pat.var ~loc s)
-                 )
-               ~rhs:(make_rhs cd names)
-           | Pcstr_tuple args ->
-             let names = List.map args ~f:(fun _ -> gen_symbol ()) in
-             (* notify "constructing %s of %s" cd.pcd_name.txt (String.concat ~sep:" " names); *)
-             case
-               ~lhs:(Pat.constr ~loc cd.pcd_name.txt @@ List.map ~f:(Pat.var ~loc) names)
-               ~rhs:(make_rhs cd names))
+        match cd.pcd_args with
+        | Pcstr_record ls ->
+          let names = List.map ls ~f:(fun _ -> gen_symbol ()) in
+          case
+            ~lhs:
+              (Pat.constr_record ~loc cd.pcd_name.txt
+               @@ List.map2_exn ls names ~f:(fun l s -> l.pld_name.txt, Pat.var ~loc s))
+            ~rhs:(make_rhs cd names)
+        | Pcstr_tuple args ->
+          let names = List.map args ~f:(fun _ -> gen_symbol ()) in
+          (* notify "constructing %s of %s" cd.pcd_name.txt (String.concat ~sep:" " names); *)
+          case
+            ~lhs:(Pat.constr ~loc cd.pcd_name.txt @@ List.map ~f:(Pat.var ~loc) names)
+            ~rhs:(make_rhs cd names))
       @
       match else_case with
       | None -> []
@@ -116,10 +115,10 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   *)
     (List.concat
      @@ map_type_param_names params ~f:(fun s ->
-          [ named_type_arg ~loc ("i" ^ s)
-          ; named_type_arg ~loc s
-          ; named_type_arg ~loc ("s" ^ s)
-          ]))
+       [ named_type_arg ~loc ("i" ^ s)
+       ; named_type_arg ~loc s
+       ; named_type_arg ~loc ("s" ^ s)
+       ]))
     @ [ named_type_arg ~loc "inh"
       ; named_type_arg ~loc Naming.extra_param_name
       ; named_type_arg ~loc "syn"
@@ -211,7 +210,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
             map_core_type typ ~onvar:(fun as_ ->
               let params = List.map ~f:fst tdecl.ptype_params in
               let open Ppxlib.Ast_builder.Default in
-              if String.equal as_ new_name
+              if String.equal as_ new_name.txt
               then Some (ptyp_constr ~loc (Located.lident ~loc name.txt) params)
               else Some (ptyp_var ~loc as_))
             |> helper
@@ -345,7 +344,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                let loc = typ.ptyp_loc in
                map_core_type typ ~onvar:(fun as_ ->
                  let open Ppxlib.Ast_builder.Default in
-                 if String.equal as_ new_name
+                 if String.equal as_ new_name.txt
                  then Some (ptyp_constr ~loc (Located.lident ~loc name.txt) params)
                  else Some (ptyp_var ~loc as_))
                |> helper
@@ -353,37 +352,36 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                (* rows go to virtual methods. label goes to inherit fields *)
                ans ~is_poly:true
                @@ List.concat_map rows ~f:(fun rf ->
-                    match rf.prf_desc with
-                    | Rtag (lab, _, []) ->
-                      let methname = sprintf "c_%s" lab.txt in
-                      [ (Cf.method_virtual ~loc methname
-                         @@ Typ.(
-                              var ~loc "syn"
-                              |> arrow ~loc @@ var ~loc "extra"
-                              |> arrow ~loc (var ~loc "inh")))
-                      ]
-                    | Rtag (lab, _, [ typ ]) ->
-                      (* print_endline "HERE"; *)
-                      let args =
-                        match typ.ptyp_desc with
-                        | Ptyp_tuple ts -> ts
-                        | _ -> [ typ ]
-                      in
-                      let methname = sprintf "c_%s" lab.txt in
-                      [ (Cf.method_virtual ~loc methname
-                         @@
-                         let open Typ in
-                         List.fold_right args ~init:(var ~loc "syn") ~f:(fun t ->
-                           arrow ~loc (from_caml t))
-                         |> arrow ~loc @@ var ~loc "extra"
-                         |> arrow ~loc (var ~loc "inh"))
-                      ]
-                    | Rtag (_, _, _) -> failwith "Can't deal with conjunctive types"
-                    | Rinherit typ ->
-                      (match typ.ptyp_desc with
-                       | Ptyp_constr ({ txt; loc }, params) ->
-                         wrap ~is_poly:true txt params
-                       | _ -> assert false))
+                 match rf.prf_desc with
+                 | Rtag (lab, _, []) ->
+                   let methname = sprintf "c_%s" lab.txt in
+                   [ (Cf.method_virtual ~loc methname
+                      @@ Typ.(
+                           var ~loc "syn"
+                           |> arrow ~loc @@ var ~loc "extra"
+                           |> arrow ~loc (var ~loc "inh")))
+                   ]
+                 | Rtag (lab, _, [ typ ]) ->
+                   (* print_endline "HERE"; *)
+                   let args =
+                     match typ.ptyp_desc with
+                     | Ptyp_tuple ts -> ts
+                     | _ -> [ typ ]
+                   in
+                   let methname = sprintf "c_%s" lab.txt in
+                   [ (Cf.method_virtual ~loc methname
+                      @@
+                      let open Typ in
+                      List.fold_right args ~init:(var ~loc "syn") ~f:(fun t ->
+                        arrow ~loc (from_caml t))
+                      |> arrow ~loc @@ var ~loc "extra"
+                      |> arrow ~loc (var ~loc "inh"))
+                   ]
+                 | Rtag (_, _, _) -> failwith "Can't deal with conjunctive types"
+                 | Rinherit typ ->
+                   (match typ.ptyp_desc with
+                    | Ptyp_constr ({ txt; loc }, params) -> wrap ~is_poly:true txt params
+                    | _ -> assert false))
              | Ptyp_extension _ ->
                not_implemented "extensions in types `%s`" (string_of_core_type typ)
              | _ -> failwith "not implemented ")
@@ -435,19 +433,19 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
         ~onvariant:(fun cds ->
           Typ.object_ ~loc Open
           @@ List.map cds ~f:(fun cd ->
-               let typs =
-                 match cd.pcd_args with
-                 | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
-                 | Pcstr_tuple ts -> ts
-               in
-               let new_ts =
-                 let open Typ in
-                 [ var ~loc "inh"; use_tdecl tdecl ]
-                 @ List.map typs ~f:Typ.from_caml
-                 @ [ Typ.var ~loc "syn" ]
-               in
-               ( Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt
-               , Typ.chain_arrow ~loc new_ts )))
+            let typs =
+              match cd.pcd_args with
+              | Pcstr_record ls -> List.map ls ~f:(fun x -> x.pld_type)
+              | Pcstr_tuple ts -> ts
+            in
+            let new_ts =
+              let open Typ in
+              [ var ~loc "inh"; use_tdecl tdecl ]
+              @ List.map typs ~f:Typ.from_caml
+              @ [ Typ.var ~loc "syn" ]
+            in
+            ( Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt
+            , Typ.chain_arrow ~loc new_ts )))
         ~onmanifest:(fun t ->
           let rec helper typ =
             match typ.ptyp_desc with
@@ -539,16 +537,16 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
     let onvariant cds =
       ans
       @@ prepare_patt_match ~loc (Exp.ident ~loc "subj") (`Algebraic cds) (fun cd names ->
-           (* TODO: Subj ident has to be passed as an argument *)
-           let subj = "subj" in
-           List.fold_left
-             ("inh" :: subj :: names)
-             ~init:
-               (Exp.send
-                  ~loc
-                  (Exp.ident ~loc "tr")
-                  (Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt))
-             ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)))
+        (* TODO: Subj ident has to be passed as an argument *)
+        let subj = "subj" in
+        List.fold_left
+          ("inh" :: subj :: names)
+          ~init:
+            (Exp.send
+               ~loc
+               (Exp.ident ~loc "tr")
+               (Naming.meth_name_for_constructor cd.pcd_attributes cd.pcd_name.txt))
+          ~f:(fun acc arg -> Exp.app ~loc acc (Exp.ident ~loc arg)))
     in
     visit_typedecl
       ~loc
@@ -608,6 +606,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
           | Ptyp_package _ -> failwith "not implemented: package types"
           | Ptyp_extension _ -> failwith "not implemented: extension types"
           | Ptyp_arrow _ -> failwith "not implemented: arrow types"
+          | Ptyp_open _ -> failwith "not implemented: open types"
           | Ptyp_any ->
             failwith "not implemented: wildcard types (but it should be easy to rewrite)"
           | Ptyp_poly (_, _) -> failwith "not implemented: existential types"
@@ -669,15 +668,14 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
               @@ class_structure ~self:(Pat.any ~loc) ~fields:plugin_fields )
           ])
     :: List.filter_map plugins ~f:(fun p ->
-         (* also we generate transformation function with unit preapplied
+      (* also we generate transformation function with unit preapplied
          Because we seems to need them in case of abstract type in the interface
       *)
-         if p#need_inh_attr
-         then None
-         else (
-           let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
-           Option.some
-           @@ Str.single_value ~loc (Pat.sprintf ~loc "%s" fname) (wrap p tdecl)))
+      if p#need_inh_attr
+      then None
+      else (
+        let fname = Naming.trf_function p#trait_name tdecl.ptype_name.txt in
+        Option.some @@ Str.single_value ~loc (Pat.sprintf ~loc "%s" fname) (wrap p tdecl)))
   ;;
 
   let rename_params tdecl =
@@ -714,10 +712,10 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
   (* TODO: Implement general case about renaming of paramters *)
 
   module G = Graph.Persistent.Digraph.Concrete (struct
-    include String
+      include String
 
-    let hash = Hashtbl.hash
-  end)
+      let hash = Hashtbl.hash
+    end)
 
   module T = Graph.Topological.Make (G)
   module SM = Stdlib.Map.Make (String)
@@ -862,7 +860,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
       let fix_arg =
         tup ~loc
         @@ List.map tdecls ~f:(fun { ptype_name = { txt } } ->
-             Typ.var ~loc (sprintf "alias_for_%s" txt))
+          Typ.var ~loc (sprintf "alias_for_%s" txt))
       in
       List.fold_right
         ys
@@ -910,15 +908,15 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                           (Exp.sprintf ~loc "%s0" tdecl.ptype_name.txt)
                           ((Exp.tuple ~loc
                             @@ List.map tdecls ~f:(fun { ptype_name = { txt } } ->
-                                 Exp.sprintf ~loc "trait%s" txt))
+                              Exp.sprintf ~loc "trait%s" txt))
                            :: map_type_param_names tdecl.ptype_params ~f:(fun txt ->
-                                Exp.sprintf ~loc "f%s" txt)
-                              (* @
-                               * [Exp.app_list ~loc
-                               *    (Exp.sprintf ~loc "trait%s" tdecl.ptype_name.txt)
-                               *    (map_type_param_names tdecl.ptype_params
-                               *       ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
-                               * ] *))
+                             Exp.sprintf ~loc "f%s" txt)
+                             (* @
+                              * [Exp.app_list ~loc
+                              *    (Exp.sprintf ~loc "trait%s" tdecl.ptype_name.txt)
+                              *    (map_type_param_names tdecl.ptype_params
+                              *       ~f:(fun txt -> Exp.sprintf ~loc "f%s" txt))
+                              * ] *))
                       ; Exp.ident ~loc "inh"
                       ; Exp.ident ~loc "subj"
                       ]
@@ -942,7 +940,7 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
                [ make_gcata_typ ~loc tdecl
                ; Typ.object_ ~loc Closed
                  @@ List.map plugins ~f:(fun p ->
-                      p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
+                   p#trait_name, p#make_final_trans_function_typ ~loc tdecl)
                  (* ; make_gcata_typ ~loc tdecl *)
                ; fix_typ ~loc tdecls
                ]
@@ -999,15 +997,16 @@ module Make (AstHelpers : GTHELPERS_sig.S) = struct
     (* TODO: it could be a bug with topological sorting here *)
     sis
     @ List.concat_map tdecls ~f:(fun tdecl ->
-        List.concat [ make_interface_class_sig ~loc tdecl; make_gcata_sig ~loc tdecl ])
+      List.concat [ make_interface_class_sig ~loc tdecl; make_gcata_sig ~loc tdecl ])
     @ [ fix_sig ~loc tdecls ]
     @ List.concat_map plugins ~f:(fun p ->
-        (p (true, tdecls))#do_mutuals_sigs ~loc ~is_rec:true)
-    @ (* (List.concat_map tdecls ~f:(fun tdecl ->
-       *      List.concat_map plugins ~f:(fun p ->
-       *          collect_plugins_sig ~loc tdecl (p tdecls))
-       *    )
-       * ) @ *)
+      (p (true, tdecls))#do_mutuals_sigs ~loc ~is_rec:true)
+    @
+    (* (List.concat_map tdecls ~f:(fun tdecl ->
+     *      List.concat_map plugins ~f:(fun p ->
+     *          collect_plugins_sig ~loc tdecl (p tdecls))
+     *    )
+     * ) @ *)
     collect_plugins_sig ~loc tdecls (List.map plugins ~f:(fun p -> p (true, tdecls)))
   ;;
 

@@ -131,13 +131,13 @@ let compare_core_type a b =
 ;;
 
 let visit_typedecl
-  ~loc
-  ?(onrecord = fun _ -> not_implemented ~loc "record types")
-  ?(onmanifest = fun _ -> not_implemented ~loc "manifest")
-  ?(onvariant = fun _ -> not_implemented ~loc "algebraic types")
-  ?(onabstract = fun _ -> not_implemented ~loc "abstract types without manifest")
-  ?(onopen = fun () -> not_implemented ~loc "open types")
-  tdecl
+      ~loc
+      ?(onrecord = fun _ -> not_implemented ~loc "record types")
+      ?(onmanifest = fun _ -> not_implemented ~loc "manifest")
+      ?(onvariant = fun _ -> not_implemented ~loc "algebraic types")
+      ?(onabstract = fun _ -> not_implemented ~loc "abstract types without manifest")
+      ?(onopen = fun () -> not_implemented ~loc "open types")
+      tdecl
   =
   match tdecl.ptype_kind with
   | Ptype_record r -> onrecord r
@@ -155,7 +155,7 @@ let affect_longident ~f = function
   | Lapply (_, _) as l -> l
 ;;
 
-let rec map_longident ~f = function
+let rec map_longident ~f : _ -> Longident.t = function
   | Lident x -> Lident (f x)
   | Ldot (l, s) -> Ldot (l, f s)
   | Lapply (l, r) -> Lapply (l, map_longident ~f r)
@@ -175,11 +175,11 @@ let vars_from_core_type =
     | Ptyp_var s -> SS.add s acc
     | Ptyp_tuple args | Ptyp_constr (_, args) -> List.fold_left args ~init:acc ~f:helper
     | Ptyp_arrow (_, l, r) -> helper (helper acc l) r
-    | Ptyp_alias (t, lab) -> SS.remove lab (helper acc t)
+    | Ptyp_alias (t, lab) -> SS.remove lab.txt (helper acc t)
     | Ptyp_object (_, _)
     | Ptyp_class (_, _)
     | Ptyp_variant (_, _, _)
-    | Ptyp_any
+    | Ptyp_any | Ptyp_open _
     | Ptyp_poly (_, _)
     | Ptyp_package _ | Ptyp_extension _ -> acc
   in
@@ -211,12 +211,11 @@ let vars_from_tdecl tdecl =
     | Ptype_open | Ptype_abstract -> SS.empty
     | Ptype_record ls -> of_labels ls
     | Ptype_variant cds ->
-      List.fold_left cds ~init:SS.empty ~f:(fun acc ->
-          function
-          | { pcd_args = Pcstr_tuple ts } ->
-            List.fold_left ~init:SS.empty ts ~f:(fun acc x ->
-              SS.union acc (vars_from_core_type x))
-          | { pcd_args = Pcstr_record ls } -> SS.union acc (of_labels ls))
+      List.fold_left cds ~init:SS.empty ~f:(fun acc -> function
+        | { pcd_args = Pcstr_tuple ts } ->
+          List.fold_left ~init:SS.empty ts ~f:(fun acc x ->
+            SS.union acc (vars_from_core_type x))
+        | { pcd_args = Pcstr_record ls } -> SS.union acc (of_labels ls))
   in
   SS.union ans2 ans
 ;;
@@ -261,7 +260,7 @@ let is_type_used_in ~tdecl lident =
   let rec helper t =
     match t.ptyp_desc with
     | Ptyp_constr ({ txt }, _) when lident = txt -> raise Found
-    | Ptyp_object _ -> ()
+    | Ptyp_open _ | Ptyp_object _ -> ()
     | Ptyp_any | Ptyp_var _ | Ptyp_class _ | Ptyp_package _ | Ptyp_extension _ -> ()
     | Ptyp_variant (rfs, _, _) ->
       List.iter rfs ~f:(function
@@ -283,8 +282,8 @@ let is_type_used_in ~tdecl lident =
       ~onmanifest:helper
       ~onvariant:
         (List.iter ~f:(function
-          | { pcd_args = Pcstr_tuple ls } -> List.iter ~f:helper ls
-          | { pcd_args = Pcstr_record ls } -> onrecord ls))
+           | { pcd_args = Pcstr_tuple ls } -> List.iter ~f:helper ls
+           | { pcd_args = Pcstr_record ls } -> onrecord ls))
       ~onrecord;
     false
   with

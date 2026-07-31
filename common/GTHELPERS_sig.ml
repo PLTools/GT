@@ -142,7 +142,7 @@ module type S = sig
   end
 
   and Ctf : (* class_sig_item *)
-  sig
+    sig
     type t
 
     val inherit_ : loc:loc -> Cty.t -> t
@@ -218,7 +218,7 @@ module type S = sig
     type t
 
     val structure : loc:loc -> Str.t list -> t
-    val ident : loc:loc -> Longident.t -> t
+    val ident : loc:loc -> Ppxlib.longident -> t
     val apply : loc:loc -> t -> t -> t
     (* val functor_ : loc:loc -> string -> Mt.t option -> t -> t *)
   end
@@ -226,7 +226,7 @@ module type S = sig
   and Mt : sig
     type t
 
-    val ident : loc:loc -> Longident.t -> t
+    val ident : loc:loc -> Ppxlib.longident -> t
     val signature : loc:loc -> Sig.t list -> t
 
     (* val functor_:  loc:loc -> string -> t option -> t -> t *)
@@ -240,12 +240,12 @@ module type S = sig
   end
 
   and Cl : (* class_expr *)
-  sig
+    sig
     type t
 
     val fun_ : loc:loc -> Pat.t -> t -> t
     val fun_list : loc:loc -> Pat.t list -> t -> t
-    val constr : loc:loc -> Longident.t -> Typ.t list -> t
+    val constr : loc:loc -> Ppxlib.longident -> Typ.t list -> t
     val apply : loc:loc -> t -> Exp.t list -> t
     val let_ : loc:loc -> ?flg:Ppxlib.rec_flag -> Vb.t list -> t -> t
   end
