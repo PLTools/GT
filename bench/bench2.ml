@@ -347,7 +347,7 @@ let repeat = 20
 let style = Auto
 let style = Nil
 let confidence = 0.95
-let sizes = [ 100; 200; 300; 500; 700; 900; 1000 ]
+let sizes = [ 100; 500; 1000 ]
 
 let __ () =
   let module M = Lambda.Iter in
@@ -433,7 +433,7 @@ let () =
     tabulate ~confidence res)
 ;;
 
-let () =
+let __ () =
   let module M = Lambda.Eval in
   sizes
   |> List.iter (fun n ->

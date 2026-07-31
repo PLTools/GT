@@ -16,10 +16,7 @@
  (instrumentation
   (backend bisect_ppx))
  (preprocess
-  (pps
-   ppx_inline_test_nobase
-   ;ppx_expect
-   ppxlib.metaquot))
+  (pps ppx_inline_test_nobase ppxlib.metaquot))
  (foreign_stubs
   (language c)
   (names common_stubs)))

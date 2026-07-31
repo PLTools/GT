@@ -81,13 +81,14 @@ module Pat = struct
   let sprintf ~loc fmt = Printf.ksprintf (fun s -> <:patt< $lid:s$ >>) fmt
 
   let of_longident ~loc lid =
+    let _ : Ppxlib.longident = lid in
     let is_lident s = not (capitalized s) in
     match lid with
-    | Longident.Lident ("[]" as s)
+    | Astlib.Longident.Lident ("[]" as s)
     | Lident ("::" as s) -> <:patt< $uid:s$ >>
-    | Longident.Lident s when is_lident s -> <:patt< $lid:s$ >>
+    | Lident s when is_lident s -> <:patt< $lid:s$ >>
     | Ldot(li, s) when is_lident s ->
-      let li = Longid.of_longident ~loc li in
+      let li = Longid.of_longident ~loc li  in
       <:patt< $longid:li$ . $lid:s$ >>
     | li ->
       let li = Longid.of_longident ~loc li in
@@ -105,7 +106,8 @@ module Pat = struct
     List.fold_left (fun acc x -> <:patt< $acc$ $x$ >>) c ps
 
   let type_ ~loc lident =
-    <:patt< # $lilongid:Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >>
+    let _ : Ppxlib.longident = lident in
+    <:patt< # $lilongid:Asttools.longident_lident_of_string_list loc (Astlib.Longident.flatten lident)$ >>
 
   let record ~loc fs =
     <:patt< { $list:List.map (fun (l,r) -> (of_longident ~loc l, r) ) fs$ } >>
@@ -216,7 +218,7 @@ module Exp = struct
     | le  -> <:expr< ($list:le$) >>
 
   let new_ ~loc lident =
-    <:expr< new $lilongid: Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >>
+    <:expr< new $lilongid: Asttools.longident_lident_of_string_list loc (Astlib.Longident.flatten lident)$ >>
   let object_ ~loc (pat, fields) =
     <:expr< object ($pat$) $list:fields$ end >>
   let send ~loc left s = <:expr< $left$ # $s$ >>
@@ -292,7 +294,8 @@ module Typ = struct
       List.fold_left (app ~loc) init lt
 
   let class_ ~loc lident  =
-    let init = <:ctyp< # $lilongid:Asttools.longident_lident_of_string_list loc (Longident.flatten lident)$ >> in
+
+    let init = <:ctyp< # $lilongid:Asttools.longident_lident_of_string_list loc (Astlib.Longident.flatten lident)$ >> in
     function
     | []    -> init
     (* | [r]   -> <:ctyp< $init$ $r$ >> *)
@@ -686,7 +689,7 @@ end
 module Cl = struct
   type t = class_expr
   let constr ~loc lident args =
-    let ls = Asttools.longident_lident_of_string_list loc (Longident.flatten lident) in
+    let ls = Asttools.longident_lident_of_string_list loc (Astlib.Longident.flatten lident) in
     <:class_expr< [ $list:args$ ] $lilongid:ls$ >>
   let apply ~loc l xs =
     List.fold_left (fun acc r -> <:class_expr< $acc$ $r$ >>) l  xs

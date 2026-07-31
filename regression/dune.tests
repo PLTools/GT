@@ -697,6 +697,15 @@
   (modules test840garrique)
   (libraries GT)
   (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
+
+(cram
+  (applies_to test841)
+  (deps test841mut.exe))
+(executable
+  (name test841mut)
+  (modules test841mut)
+  (libraries GT)
+  (instrumentation (backend bisect_ppx))(preprocess (pps GT.ppx_all)))
 ; ppx+rectypes
 
 (cram
