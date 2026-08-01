@@ -1,9 +1,6 @@
 name: Build master in docker
 
 on:
-  # pull_request:
-  #   branches:
-  #     - 'master'
   push:
     branches:
       - 'master'

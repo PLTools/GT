@@ -1,4 +1,4 @@
-name: Build master in docker (OCaml 5.2)
+name: Build master in docker (OCaml 5.3 and 5.5)
 
 on:
   push:
@@ -6,50 +6,43 @@ on:
       - 'master'
     paths-ignore:
       - 'README.md'
-
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+    branches:
+      - 'master'
 env:
-  OPAMROOT: /home/opam/.opam
   OPAMCONFIRMLEVEL: unsafe-yes
   GT_WITH_DOCS: yes
+  OPAMROOT: /home/opam/.opam
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+        containers: [ 'zanuda53', 'zanuda55' ]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     container:
-      image: ocaml/opam:ubuntu-lts-ocaml-5.2
-      options: --user root # Kind of important dirty hack
-      #options: --user opam               # dirty hack
+      image: kakadu18/ocaml:${{ matrix.containers }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.containers }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          fetch-depth: 1
+          fetch-depth: 2
 
       - run: |
           sudo apt-get update
           sudo apt-get install pkg-config libpcre2-dev m4 -y
+
+      #- run: mv `which opam-dev` `which opam`
       - run: opam --version
-
-      - name: bisect many not work without it
-        if: false #we will not run coverage in 5.2
-        run: |
-          git config --global --add safe.directory /__w/GT/GT
-          #git submodule update --init
-
-
-      - name: Install dependecies for documentation
-        run: |
-          sudo apt-get install pkg-config libpcre2-dev -y
 
       - run: opam install . --deps-only --with-test --with-doc
       - run: opam exec -- dune build @check --profile=release

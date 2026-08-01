@@ -12,37 +12,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-20.04
-        ocaml-version:
-          - 4.10.1
+        containers: [ 'zanuda414' ]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: kakadu18/ocaml:${{ matrix.containers }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.containers }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Retrieve date for cache key
-        id: cache-key
-        run: echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-        shell: bash
-
-      - name: Restore opam cache
-        id: opam-cache
-        uses: actions/cache@v2
+        uses: actions/checkout@v7
         with:
-          path: "~/.opam"
-          # invalidate cache daily, gets built daily using a scheduled job
-          key: ${{ steps.cache-key.outputs.date }}
+          fetch-depth: 2
 
-      - name: Use OCaml ${{ matrix.ocaml-version }}
-        uses: avsm/setup-ocaml@v1
-        with:
-          ocaml-version: ${{ matrix.ocaml-version }}
+      - run: opam --version
 
-      - run: opam pin add GT.dev . --no-action
-      - run: opam depext GT.dev --yes --with-test
-      - run: opam install . --deps-only --with-test
-      - run: opam exec -- make #dune build
-      - run: opam exec -- make test # dune runtest
+      - run: opam install . --deps-only --with-test --with-doc
+      - run: opam exec -- dune build @check --profile=release
+      - run: opam exec -- dune test --profile=release
+
+      - name: Installing using Opam
+        run: |
+          opam exec -- dune build @install
+          opam exec -- dune install
+
+      - name: List files
+        run: opam show --list-files GT
+
+      # TODO: coverage
