@@ -12,11 +12,18 @@
   "Actual code that perform codegeneration. Will used for creating new plugins")
  (flags
   (:standard -w -32-9 -warn-error -A))
- ;(inline_tests)
  (instrumentation
   (backend bisect_ppx))
  (preprocess
-  (pps ppx_inline_test_nobase ppxlib.metaquot))
+  (pps ppxlib.metaquot))
  (foreign_stubs
   (language c)
   (names common_stubs)))
+
+(library
+ (name GTCommon_tests)
+ (modules GTCommon_tests)
+ (inline_tests)
+ (libraries GTCommon)
+ (preprocess
+  (pps ppxlib.metaquot ppx_inline_test_nobase)))

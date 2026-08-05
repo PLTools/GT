@@ -186,16 +186,6 @@ let vars_from_core_type =
   fun root -> helper SS.empty root
 ;;
 
-let%test _ =
-  let loc = Location.none in
-  [ "a" ] = (vars_from_core_type [%type: 'a list] |> SS.elements)
-;;
-
-let%test _ =
-  let loc = Location.none in
-  [] = (vars_from_core_type [%type: int list] |> SS.elements)
-;;
-
 let vars_from_tdecl tdecl =
   let ans =
     match tdecl.ptype_manifest with
