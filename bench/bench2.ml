@@ -4,24 +4,32 @@ let () =
 ;;
 
 module MySamples = struct
-  type t = Benchmark.t =
-    { wall : GT.float
-    ; utime : GT.float
-    ; stime : GT.float
-    ; cutime : GT.float
-    ; cstime : GT.float
-    ; iters : GT.int64
+  type t = Benchmark.t
+
+  let t =
+    { GT.plugins =
+        object
+          method fmt ppf b =
+            Format.fprintf
+              ppf
+              "{ utime = %f; minor = %.0f; major = %.0f }"
+              b.Benchmark.utime
+              b.Benchmark.minor_words
+              b.Benchmark.major_words
+        end
+    ; gcata = (fun _ _ -> assert false)
+    ; fix = (fun _ _ -> assert false)
     }
-  [@@deriving gt ~plugins:{ show }]
+  ;;
 
   [@@@ocaml.warning "-34"]
 
-  type samples = (GT.string * t GT.list) GT.list [@@deriving gt ~plugins:{ show }]
+  type samples = (GT.string * t GT.list) GT.list [@@deriving gt ~plugins:{ fmt }]
 
   let save res filename =
-    let ch = Stdlib.open_out filename in
-    Stdlib.Printf.fprintf ch "%s\n" (GT.show samples res);
-    Stdlib.close_out ch
+    Out_channel.with_open_text filename (fun ch ->
+      let ppf = Format.formatter_of_out_channel ch in
+      Format.fprintf ppf "%a\n" (GT.fmt samples) res)
   ;;
 end
 
@@ -177,7 +185,7 @@ module Lambda = struct
   end
 
   module PP = struct
-    let name = "lambda formatting"
+    let name = "lambda fmting"
     let create n = Id.create n
 
     module D = struct
