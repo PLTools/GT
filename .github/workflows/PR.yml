@@ -7,6 +7,11 @@ on:
     branches:
       - 'master'
 
+env:
+  OPAMCONFIRMLEVEL: unsafe-yes
+  GT_WITH_DOCS: yes
+  OPAMROOT: /home/opam/.opam
+
 jobs:
   build:
     strategy:
@@ -42,4 +47,6 @@ jobs:
       - name: List files
         run: opam show --list-files GT
 
+
+      - run: make coverage
       # TODO: coverage
