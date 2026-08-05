@@ -62,4 +62,4 @@
  (depends
   dune
   (benchmark
-   (< "1.7"))))
+   (>= "1.7"))))
