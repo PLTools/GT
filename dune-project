@@ -1,4 +1,4 @@
-(lang dune 3.16)
+(lang dune 3.18)
 
 (generate_opam_files true)
 
@@ -14,6 +14,8 @@
 
 (homepage "https://github.com/PLTools/GT")
 
+(maintenance_intent "(latest)")
+
 (source
  (github PLTools/GT))
 
@@ -23,8 +25,8 @@
  (description
   "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from François Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.\n\n\nP.S. Since 2023 development team is no longer associated with JetBrains Research")
  (authors "https://github.com/dboulytchev" "https://github.com/Kakadu")
- (maintainers "Kakadu@pm.me")
- (version 0.5.5)
+ (maintainers "kakadu.hafanana@gmail.com")
+ (version 0.5.6)
  (depends
   (ocaml
    (or
@@ -58,7 +60,7 @@
  (version 0.1)
  (allow_empty)
  (authors "Dmitrii Kosarev a.k.a. Kakadu")
- (maintainers "Kakadu@pm.me")
+ (maintainers "kakadu.hafanana@gmail.com")
  (depends
   dune
   (benchmark
