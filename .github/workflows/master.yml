@@ -36,9 +36,10 @@ jobs:
 
       - run: |
           sudo apt-get update
-          sudo apt-get install pkg-config libpcre2-dev m4 -y
+          sudo apt-get install pkg-config libpcre2-dev m4 xdot --no-install-recommends -y
       - run: opam --version
 
+      - run: opam update
       - name: bisect many not work without it
         run: |
           git config --global --add safe.directory /__w/GT/GT
@@ -47,7 +48,9 @@ jobs:
 
       - name: Install dependecies for documentation
         run: |
-          sudo apt-get install pkg-config libpcre2-dev -y
+          sudo apt-get install pkg-config libpcre2-dev m4 xdot --no-install-recommends -y
+
+      - run: opam pin add bisect_ppx https://github.com/Kakadu/bisect_ppx_ng.git\#Hacking4.14 --no-action
 
       - run: opam install . --deps-only --with-test --with-doc
       - run: opam exec -- dune build @check --profile=release
@@ -89,5 +92,10 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir:  ${{ env.ODIG_DOC_LOC }}
 
+      - name: Installing using Opam
+        run: opam pin add GT ./
+
       - name: List files
         run: opam show --list-files GT
+
+      - run: opam exec -- make coverage

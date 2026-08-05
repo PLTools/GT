@@ -35,18 +35,24 @@ jobs:
 
       - run: opam --version
 
+      - run: opam update
+      - run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libpcre2-dev m4 xdot --no-install-recommends -y
+
+      #- run: opam pin add ppx_optcomp_nobase https://github.com/Kakadu/ppx_optcomp_nobase.git\#nobase --no-action
+      - run: opam pin add bisect_ppx https://github.com/Kakadu/bisect_ppx_ng.git\#Hacking4.14 --no-action
+
       - run: opam install . --deps-only --with-test --with-doc
       - run: opam exec -- dune build @check --profile=release
       - run: opam exec -- dune test --profile=release
 
       - name: Installing using Opam
-        run: |
-          opam exec -- dune build @install
-          opam exec -- dune install
+        run: opam pin add GT ./
 
       - name: List files
         run: opam show --list-files GT
 
 
-      - run: make coverage
+      - run: opam exec -- make coverage
       # TODO: coverage
