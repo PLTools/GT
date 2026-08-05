@@ -2,7 +2,7 @@
 opam-version: "2.0"
 version: "0.1"
 synopsis: "Some benchmarks. Should not be installed"
-maintainer: ["Kakadu@pm.me"]
+maintainer: ["kakadu.hafanana@gmail.com"]
 authors: ["Dmitrii Kosarev a.k.a. Kakadu"]
 license: "LGPL-2.1-or-later"
 homepage: "https://github.com/PLTools/GT"
@@ -27,3 +27,4 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/PLTools/GT.git"
+x-maintenance-intent: ["(latest)"]
