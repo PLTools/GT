@@ -1,6 +1,11 @@
-## Ureleased
+## Unreleased
 
 ## Changed
+
+## 0.5.5
+
+* OCaml 5.5 support
+* camlp5 8.04.0 support
 
 ## 0.5.4 (2025-03-21)
 
