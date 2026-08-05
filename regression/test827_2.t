@@ -68,8 +68,8 @@
           method c_BBB () _ _x__009_ _x__010_ =
             BBB
               ((fa () _x__009_),
-                ((fun () -> fun subj -> GT.gmap GT.option (gmap_bbb fa ()) subj)
-                   () _x__010_))
+                ((fun () subj -> GT.gmap GT.option (gmap_bbb fa ()) subj) ()
+                   _x__010_))
         end
       class ['a,'a_2,'extra_bbb,'syn_bbb] gmap_bbb_t_stub ((_, _fself_bbb) as
                                                              _mutuals_pack)
@@ -81,8 +81,8 @@
           method c_AAA () _ _x__011_ _x__012_ =
             AAA
               ((fa () _x__011_),
-                ((fun () -> fun subj -> GT.gmap GT.list (_fself_bbb fa ()) subj)
-                   () _x__012_))
+                ((fun () subj -> GT.gmap GT.list (_fself_bbb fa ()) subj) ()
+                   _x__012_))
         end
       let gmap_aaa_0 eta = (new gmap_aaa_t_stub) eta
       let gmap_bbb_0 eta = (new gmap_bbb_t_stub) eta
