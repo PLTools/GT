@@ -11,6 +11,7 @@ on:
       - 'README.md'
     branches:
       - 'master'
+
 env:
   OPAMCONFIRMLEVEL: unsafe-yes
   GT_WITH_DOCS: yes
@@ -41,8 +42,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install pkg-config libpcre2-dev m4 xdot --no-install-recommends -y
 
-
-      #- run: mv `which opam-dev` `which opam`
       - run: opam --version
 
       - run: opam update

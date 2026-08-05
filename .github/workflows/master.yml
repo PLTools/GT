@@ -1,4 +1,4 @@
-name: Build master in docker
+name: Build master in docker (OCaml 4.14)
 
 on:
   push:
@@ -6,49 +6,45 @@ on:
       - 'master'
     paths-ignore:
       - 'README.md'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+    branches:
+      - 'master'
 
 env:
-  OPAMROOT: /home/opam/.opam
   OPAMCONFIRMLEVEL: unsafe-yes
   GT_WITH_DOCS: yes
+  OPAMROOT: /home/opam/.opam
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
-    runs-on: ${{ matrix.os }}
+        containers: [ 'zanuda414' ]
+
+    runs-on: ubuntu-latest
     container:
-      image: ocaml/opam:ubuntu-lts-ocaml-4.14
-      options: --user root # Kind of important dirty hack
-      #options: --user opam               # dirty hack
+      image: kakadu18/ocaml:${{ matrix.containers }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.containers }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          fetch-depth: 1
+          fetch-depth: 2
 
       - run: |
           sudo apt-get update
           sudo apt-get install pkg-config libpcre2-dev m4 xdot --no-install-recommends -y
+
       - run: opam --version
 
       - run: opam update
-      - name: bisect many not work without it
-        run: |
-          git config --global --add safe.directory /__w/GT/GT
-          #git submodule update --init
-
-
-      - name: Install dependecies for documentation
-        run: |
-          sudo apt-get install pkg-config libpcre2-dev m4 xdot --no-install-recommends -y
 
       - run: opam pin add bisect_ppx https://github.com/Kakadu/bisect_ppx_ng.git\#Hacking4.14 --no-action
 
@@ -70,13 +66,6 @@ jobs:
           opam exec -- dune build @install
           opam exec -- dune install
 
-      - name: Deploy documentation
-        #if: ${{ github.event.pull_request.head.repo.full_name == 'PLTools/OCanren' }}
-        if: false
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_build/default/_doc/_html
 
       - name: Build API documentation
         if: github.event_name != 'pull_request'
@@ -85,8 +74,6 @@ jobs:
           echo "ODIG_DOC_LOC=$(opam exec -- odig cache path)/html" >> $GITHUB_ENV
 
       - name: Deploy documentation
-        #if: ${{ github.event.pull_request.head.repo.full_name == 'PLTools/GT' }}
-        #if: false
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -97,5 +84,3 @@ jobs:
 
       - name: List files
         run: opam show --list-files GT
-
-      - run: opam exec -- make coverage
