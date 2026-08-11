@@ -199,7 +199,7 @@ let gen_tests_dune dir =
     (* --as-pp will output serialized AST
         without it the human-readable AST will be printed
     ***)
-    Format.fprintf ppf "@[(instrumentation (backend bisect_ppx))@]";
+    Format.fprintf ppf "@[(instrumentation (backend bisect_ppx_ng))@]";
     Format.fprintf ppf "@[(preprocess (pps GT.ppx_all))@]";
     (* Format.fprintf ppf "@[(preprocess (action (run %s --as-pp %%{input-file})))@]@," pp; *)
     (* Format.fprintf ppf "@[(preprocessor_deps (file %s))@]@," pp *)

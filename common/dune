@@ -13,7 +13,7 @@
  (flags
   (:standard -w -32-9 -warn-error -A))
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (preprocess
   (pps ppxlib.metaquot))
  (foreign_stubs

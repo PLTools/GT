@@ -40,7 +40,9 @@
    -package
    camlp5,camlp5.pa_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations,logger,ppxlib,ocamlgraph
    -package
-   ppx_inline_test_nobase.runtime-lib,bisect_ppx.common,bisect_ppx.runtime
+   ppx_inline_test_nobase.runtime-lib
+   -package
+   bisect_ppx_ng.common,bisect_ppx_ng.runtime
    -I
    ../common
    %{read-lines:../config/package-doc.cfg}
@@ -95,7 +97,9 @@
    -package
    logger,ppxlib,ocamlgraph
    -package
-   ppx_inline_test_nobase.runtime-lib,bisect_ppx.common,bisect_ppx.runtime
+   ppx_inline_test_nobase.runtime-lib
+   -package
+   bisect_ppx_ng.common,bisect_ppx_ng.runtime
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
    -o

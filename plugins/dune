@@ -9,7 +9,7 @@
  (modules show)
  (libraries GT.common)
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (synopsis "Plugin 'show'"))
 
 (library
@@ -18,7 +18,7 @@
  (modules gfmt)
  (libraries GTCommon)
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (synopsis "Plugin 'gfmt'"))
 
 (library
@@ -27,7 +27,7 @@
  (modules foldl)
  (libraries GTCommon)
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (synopsis "Plugin 'foldl'"))
 
 (library
@@ -36,7 +36,7 @@
  (modules foldr)
  (libraries GTCommon foldl)
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (synopsis "Plugin 'foldr'"))
 
 (library
@@ -45,7 +45,7 @@
  (modules eq)
  (libraries GTCommon compare)
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (synopsis "Plugin 'eq'"))
 
 (library
@@ -55,7 +55,7 @@
  (synopsis "Plugin 'compare'")
  (libraries GTCommon)
  (instrumentation
-  (backend bisect_ppx))
+  (backend bisect_ppx_ng))
  (flags
   (:standard -w -7-9)))
 
@@ -66,7 +66,7 @@
  (synopsis "Plugin 'map' a.k.a. functor's fmap")
  (libraries GTCommon)
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name eval)
@@ -77,7 +77,7 @@
  (flags
   (:standard -w -7-9-13-36))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name stateful)
@@ -86,7 +86,7 @@
  (libraries GTCommon gmap)
  (synopsis "Plugin 'stateful'")
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name html)
@@ -97,7 +97,7 @@
  (flags
   (:standard -w -7-9-13-36))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name ghash)
@@ -108,7 +108,7 @@
  (flags
   (:standard -w -7-9-13-36))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name enum)
@@ -119,7 +119,7 @@
  (flags
   (:standard -w -7-9-13-36))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name syntax_all)
@@ -139,4 +139,4 @@
   GT.syntax.html
   GT.syntax.hash)
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))

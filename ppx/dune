@@ -10,7 +10,7 @@
  (flags
   (:standard -w -27-9 -warn-error -A -linkall))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (library
  (name ppx_all)
@@ -36,7 +36,7 @@
  (flags
   (:standard -linkall -w -33))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 (executable
  (name pp_gt)
@@ -61,7 +61,7 @@
  (flags
   (:standard -linkall))
  (instrumentation
-  (backend bisect_ppx)))
+  (backend bisect_ppx_ng)))
 
 ;(executable
 ; (name pp_all)
