@@ -1,8 +1,10 @@
 ## Unreleased
 
-## Changed
+### Changed
 
-## 0.5.5
+## 0.5.5 (2026-08-17)
+
+### Changed
 
 * camlp5 8.04.0 support
 * OCaml 5.5 support
@@ -10,7 +12,7 @@
 
 ## 0.5.4 (2025-03-21)
 
-## Changed
+### Changed
 
 * Fix issue 32: using polyvariants as type arguments crashed for Camlp5
 * Allow both 'options' and 'plugins' in the signatures
@@ -19,7 +21,7 @@
 
 ## 0.5.3 (2024-07-30)
 
-## Changed
+### Changed
 
 * It compiles for OCaml 4.14 or 5.2
 * Upper bound for ppxlib is <= 0.32.1
@@ -28,7 +30,7 @@
 
 ## 0.5.2 (2023-06-16)
 
-## Changed
+### Changed
 
 - Upgrade support of mutually recursive abbreviations (in presence of -rectypes). Previously some code would not compile (breaking)
 - Mutually recursive fixpoint on N typs is now called 'fix_typ1_typ2_..._typN' instead of 'fix_typ1' (breaking)

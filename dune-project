@@ -14,7 +14,7 @@
 
 (homepage "https://github.com/PLTools/GT")
 
-(maintenance_intent "(latest)")
+(maintenance_intent "0.5.3" "0.5.4" "(latest)")
 
 (source
  (github PLTools/GT))
@@ -33,9 +33,7 @@
     (and
      (>= "4.14")
      (< "5.0.0"))
-    (and
-     (>= "5.2.0")
-     (< "5.6.0"))))
+    (>= "5.2.0")))
   dune
   (ppxlib
    (>= "0.38.0"))
