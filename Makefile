@@ -56,6 +56,8 @@ TEST_COV_D ?= /tmp/GTcov
 coverage:
 	if [ -d $(TEST_COV_D) ]; then $(RM) -r $(TEST_COV_D); fi
 	mkdir -p $(TEST_COV_D)
+	find regression -iname '*.t' -exec touch {} \; # Doesn't help but we will address it later
+	# See https://github.com/ocaml/dune/issues/15755
 	BISECT_FILE=$(TEST_COV_D)/GT dune b @runtest regression \
 		--no-print-directory \
 		--instrument-with bisect_ppx_ng --force

@@ -26,7 +26,7 @@
   "Yet another library for generic programming. Provides syntax extensions\nboth for camlp5 and PPX which allow decoration of type declarations with\nfollowing compile-time code generation. Provides the way for creating\nplugins (compiled separately from the library) for enchancing supported\ntype transformations.\n\nStrongly reminds the `visitors` library from François Pottier.\nDuring desing of a library of these kind there many possible\ndesign decision and in many cases we decided to implement\nthe decision opposite to the one used in `visitors`.\n\n\nP.S. Since 2023 development team is no longer associated with JetBrains Research")
  (authors "https://github.com/dboulytchev" "https://github.com/Kakadu")
  (maintainers "kakadu.hafanana@gmail.com")
- (version 0.5.6)
+ (version 0.5.5)
  (depends
   (ocaml
    (or
