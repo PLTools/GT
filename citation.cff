@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: article
+title: "Generic programming with combinators and objects"
+authors:
+  - family-names: Kosarev
+    given-names: D.S.
+  - family-names: Boulytchev
+    given-names: D.Yu.
+journal-title: "Scientific and Technical Journal of Information Technologies, Mechanics and Optics"
+year: 2021
+volume: 21
+issue: 5
+start: 720
+end: 726
+doi: "10.17586/2226-1494-2021-21-5-720-726"
+issn: "2226-1494"
+url: "https://doi.org/10.17586/2226-1494-2021-21-5-720-726"
