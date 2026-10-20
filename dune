@@ -6,4 +6,6 @@
 (mdx
  (files index.mld README.md)
  (package GT)
- (libraries GT))
+ (libraries GT)
+ (deps
+  (package GT)))

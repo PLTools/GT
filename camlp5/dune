@@ -107,7 +107,9 @@
 
 (rule
  (targets pp5+gt+o.exe)
- (deps pa_gt.cmxa)
+ (deps
+  pa_gt.cmxa
+  (package GT))
  (action
   (run
    mkcamlp5.opt
@@ -121,7 +123,9 @@
 
 (rule
  (targets pp5+gt+o.byte)
- (deps pa_gt.cma)
+ (deps
+  pa_gt.cma
+  (package GT))
  (action
   (run
    mkcamlp5
